@@ -11,9 +11,10 @@ Built as a single `index.html` — no dependencies, no build step, works offline
 You start with one small robot in a big procedurally generated world. You never control it directly — you **program** it with drag-free, tap-to-build code blocks:
 
 - ⬆️ Move, ↩️ Turn, ✋ Collect, ⤵️ Drop, 🔨 Build, ⏱️ Wait
-- 🔁 Repeat and ♾️ Forever loops
-- ❓ If / Else conditions (tree ahead? blocked? bag full?)
+- 🔁 Repeat and ♾️ Forever loops (repeat count can be a variable!)
+- ❓ If / Else conditions (tree ahead? blocked? bag full? `x > 5`?)
 - 🧭 Face Nearest, 🏠 Go Home (pathfinding), 💰 Sell All
+- 🧠 Memory: 📦 Set (numbers & strings), ➕ Change, 🔢 Count loops with a rising index, 💬 Say (speech bubbles!) — with a **live variable watch** in the editor
 
 The editor has undo/redo and block duplication, and a 3-step interactive tutorial gets first-time players to their first running program in under a minute.
 
@@ -36,17 +37,24 @@ You don't pass stages; you expand what you can automate. New abilities unlock na
 | 🔁 Loops | Collect 5 resources |
 | ❓ Logic | Sell something at the market |
 | 🧭 Smart blocks | Earn 150 🪙 or own 2 robots |
+| 🧠 Memory (variables) | Earn 250 🪙 |
+
+Plus an **Inventor Level** (XP from everything you do), an endless **quest board** 📜 with no timers or FOMO, a **daily gift** that grows with total days played, collectible **robot hats** 🎩, and **treasure chests** 🎁 hidden far from home to reward explorers.
 
 ## From blocks to real Python 🐍
 
 Every block program is shown live as **real Python** in the editor's Python tab:
 
 ```python
+c = 0
 while True:
     robot.face_nearest("tree")
     if robot.sees("tree"):
         robot.collect()
-    robot.move()
+        c = c + 1
+        robot.say(c)
+    else:
+        robot.move()
 ```
 
 Kids realize they've been writing Python all along.

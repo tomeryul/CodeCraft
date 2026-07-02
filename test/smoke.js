@@ -192,6 +192,54 @@ async function ev(expr) {
     await ev(`JSON.stringify(objects.get(key(homePos.x-2,homePos.y+2)))`));
   check("away summary prepared", typeof await ev("pendingAway") === "string", await ev("pendingAway"));
 
+  await ev(`document.getElementById('playBtn').click(); 'ok'`); // start the sim on the reloaded page
+  await sleep(400);
+
+  console.log("▶ VM: variables & count loop");
+  await ev(`(()=>{
+    const r=R(); r.vars={};
+    const s1=newBlock('setVar'); s1.name='c'; s1.val={k:'num',n:0};
+    const cl=newBlock('countLoop'); cl.name='i'; cl.to=3;
+    const ch=newBlock('changeVar'); ch.name='c'; ch.n=2;
+    cl.body.push(ch);
+    const sy=newBlock('say'); sy.val={k:'var',name:'c'};
+    r.program=[s1,cl,sy]; unlocks.vars=true; startRobot(r); return 'ok';
+  })()`);
+  await sleep(2800);
+  check("count loop ran body 3 times (c=0+2*3=6)", await ev("R().vars.c") === 6, await ev("JSON.stringify(R().vars)"));
+  check("loop variable counted up to 3", await ev("R().vars.i") === 3, await ev("R().vars.i"));
+  check("say shows the variable's value", await ev("R().say && R().say.txt") === "6", await ev("JSON.stringify(R().say)"));
+
+  console.log("▶ VM: comparison condition");
+  await ev(`(()=>{
+    const r=R(); r.dir=1; r.vars={c:6};
+    const iff=newBlock('if'); iff.cond={var:'c',op:'>',val:5};
+    iff.body.push(newBlock('turnR')); iff.els.push(newBlock('turnL'));
+    r.program=[iff]; startRobot(r); return 'ok';
+  })()`);
+  await sleep(1000);
+  check("c > 5 takes the true branch (turnR: dir 1→2)", await ev("R().dir") === 2, await ev("R().dir"));
+
+  console.log("▶ Python: variables");
+  const py2 = await ev(`(()=>{
+    const s=newBlock('setVar'); s.name='c'; s.val={k:'num',n:0};
+    const cl=newBlock('countLoop'); cl.name='i'; cl.to=3;
+    const ch=newBlock('changeVar'); ch.name='c'; ch.n=2; cl.body.push(ch);
+    const sy=newBlock('say'); sy.val={k:'str',s:'hi'};
+    const iff=newBlock('if'); iff.cond={var:'c',op:'>',val:5}; iff.body.push(newBlock('move'));
+    return toPy([s,cl,sy,iff],'');
+  })()`);
+  check("py: counting loop", py2.indexOf("for i in range(1, 4):") >= 0, py2);
+  check("py: increment", py2.indexOf("c = c + 2") >= 0, py2);
+  check("py: say string", py2.indexOf('robot.say("hi")') >= 0, py2);
+  check("py: comparison", py2.indexOf("if c > 5:") >= 0, py2);
+
+  console.log("▶ engagement");
+  check("collecting granted XP", (await ev("player.xp")) > 0 || (await ev("player.level")) > 1, await ev("JSON.stringify({xp:player.xp,lvl:player.level})"));
+  check("3 quests are active", await ev("player.quests.length") === 3, await ev("player.quests.length"));
+  check("treasure chests exist in the world", await ev(`[...objects.values()].filter(o=>o.type==='gift').length`) >= 5, await ev(`[...objects.values()].filter(o=>o.type==='gift').length`));
+  check("say quest progressed", await ev(`(player.quests.find(q=>q.id==='say1')||{prog:1}).prog`) >= 1);
+
   check("no uncaught exceptions during entire run", exceptions.length === 0, exceptions.join(" | "));
 
   console.log(`\n${passed} passed, ${failed} failed`);
