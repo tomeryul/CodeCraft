@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#3b2f63">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" href="./icon-192.png">
 <meta name="description" content="CodeCraft — an open-world game where kids learn programming by automating robots, building factories and shaping a living world.">
 <title>CodeCraft — Program Your World</title>
 <style>
@@ -45,7 +48,7 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .sheet.open{transform:translateY(0);}
 .sheet .grab{width:44px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);margin:8px auto 2px;flex:0 0 auto;}
 /* ---------- editor ---------- */
-#editor{height:66vh;}
+#editor{height:48vh;}
 .ed-head{display:flex;align-items:center;gap:8px;padding:6px 12px 4px;flex:0 0 auto;}
 #robotChips{display:flex;gap:6px;overflow-x:auto;flex:1;padding:2px 0;scrollbar-width:none;}
 #robotChips::-webkit-scrollbar{display:none;}
@@ -143,8 +146,21 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   box-shadow:0 6px 20px rgba(0,0,0,.4);animation:tin .25s ease-out;max-width:88vw;text-align:center;}
 .toast.big{border-color:var(--accent);background:rgba(60,40,5,.95);font-size:15px;padding:12px 22px;border-radius:16px;}
 @keyframes tin{from{transform:translateY(-14px);opacity:0}to{transform:translateY(0);opacity:1}}
+/* ---------- tutorial coach ---------- */
+#coach{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--sab) + 92px);z-index:60;background:#171230;
+  border:2px solid var(--accent);border-radius:16px;padding:12px 18px;font-size:14.5px;font-weight:700;max-width:88vw;
+  text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5);display:none;line-height:1.45;pointer-events:none;}
+#coach.show{display:block;animation:tin .3s ease-out;}
+#coach.hi{bottom:calc(48vh + 12px);}
+#coach small{display:block;color:var(--ink2);font-weight:600;margin-top:2px;}
+.tut-pulse{animation:tpulse 1.1s ease-in-out infinite;}
+@keyframes tpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,184,48,.9)}50%{box-shadow:0 0 0 10px rgba(255,184,48,0)}}
+.chip.flash{animation:coinflash .5s ease-out;}
+@keyframes coinflash{0%{transform:scale(1)}35%{transform:scale(1.25)}100%{transform:scale(1)}}
+.blk.elserow{min-height:30px;padding:5px 10px;opacity:.92;font-size:13px;}
 /* ---------- desktop ---------- */
 @media (min-width: 920px){
+  #coach.hi{bottom:calc(var(--sab) + 92px);}
   #editor{left:auto;right:0;top:0;bottom:0;width:430px;max-height:none;height:auto;border-radius:22px 0 0 22px;transform:translateX(105%);}
   #editor.open{transform:translateX(0);}
   #editor .grab{display:none;}
@@ -157,7 +173,7 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 <canvas id="game"></canvas>
 
 <div id="topbar">
-  <div class="chip">🪙 <span id="coinsEl">0</span></div>
+  <div class="chip" id="coinChip">🪙 <span id="coinsEl">0</span></div>
   <div class="chip" id="bagChip">🎒 <span id="bagEl">0/8</span></div>
   <div class="spacer"></div>
   <button class="iconbtn" id="shopBtn" title="Shop">🛒</button>
@@ -178,6 +194,8 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   <div class="ed-head">
     <div id="robotChips"></div>
     <div class="ed-btns">
+      <button id="undoBtn" title="Undo">↺</button>
+      <button id="redoBtn" title="Redo">↻</button>
       <button class="go" id="runBtn" title="Run">▶</button>
       <button class="halt" id="stopBtn" title="Stop">⏹</button>
       <button id="edClose" title="Close">✕</button>
@@ -190,7 +208,7 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   <div class="tabbody" id="blocksTab">
     <div id="programWrap"><div id="programEl"></div></div>
     <div id="selActions">
-      <button id="mvUp">↑</button><button id="mvDn">↓</button><button class="del" id="delBlk">🗑</button>
+      <button id="mvUp">↑</button><button id="mvDn">↓</button><button id="dupBlk">⧉</button><button class="del" id="delBlk">🗑</button>
       <div class="note" id="insNote"></div>
     </div>
     <div id="palette"></div>
@@ -228,6 +246,8 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 </div>
 
 <div id="toasts"></div>
+<div id="coach"></div>
+<input type="file" id="importFile" accept=".json,application/json" style="display:none">
 
 <!-- ============ SPLASH ============ -->
 <div id="splash">
@@ -269,6 +289,7 @@ let totals={collected:0,earned:0};
 let unlocks={loops:false,logic:false,smart:false};
 let homePos={x:0,y:0}, marketPos={x:0,y:0};
 let selRobot=0, muted=false, isNew=true;
+let tut={step:0,done:false}, pendingAway=null;
 const key=(x,y)=>y*W+x;
 
 /* ---------------- world generation ---------------- */
@@ -366,7 +387,7 @@ function newBlock(t){
   const b={t,uid:uid()};
   if(t==="repeat"){b.n=3;b.body=[];}
   if(t==="forever"){b.body=[];}
-  if(t==="if"){b.cond="treeAhead";b.body=[];}
+  if(t==="if"){b.cond="treeAhead";b.body=[];b.els=[];}
   if(t==="wait")b.n=1;
   if(t==="build")b.opt="sapling";
   if(t==="faceNearest")b.opt="tree";
@@ -401,6 +422,7 @@ function startRobot(r){
   if(!r.program.length){toast("🧩 "+r.name+" has no program yet! Open the Code editor.");return;}
   r.frames=[{blocks:r.program,i:0,reps:1}];r.running=true;r.wait=0;r.path=null;r.blocked=false;
   sfx(520,.06);updateChips();updateFab();
+  if(!tut.done&&tut.step>0)tutFinish();
 }
 function stopRobot(r){r.running=false;r.frames=null;r.curUid=null;r.path=null;updateChips();updateFab();}
 function tickRobot(r){
@@ -427,7 +449,11 @@ function tickRobot(r){
     const b=fr.blocks[fr.i];
     if(b.t==="repeat"){ if(!b.body.length||b.n<1){fr.i++;continue;} r.frames.push({blocks:b.body,i:0,reps:Math.max(1,b.n|0)});continue;}
     if(b.t==="forever"){ r.curUid=b.uid; if(!b.body.length)return; r.frames.push({blocks:b.body,i:0,reps:Infinity});continue;}
-    if(b.t==="if"){ if(evalCond(r,b.cond)&&b.body.length){r.curUid=b.uid;r.frames.push({blocks:b.body,i:0,reps:1});}else fr.i++; continue;}
+    if(b.t==="if"){
+      const br=evalCond(r,b.cond)?b.body:(b.els||[]);
+      if(br.length){r.curUid=b.uid;r.frames.push({blocks:br,i:0,reps:1});}
+      else fr.i++;
+      continue;}
     r.curUid=b.uid; doAction(r,b); fr.i++; return;
   }
 }
@@ -457,8 +483,9 @@ function doAction(r,b){
         const space=r.cap-bagCount(r), take=Math.min(space,o.n);
         r.inv[o.item]+=take;o.n-=take;if(o.n<=0)objects.delete(k);
         totals.collected+=take;got="__stack";
+        addPop(a.x,a.y,"+"+take+" "+RES[o.item].em);
       }
-      if(got&&got!=="__stack"){r.inv[got]++;totals.collected++;}
+      if(got&&got!=="__stack"){r.inv[got]++;totals.collected++;addPop(a.x,a.y,"+1 "+RES[got].em);}
       if(got){sfxIf(r,660,.06);checkUnlocks();}else r.blocked=true;
       break;}
     case "drop":{
@@ -503,8 +530,19 @@ function doAction(r,b){
 function sellInv(r){
   let sum=0;
   for(const res in r.inv){sum+=r.inv[res]*RES[res].price;r.inv[res]=0;}
-  if(sum>0){coins+=sum;totals.earned+=sum;toast("💰 "+r.name+" sold goods for "+sum+" 🪙");sfx(880,.09);sfx(1100,.09,.1);checkUnlocks();updateHud();}
+  if(sum>0){coins+=sum;totals.earned+=sum;addPop(r.x,r.y,"+"+sum+" 🪙");queueSaleToast(sum);coinFlash();sfx(880,.09);sfx(1100,.09,.1);checkUnlocks();updateHud();}
 }
+let saleAcc=0,saleT=null;
+function queueSaleToast(n){
+  saleAcc+=n;clearTimeout(saleT);
+  saleT=setTimeout(()=>{toast("💰 Sold goods for "+saleAcc+" 🪙");saleAcc=0;},1200);
+}
+function coinFlash(){
+  const c=$("coinChip");
+  c.classList.remove("flash");void c.offsetWidth;c.classList.add("flash");
+}
+const pops=[];
+function addPop(x,y,txt){pops.push({x,y,txt,t0:performance.now()});if(pops.length>40)pops.shift();}
 function findNearest(r,what){
   let best=null,bd=1e9;
   const R2=14;
@@ -565,7 +603,9 @@ function toPy(list,ind){
         P.push(b.body.length?toPy(b.body,ind+"    "):ind+"    pass");break;
       case "if":
         P.push(ind+"if "+pyCond(b.cond)+":");
-        P.push(b.body.length?toPy(b.body,ind+"    "):ind+"    pass");break;
+        P.push(b.body.length?toPy(b.body,ind+"    "):ind+"    pass");
+        if(b.els&&b.els.length){P.push(ind+"else:");P.push(toPy(b.els,ind+"    "));}
+        break;
     }
   }
   return P.join("\n");
@@ -587,22 +627,47 @@ function renderPy(){
 }
 
 /* ---------------- editor UI ---------------- */
-let selBlock=null;
+let selBlock=null, elseSel=null;
 function findList(list,blk){
   for(let i=0;i<list.length;i++){
     if(list[i]===blk)return {list,i};
     if(list[i].body){const f=findList(list[i].body,blk);if(f)return f;}
+    if(list[i].els){const f=findList(list[i].els,blk);if(f)return f;}
   }
   return null;
 }
+function pushUndo(){
+  const r=R();
+  if(!r.hist)r.hist=[];
+  r.hist.push(JSON.stringify(r.program));
+  if(r.hist.length>50)r.hist.shift();
+  r.redoS=[];
+}
+function restoreProgram(r,json,toStack){
+  toStack.push(JSON.stringify(r.program));
+  r.program=JSON.parse(json);reUid(r.program);
+  selBlock=null;elseSel=null;programChanged();
+}
+function doUndo(){const r=R();if(r.hist&&r.hist.length)restoreProgram(r,r.hist.pop(),(r.redoS=r.redoS||[]));}
+function doRedo(){const r=R();if(r.redoS&&r.redoS.length)restoreProgram(r,r.redoS.pop(),(r.hist=r.hist||[]));}
+function updateUndoBtns(){
+  const r=R();
+  $("undoBtn").style.opacity=(r.hist&&r.hist.length)?"1":".35";
+  $("redoBtn").style.opacity=(r.redoS&&r.redoS.length)?"1":".35";
+}
+$("undoBtn").addEventListener("click",doUndo);
+$("redoBtn").addEventListener("click",doRedo);
 function programChanged(){
   const r=R();
   if(r.running){stopRobot(r);toast("⏹ "+r.name+" stopped — program changed");}
-  renderProgram();renderPy();saveSoon();
+  renderProgram();renderPy();saveSoon();updateUndoBtns();
+  if(!tut.done&&tut.step===2&&r.program.length>=2)tutSet(3);
 }
 function addBlock(t){
+  pushUndo();
   const b=newBlock(t), r=R();
-  if(selBlock&&selBlock.body){selBlock.body.push(b);}
+  if(elseSel){elseSel.els.push(b);}
+  else if(selBlock&&selBlock.body){selBlock.body.push(b);}
   else if(selBlock){const f=findList(r.program,selBlock);if(f)f.list.splice(f.i+1,0,b);else r.program.push(b);}
   else r.program.push(b);
   sfx(440,.04);
@@ -633,6 +698,7 @@ function renderList(list,parent){
     row.addEventListener("click",e=>{
       const p=e.target.dataset&&e.target.dataset.p;
       if(p){
+        pushUndo();
         if(p==="inc")b.n=Math.min(99,b.n+1);
         if(p==="dec")b.n=Math.max(1,b.n-1);
         if(p==="cond")b.cond=CONDS[(CONDS.indexOf(b.cond)+1)%CONDS.length];
@@ -640,7 +706,7 @@ function renderList(list,parent){
         if(p==="tgt")b.opt=TARGETS[(TARGETS.indexOf(b.opt)+1)%TARGETS.length];
         programChanged();e.stopPropagation();return;
       }
-      selBlock=(selBlock===b)?null:b;
+      selBlock=(selBlock===b)?null:b;elseSel=null;
       renderProgram();
       e.stopPropagation();
     });
@@ -652,20 +718,44 @@ function renderList(list,parent){
       renderList(b.body,nest);
       parent.appendChild(nest);
     }
+    if(b.t==="if"){
+      const er=document.createElement("div");
+      er.className="blk c-logic elserow"+(elseSel===b?" sel":"");
+      er.innerHTML='<span class="ic">↪️</span><span class="lbl">Else</span>';
+      er.addEventListener("click",e=>{elseSel=(elseSel===b)?null:b;selBlock=null;renderProgram();e.stopPropagation();});
+      parent.appendChild(er);
+      const en=document.createElement("div");
+      en.className="nest";
+      if(!b.els.length)en.innerHTML='<div class="hint">'+(elseSel===b?"👇 new blocks go in here":"runs when the condition is false")+'</div>';
+      renderList(b.els,en);
+      parent.appendChild(en);
+    }
   }
 }
 function updateSelUI(){
   const bar=$("selActions");
-  if(selBlock){
+  if(selBlock||elseSel){
     bar.classList.add("show");
-    $("insNote").textContent = selBlock.body ? "new blocks → inside "+DEFS[selBlock.t].lbl : "new blocks → after selection";
+    $("insNote").textContent = elseSel ? "new blocks → inside Else" :
+      (selBlock.body ? "new blocks → inside "+DEFS[selBlock.t].lbl : "new blocks → after selection");
   }else bar.classList.remove("show");
 }
 $("delBlk").addEventListener("click",()=>{
   if(!selBlock)return;
+  pushUndo();
   const f=findList(R().program,selBlock);
   if(f)f.list.splice(f.i,1);
   selBlock=null;programChanged();
+});
+$("dupBlk").addEventListener("click",()=>{
+  if(!selBlock)return;
+  const f=findList(R().program,selBlock);
+  if(!f)return;
+  pushUndo();
+  const copy=JSON.parse(JSON.stringify(selBlock));
+  reUid([copy]);
+  f.list.splice(f.i+1,0,copy);
+  programChanged();
 });
 function moveSel(dir){
   if(!selBlock)return;
@@ -673,6 +763,7 @@ function moveSel(dir){
   if(!f)return;
   const j=f.i+dir;
   if(j<0||j>=f.list.length)return;
+  pushUndo();
   f.list.splice(f.i,1);f.list.splice(j,0,selBlock);
   programChanged();
 }
@@ -703,7 +794,7 @@ function updateChips(){
     const c=document.createElement("button");
     c.className="rchip"+(i===selRobot?" sel":"");
     c.innerHTML='<span class="dot" style="background:'+r.color+'"></span>'+r.name+(r.running?' <span class="live">●RUN</span>':'');
-    c.addEventListener("click",()=>{selRobot=i;selBlock=null;renderProgram();renderPy();updateChips();updateHud();updateFab();follow=true;});
+    c.addEventListener("click",()=>{selRobot=i;selBlock=null;elseSel=null;renderProgram();renderPy();updateChips();updateHud();updateFab();updateUndoBtns();follow=true;});
     wrap.appendChild(c);
   });
   const add=document.createElement("button");
@@ -742,12 +833,40 @@ function renderShop(){
     btn.addEventListener("click",()=>{it.fn();updateHud();updateChips();renderShop();saveSoon();});
     d.appendChild(btn);el.appendChild(d);
   }
+  const ex=document.createElement("div");ex.className="shopitem";
+  ex.innerHTML='<div class="em">💾</div><div class="tx"><b>Backup World</b><small>Export your world to a file, or restore a backup.</small></div>';
+  const eb=document.createElement("button");eb.textContent="Export";
+  eb.addEventListener("click",()=>{
+    saveNow();
+    const blob=new Blob([localStorage.getItem(SAVE_KEY)],{type:"application/json"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);a.download="codecraft-world.json";a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+    toast("💾 World exported!");
+  });
+  const ib=document.createElement("button");ib.textContent="Import";ib.style.marginLeft="6px";
+  ib.addEventListener("click",()=>$("importFile").click());
+  ex.appendChild(eb);ex.appendChild(ib);el.appendChild(ex);
   const rd=document.createElement("div");rd.className="shopitem";
   rd.innerHTML='<div class="em">🌍</div><div class="tx"><b>New World</b><small>Erase everything and generate a fresh world.</small></div>';
   const rb=document.createElement("button");rb.textContent="Reset";rb.className="danger";
   rb.addEventListener("click",()=>{if(confirm("Really erase your world, robots and coins?")){localStorage.removeItem(SAVE_KEY);location.reload();}});
   rd.appendChild(rb);el.appendChild(rd);
 }
+$("importFile").addEventListener("change",e=>{
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const d=JSON.parse(rd.result);
+      if(d.v!==1&&d.v!==2)throw 0;
+      localStorage.setItem(SAVE_KEY,rd.result);
+      location.reload();
+    }catch(_){toast("⚠️ That file isn't a CodeCraft world.");}
+  };
+  rd.readAsText(f);
+  e.target.value="";
+});
 $("shopBtn").addEventListener("click",openShop);
 $("shopClose").addEventListener("click",()=>$("shopWrap").classList.remove("open"));
 $("shopWrap").addEventListener("click",e=>{if(e.target.id==="shopWrap")$("shopWrap").classList.remove("open");});
@@ -851,12 +970,43 @@ function sfx(freq,dur,delay){
 function sfxIf(r,f,d){if(robots[selRobot]===r)sfx(f,d);}
 $("muteBtn").addEventListener("click",()=>{muted=!muted;$("muteBtn").textContent=muted?"🔇":"🔊";saveSoon();});
 
+/* ---------------- tutorial ---------------- */
+let tutTarget=null;
+function tutSet(step){
+  tut.step=step;
+  if(tutTarget){tutTarget.classList.remove("tut-pulse");tutTarget=null;}
+  const coach=$("coach");
+  coach.classList.remove("hi");
+  if(step===1){
+    coach.innerHTML='👋 Your robot only moves when you <b>program</b> it!<small>Step 1 of 3 — tap the 🧩 Code button</small>';
+    tutTarget=$("codeBtn");
+  }else if(step===2){
+    coach.innerHTML='Tap <b>⬆️ Move</b> a few times, then <b>✋ Collect</b>!<small>Step 2 of 3 — your blocks appear in the program above</small>';
+    coach.classList.add("hi");
+    tutTarget=$("palette").querySelector(".pblk");
+  }else if(step===3){
+    coach.innerHTML='🚀 Press the green <b>▶ Run</b> button and watch your robot!<small>Step 3 of 3</small>';
+    coach.classList.add("hi");
+    tutTarget=$("runBtn");
+  }
+  if(step>=1&&step<=3){coach.classList.add("show");if(tutTarget)tutTarget.classList.add("tut-pulse");}
+  else coach.classList.remove("show");
+}
+function tutFinish(){
+  if(tut.done)return;
+  tut.done=true;tutSet(0);
+  setTimeout(()=>bigToast("🎉 You're a programmer now! Collect 🌳, sell at the 🏪, and unlock new powers!"),900);
+  saveSoon();
+}
+
 /* ---------------- HUD ---------------- */
 function updateHud(){
   $("coinsEl").textContent=coins;
   const r=R();
+  const parts=Object.keys(r.inv).filter(res=>r.inv[res]>0).sort((a,b)=>r.inv[b]-r.inv[a]);
   let inv="";
-  for(const res in r.inv)if(r.inv[res]>0)inv+=" "+RES[res].em+r.inv[res];
+  parts.slice(0,2).forEach(res=>{inv+=" "+RES[res].em+r.inv[res];});
+  if(parts.length>2)inv+=" +";
   $("bagEl").textContent=bagCount(r)+"/"+r.cap+inv;
 }
 function updateFab(){
@@ -867,7 +1017,10 @@ function updateFab(){
 $("fabRun").addEventListener("click",()=>{const r=R();r.running?stopRobot(r):startRobot(r);});
 $("runBtn").addEventListener("click",()=>startRobot(R()));
 $("stopBtn").addEventListener("click",()=>stopRobot(R()));
-$("codeBtn").addEventListener("click",()=>{$("editor").classList.add("open");renderProgram();renderPy();});
+$("codeBtn").addEventListener("click",()=>{
+  $("editor").classList.add("open");renderProgram();renderPy();updateUndoBtns();
+  if(!tut.done&&tut.step===1)tutSet(2);
+});
 $("edClose").addEventListener("click",()=>$("editor").classList.remove("open"));
 $("centerBtn").addEventListener("click",()=>{follow=true;toast("🎯 Following "+R().name);});
 document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{
@@ -925,7 +1078,7 @@ function handleTap(sx,sy){
   const wx=(sx-innerWidth/2)/cam.scale+cam.x, wy=(sy-innerHeight/2)/cam.scale+cam.y;
   const tx=Math.floor(wx/TILE), ty=Math.floor(wy/TILE);
   const ri=robots.findIndex(r=>Math.round(r.rx)===tx&&Math.round(r.ry)===ty);
-  if(ri>=0){selRobot=ri;selBlock=null;follow=true;updateChips();updateHud();updateFab();renderProgram();renderPy();toast("🤖 Selected "+robots[ri].name);sfx(500,.05);return;}
+  if(ri>=0){selRobot=ri;selBlock=null;elseSel=null;follow=true;updateChips();updateHud();updateFab();renderProgram();renderPy();toast("🤖 Selected "+robots[ri].name);sfx(500,.05);return;}
   if(!inB(tx,ty))return;
   const o=objects.get(key(tx,ty));
   const names={tree:"🌳 Tree — collect for wood!",rock:"🪨 Rock — collect for stone!",iron:"⛓️ Iron ore — worth 6🪙!",crystal:"💎 Crystal — worth 15🪙!",home:"🏠 Home base",market:"🏪 Market — sell resources here!",chest:"📦 Chest — drop items in to store them",bridge:"🌉 Bridge",flower:"🌼 Just a pretty flower",item:"📦 Dropped items — a robot can collect these!"};
@@ -960,7 +1113,13 @@ function draw(t){
   const w=innerWidth,h=innerHeight;
   ctx.setTransform(DPR,0,0,DPR,0,0);
   ctx.fillStyle="#2c7fb8";ctx.fillRect(0,0,w,h);
-  if(follow){const r=R();cam.x=lerp(cam.x,(r.rx+.5)*TILE,.12);cam.y=lerp(cam.y,(r.ry+.5)*TILE,.12);}
+  if(follow){
+    const r=R();
+    let ty=(r.ry+.5)*TILE;
+    // keep the robot visible above the editor sheet on mobile
+    if($("editor").classList.contains("open")&&innerWidth<920)ty+=h*0.24/cam.scale;
+    cam.x=lerp(cam.x,(r.rx+.5)*TILE,.12);cam.y=lerp(cam.y,ty,.12);
+  }
   cam.x=clamp(cam.x,0,W*TILE);cam.y=clamp(cam.y,0,H*TILE);
   ctx.translate(w/2,h/2);ctx.scale(cam.scale,cam.scale);ctx.translate(-cam.x,-cam.y);
   const x0=clamp(Math.floor((cam.x-w/2/cam.scale)/TILE)-1,0,W-1);
@@ -1043,6 +1202,17 @@ function draw(t){
       const sp=sprite("💢",14);ctx.drawImage(sp,cx+s2*.35,cy-s2*.8);
     }
   });
+  // floating reward popups
+  for(let i=pops.length-1;i>=0;i--){
+    const p=pops[i], age=(t-p.t0)/1000;
+    if(age>1){pops.splice(i,1);continue;}
+    ctx.globalAlpha=1-age;
+    ctx.font="bold 15px sans-serif";ctx.textAlign="center";
+    ctx.fillStyle="#fff";ctx.strokeStyle="rgba(0,0,0,.55)";ctx.lineWidth=3;
+    const px=(p.x+.5)*TILE, py=(p.y+.2)*TILE-age*26;
+    ctx.strokeText(p.txt,px,py);ctx.fillText(p.txt,px,py);
+    ctx.globalAlpha=1;
+  }
 }
 function rr(c,x,y,w2,h2,r2){
   c.beginPath();
@@ -1051,17 +1221,17 @@ function rr(c,x,y,w2,h2,r2){
 }
 
 /* ---------------- simulation loop ---------------- */
-let last=0, slowAcc=0, started=false;
+let last=0, slowAcc=0, started=false, simTime=0;
 function loop(t){
   requestAnimationFrame(loop);
   if(!started){last=t;return;}
-  now=t;
+  // simTime advances by clamped dt, so a suspended tab can never cause a tick flood
   const dt=Math.min(100,t-last);last=t;
-  // robots act on their own timers
+  simTime+=dt;now=simTime;
   for(const r of robots){
-    if(!r.nextAct)r.nextAct=t;
+    if(!r.nextAct)r.nextAct=simTime;
     const step=340/r.speed;
-    while(t>=r.nextAct){r.nextAct+=step;tickRobot(r);}
+    while(simTime>=r.nextAct){r.nextAct+=step;tickRobot(r);}
   }
   // slow world tick (1s): growth, respawns, animals hud
   slowAcc+=dt;
@@ -1087,8 +1257,8 @@ function loop(t){
   }
   // animals hop
   for(const a of animals){
-    if(t>=a.next){
-      a.next=t+800+Math.random()*2200;
+    if(now>=a.next){
+      a.next=now+800+Math.random()*2200;
       const d=(Math.random()*4)|0, nx=a.x+DX[d], ny=a.y+DY[d];
       if(inB(nx,ny)&&terrain[key(nx,ny)]===T_GRASS&&!objects.has(key(nx,ny)))
         {a.x=nx;a.y=ny;}
@@ -1097,6 +1267,7 @@ function loop(t){
   draw(t);
 }
 function updateExecHighlight(){
+  if(!$("editor").classList.contains("open"))return;
   const r=R();
   document.querySelectorAll("#programEl .blk.exec").forEach(el=>el.classList.remove("exec"));
   if(r.running&&r.curUid){
@@ -1112,21 +1283,29 @@ let saveT=null;
 function saveSoon(){clearTimeout(saveT);saveT=setTimeout(saveNow,1500);}
 function saveNow(){
   try{
-    const data={v:1,seed,coins,stash,totals,unlocks,muted,selRobot,
+    // timers are stored as ms-remaining so they survive reloads and enable offline fast-forward
+    const data={v:2,savedAt:Date.now(),seed,coins,stash,totals,unlocks,muted,selRobot,tutDone:tut.done,
       robots:robots.map(r=>({x:r.x,y:r.y,dir:r.dir,name:r.name,color:r.color,inv:r.inv,cap:r.cap,speed:r.speed,program:r.program})),
-      objects:[...objects.entries()].map(([k2,o])=>{const c={...o};delete c.growAt;return [k2,c];})};
+      objects:[...objects.entries()].map(([k2,o])=>{
+        const c={...o};
+        if(c.growAt!==undefined){c.growIn=Math.max(0,c.growAt-now);delete c.growAt;}
+        return [k2,c];
+      }),
+      respawns:respawnQ.map(e=>({rin:Math.max(0,e.at-now),x:e.x,y:e.y,type:e.type}))};
     localStorage.setItem(SAVE_KEY,JSON.stringify(data));
   }catch(_){}
 }
+const GROW_MS=20000;
 function load(){
   try{
     const raw=localStorage.getItem(SAVE_KEY);
     if(!raw)return false;
     const d=JSON.parse(raw);
-    if(d.v!==1)return false;
+    if(d.v!==1&&d.v!==2)return false;
     seed=d.seed;buildTerrain();
     objects=new Map(d.objects);
     coins=d.coins;stash=d.stash;totals=d.totals;unlocks=d.unlocks;muted=!!d.muted;
+    tut.done=d.v===1?true:!!d.tutDone;
     robots=d.robots.map(rd=>{
       const r=makeRobot(rd.x,rd.y,rd.name);
       Object.assign(r,{dir:rd.dir,color:rd.color,inv:rd.inv,cap:rd.cap,speed:rd.speed,program:rd.program||[]});
@@ -1134,11 +1313,37 @@ function load(){
       return r;
     });
     selRobot=clamp(d.selRobot||0,0,robots.length-1);
+    // fast-forward growth and respawns by the real time spent away (sim clock restarts at 0)
+    const elapsed=Math.max(0,Date.now()-(d.savedAt||Date.now()));
+    let grew=0,back=0;
+    for(const [,o] of objects){
+      if(o.type==="tree"&&o.stage<2){
+        let rem=(o.growIn!==undefined?o.growIn:GROW_MS)-elapsed;
+        while(o.stage<2&&rem<=0){o.stage++;grew++;rem+=GROW_MS;}
+        delete o.growIn;
+        if(o.stage<2)o.growAt=rem;
+      }
+    }
+    respawnQ=[];
+    for(const e of (d.respawns||[])){
+      const rem=e.rin-elapsed;
+      if(rem>0){respawnQ.push({at:rem,x:e.x,y:e.y,type:e.type});continue;}
+      const k2=key(e.x,e.y);
+      if(objects.has(k2))continue;
+      if(e.type==="tree"){
+        const stage=Math.min(2,Math.floor(-rem/GROW_MS));
+        const o={type:"tree",stage};
+        if(stage<2)o.growAt=GROW_MS+rem%GROW_MS;
+        objects.set(k2,o);grew++;
+      }else{objects.set(k2,{type:e.type});back++;}
+    }
+    if(elapsed>60000&&(grew||back))
+      pendingAway="🌍 While you were away: "+(grew?grew+" 🌳 grew":"")+(grew&&back?", ":"")+(back?back+" 🪨 returned":"")+"!";
     genAnimals();
     return true;
   }catch(_){return false;}
 }
-function reUid(list){for(const b of list){b.uid=uid();if(b.body)reUid(b.body);}}
+function reUid(list){for(const b of list){b.uid=uid();if(b.t==="if"&&!b.els)b.els=[];if(b.body)reUid(b.body);if(b.els)reUid(b.els);}}
 setInterval(saveNow,8000);
 document.addEventListener("visibilitychange",()=>{if(document.hidden)saveNow();});
 
@@ -1156,18 +1361,19 @@ isNew=!load();
 if(isNew)newGame();
 cam.x=(homePos.x+.5)*TILE;cam.y=(homePos.y+.5)*TILE;
 $("muteBtn").textContent=muted?"🔇":"🔊";
-renderPalette();updateChips();updateHud();updateFab();renderProgram();renderPy();
+renderPalette();updateChips();updateHud();updateFab();updateUndoBtns();renderProgram();renderPy();
 
 $("playBtn").addEventListener("click",()=>{
   $("splash").classList.add("hide");
   started=true;
   sfx(660,.08);sfx(880,.08,.1);
-  if(isNew){
-    say("👋 Hi! I'm Byte, your coding mentor.\n\nThat little robot down there is YOURS — but it only moves when you program it!\n\n1️⃣ Tap 🧩 Code\n2️⃣ Add some ⬆️ Move and ✋ Collect blocks\n3️⃣ Press ▶ and watch it come alive!\n\nCollect wood 🌳, sell it at the market 🏪, and unlock amazing powers. Ask me anything, anytime! 🦉",false);
-    setTimeout(()=>{$("mentor").classList.add("open");},700);
-    setTimeout(()=>{$("mentor").classList.remove("open");$("editor").classList.add("open");},6500);
-  }
+  if(isNew)say("👋 Hi! I'm Byte, your coding mentor. Follow the 3 quick steps on screen to wake up your robot — then ask me anything, anytime! 🦉",false);
+  if(!tut.done)setTimeout(()=>tutSet(1),800);
+  if(pendingAway){setTimeout(()=>bigToast(pendingAway),1400);pendingAway=null;}
 });
+if("serviceWorker" in navigator&&location.protocol.indexOf("http")===0){
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+}
 </script>
 </body>
 </html>

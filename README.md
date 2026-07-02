@@ -12,8 +12,10 @@ You start with one small robot in a big procedurally generated world. You never 
 
 - ⬆️ Move, ↩️ Turn, ✋ Collect, ⤵️ Drop, 🔨 Build, ⏱️ Wait
 - 🔁 Repeat and ♾️ Forever loops
-- ❓ If-conditions (tree ahead? blocked? bag full?)
+- ❓ If / Else conditions (tree ahead? blocked? bag full?)
 - 🧭 Face Nearest, 🏠 Go Home (pathfinding), 💰 Sell All
+
+The editor has undo/redo and block duplication, and a 3-step interactive tutorial gets first-time players to their first running program in under a minute.
 
 Press ▶ and watch your code come alive in the world.
 
@@ -23,6 +25,7 @@ Press ▶ and watch your code come alive in the world.
 - 🪨 Rocks, ⛓️ iron and 💎 crystals respawn over time
 - 🐰 Animals wander around
 - 🤖 Every robot keeps running its program simultaneously — build a fleet and automate everything
+- ⏰ The world keeps evolving while you're away — come back to regrown forests and a "while you were away" report
 
 ## No levels — just powers to unlock
 
@@ -61,7 +64,7 @@ Byte, the in-game mentor, answers questions like *"Why isn't my robot moving?"* 
 5. Chain robots into supply lines — harvester → courier → seller
 6. Automate everything with `Forever` loops and watch your empire run itself ♾️
 
-Progress is saved automatically in your browser.
+Progress is saved automatically in your browser, and you can export/import your world as a backup file from the 🛒 shop. The game is an installable PWA and works offline after the first load.
 
 ## Hosting on GitHub Pages
 
@@ -75,4 +78,13 @@ The game will be live at `https://<your-username>.github.io/CodeCraft/`.
 
 ## Development
 
-Everything lives in [`index.html`](index.html) — vanilla JS + Canvas, zero dependencies. Open it in any browser to play locally.
+The game lives in [`index.html`](index.html) — vanilla JS + Canvas, zero runtime dependencies. Open it in any browser to play locally. `manifest.json` and `sw.js` provide PWA install + offline support.
+
+### Tests
+
+```bash
+node test/smoke.js          # drives the real game in headless Chromium (CDP, no npm deps)
+CHROME=/path/to/chrome node test/smoke.js   # custom browser binary
+```
+
+The suite covers the block VM (loops, if/else), Python code generation, editor undo/redo, and save/load persistence including offline fast-forward of growth and respawn timers.
