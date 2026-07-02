@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#3b2f63">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="CodeCraft — an open-world game where kids learn programming by automating robots, building factories and shaping a living world.">
+<title>CodeCraft — Program Your World</title>
+<style>
+:root{
+  --bg:#3b2f63; --panel:#241b45; --panel2:#2f2456; --ink:#f4f1ff; --ink2:#b9aee0;
+  --accent:#ffb830; --green:#54d66a; --red:#ff5d73; --blue:#5ab8ff; --purple:#b184ff;
+  --radius:16px; --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;background:var(--bg);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--ink);
+  touch-action:none;user-select:none;-webkit-user-select:none;}
+button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
+#game{position:fixed;inset:0;display:block;background:#2c7fb8;}
+/* ---------- top bar ---------- */
+#topbar{position:fixed;top:calc(var(--sat) + 8px);left:8px;right:8px;display:flex;gap:6px;align-items:center;z-index:20;pointer-events:none;}
+.chip{pointer-events:auto;display:flex;align-items:center;gap:5px;background:rgba(20,14,45,.82);backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:7px 12px;font-weight:700;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.25);}
+.chip small{font-weight:600;color:var(--ink2);}
+#topbar .spacer{flex:1;}
+.iconbtn{pointer-events:auto;width:40px;height:40px;border-radius:13px;background:rgba(20,14,45,.82);backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.14);font-size:18px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.25);transition:transform .1s;}
+.iconbtn:active{transform:scale(.9);}
+/* ---------- bottom controls ---------- */
+#bottombar{position:fixed;left:12px;right:12px;bottom:calc(var(--sab) + 12px);display:flex;align-items:flex-end;gap:10px;z-index:20;pointer-events:none;}
+#codeBtn{pointer-events:auto;flex:0 0 auto;display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#7a4dff,#b184ff);
+  border-radius:999px;padding:14px 22px;font-size:16px;font-weight:800;box-shadow:0 8px 24px rgba(122,77,255,.45);transition:transform .1s;}
+#codeBtn:active{transform:scale(.95);}
+#bottombar .spacer{flex:1;}
+#fabRun{pointer-events:auto;width:62px;height:62px;border-radius:50%;font-size:24px;font-weight:900;
+  background:linear-gradient(135deg,#37c85c,#7fe28f);box-shadow:0 8px 24px rgba(55,200,92,.45);transition:transform .1s;}
+#fabRun:active{transform:scale(.92);}
+#fabRun.running{background:linear-gradient(135deg,#ff5d73,#ff9a8b);box-shadow:0 8px 24px rgba(255,93,115,.45);}
+/* ---------- sheets ---------- */
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--panel);border-radius:22px 22px 0 0;
+  box-shadow:0 -10px 40px rgba(0,0,0,.5);transform:translateY(105%);transition:transform .28s cubic-bezier(.32,.9,.35,1);
+  display:flex;flex-direction:column;max-height:78vh;padding-bottom:var(--sab);}
+.sheet.open{transform:translateY(0);}
+.sheet .grab{width:44px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);margin:8px auto 2px;flex:0 0 auto;}
+/* ---------- editor ---------- */
+#editor{height:66vh;}
+.ed-head{display:flex;align-items:center;gap:8px;padding:6px 12px 4px;flex:0 0 auto;}
+#robotChips{display:flex;gap:6px;overflow-x:auto;flex:1;padding:2px 0;scrollbar-width:none;}
+#robotChips::-webkit-scrollbar{display:none;}
+.rchip{flex:0 0 auto;display:flex;align-items:center;gap:5px;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;
+  background:var(--panel2);border:2px solid transparent;color:var(--ink);}
+.rchip.sel{border-color:var(--accent);background:#453a77;}
+.rchip .dot{width:10px;height:10px;border-radius:50%;}
+.rchip .live{color:var(--green);font-size:10px;}
+.ed-btns{display:flex;gap:6px;flex:0 0 auto;}
+.ed-btns button{width:38px;height:38px;border-radius:12px;background:var(--panel2);font-size:16px;}
+.ed-btns .go{background:#2e9e4a;}
+.ed-btns .halt{background:#b53a4d;}
+#tabs{display:flex;gap:6px;padding:4px 12px;flex:0 0 auto;}
+#tabs button{flex:1;padding:9px;border-radius:12px;background:var(--panel2);font-weight:800;font-size:14px;color:var(--ink2);}
+#tabs button.on{background:#453a77;color:var(--ink);}
+.tabbody{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:0 12px 10px;}
+#programWrap{flex:1;overflow-y:auto;background:rgba(0,0,0,.22);border-radius:14px;padding:10px;min-height:90px;}
+#programWrap .empty{color:var(--ink2);text-align:center;padding:26px 12px;font-size:14px;line-height:1.5;}
+.blk{display:flex;align-items:center;gap:8px;background:var(--panel2);border:2px solid transparent;border-radius:12px;
+  padding:8px 10px;margin:5px 0;font-size:14px;font-weight:700;min-height:40px;}
+.blk .ic{font-size:17px;}
+.blk.sel{border-color:var(--accent);background:#4a3d80;}
+.blk.exec{border-color:var(--green);box-shadow:0 0 0 2px rgba(84,214,106,.35);}
+.blk .lbl{flex:1;}
+.blk .pbtn{background:rgba(255,255,255,.12);border-radius:8px;padding:4px 9px;font-size:13px;font-weight:800;color:var(--ink);}
+.blk .num{min-width:26px;text-align:center;font-weight:900;color:var(--accent);}
+.blk.c-basic{background:#3d5aa8;} .blk.c-basic.sel{background:#4b6cc4;}
+.blk.c-loops{background:#a86a1f;} .blk.c-loops.sel{background:#c47f2b;}
+.blk.c-logic{background:#8746a8;} .blk.c-logic.sel{background:#a058c6;}
+.blk.c-smart{background:#1f8a72;} .blk.c-smart.sel{background:#27a888;}
+.nest{margin-left:20px;border-left:3px solid rgba(255,255,255,.2);padding-left:8px;}
+.nest .hint{color:var(--ink2);font-size:12px;padding:4px 6px;}
+#selActions{display:none;gap:6px;padding:8px 0 2px;flex:0 0 auto;align-items:center;}
+#selActions.show{display:flex;}
+#selActions button{background:var(--panel2);border-radius:10px;padding:9px 13px;font-size:14px;font-weight:800;}
+#selActions .del{background:#b53a4d;}
+#selActions .note{flex:1;font-size:11px;color:var(--ink2);text-align:right;line-height:1.3;}
+#palette{flex:0 0 auto;max-height:34%;overflow-y:auto;padding:8px 2px 2px;}
+.pcat{margin-bottom:6px;}
+.pcat h4{margin:2px 0 5px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--ink2);}
+.pcat .row{display:flex;flex-wrap:wrap;gap:6px;}
+.pblk{border-radius:11px;padding:8px 12px;font-size:13px;font-weight:800;color:#fff;display:flex;gap:6px;align-items:center;transition:transform .1s;}
+.pblk:active{transform:scale(.92);}
+.pblk.c-basic{background:#3d5aa8;} .pblk.c-loops{background:#a86a1f;} .pblk.c-logic{background:#8746a8;} .pblk.c-smart{background:#1f8a72;}
+.pcat.locked .pblk{opacity:.35;filter:grayscale(.6);}
+.pcat .lockmsg{font-size:11px;color:var(--accent);font-weight:700;margin-top:3px;}
+#pyTab pre{flex:1;overflow:auto;background:#171230;border-radius:14px;padding:14px;margin:0;font-size:13.5px;line-height:1.65;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cde3ff;white-space:pre;}
+#pyTab .pynote{font-size:12px;color:var(--ink2);padding:8px 4px 2px;line-height:1.4;}
+/* ---------- mentor ---------- */
+#mentor{height:70vh;z-index:50;}
+.m-head{display:flex;align-items:center;gap:10px;padding:8px 16px;flex:0 0 auto;}
+.m-head .face{font-size:28px;}
+.m-head h3{margin:0;font-size:16px;} .m-head p{margin:0;font-size:12px;color:var(--ink2);}
+.m-head .x{margin-left:auto;}
+#chat{flex:1;overflow-y:auto;padding:6px 14px;display:flex;flex-direction:column;gap:8px;}
+.msg{max-width:86%;padding:10px 13px;border-radius:16px;font-size:14px;line-height:1.5;white-space:pre-wrap;}
+.msg.ai{background:var(--panel2);border-bottom-left-radius:4px;align-self:flex-start;}
+.msg.me{background:#7a4dff;border-bottom-right-radius:4px;align-self:flex-end;}
+#chips{display:flex;gap:6px;overflow-x:auto;padding:8px 14px 4px;flex:0 0 auto;scrollbar-width:none;}
+#chips::-webkit-scrollbar{display:none;}
+#chips button{flex:0 0 auto;background:var(--panel2);border-radius:999px;padding:8px 13px;font-size:12.5px;font-weight:700;color:var(--ink);}
+#askrow{display:flex;gap:8px;padding:8px 14px 12px;flex:0 0 auto;}
+#askrow input{flex:1;border:none;border-radius:12px;background:var(--panel2);color:var(--ink);padding:12px 14px;font-size:14px;outline:none;}
+#askrow button{background:#7a4dff;border-radius:12px;padding:0 18px;font-size:17px;}
+/* ---------- shop ---------- */
+#shopWrap{position:fixed;inset:0;z-index:45;background:rgba(10,6,25,.6);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:18px;}
+#shopWrap.open{display:flex;}
+#shop{width:min(420px,100%);max-height:80vh;overflow-y:auto;background:var(--panel);border-radius:22px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+#shop h2{margin:0 0 4px;font-size:20px;} #shop .sub{color:var(--ink2);font-size:13px;margin-bottom:12px;}
+.shopitem{display:flex;align-items:center;gap:12px;background:var(--panel2);border-radius:14px;padding:12px;margin-bottom:9px;}
+.shopitem .em{font-size:26px;}
+.shopitem .tx{flex:1;} .shopitem .tx b{font-size:14.5px;} .shopitem .tx small{display:block;color:var(--ink2);font-size:12px;margin-top:2px;line-height:1.35;}
+.shopitem button{background:var(--accent);color:#3a2800;font-weight:900;border-radius:10px;padding:9px 13px;font-size:13.5px;white-space:nowrap;}
+.shopitem button:disabled{opacity:.4;}
+.shopitem button.danger{background:#b53a4d;color:#fff;}
+#shop .closerow{display:flex;justify-content:center;margin-top:8px;}
+#shop .closerow button{background:var(--panel2);border-radius:12px;padding:11px 26px;font-weight:800;}
+/* ---------- splash ---------- */
+#splash{position:fixed;inset:0;z-index:100;background:radial-gradient(120% 100% at 50% 0%,#5a3fa8 0%,#33255e 55%,#1d1440 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;transition:opacity .5s;}
+#splash.hide{opacity:0;pointer-events:none;}
+#splash .bot{font-size:74px;animation:bob 2.4s ease-in-out infinite;}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+#splash h1{font-size:42px;margin:8px 0 2px;background:linear-gradient(90deg,#ffd66b,#ff9d6b);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:1px;}
+#splash .tag{color:#cfc4f5;font-size:15.5px;max-width:340px;line-height:1.55;margin:6px 0 26px;}
+#playBtn{background:linear-gradient(135deg,#37c85c,#7fe28f);border-radius:999px;padding:17px 54px;font-size:20px;font-weight:900;
+  box-shadow:0 10px 34px rgba(55,200,92,.5);transition:transform .1s;}
+#playBtn:active{transform:scale(.94);}
+#splash .feats{display:flex;gap:14px;margin-top:30px;flex-wrap:wrap;justify-content:center;}
+#splash .feats span{background:rgba(255,255,255,.09);border-radius:999px;padding:7px 14px;font-size:12.5px;color:#e8e2ff;font-weight:600;}
+/* ---------- toasts ---------- */
+#toasts{position:fixed;top:calc(var(--sat) + 60px);left:0;right:0;z-index:90;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;}
+.toast{background:rgba(18,12,40,.92);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:9px 18px;font-size:13.5px;font-weight:700;
+  box-shadow:0 6px 20px rgba(0,0,0,.4);animation:tin .25s ease-out;max-width:88vw;text-align:center;}
+.toast.big{border-color:var(--accent);background:rgba(60,40,5,.95);font-size:15px;padding:12px 22px;border-radius:16px;}
+@keyframes tin{from{transform:translateY(-14px);opacity:0}to{transform:translateY(0);opacity:1}}
+/* ---------- desktop ---------- */
+@media (min-width: 920px){
+  #editor{left:auto;right:0;top:0;bottom:0;width:430px;max-height:none;height:auto;border-radius:22px 0 0 22px;transform:translateX(105%);}
+  #editor.open{transform:translateX(0);}
+  #editor .grab{display:none;}
+  #palette{max-height:40%;}
+  #mentor{left:auto;width:430px;border-radius:22px 22px 0 0;margin-right:0;}
+}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="topbar">
+  <div class="chip">🪙 <span id="coinsEl">0</span></div>
+  <div class="chip" id="bagChip">🎒 <span id="bagEl">0/8</span></div>
+  <div class="spacer"></div>
+  <button class="iconbtn" id="shopBtn" title="Shop">🛒</button>
+  <button class="iconbtn" id="mentorBtn" title="AI Mentor">💡</button>
+  <button class="iconbtn" id="centerBtn" title="Find my robot">🎯</button>
+  <button class="iconbtn" id="muteBtn" title="Sound">🔊</button>
+</div>
+
+<div id="bottombar">
+  <button id="codeBtn">🧩 Code</button>
+  <div class="spacer"></div>
+  <button id="fabRun">▶</button>
+</div>
+
+<!-- ============ CODE EDITOR ============ -->
+<div class="sheet" id="editor">
+  <div class="grab"></div>
+  <div class="ed-head">
+    <div id="robotChips"></div>
+    <div class="ed-btns">
+      <button class="go" id="runBtn" title="Run">▶</button>
+      <button class="halt" id="stopBtn" title="Stop">⏹</button>
+      <button id="edClose" title="Close">✕</button>
+    </div>
+  </div>
+  <div id="tabs">
+    <button data-tab="blocks" class="on">🧩 Blocks</button>
+    <button data-tab="python">🐍 Python</button>
+  </div>
+  <div class="tabbody" id="blocksTab">
+    <div id="programWrap"><div id="programEl"></div></div>
+    <div id="selActions">
+      <button id="mvUp">↑</button><button id="mvDn">↓</button><button class="del" id="delBlk">🗑</button>
+      <div class="note" id="insNote"></div>
+    </div>
+    <div id="palette"></div>
+  </div>
+  <div class="tabbody" id="pyTab" style="display:none">
+    <pre id="pyCode"></pre>
+    <div class="pynote">🐍 This is your block program written in Python — the same language real engineers use! Your blocks and this code always match.</div>
+  </div>
+</div>
+
+<!-- ============ AI MENTOR ============ -->
+<div class="sheet" id="mentor">
+  <div class="grab"></div>
+  <div class="m-head">
+    <div class="face">🦉</div>
+    <div><h3>Byte — your AI mentor</h3><p>Ask me anything about coding or your robots!</p></div>
+    <button class="iconbtn x" id="mClose">✕</button>
+  </div>
+  <div id="chat"></div>
+  <div id="chips"></div>
+  <div id="askrow">
+    <input id="askInput" placeholder="Ask Byte something…" autocomplete="off">
+    <button id="askSend">➤</button>
+  </div>
+</div>
+
+<!-- ============ SHOP ============ -->
+<div id="shopWrap">
+  <div id="shop">
+    <h2>🛒 Robo-Mart</h2>
+    <div class="sub">Sell resources near the market 🏪, then power up your automation empire!</div>
+    <div id="shopItems"></div>
+    <div class="closerow"><button id="shopClose">Done</button></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<!-- ============ SPLASH ============ -->
+<div id="splash">
+  <div class="bot">🤖</div>
+  <h1>CodeCraft</h1>
+  <div class="tag">A living open world where <b>everything runs on your code</b>.<br>Program robots. Automate everything. Build your empire.</div>
+  <button id="playBtn">▶ Play</button>
+  <div class="feats"><span>🌍 Open world</span><span>🧩 Block coding</span><span>🐍 Real Python</span><span>⚙️ Automation</span><span>🦉 AI mentor</span></div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   CodeCraft — open-world programming game. Single file, no dependencies.
+   ===================================================================== */
+window.addEventListener("error", e => {
+  try { document.title = "JSERR: " + e.message; toast("⚠️ " + e.message); } catch (_) {}
+});
+
+/* ---------------- utils ---------------- */
+const $ = id => document.getElementById(id);
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const lerp=(a,b,t)=>a+(b-a)*t;
+let uidN=1; const uid=()=>uidN++;
+
+/* ---------------- constants ---------------- */
+const W=80, H=80, TILE=48;
+const DX=[0,1,0,-1], DY=[-1,0,1,0];
+const T_WATER=0,T_SAND=1,T_GRASS=2,T_ROCKY=3;
+const RES={wood:{em:"🪵",price:2},stone:{em:"🪨",price:3},iron:{em:"⛓️",price:6},crystal:{em:"💎",price:15}};
+const ROBOT_COLORS=["#ffb830","#5ab8ff","#ff5d73","#54d66a","#b184ff","#ff9d6b","#4dd4c0","#f06bd4"];
+const SAVE_KEY="codecraft_save_v1";
+
+/* ---------------- state ---------------- */
+let terrain, objects, robots=[], animals=[], respawnQ=[];
+let seed=0, coins=0, stash={wood:0,stone:0,iron:0,crystal:0};
+let totals={collected:0,earned:0};
+let unlocks={loops:false,logic:false,smart:false};
+let homePos={x:0,y:0}, marketPos={x:0,y:0};
+let selRobot=0, muted=false, isNew=true;
+const key=(x,y)=>y*W+x;
+
+/* ---------------- world generation ---------------- */
+function noiseFn(rnd,cell){
+  const gw=Math.floor(W/cell)+3, gh=Math.floor(H/cell)+3;
+  const v=new Float32Array(gw*gh); for(let i=0;i<v.length;i++)v[i]=rnd();
+  return (x,y)=>{
+    const fx=x/cell, fy=y/cell, x0=Math.floor(fx), y0=Math.floor(fy);
+    const tx=fx-x0, ty=fy-y0, sx=tx*tx*(3-2*tx), sy=ty*ty*(3-2*ty);
+    const a=v[y0*gw+x0], b=v[y0*gw+x0+1], c=v[(y0+1)*gw+x0], d=v[(y0+1)*gw+x0+1];
+    return a+(b-a)*sx+(c-a)*sy+(a-b-c+d)*sx*sy;
+  };
+}
+function buildTerrain(){
+  const rnd=mulberry32(seed);
+  const n1=noiseFn(rnd,11), n2=noiseFn(rnd,5);
+  terrain=new Uint8Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const n=.62*n1(x,y)+.38*n2(x,y);
+    terrain[key(x,y)] = n<.34?T_WATER : n<.40?T_SAND : n<.70?T_GRASS : T_ROCKY;
+  }
+  homePos={x:W>>1,y:H>>1}; marketPos={x:(W>>1)+2,y:H>>1};
+  for(let y=homePos.y-4;y<=homePos.y+4;y++)for(let x=homePos.x-4;x<=homePos.x+4;x++)
+    if(x>=0&&y>=0&&x<W&&y<H) terrain[key(x,y)]=T_GRASS;
+}
+function genObjects(){
+  const rnd=mulberry32(seed^0x9e37);
+  objects=new Map();
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    if(Math.abs(x-homePos.x)<=3&&Math.abs(y-homePos.y)<=3)continue;
+    const t=terrain[key(x,y)], r=rnd();
+    if(t===T_GRASS){
+      if(r<.13)objects.set(key(x,y),{type:"tree",stage:2});
+      else if(r<.17)objects.set(key(x,y),{type:"flower"});
+    }else if(t===T_ROCKY){
+      if(r<.16)objects.set(key(x,y),{type:"rock"});
+      else if(r<.24)objects.set(key(x,y),{type:"iron"});
+      else if(r<.255)objects.set(key(x,y),{type:"crystal"});
+    }
+  }
+  objects.set(key(homePos.x,homePos.y),{type:"home"});
+  objects.set(key(marketPos.x,marketPos.y),{type:"market"});
+  objects.set(key(homePos.x-2,homePos.y),{type:"chest"});
+}
+function genAnimals(){
+  const rnd=mulberry32(seed^0x51f1);
+  animals=[]; const kinds=["🐰","🐑","🐰","🦆","🐿️"];
+  let tries=0;
+  while(animals.length<16&&tries++<600){
+    const x=1+Math.floor(rnd()*(W-2)), y=1+Math.floor(rnd()*(H-2));
+    if(terrain[key(x,y)]===T_GRASS&&!objects.has(key(x,y)))
+      animals.push({x,y,rx:x,ry:y,em:kinds[animals.length%kinds.length],next:rnd()*2000});
+  }
+}
+
+/* ---------------- robots ---------------- */
+function makeRobot(x,y,name){
+  return {id:uid(),x,y,rx:x,ry:y,dir:1,name:name||("Robo-"+(robots.length+1)),
+    color:ROBOT_COLORS[robots.length%ROBOT_COLORS.length],
+    inv:{wood:0,stone:0,iron:0,crystal:0},cap:8,speed:1,
+    program:[],frames:null,running:false,wait:0,path:null,blocked:false,curUid:null,nextAct:0};
+}
+const bagCount=r=>r.inv.wood+r.inv.stone+r.inv.iron+r.inv.crystal;
+const R=()=>robots[selRobot];
+
+/* ---------------- blocks ---------------- */
+const CONDS=["treeAhead","rockAhead","ironAhead","waterAhead","blocked","bagFull","bagEmpty"];
+const COND_LBL={treeAhead:"tree ahead 🌳",rockAhead:"rock ahead 🪨",ironAhead:"iron ahead ⛓️",waterAhead:"water ahead 🌊",blocked:"blocked 🚧",bagFull:"bag full 🎒",bagEmpty:"bag empty 🕳️"};
+const BUILDS=["sapling","bridge","chest"];
+const BUILD_LBL={sapling:"🌱 sapling (1🪵)",bridge:"🌉 bridge (2🪨)",chest:"📦 chest (5🪵)"};
+const TARGETS=["tree","rock","iron","crystal"];
+const TGT_EM={tree:"🌳",rock:"🪨",iron:"⛓️",crystal:"💎"};
+const DEFS={
+  move:{cat:"basic",ic:"⬆️",lbl:"Move"},
+  turnL:{cat:"basic",ic:"↩️",lbl:"Turn Left"},
+  turnR:{cat:"basic",ic:"↪️",lbl:"Turn Right"},
+  collect:{cat:"basic",ic:"✋",lbl:"Collect"},
+  drop:{cat:"basic",ic:"⤵️",lbl:"Drop"},
+  build:{cat:"basic",ic:"🔨",lbl:"Build"},
+  wait:{cat:"basic",ic:"⏱️",lbl:"Wait"},
+  repeat:{cat:"loops",ic:"🔁",lbl:"Repeat",container:true},
+  forever:{cat:"loops",ic:"♾️",lbl:"Forever",container:true},
+  "if":{cat:"logic",ic:"❓",lbl:"If",container:true},
+  faceNearest:{cat:"smart",ic:"🧭",lbl:"Face Nearest"},
+  goHome:{cat:"smart",ic:"🏠",lbl:"Go Home"},
+  sellAll:{cat:"smart",ic:"💰",lbl:"Sell All"},
+};
+const CATS=[
+  {id:"basic",name:"Basics",types:["move","turnL","turnR","collect","drop","build","wait"],lock:null},
+  {id:"loops",name:"Loops",types:["repeat","forever"],lock:"loops",need:"Collect 5 resources to unlock 🔁 loops!"},
+  {id:"logic",name:"Logic",types:["if"],lock:"logic",need:"Sell something at the market 🏪 to unlock ❓ logic!"},
+  {id:"smart",name:"Smart",types:["faceNearest","goHome","sellAll"],lock:"smart",need:"Earn 150 🪙 total (or own 2 robots) to unlock 🧭 smart blocks!"},
+];
+function newBlock(t){
+  const b={t,uid:uid()};
+  if(t==="repeat"){b.n=3;b.body=[];}
+  if(t==="forever"){b.body=[];}
+  if(t==="if"){b.cond="treeAhead";b.body=[];}
+  if(t==="wait")b.n=1;
+  if(t==="build")b.opt="sapling";
+  if(t==="faceNearest")b.opt="tree";
+  return b;
+}
+
+/* ---------------- world helpers ---------------- */
+const inB=(x,y)=>x>=0&&y>=0&&x<W&&y<H;
+function solidObj(o){return o&&(o.type==="rock"||o.type==="iron"||o.type==="crystal"||o.type==="home"||o.type==="market"||o.type==="chest"||(o.type==="tree"&&o.stage>=1));}
+function canWalk(x,y){
+  if(!inB(x,y))return false;
+  const o=objects.get(key(x,y));
+  if(terrain[key(x,y)]===T_WATER)return o&&o.type==="bridge";
+  return !solidObj(o);
+}
+function ahead(r){return {x:r.x+DX[r.dir],y:r.y+DY[r.dir]};}
+function evalCond(r,c){
+  const a=ahead(r), o=inB(a.x,a.y)?objects.get(key(a.x,a.y)):null;
+  switch(c){
+    case "treeAhead":return !!(o&&o.type==="tree"&&o.stage===2);
+    case "rockAhead":return !!(o&&o.type==="rock");
+    case "ironAhead":return !!(o&&o.type==="iron");
+    case "waterAhead":return inB(a.x,a.y)&&terrain[key(a.x,a.y)]===T_WATER&&!(o&&o.type==="bridge");
+    case "blocked":return !canWalk(a.x,a.y);
+    case "bagFull":return bagCount(r)>=r.cap;
+    case "bagEmpty":return bagCount(r)===0;
+  } return false;
+}
+
+/* ---------------- interpreter ---------------- */
+function startRobot(r){
+  if(!r.program.length){toast("🧩 "+r.name+" has no program yet! Open the Code editor.");return;}
+  r.frames=[{blocks:r.program,i:0,reps:1}];r.running=true;r.wait=0;r.path=null;r.blocked=false;
+  sfx(520,.06);updateChips();updateFab();
+}
+function stopRobot(r){r.running=false;r.frames=null;r.curUid=null;r.path=null;updateChips();updateFab();}
+function tickRobot(r){
+  if(!r.running)return;
+  if(r.wait>0){r.wait--;return;}
+  if(r.path&&r.path.length){
+    const s=r.path.shift();
+    faceTo(r,s.x,s.y);
+    if(canWalk(s.x,s.y)){r.x=s.x;r.y=s.y;}else{r.path=null;r.blocked=true;}
+    return;
+  }
+  let guard=0;
+  while(guard++<80){
+    const fr=r.frames&&r.frames[r.frames.length-1];
+    if(!fr){stopRobot(r);return;}
+    if(fr.i>=fr.blocks.length){
+      if(fr.reps===Infinity){fr.i=0;if(!fr.blocks.length)return;continue;}
+      if(fr.reps>1){fr.reps--;fr.i=0;continue;}
+      r.frames.pop();
+      const p=r.frames[r.frames.length-1];
+      if(p){p.i++;continue;}
+      stopRobot(r);return;
+    }
+    const b=fr.blocks[fr.i];
+    if(b.t==="repeat"){ if(!b.body.length||b.n<1){fr.i++;continue;} r.frames.push({blocks:b.body,i:0,reps:Math.max(1,b.n|0)});continue;}
+    if(b.t==="forever"){ r.curUid=b.uid; if(!b.body.length)return; r.frames.push({blocks:b.body,i:0,reps:Infinity});continue;}
+    if(b.t==="if"){ if(evalCond(r,b.cond)&&b.body.length){r.curUid=b.uid;r.frames.push({blocks:b.body,i:0,reps:1});}else fr.i++; continue;}
+    r.curUid=b.uid; doAction(r,b); fr.i++; return;
+  }
+}
+function faceTo(r,x,y){
+  if(x>r.x)r.dir=1;else if(x<r.x)r.dir=3;else if(y>r.y)r.dir=2;else if(y<r.y)r.dir=0;
+}
+function doAction(r,b){
+  const a=ahead(r), k=inB(a.x,a.y)?key(a.x,a.y):-1, o=k>=0?objects.get(k):null;
+  r.blocked=false;
+  switch(b.t){
+    case "move":
+      if(canWalk(a.x,a.y)){r.x=a.x;r.y=a.y;}
+      else{r.blocked=true;sfxIf(r,150,.05);}
+      break;
+    case "turnL": r.dir=(r.dir+3)%4; break;
+    case "turnR": r.dir=(r.dir+1)%4; break;
+    case "wait": r.wait=Math.max(0,(b.n|0)-1); break;
+    case "collect":{
+      if(!o){r.blocked=true;break;}
+      if(bagCount(r)>=r.cap){r.blocked=true;sfxIf(r,150,.05);mentorFlag("bagFull");break;}
+      let got=null;
+      if(o.type==="tree"&&o.stage===2){got="wood";objects.delete(k);respawnQ.push({at:now+25000,x:a.x,y:a.y,type:"tree"});}
+      else if(o.type==="rock"){got="stone";objects.delete(k);respawnQ.push({at:now+50000,x:a.x,y:a.y,type:"rock"});}
+      else if(o.type==="iron"){got="iron";objects.delete(k);respawnQ.push({at:now+70000,x:a.x,y:a.y,type:"iron"});}
+      else if(o.type==="crystal"){got="crystal";objects.delete(k);respawnQ.push({at:now+120000,x:a.x,y:a.y,type:"crystal"});}
+      else if(o.type==="item"){
+        const space=r.cap-bagCount(r), take=Math.min(space,o.n);
+        r.inv[o.item]+=take;o.n-=take;if(o.n<=0)objects.delete(k);
+        totals.collected+=take;got="__stack";
+      }
+      if(got&&got!=="__stack"){r.inv[got]++;totals.collected++;}
+      if(got){sfxIf(r,660,.06);checkUnlocks();}else r.blocked=true;
+      break;}
+    case "drop":{
+      if(o&&o.type==="chest"){ for(const res in r.inv){stash[res]+=r.inv[res];r.inv[res]=0;} sfxIf(r,500,.06); break;}
+      if(o&&o.type==="market"){ sellInv(r); break;}
+      const order=Object.keys(r.inv).sort((p,q)=>r.inv[q]-r.inv[p]);
+      const it=order.find(x=>r.inv[x]>0);
+      if(!it){r.blocked=true;break;}
+      if(!inB(a.x,a.y)||terrain[k]===T_WATER){r.blocked=true;break;}
+      if(!o){objects.set(k,{type:"item",item:it,n:1});r.inv[it]--;}
+      else if(o.type==="item"&&o.item===it){o.n++;r.inv[it]--;}
+      else r.blocked=true;
+      break;}
+    case "build":{
+      if(!inB(a.x,a.y)||o){r.blocked=true;break;}
+      if(b.opt==="sapling"){
+        if(terrain[k]!==T_GRASS||r.inv.wood<1){r.blocked=true;break;}
+        r.inv.wood--;objects.set(k,{type:"tree",stage:0,growAt:now+20000});
+      }else if(b.opt==="bridge"){
+        if(terrain[k]!==T_WATER||r.inv.stone<2){r.blocked=true;break;}
+        r.inv.stone-=2;objects.set(k,{type:"bridge"});
+      }else if(b.opt==="chest"){
+        if(terrain[k]===T_WATER||r.inv.wood<5){r.blocked=true;break;}
+        r.inv.wood-=5;objects.set(k,{type:"chest"});
+      }
+      if(!r.blocked)sfxIf(r,420,.07);
+      break;}
+    case "faceNearest":{
+      const t=findNearest(r,b.opt);
+      if(t)faceTo(r,t.x,t.y);else r.blocked=true;
+      break;}
+    case "goHome":{
+      const p=pathTo(r,homePos.x,homePos.y);
+      if(p)r.path=p;else r.blocked=true;
+      break;}
+    case "sellAll":{
+      if(Math.abs(r.x-marketPos.x)<=2&&Math.abs(r.y-marketPos.y)<=2)sellInv(r);
+      else{r.blocked=true;mentorFlag("farFromMarket");}
+      break;}
+  }
+}
+function sellInv(r){
+  let sum=0;
+  for(const res in r.inv){sum+=r.inv[res]*RES[res].price;r.inv[res]=0;}
+  if(sum>0){coins+=sum;totals.earned+=sum;toast("💰 "+r.name+" sold goods for "+sum+" 🪙");sfx(880,.09);sfx(1100,.09,.1);checkUnlocks();updateHud();}
+}
+function findNearest(r,what){
+  let best=null,bd=1e9;
+  const R2=14;
+  for(let dy=-R2;dy<=R2;dy++)for(let dx=-R2;dx<=R2;dx++){
+    const x=r.x+dx,y=r.y+dy;if(!inB(x,y))continue;
+    const o=objects.get(key(x,y));if(!o)continue;
+    let ok=false;
+    if(what==="tree")ok=o.type==="tree"&&o.stage===2;
+    else ok=o.type===what;
+    if(!ok)continue;
+    const d=Math.abs(dx)+Math.abs(dy);
+    if(d<bd&&d>0){bd=d;best={x,y};}
+  }
+  return best;
+}
+function pathTo(r,tx,ty){
+  // BFS to any tile adjacent to (tx,ty)
+  const seen=new Uint8Array(W*H), prev=new Int32Array(W*H).fill(-1);
+  const q=[key(r.x,r.y)];seen[q[0]]=1;
+  let found=-1,n=0;
+  while(q.length&&n++<6000){
+    const c=q.shift(), cx=c%W, cy=(c/W)|0;
+    if(Math.abs(cx-tx)+Math.abs(cy-ty)===1){found=c;break;}
+    for(let d=0;d<4;d++){
+      const nx=cx+DX[d],ny=cy+DY[d];
+      if(!inB(nx,ny))continue;
+      const nk=key(nx,ny);
+      if(seen[nk]||!canWalk(nx,ny))continue;
+      seen[nk]=1;prev[nk]=c;q.push(nk);
+    }
+  }
+  if(found<0)return null;
+  const path=[];let c=found;
+  while(c!==key(r.x,r.y)&&c>=0){path.unshift({x:c%W,y:(c/W)|0});c=prev[c];}
+  return path;
+}
+
+/* ---------------- python view ---------------- */
+function toPy(list,ind){
+  const P=[];
+  for(const b of list){
+    switch(b.t){
+      case "move":P.push(ind+"robot.move()");break;
+      case "turnL":P.push(ind+"robot.turn_left()");break;
+      case "turnR":P.push(ind+"robot.turn_right()");break;
+      case "collect":P.push(ind+"robot.collect()");break;
+      case "drop":P.push(ind+"robot.drop()");break;
+      case "wait":P.push(ind+"robot.wait("+b.n+")");break;
+      case "build":P.push(ind+'robot.build("'+b.opt+'")');break;
+      case "faceNearest":P.push(ind+'robot.face_nearest("'+b.opt+'")');break;
+      case "goHome":P.push(ind+"robot.go_home()");break;
+      case "sellAll":P.push(ind+"robot.sell_all()");break;
+      case "repeat":
+        P.push(ind+"for i in range("+b.n+"):");
+        P.push(b.body.length?toPy(b.body,ind+"    "):ind+"    pass");break;
+      case "forever":
+        P.push(ind+"while True:");
+        P.push(b.body.length?toPy(b.body,ind+"    "):ind+"    pass");break;
+      case "if":
+        P.push(ind+"if "+pyCond(b.cond)+":");
+        P.push(b.body.length?toPy(b.body,ind+"    "):ind+"    pass");break;
+    }
+  }
+  return P.join("\n");
+}
+function pyCond(c){
+  switch(c){
+    case "treeAhead":return 'robot.sees("tree")';
+    case "rockAhead":return 'robot.sees("rock")';
+    case "ironAhead":return 'robot.sees("iron")';
+    case "waterAhead":return 'robot.sees("water")';
+    case "blocked":return "robot.is_blocked()";
+    case "bagFull":return "robot.bag_full()";
+    case "bagEmpty":return "robot.bag_empty()";
+  } return "True";
+}
+function renderPy(){
+  const r=R();
+  $("pyCode").textContent = "# "+r.name+" — program\n" + (r.program.length?toPy(r.program,""):"# (no blocks yet — build something in the Blocks tab!)");
+}
+
+/* ---------------- editor UI ---------------- */
+let selBlock=null;
+function findList(list,blk){
+  for(let i=0;i<list.length;i++){
+    if(list[i]===blk)return {list,i};
+    if(list[i].body){const f=findList(list[i].body,blk);if(f)return f;}
+  }
+  return null;
+}
+function programChanged(){
+  const r=R();
+  if(r.running){stopRobot(r);toast("⏹ "+r.name+" stopped — program changed");}
+  renderProgram();renderPy();saveSoon();
+}
+function addBlock(t){
+  const b=newBlock(t), r=R();
+  if(selBlock&&selBlock.body){selBlock.body.push(b);}
+  else if(selBlock){const f=findList(r.program,selBlock);if(f)f.list.splice(f.i+1,0,b);else r.program.push(b);}
+  else r.program.push(b);
+  sfx(440,.04);
+  programChanged();
+}
+function renderProgram(){
+  const r=R(), root=$("programEl");
+  root.innerHTML="";
+  if(!r.program.length){
+    root.innerHTML='<div class="empty">🧩 Tap blocks below to program <b>'+r.name+'</b>!<br>Try: <b>Repeat 3</b> → put <b>Move</b> inside → then <b>Collect</b>.</div>';
+  }else renderList(r.program,root);
+  updateSelUI();
+}
+function renderList(list,parent){
+  for(const b of list){
+    const d=DEFS[b.t];
+    const row=document.createElement("div");
+    row.className="blk c-"+d.cat+(b===selBlock?" sel":"");
+    row.dataset.uid=b.uid;
+    let inner='<span class="ic">'+d.ic+'</span><span class="lbl">'+d.lbl+'</span>';
+    if(b.t==="repeat"||b.t==="wait"){
+      inner+='<button class="pbtn" data-p="dec">−</button><span class="num">'+b.n+'</span><button class="pbtn" data-p="inc">＋</button>';
+    }
+    if(b.t==="if")inner+='<button class="pbtn" data-p="cond">'+COND_LBL[b.cond]+'</button>';
+    if(b.t==="build")inner+='<button class="pbtn" data-p="build">'+BUILD_LBL[b.opt]+'</button>';
+    if(b.t==="faceNearest")inner+='<button class="pbtn" data-p="tgt">'+TGT_EM[b.opt]+' '+b.opt+'</button>';
+    row.innerHTML=inner;
+    row.addEventListener("click",e=>{
+      const p=e.target.dataset&&e.target.dataset.p;
+      if(p){
+        if(p==="inc")b.n=Math.min(99,b.n+1);
+        if(p==="dec")b.n=Math.max(1,b.n-1);
+        if(p==="cond")b.cond=CONDS[(CONDS.indexOf(b.cond)+1)%CONDS.length];
+        if(p==="build")b.opt=BUILDS[(BUILDS.indexOf(b.opt)+1)%BUILDS.length];
+        if(p==="tgt")b.opt=TARGETS[(TARGETS.indexOf(b.opt)+1)%TARGETS.length];
+        programChanged();e.stopPropagation();return;
+      }
+      selBlock=(selBlock===b)?null:b;
+      renderProgram();
+      e.stopPropagation();
+    });
+    parent.appendChild(row);
+    if(b.body){
+      const nest=document.createElement("div");
+      nest.className="nest";
+      if(!b.body.length)nest.innerHTML='<div class="hint">'+(b===selBlock?"👇 new blocks go in here":"tap "+d.lbl+" then add blocks inside")+'</div>';
+      renderList(b.body,nest);
+      parent.appendChild(nest);
+    }
+  }
+}
+function updateSelUI(){
+  const bar=$("selActions");
+  if(selBlock){
+    bar.classList.add("show");
+    $("insNote").textContent = selBlock.body ? "new blocks → inside "+DEFS[selBlock.t].lbl : "new blocks → after selection";
+  }else bar.classList.remove("show");
+}
+$("delBlk").addEventListener("click",()=>{
+  if(!selBlock)return;
+  const f=findList(R().program,selBlock);
+  if(f)f.list.splice(f.i,1);
+  selBlock=null;programChanged();
+});
+function moveSel(dir){
+  if(!selBlock)return;
+  const f=findList(R().program,selBlock);
+  if(!f)return;
+  const j=f.i+dir;
+  if(j<0||j>=f.list.length)return;
+  f.list.splice(f.i,1);f.list.splice(j,0,selBlock);
+  programChanged();
+}
+$("mvUp").addEventListener("click",()=>moveSel(-1));
+$("mvDn").addEventListener("click",()=>moveSel(1));
+
+function renderPalette(){
+  const pal=$("palette");pal.innerHTML="";
+  for(const cat of CATS){
+    const locked=cat.lock&&!unlocks[cat.lock];
+    const div=document.createElement("div");
+    div.className="pcat"+(locked?" locked":"");
+    let html='<h4>'+cat.name+(locked?" 🔒":"")+'</h4><div class="row">';
+    for(const t of cat.types){
+      const d=DEFS[t];
+      html+='<button class="pblk c-'+d.cat+'" data-t="'+t+'" '+(locked?"disabled":"")+'>'+d.ic+' '+d.lbl+'</button>';
+    }
+    html+='</div>';
+    if(locked)html+='<div class="lockmsg">'+cat.need+'</div>';
+    div.innerHTML=html;
+    pal.appendChild(div);
+  }
+  pal.querySelectorAll(".pblk").forEach(btn=>btn.addEventListener("click",()=>addBlock(btn.dataset.t)));
+}
+function updateChips(){
+  const wrap=$("robotChips");wrap.innerHTML="";
+  robots.forEach((r,i)=>{
+    const c=document.createElement("button");
+    c.className="rchip"+(i===selRobot?" sel":"");
+    c.innerHTML='<span class="dot" style="background:'+r.color+'"></span>'+r.name+(r.running?' <span class="live">●RUN</span>':'');
+    c.addEventListener("click",()=>{selRobot=i;selBlock=null;renderProgram();renderPy();updateChips();updateHud();updateFab();follow=true;});
+    wrap.appendChild(c);
+  });
+  const add=document.createElement("button");
+  add.className="rchip";add.textContent="＋ robot";
+  add.addEventListener("click",openShop);
+  wrap.appendChild(add);
+}
+
+/* ---------------- unlocks ---------------- */
+function checkUnlocks(){
+  if(!unlocks.loops&&totals.collected>=5){unlocks.loops=true;bigToast("🔁 LOOPS UNLOCKED! Repeat & Forever blocks are yours!");sfx(660,.1);sfx(880,.1,.12);sfx(1100,.12,.24);renderPalette();}
+  if(!unlocks.logic&&totals.earned>=1){unlocks.logic=true;bigToast("❓ LOGIC UNLOCKED! Your robots can now make decisions with If!");sfx(660,.1);sfx(880,.1,.12);sfx(1100,.12,.24);renderPalette();}
+  if(!unlocks.smart&&(totals.earned>=150||robots.length>=2)){unlocks.smart=true;bigToast("🧭 SMART BLOCKS UNLOCKED! Face Nearest, Go Home & Sell All!");sfx(660,.1);sfx(880,.1,.12);sfx(1320,.14,.24);renderPalette();}
+}
+
+/* ---------------- shop ---------------- */
+function openShop(){renderShop();$("shopWrap").classList.add("open");}
+function renderShop(){
+  const r=R(), el=$("shopItems");
+  const stashSum=Object.keys(stash).reduce((s,k2)=>s+stash[k2]*RES[k2].price,0);
+  const items=[
+    {em:"🤖",b:"New Robot — 100 🪙",s:"More robots = more automation! It spawns at your home base.",
+     can:coins>=100,fn(){coins-=100;const nr=makeRobot(homePos.x,homePos.y+1);robots.push(nr);selRobot=robots.length-1;toast("🤖 "+nr.name+" joined your team!");checkUnlocks();}},
+    {em:"🎒",b:"Bigger Bag +4 — 60 🪙",s:r.name+" carries "+r.cap+" now. Fewer trips home!",
+     can:coins>=60,fn(){coins-=60;r.cap+=4;toast("🎒 "+r.name+" bag upgraded to "+r.cap+"!");}},
+    {em:"⚡",b:"Speed Boost — 80 🪙",s:r.name+" runs code 25% faster. (x"+r.speed.toFixed(2)+" now, max x2)",
+     can:coins>=80&&r.speed<2,fn(){coins-=80;r.speed=Math.min(2,r.speed*1.25);toast("⚡ "+r.name+" is faster!");}},
+    {em:"📦",b:"Sell chest storage — +"+stashSum+" 🪙",s:"Wood "+stash.wood+" · Stone "+stash.stone+" · Iron "+stash.iron+" · Crystal "+stash.crystal,
+     can:stashSum>0,fn(){coins+=stashSum;totals.earned+=stashSum;stash={wood:0,stone:0,iron:0,crystal:0};toast("💰 Storage sold for "+stashSum+" 🪙");sfx(880,.1);checkUnlocks();}},
+  ];
+  el.innerHTML="";
+  for(const it of items){
+    const d=document.createElement("div");d.className="shopitem";
+    d.innerHTML='<div class="em">'+it.em+'</div><div class="tx"><b>'+it.b+'</b><small>'+it.s+'</small></div>';
+    const btn=document.createElement("button");btn.textContent="Get";btn.disabled=!it.can;
+    btn.addEventListener("click",()=>{it.fn();updateHud();updateChips();renderShop();saveSoon();});
+    d.appendChild(btn);el.appendChild(d);
+  }
+  const rd=document.createElement("div");rd.className="shopitem";
+  rd.innerHTML='<div class="em">🌍</div><div class="tx"><b>New World</b><small>Erase everything and generate a fresh world.</small></div>';
+  const rb=document.createElement("button");rb.textContent="Reset";rb.className="danger";
+  rb.addEventListener("click",()=>{if(confirm("Really erase your world, robots and coins?")){localStorage.removeItem(SAVE_KEY);location.reload();}});
+  rd.appendChild(rb);el.appendChild(rd);
+}
+$("shopBtn").addEventListener("click",openShop);
+$("shopClose").addEventListener("click",()=>$("shopWrap").classList.remove("open"));
+$("shopWrap").addEventListener("click",e=>{if(e.target.id==="shopWrap")$("shopWrap").classList.remove("open");});
+
+/* ---------------- mentor ---------------- */
+const IDEAS=[
+  "🌲 Wood farm: Forever → Face Nearest tree → If tree ahead: Collect, else Move. Watch it harvest forever!",
+  "🚚 Delivery bot: one robot drops wood in a line, a second robot collects it and carries it to the market. A supply chain!",
+  "🌉 Bridge builder: collect 10 stone, walk to a river, and use Build → bridge to cross into new lands!",
+  "🌱 Tree planter: Repeat 5 → Build sapling → Move. Plant a forest, then harvest it later — renewable resources!",
+  "💎 Crystal hunter: crystals hide in rocky mountains and sell for 15 🪙 each. Program an expedition!",
+  "🏭 Full factory: harvester bot fills its bag → Go Home → face the chest → Drop → back to work. Sell the chest storage in the shop!",
+  "🤖 Robot fleet: buy more robots and give each one a different job — miner, lumberjack, courier, seller.",
+  "♾️ The dream: a program you never have to touch again. Coins roll in while you just watch your world work!",
+];
+const BRAIN=[
+  {k:["move","moving","stuck","walk"],a:"To move, add the ⬆️ Move block — your robot walks 1 tile in the direction it faces. Use ↩️/↪️ to turn first!\n\nIf it's not moving, check:\n1️⃣ Did you press ▶ Run?\n2️⃣ Is something blocking it (trees, rocks, water)?\n3️⃣ Does the program have blocks in it?"},
+  {k:["loop","repeat","forever"],a:"Loops repeat actions so YOU don't have to! 🔁\n\n• Repeat 5 → runs its inside blocks 5 times\n• Forever ♾️ → runs them until you press Stop — perfect for automation!\n\nIn Python it looks like:\nfor i in range(5):\n    robot.move()\n\nTap a loop block, then tap other blocks — they go INSIDE it."},
+  {k:["if","condition","logic","decide"],a:"❓ If blocks let robots make decisions!\n\nExample: If tree ahead → Collect. Otherwise the robot skips it.\n\nCombine with Forever for smart bots:\n♾️ Forever\n  ❓ If tree ahead → ✋ Collect\n  ⬆️ Move\n\nThat robot harvests every tree it walks past!"},
+  {k:["coin","money","sell","earn","market","buy"],a:"💰 Earning coins:\n1️⃣ Collect resources (wood 2🪙, stone 3🪙, iron 6🪙, crystal 15🪙)\n2️⃣ Walk your robot next to the market 🏪 (near your home)\n3️⃣ Face it and use ⤵️ Drop — or the 💰 Sell All smart block\n\nSpend coins in the 🛒 shop on robots and upgrades!"},
+  {k:["collect","chop","mine","wood","tree","resource"],a:"✋ Collect grabs whatever is directly in FRONT of your robot: full-grown trees 🌳 → wood, rocks 🪨 → stone, ⛓️ iron, 💎 crystal.\n\nFace the thing first (turn blocks), and make sure your bag isn't full — check 🎒 at the top!"},
+  {k:["build","bridge","chest","sapling","plant"],a:"🔨 Build creates things on the tile ahead:\n• 🌱 Sapling (1 wood) — grows into a tree. Renewable farming!\n• 🌉 Bridge (2 stone) — cross water into new lands!\n• 📦 Chest (5 wood) — Drop while facing a chest to store items, then sell storage in the shop."},
+  {k:["python","code","real","text"],a:"🐍 Tap the Python tab in the editor! Every block you place is shown as real Python code — the same language used at NASA, Google and in AI.\n\nrobot.move() is a function call, for i in range(3): is a loop… you're already writing it!"},
+  {k:["fast","faster","speed","slow","optimi"],a:"⚡ Ways to go faster:\n1️⃣ Buy Speed Boost in the shop\n2️⃣ Write smarter code — 🧭 Face Nearest beats wandering randomly\n3️⃣ Bigger bag = fewer trips\n4️⃣ MORE ROBOTS working in parallel — that's real optimization thinking!"},
+  {k:["robot","new","another","fleet","team"],a:"🤖 Buy extra robots in the 🛒 shop (100 🪙). Each robot has its OWN program and runs at the same time.\n\nPro move: give each robot one job — one harvests, one hauls, one sells. That's called division of labor, and it's how real factories (and real software!) work."},
+  {k:["water","river","lake","cross","island"],a:"🌊 Robots can't swim! Collect 2 stone, stand at the shore facing the water, and use 🔨 Build → bridge. Chain bridges to cross big rivers and reach islands full of treasure."},
+  {k:["function","variable","array","advanced"],a:"Great question! In this world:\n• A robot's program is like a function — a reusable recipe\n• Its bag works like variables — data it carries\n• Your robot team is like an array of workers\n\nSwitch to the 🐍 Python tab to see the real syntax. When you're ready, try Python on a computer — you already know the ideas!"},
+  {k:["smart","nearest","home","pathfind"],a:"🧭 Smart blocks (unlock by earning 150 🪙 or owning 2 robots):\n• Face Nearest — auto-aims at the closest tree/rock/iron/crystal\n• Go Home — pathfinds back to base, walking around obstacles\n• Sell All — sells your bag when near the market\n\nThe ultimate combo: Forever → Face Nearest tree → If tree ahead: Collect, else Move → If bag full: Go Home + Sell All."},
+  {k:["unlock","lock","locked"],a:"🔓 You unlock powers by PLAYING:\n• 🔁 Loops — collect 5 resources\n• ❓ Logic — sell anything at the market\n• 🧭 Smart blocks — earn 150 🪙 total or own 2 robots\n\nNo lessons, no levels — just build stuff!"},
+  {k:["hello","hi","hey"],a:"Hey there, world-builder! 👋 I'm Byte. Ask me about loops, selling, building… or tap 💡 Give me an idea and I'll suggest a project!"},
+];
+function mentorAnswer(q){
+  const s=q.toLowerCase();
+  if(s.includes("idea")||s.includes("what should")||s.includes("bored"))return IDEAS[Math.floor(Math.random()*IDEAS.length)];
+  if(s.includes("why")&&(s.includes("not")||s.includes("n't")||s.includes("stop"))){
+    const r=R();
+    if(!r.program.length)return "🔍 I checked "+r.name+" — its program is EMPTY! Open 🧩 Code and add some blocks first.";
+    if(!r.running)return "🔍 "+r.name+" has a program but isn't running. Press the green ▶ button!";
+    if(r.blocked)return "🔍 "+r.name+" is blocked! Something is in the way (or its bag is full / nothing to collect). Try a ❓ If blocked → Turn Right block so it steers around obstacles by itself.";
+    return "🔍 "+r.name+" looks fine — it's at ("+r.x+", "+r.y+") and running. Tap 🎯 to jump the camera to it! Maybe it finished its program? Use ♾️ Forever to keep it going.";
+  }
+  for(const e of BRAIN)if(e.k.some(k2=>s.includes(k2)))return e.a;
+  return "🤔 Interesting question! I know a lot about: loops 🔁, if-logic ❓, collecting ✋, building 🔨, selling 💰, robots 🤖, Python 🐍 and speed ⚡. Try asking about one of those — or say \"give me an idea\"!";
+}
+let mentorFlags={};
+function mentorFlag(f){
+  if(mentorFlags[f])return;mentorFlags[f]=true;
+  if(f==="bagFull")toast("🎒 A robot's bag is full! Sell at the market 🏪 or Drop into a chest 📦.");
+  if(f==="farFromMarket")toast("💰 Sell All only works within 2 tiles of the market 🏪.");
+}
+function say(txt,me){
+  const d=document.createElement("div");
+  d.className="msg "+(me?"me":"ai");d.textContent=txt;
+  $("chat").appendChild(d);$("chat").scrollTop=1e6;
+}
+function ask(q){
+  if(!q.trim())return;
+  say(q,true);
+  setTimeout(()=>say(mentorAnswer(q),false),350);
+}
+$("askSend").addEventListener("click",()=>{ask($("askInput").value);$("askInput").value="";});
+$("askInput").addEventListener("keydown",e=>{if(e.key==="Enter"){ask($("askInput").value);$("askInput").value="";}});
+[["🤔 Why isn't my robot moving?","Why isn't my robot moving?"],
+ ["🔁 Explain loops","Explain loops"],
+ ["💰 How do I earn coins?","How do I earn coins?"],
+ ["💡 Give me an idea","Give me an idea"],
+ ["🐍 Show me Python","Tell me about python"],
+ ["⚡ Make it faster","How can I make this faster?"]].forEach(([lbl,q])=>{
+  const b=document.createElement("button");b.textContent=lbl;
+  b.addEventListener("click",()=>ask(q));
+  $("chips").appendChild(b);
+});
+$("mentorBtn").addEventListener("click",()=>{$("mentor").classList.add("open");});
+$("mClose").addEventListener("click",()=>$("mentor").classList.remove("open"));
+
+/* ---------------- toasts & sfx ---------------- */
+function toast(t){
+  const d=document.createElement("div");d.className="toast";d.textContent=t;
+  $("toasts").appendChild(d);
+  setTimeout(()=>{d.style.opacity="0";d.style.transition="opacity .4s";},2600);
+  setTimeout(()=>d.remove(),3100);
+}
+function bigToast(t){
+  const d=document.createElement("div");d.className="toast big";d.textContent=t;
+  $("toasts").appendChild(d);
+  setTimeout(()=>{d.style.opacity="0";d.style.transition="opacity .5s";},4200);
+  setTimeout(()=>d.remove(),4800);
+}
+let actx=null;
+function sfx(freq,dur,delay){
+  if(muted)return;
+  try{
+    if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();
+    const t=actx.currentTime+(delay||0);
+    const o=actx.createOscillator(),g=actx.createGain();
+    o.type="triangle";o.frequency.value=freq;
+    g.gain.setValueAtTime(.08,t);g.gain.exponentialRampToValueAtTime(.001,t+dur+.02);
+    o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+dur+.05);
+  }catch(_){}
+}
+function sfxIf(r,f,d){if(robots[selRobot]===r)sfx(f,d);}
+$("muteBtn").addEventListener("click",()=>{muted=!muted;$("muteBtn").textContent=muted?"🔇":"🔊";saveSoon();});
+
+/* ---------------- HUD ---------------- */
+function updateHud(){
+  $("coinsEl").textContent=coins;
+  const r=R();
+  let inv="";
+  for(const res in r.inv)if(r.inv[res]>0)inv+=" "+RES[res].em+r.inv[res];
+  $("bagEl").textContent=bagCount(r)+"/"+r.cap+inv;
+}
+function updateFab(){
+  const r=R(), f=$("fabRun");
+  if(r.running){f.textContent="⏹";f.classList.add("running");}
+  else{f.textContent="▶";f.classList.remove("running");}
+}
+$("fabRun").addEventListener("click",()=>{const r=R();r.running?stopRobot(r):startRobot(r);});
+$("runBtn").addEventListener("click",()=>startRobot(R()));
+$("stopBtn").addEventListener("click",()=>stopRobot(R()));
+$("codeBtn").addEventListener("click",()=>{$("editor").classList.add("open");renderProgram();renderPy();});
+$("edClose").addEventListener("click",()=>$("editor").classList.remove("open"));
+$("centerBtn").addEventListener("click",()=>{follow=true;toast("🎯 Following "+R().name);});
+document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("#tabs button").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on");
+  $("blocksTab").style.display=b.dataset.tab==="blocks"?"flex":"none";
+  $("pyTab").style.display=b.dataset.tab==="python"?"flex":"none";
+  if(b.dataset.tab==="python")renderPy();
+}));
+
+/* ---------------- camera & input ---------------- */
+const canvas=$("game"), ctx=canvas.getContext("2d");
+let cam={x:0,y:0,scale:1}, follow=true, DPR=1;
+function resize(){
+  DPR=Math.min(2,window.devicePixelRatio||1);
+  canvas.width=innerWidth*DPR;canvas.height=innerHeight*DPR;
+  canvas.style.width=innerWidth+"px";canvas.style.height=innerHeight+"px";
+}
+addEventListener("resize",resize);resize();
+
+const pointers=new Map();
+let pinchD=0, panMoved=false;
+canvas.addEventListener("pointerdown",e=>{
+  canvas.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  panMoved=false;
+  if(pointers.size===2){
+    const p=[...pointers.values()];
+    pinchD=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);
+  }
+});
+canvas.addEventListener("pointermove",e=>{
+  const p=pointers.get(e.pointerId);if(!p)return;
+  if(pointers.size===1){
+    const dx=e.clientX-p.x, dy=e.clientY-p.y;
+    if(Math.abs(dx)+Math.abs(dy)>4)panMoved=true;
+    if(panMoved){cam.x-=dx/cam.scale;cam.y-=dy/cam.scale;follow=false;}
+  }
+  p.x=e.clientX;p.y=e.clientY;
+  if(pointers.size===2){
+    const q=[...pointers.values()];
+    const d=Math.hypot(q[0].x-q[1].x,q[0].y-q[1].y);
+    if(pinchD>0){cam.scale=clamp(cam.scale*(d/pinchD),.4,2.2);follow=false;panMoved=true;}
+    pinchD=d;
+  }
+});
+function endPointer(e){
+  if(pointers.size===1&&!panMoved)handleTap(e.clientX,e.clientY);
+  pointers.delete(e.pointerId);pinchD=0;
+}
+canvas.addEventListener("pointerup",endPointer);
+canvas.addEventListener("pointercancel",e=>pointers.delete(e.pointerId));
+canvas.addEventListener("wheel",e=>{cam.scale=clamp(cam.scale*(e.deltaY<0?1.1:0.9),.4,2.2);follow=false;e.preventDefault();},{passive:false});
+function handleTap(sx,sy){
+  const wx=(sx-innerWidth/2)/cam.scale+cam.x, wy=(sy-innerHeight/2)/cam.scale+cam.y;
+  const tx=Math.floor(wx/TILE), ty=Math.floor(wy/TILE);
+  const ri=robots.findIndex(r=>Math.round(r.rx)===tx&&Math.round(r.ry)===ty);
+  if(ri>=0){selRobot=ri;selBlock=null;follow=true;updateChips();updateHud();updateFab();renderProgram();renderPy();toast("🤖 Selected "+robots[ri].name);sfx(500,.05);return;}
+  if(!inB(tx,ty))return;
+  const o=objects.get(key(tx,ty));
+  const names={tree:"🌳 Tree — collect for wood!",rock:"🪨 Rock — collect for stone!",iron:"⛓️ Iron ore — worth 6🪙!",crystal:"💎 Crystal — worth 15🪙!",home:"🏠 Home base",market:"🏪 Market — sell resources here!",chest:"📦 Chest — drop items in to store them",bridge:"🌉 Bridge",flower:"🌼 Just a pretty flower",item:"📦 Dropped items — a robot can collect these!"};
+  if(o){
+    if(o.type==="tree"&&o.stage<2)toast("🌱 A young tree… it's still growing!");
+    else toast(names[o.type]||o.type);
+  }else if(terrain[key(tx,ty)]===T_WATER)toast("🌊 Water — build a bridge (2 stone) to cross!");
+}
+
+/* ---------------- sprites ---------------- */
+const spriteCache=new Map();
+function sprite(ch,size){
+  const s=Math.round(size), k=ch+"@"+s;
+  let c=spriteCache.get(k);
+  if(!c){
+    c=document.createElement("canvas");
+    c.width=c.height=Math.ceil(s*1.3);
+    const g=c.getContext("2d");
+    g.textAlign="center";g.textBaseline="middle";
+    g.font=s+'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+    g.fillText(ch,c.width/2,c.height/2+s*.05);
+    spriteCache.set(k,c);
+  }
+  return c;
+}
+
+/* ---------------- render ---------------- */
+const GRASS=["#79c34e","#71ba47","#7fc957"],SANDC="#ecd9a0",ROCKC=["#a9a9b4","#b3b3be","#9f9faa"],WATERC=["#3f9fd8","#48a8e0"];
+const OBJ_EM={rock:"🪨",iron:"⛓️",crystal:"💎",home:"🏠",market:"🏪",chest:"📦",bridge:"🌉",flower:"🌼"};
+let now=0;
+function draw(t){
+  const w=innerWidth,h=innerHeight;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.fillStyle="#2c7fb8";ctx.fillRect(0,0,w,h);
+  if(follow){const r=R();cam.x=lerp(cam.x,(r.rx+.5)*TILE,.12);cam.y=lerp(cam.y,(r.ry+.5)*TILE,.12);}
+  cam.x=clamp(cam.x,0,W*TILE);cam.y=clamp(cam.y,0,H*TILE);
+  ctx.translate(w/2,h/2);ctx.scale(cam.scale,cam.scale);ctx.translate(-cam.x,-cam.y);
+  const x0=clamp(Math.floor((cam.x-w/2/cam.scale)/TILE)-1,0,W-1);
+  const x1=clamp(Math.ceil((cam.x+w/2/cam.scale)/TILE)+1,0,W-1);
+  const y0=clamp(Math.floor((cam.y-h/2/cam.scale)/TILE)-1,0,H-1);
+  const y1=clamp(Math.ceil((cam.y+h/2/cam.scale)/TILE)+1,0,H-1);
+  // terrain
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+    const tr=terrain[key(x,y)];
+    if(tr===T_WATER)ctx.fillStyle=WATERC[(x+y+((t/600)|0))%2];
+    else if(tr===T_SAND)ctx.fillStyle=SANDC;
+    else if(tr===T_GRASS)ctx.fillStyle=GRASS[(x*31+y*17)%3];
+    else ctx.fillStyle=ROCKC[(x*31+y*17)%3];
+    ctx.fillRect(x*TILE,y*TILE,TILE+1,TILE+1);
+  }
+  // territory glow around home
+  ctx.strokeStyle="rgba(255,214,107,.5)";ctx.lineWidth=3;
+  ctx.strokeRect((homePos.x-3.5)*TILE,(homePos.y-3.5)*TILE,7*TILE,7*TILE);
+  // objects
+  const es=TILE*.88;
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+    const o=objects.get(key(x,y));if(!o)continue;
+    let ch=null,sz=es;
+    if(o.type==="tree")ch=o.stage===0?"🌱":o.stage===1?"🌿":"🌳";
+    else if(o.type==="item"){ch=RES[o.item].em;sz=es*.6;}
+    else ch=OBJ_EM[o.type];
+    if(o.type==="home"||o.type==="market")sz=es*1.12;
+    if(ch){
+      const sp=sprite(ch,sz);
+      ctx.drawImage(sp,(x+.5)*TILE-sp.width/2,(y+.5)*TILE-sp.height/2);
+      if(o.type==="item"&&o.n>1){
+        ctx.fillStyle="#fff";ctx.font="bold 11px sans-serif";ctx.textAlign="center";
+        ctx.fillText("x"+o.n,(x+.5)*TILE+10,(y+.5)*TILE+12);
+      }
+    }
+  }
+  // animals
+  for(const a of animals){
+    a.rx=lerp(a.rx,a.x,.08);a.ry=lerp(a.ry,a.y,.08);
+    const sp=sprite(a.em,TILE*.62);
+    ctx.drawImage(sp,(a.rx+.5)*TILE-sp.width/2,(a.ry+.5)*TILE-sp.height/2-Math.abs(Math.sin(t/300+a.x))*3);
+  }
+  // robots
+  robots.forEach((r,i)=>{
+    r.rx=lerp(r.rx,r.x,.22);r.ry=lerp(r.ry,r.y,.22);
+    const cx=(r.rx+.5)*TILE, cy=(r.ry+.5)*TILE, s2=TILE*.72;
+    if(i===selRobot){
+      ctx.beginPath();ctx.arc(cx,cy,s2*.72+Math.sin(t/250)*2,0,7);
+      ctx.strokeStyle="rgba(255,255,255,.85)";ctx.lineWidth=3;ctx.stroke();
+    }
+    ctx.save();ctx.translate(cx,cy);
+    // shadow
+    ctx.fillStyle="rgba(0,0,0,.22)";ctx.beginPath();ctx.ellipse(0,s2*.42,s2*.42,s2*.16,0,0,7);ctx.fill();
+    const bob=r.running?Math.sin(t/120)*1.6:0;
+    ctx.translate(0,bob);
+    // body
+    ctx.fillStyle=r.color;
+    rr(ctx,-s2/2,-s2/2,s2,s2,9);ctx.fill();
+    ctx.strokeStyle="rgba(255,255,255,.85)";ctx.lineWidth=2.5;
+    rr(ctx,-s2/2,-s2/2,s2,s2,9);ctx.stroke();
+    // antenna
+    ctx.strokeStyle="#fff";ctx.beginPath();ctx.moveTo(0,-s2/2);ctx.lineTo(0,-s2/2-7);ctx.stroke();
+    ctx.fillStyle=r.running?"#54d66a":"#ffd66b";ctx.beginPath();ctx.arc(0,-s2/2-9,3.5,0,7);ctx.fill();
+    // eyes look toward dir
+    const ex=DX[r.dir]*4, ey=DY[r.dir]*4;
+    ctx.fillStyle="#1c1638";
+    ctx.beginPath();ctx.arc(-6+ex,-3+ey,4,0,7);ctx.arc(6+ex,-3+ey,4,0,7);ctx.fill();
+    ctx.fillStyle="#fff";
+    ctx.beginPath();ctx.arc(-6+ex+1,-4+ey,1.4,0,7);ctx.arc(6+ex+1,-4+ey,1.4,0,7);ctx.fill();
+    // smile
+    ctx.strokeStyle="#1c1638";ctx.lineWidth=2;ctx.beginPath();ctx.arc(ex*.5,4+ey*.5,5,.2*Math.PI,.8*Math.PI);ctx.stroke();
+    ctx.restore();
+    // name
+    ctx.fillStyle="rgba(20,14,45,.75)";
+    const nm=r.name;ctx.font="bold 11px sans-serif";ctx.textAlign="center";
+    const tw=ctx.measureText(nm).width;
+    rr(ctx,cx-tw/2-5,cy-s2*.95-14,tw+10,15,7);ctx.fill();
+    ctx.fillStyle="#fff";ctx.fillText(nm,cx,cy-s2*.95-2.5);
+    if(r.blocked){
+      const sp=sprite("💢",14);ctx.drawImage(sp,cx+s2*.35,cy-s2*.8);
+    }
+  });
+}
+function rr(c,x,y,w2,h2,r2){
+  c.beginPath();
+  if(c.roundRect){c.roundRect(x,y,w2,h2,r2);return;}
+  c.moveTo(x+r2,y);c.arcTo(x+w2,y,x+w2,y+h2,r2);c.arcTo(x+w2,y+h2,x,y+h2,r2);c.arcTo(x,y+h2,x,y,r2);c.arcTo(x,y,x+w2,y,r2);c.closePath();
+}
+
+/* ---------------- simulation loop ---------------- */
+let last=0, slowAcc=0, started=false;
+function loop(t){
+  requestAnimationFrame(loop);
+  if(!started){last=t;return;}
+  now=t;
+  const dt=Math.min(100,t-last);last=t;
+  // robots act on their own timers
+  for(const r of robots){
+    if(!r.nextAct)r.nextAct=t;
+    const step=340/r.speed;
+    while(t>=r.nextAct){r.nextAct+=step;tickRobot(r);}
+  }
+  // slow world tick (1s): growth, respawns, animals hud
+  slowAcc+=dt;
+  if(slowAcc>=1000){
+    slowAcc=0;
+    for(const [k2,o] of objects){
+      if(o.type==="tree"&&o.stage<2&&o.growAt!==undefined&&now>=o.growAt){
+        o.stage++;o.growAt=now+20000;if(o.stage>=2)delete o.growAt;
+      }
+    }
+    for(let i=respawnQ.length-1;i>=0;i--){
+      const e=respawnQ[i];
+      if(now>=e.at){
+        respawnQ.splice(i,1);
+        const k2=key(e.x,e.y);
+        if(!objects.has(k2)){
+          if(e.type==="tree")objects.set(k2,{type:"tree",stage:0,growAt:now+20000});
+          else objects.set(k2,{type:e.type});
+        }
+      }
+    }
+    updateHud();updateExecHighlight();
+  }
+  // animals hop
+  for(const a of animals){
+    if(t>=a.next){
+      a.next=t+800+Math.random()*2200;
+      const d=(Math.random()*4)|0, nx=a.x+DX[d], ny=a.y+DY[d];
+      if(inB(nx,ny)&&terrain[key(nx,ny)]===T_GRASS&&!objects.has(key(nx,ny)))
+        {a.x=nx;a.y=ny;}
+    }
+  }
+  draw(t);
+}
+function updateExecHighlight(){
+  const r=R();
+  document.querySelectorAll("#programEl .blk.exec").forEach(el=>el.classList.remove("exec"));
+  if(r.running&&r.curUid){
+    const el=document.querySelector('#programEl .blk[data-uid="'+r.curUid+'"]');
+    if(el)el.classList.add("exec");
+  }
+}
+setInterval(updateExecHighlight,350);
+requestAnimationFrame(loop);
+
+/* ---------------- save / load ---------------- */
+let saveT=null;
+function saveSoon(){clearTimeout(saveT);saveT=setTimeout(saveNow,1500);}
+function saveNow(){
+  try{
+    const data={v:1,seed,coins,stash,totals,unlocks,muted,selRobot,
+      robots:robots.map(r=>({x:r.x,y:r.y,dir:r.dir,name:r.name,color:r.color,inv:r.inv,cap:r.cap,speed:r.speed,program:r.program})),
+      objects:[...objects.entries()].map(([k2,o])=>{const c={...o};delete c.growAt;return [k2,c];})};
+    localStorage.setItem(SAVE_KEY,JSON.stringify(data));
+  }catch(_){}
+}
+function load(){
+  try{
+    const raw=localStorage.getItem(SAVE_KEY);
+    if(!raw)return false;
+    const d=JSON.parse(raw);
+    if(d.v!==1)return false;
+    seed=d.seed;buildTerrain();
+    objects=new Map(d.objects);
+    coins=d.coins;stash=d.stash;totals=d.totals;unlocks=d.unlocks;muted=!!d.muted;
+    robots=d.robots.map(rd=>{
+      const r=makeRobot(rd.x,rd.y,rd.name);
+      Object.assign(r,{dir:rd.dir,color:rd.color,inv:rd.inv,cap:rd.cap,speed:rd.speed,program:rd.program||[]});
+      reUid(r.program);
+      return r;
+    });
+    selRobot=clamp(d.selRobot||0,0,robots.length-1);
+    genAnimals();
+    return true;
+  }catch(_){return false;}
+}
+function reUid(list){for(const b of list){b.uid=uid();if(b.body)reUid(b.body);}}
+setInterval(saveNow,8000);
+document.addEventListener("visibilitychange",()=>{if(document.hidden)saveNow();});
+
+/* ---------------- boot ---------------- */
+function newGame(){
+  seed=(Math.random()*1e9)|0;
+  buildTerrain();genObjects();genAnimals();
+  coins=0;stash={wood:0,stone:0,iron:0,crystal:0};
+  totals={collected:0,earned:0};
+  unlocks={loops:false,logic:false,smart:false};
+  robots=[makeRobot(homePos.x-1,homePos.y+1,"Robo-1")];
+  selRobot=0;
+}
+isNew=!load();
+if(isNew)newGame();
+cam.x=(homePos.x+.5)*TILE;cam.y=(homePos.y+.5)*TILE;
+$("muteBtn").textContent=muted?"🔇":"🔊";
+renderPalette();updateChips();updateHud();updateFab();renderProgram();renderPy();
+
+$("playBtn").addEventListener("click",()=>{
+  $("splash").classList.add("hide");
+  started=true;
+  sfx(660,.08);sfx(880,.08,.1);
+  if(isNew){
+    say("👋 Hi! I'm Byte, your coding mentor.\n\nThat little robot down there is YOURS — but it only moves when you program it!\n\n1️⃣ Tap 🧩 Code\n2️⃣ Add some ⬆️ Move and ✋ Collect blocks\n3️⃣ Press ▶ and watch it come alive!\n\nCollect wood 🌳, sell it at the market 🏪, and unlock amazing powers. Ask me anything, anytime! 🦉",false);
+    setTimeout(()=>{$("mentor").classList.add("open");},700);
+    setTimeout(()=>{$("mentor").classList.remove("open");$("editor").classList.add("open");},6500);
+  }
+});
+</script>
+</body>
+</html>
