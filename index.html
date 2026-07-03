@@ -49,13 +49,19 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 
 /* ---------- top bar ---------- */
 #topbar{position:fixed;top:calc(var(--sat) + 10px);left:10px;right:10px;display:flex;gap:6px;align-items:center;z-index:20;pointer-events:none;}
-.chip{pointer-events:auto;display:flex;align-items:center;gap:5px;background:rgba(21,14,46,.8);backdrop-filter:blur(10px);
-  border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:7px 12px;font-weight:600;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.28);}
+.chip{pointer-events:auto;display:flex;align-items:center;gap:5px;
+  background:linear-gradient(180deg,rgba(60,49,102,.94),rgba(28,20,52,.94));backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:7px 13px;font-weight:600;font-size:14px;
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.2), inset 0 -3px 0 rgba(0,0,0,.3), 0 4px 12px rgba(0,0,0,.28);}
 .chip small{font-weight:500;color:var(--ink2);font-size:11px;}
 #topbar .spacer{flex:1;}
-.iconbtn{pointer-events:auto;width:42px;height:42px;border-radius:14px;background:rgba(21,14,46,.8);backdrop-filter:blur(10px);
-  border:1px solid rgba(255,255,255,.16);font-size:19px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.28);transition:transform .1s;}
-.iconbtn:active{transform:scale(.9);}
+.iconbtn{pointer-events:auto;position:relative;width:44px;height:44px;border-radius:14px;
+  background:linear-gradient(180deg,var(--panel3),var(--panel2));backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.14);border-bottom:4px solid #191036;font-size:19px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.22), 0 5px 14px rgba(0,0,0,.3);
+  transition:transform .09s,border-bottom-width .09s;}
+.iconbtn:active{transform:translateY(2px);border-bottom-width:1px;}
 
 /* ---------- bottom controls ---------- */
 #bottombar{position:fixed;left:14px;right:14px;bottom:calc(var(--sab) + 14px);display:flex;align-items:flex-end;gap:10px;z-index:20;pointer-events:none;}
@@ -79,7 +85,12 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .sheet .grab{width:44px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);margin:8px auto 2px;flex:0 0 auto;}
 
 /* ---------- editor ---------- */
-#editor{height:48vh;}
+#editor{height:48vh;transition:transform .28s cubic-bezier(.32,.9,.35,1),height .26s cubic-bezier(.32,.9,.35,1);}
+#editor.max{height:94vh;max-height:94vh;}
+#edMax svg{width:17px;height:17px;display:block;}
+#edMax .ic-min{display:none;}
+#editor.max #edMax .ic-max{display:none;}
+#editor.max #edMax .ic-min{display:block;}
 .ed-head{display:flex;align-items:center;gap:8px;padding:6px 12px 4px;flex:0 0 auto;}
 #robotChips{display:flex;gap:6px;overflow-x:auto;flex:1;padding:2px 0;scrollbar-width:none;}
 #robotChips::-webkit-scrollbar{display:none;}
@@ -240,7 +251,6 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .iconbtn.badge::after{content:"";position:absolute;top:5px;right:5px;width:9px;height:9px;border-radius:50%;background:var(--red);
   animation:badgePulse 1.4s ease-in-out infinite;}
 @keyframes badgePulse{0%,100%{box-shadow:0 0 4px #ff5d73}50%{box-shadow:0 0 10px #ff5d73}}
-.iconbtn{position:relative;}
 #quests{height:70vh;z-index:50;}
 #questList{flex:1;overflow-y:auto;padding:4px 14px;}
 .quest{background:var(--panel2);border:1.5px solid transparent;border-radius:16px;padding:13px;margin-bottom:9px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}
@@ -285,6 +295,7 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 @media (min-width: 920px){
   #coach.hi{bottom:calc(var(--sab) + 96px);}
   #editor{left:auto;right:0;top:0;bottom:0;width:430px;max-height:none;height:auto;border-radius:22px 0 0 22px;transform:translateX(105%);}
+  #editor.max{width:min(720px,82vw);height:auto;max-height:none;}
   #editor.open{transform:translateX(0);}
   #editor .grab{display:none;}
   #palette{max-height:40%;}
@@ -352,6 +363,10 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   <div class="ed-head">
     <div id="robotChips"></div>
     <div class="ed-btns">
+      <button id="edMax" title="Expand / shrink editor" aria-label="Expand editor">
+        <svg class="ic-max" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+        <svg class="ic-min" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
+      </button>
       <button id="undoBtn" title="Undo">↺</button>
       <button id="redoBtn" title="Redo">↻</button>
       <button class="go" id="runBtn" title="Run">▶</button>
@@ -1661,6 +1676,11 @@ $("codeBtn").addEventListener("click",()=>{
   if(!tut.done&&tut.step===1)tutSet(2);
 });
 $("edClose").addEventListener("click",()=>$("editor").classList.remove("open"));
+$("edMax").addEventListener("click",()=>{
+  const on=$("editor").classList.toggle("max");
+  $("edMax").title=on?"Shrink editor":"Expand editor";
+  sfx(on?620:460,.05);
+});
 $("centerBtn").addEventListener("click",()=>{follow=true;toast("🎯 Following "+R().name);});
 document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll("#tabs button").forEach(x=>x.classList.remove("on"));
@@ -1799,8 +1819,9 @@ function draw(t){
   if(follow){
     const r=R();
     let ty=(r.ry+.5)*TILE;
-    // keep the robot visible above the editor sheet on mobile
-    if($("editor").classList.contains("open")&&innerWidth<920)ty+=h*0.24/cam.scale;
+    // keep the robot visible above the editor sheet on mobile (not when maximized — the world is intentionally hidden then)
+    const ed=$("editor");
+    if(ed.classList.contains("open")&&!ed.classList.contains("max")&&innerWidth<920)ty+=h*0.24/cam.scale;
     cam.x=lerp(cam.x,(r.rx+.5)*TILE,.12);cam.y=lerp(cam.y,ty,.12);
   }
   cam.x=clamp(cam.x,0,W*TILE);cam.y=clamp(cam.y,0,H*TILE);
