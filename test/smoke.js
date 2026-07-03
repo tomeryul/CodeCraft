@@ -240,6 +240,53 @@ async function ev(expr) {
   check("treasure chests exist in the world", await ev(`[...objects.values()].filter(o=>o.type==='gift').length`) >= 5, await ev(`[...objects.values()].filter(o=>o.type==='gift').length`));
   check("say quest progressed", await ev(`(player.quests.find(q=>q.id==='say1')||{prog:1}).prog`) >= 1);
 
+  console.log("▶ skills");
+  check("collecting granted woodcutting skill XP", (await ev("skills.wood.xp")) > 0 || (await ev("skills.wood.lvl")) > 0, await ev("JSON.stringify(skills.wood)"));
+  const tradeCheck = await ev(`(()=>{
+    const r=R(); const before=coins;
+    skills.trade.lvl=5; r.inv={wood:10,stone:0,iron:0,crystal:0};
+    sellInv(r); const gained=coins-before; skills.trade.lvl=0;
+    return gained; // 10 wood ×2 = 20 base, ×1.10 trading perk = 22
+  })()`);
+  check("trading perk boosts sale price (20 → 22)", tradeCheck === 22, tradeCheck);
+
+  console.log("▶ build project mini-game (solve the Big House)");
+  await ev(`(()=>{
+    mgEnter(PROJECTS[0]);
+    const outer=newBlock('repeat'); outer.n=4;
+    const inner=newBlock('repeat'); inner.n=3;
+    inner.body.push(newBlock('build'), newBlock('move'));
+    outer.body.push(inner, newBlock('turnR'));
+    mgRobot.program=[outer];
+    renderProgram(); mgUpdateCount(); mgRun();
+    return 'running';
+  })()`);
+  await sleep(7000);
+  check("house project completed", await ev("player.projects.house") === 1, await ev("JSON.stringify(player.projects)"));
+  check("monument placed in the world", await ev(`[...objects.values()].some(o=>o.type==='proj'&&o.em==='🏡')`) === true);
+  check("mini-game exited cleanly", await ev("mgState === null && mgRobot === null") === true);
+  check("car project now unlocked in list", await ev(`(()=>{renderProjects();return !document.querySelector('#projList .proj.locked button[disabled]')||PROJECTS[1].needs==='house';})()`) === true);
+  await ev(`const cc=document.getElementById('ccCele'); if(cc)cc.remove(); document.getElementById('projects').classList.remove('open'); 'ok'`);
+
+  console.log("▶ double-tap delete (maximized editor only)");
+  const dbl = await ev(`(()=>{
+    document.getElementById('editor').classList.add('open','max');
+    const r=R(); r.program=[]; r.hist=[]; r.redoS=[];
+    addBlock('move'); addBlock('collect');
+    const before=r.program.length;
+    const uid=r.program[0].uid;
+    document.querySelector('#programEl .blk[data-uid="'+uid+'"]').click();
+    document.querySelector('#programEl .blk[data-uid="'+uid+'"]').click();
+    const after=r.program.length;
+    // not in max mode: double-tap must NOT delete
+    document.getElementById('editor').classList.remove('max');
+    const uid2=r.program[0].uid;
+    document.querySelector('#programEl .blk[data-uid="'+uid2+'"]').click();
+    document.querySelector('#programEl .blk[data-uid="'+uid2+'"]').click();
+    return JSON.stringify([before,after,r.program.length]);
+  })()`);
+  check("double-tap deletes in max mode, not in normal mode", dbl === "[2,1,1]", dbl);
+
   check("no uncaught exceptions during entire run", exceptions.length === 0, exceptions.join(" | "));
 
   console.log(`\n${passed} passed, ${failed} failed`);

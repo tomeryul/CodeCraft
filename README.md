@@ -41,6 +41,10 @@ You don't pass stages; you expand what you can automate. New abilities unlock na
 
 Plus an **Inventor Level** (XP from everything you do), an endless **quest board** 📜 with no timers or FOMO, a **daily gift** that grows with total days played, collectible **robot hats** 🎩, and **treasure chests** 🎁 hidden far from home to reward explorers.
 
+**⚡ Skills** level up slowly with real practice — Woodcutting, Mining, Agility, Building and Trading each grant a growing perk (bonus resources, faster robots, free builds, better prices).
+
+**🏗️ Build Projects** are mini-game coding challenges a few levels above normal play: solve a blueprint (Big House → Race Car → Theme Park) inside a tight block budget that forces nested loops — finished builds appear in your world forever. In the maximized editor you can also double-tap a block to delete it.
+
 ## From blocks to real Python 🐍
 
 Every block program is shown live as **real Python** in the editor's Python tab:
