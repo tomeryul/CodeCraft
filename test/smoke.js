@@ -287,6 +287,34 @@ async function ev(expr) {
   })()`);
   check("double-tap deletes in max mode, not in normal mode", dbl === "[2,1,1]", dbl);
 
+  console.log("▶ editor 50/50 split");
+  const split = await ev(`(()=>{
+    document.getElementById('editor').classList.add('open');
+    const pw=document.getElementById('programWrap'),pl=document.getElementById('palette');
+    const a=pw.getBoundingClientRect().height,b=pl.getBoundingClientRect().height;
+    return JSON.stringify([Math.round(a),Math.round(b),Math.abs(a-b)<Math.max(a,b)*0.35]);
+  })()`);
+  check("program area and palette split roughly half-half", JSON.parse(split)[2] === true, split);
+
+  console.log("▶ challenge creator (offline flow)");
+  const creator = await ev(`(()=>{
+    mgEnterCreator();
+    const p=mgState.proj;
+    // design a 4-tile line blueprint via the same data path the canvas taps use
+    p.cells=[[0,0],[1,0],[2,0],[3,0]];
+    p.start={x:0,y:0,dir:1};mgState.robot.x=0;mgState.robot.y=0;mgState.robot.dir=1;
+    p.maxBlocks=6;
+    const rep=newBlock('repeat');rep.n=3;rep.body.push(newBlock('build'),newBlock('move'));
+    mgRobot.program=[rep,newBlock('build')];
+    renderProgram();mgRun();
+    return 'running';
+  })()`);
+  await sleep(2500);
+  check("creator solve marks challenge as proven", await ev("mgState && mgState.solved === true") === true, await ev("mgState&&JSON.stringify({solved:mgState.solved,bricks:[...mgState.robot.bricks]})"));
+  check("offline publish is blocked gracefully", await ev(`(()=>{document.getElementById('mgPublish').click();return mgState!==null;})()`) === true);
+  await ev(`mgExit(false); document.getElementById('editor').classList.remove('open','max'); 'ok'`);
+  check("auth box shows offline note when not configured", await ev(`(()=>{renderAuthBox();return document.getElementById('authBox').textContent.indexOf('offline')>=0||document.getElementById('authBox').textContent.indexOf('soon')>=0;})()`) === true);
+
   check("no uncaught exceptions during entire run", exceptions.length === 0, exceptions.join(" | "));
 
   console.log(`\n${passed} passed, ${failed} failed`);
