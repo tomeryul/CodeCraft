@@ -1625,7 +1625,7 @@ const PROJECTS=[
 function countBlocks(list){let n=0;for(const b of list){n++;if(b.body)n+=countBlocks(b.body);if(b.els)n+=countBlocks(b.els);}return n;}
 
 /* ---------------- online: Supabase (email+password only, zero-dependency REST) ---------------- */
-const SB={url:"",key:""}; // filled in when the CodeCraft Supabase project is provisioned
+const SB={url:"https://tqeswkurpznpwefbdoig.supabase.co",key:"sb_publishable_EPoUdw-xJZClvtN61SrwnA_aTQI8Uym"}; // CodeCraft — publishable anon key, safe for client use (RLS enforced)
 const SB_AUTH_KEY="codecraft_auth_v1";
 let sbUser=null;
 const sbReady=()=>!!(SB.url&&SB.key);

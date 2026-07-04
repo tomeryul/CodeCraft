@@ -313,7 +313,8 @@ async function ev(expr) {
   check("creator solve marks challenge as proven", await ev("mgState && mgState.solved === true") === true, await ev("mgState&&JSON.stringify({solved:mgState.solved,bricks:[...mgState.robot.bricks]})"));
   check("offline publish is blocked gracefully", await ev(`(()=>{document.getElementById('mgPublish').click();return mgState!==null;})()`) === true);
   await ev(`mgExit(false); document.getElementById('editor').classList.remove('open','max'); 'ok'`);
-  check("auth box shows offline note when not configured", await ev(`(()=>{renderAuthBox();return document.getElementById('authBox').textContent.indexOf('offline')>=0||document.getElementById('authBox').textContent.indexOf('soon')>=0;})()`) === true);
+  check("online configured: auth box shows email/password login form", await ev(`(()=>{renderAuthBox();return !!document.getElementById('authEmail')&&!!document.getElementById('authPass');})()`) === true);
+  check("Supabase project is wired up", await ev("sbReady()") === true);
 
   check("no uncaught exceptions during entire run", exceptions.length === 0, exceptions.join(" | "));
 

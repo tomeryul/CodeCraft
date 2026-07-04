@@ -45,6 +45,12 @@ Plus an **Inventor Level** (XP from everything you do), an endless **quest board
 
 **🏗️ Build Projects** are mini-game coding challenges a few levels above normal play: solve a blueprint (Big House → Race Car → Theme Park) inside a tight block budget that forces nested loops — finished builds appear in your world forever. In the maximized editor you can also double-tap a block to delete it.
 
+**🌍 Online (optional):** minimal email + password accounts and **community challenges** — design your own blueprint challenge (you must solve it yourself first), publish it, and let players everywhere try it. Powered by Supabase with row-level security; the game stays fully playable offline if online mode isn't configured.
+
+### Online setup (Supabase)
+
+The client is wired to a Supabase project via `SB` in `index.html`. To point it at your own project: create a Supabase project, run [`supabase/migrations/0001_challenges.sql`](supabase/migrations/0001_challenges.sql), and set `SB.url` / `SB.key` to your project URL and publishable (anon) key. For a friction-free kids experience, turn **off** *Authentication → Sign In / Up → Email → Confirm email* so players can start right after signing up.
+
 ## From blocks to real Python 🐍
 
 Every block program is shown live as **real Python** in the editor's Python tab:

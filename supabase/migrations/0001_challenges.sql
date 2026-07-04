@@ -44,4 +44,6 @@ as $$
   update public.challenges set solves = solves + 1 where id = cid;
 $$;
 
-grant execute on function public.add_solve to authenticated, anon;
+-- only signed-in players may increment the solve counter
+grant execute on function public.add_solve to authenticated;
+revoke execute on function public.add_solve(uuid) from anon, public;
