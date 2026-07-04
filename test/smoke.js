@@ -390,6 +390,80 @@ async function ev(expr) {
   check("cannot drop a container into its own descendant", D.ok2 === false, dnd);
   check("drag to reorder at root works", D.ok3 === true && D.order === "collect,repeat", dnd);
 
+  console.log("▶ bank: deposit + build from bank");
+  const bank = await ev(`(()=>{
+    mgState=null; mgRobot=null;
+    stash={wood:0,stone:0,iron:0,crystal:0,water:0};
+    const r=R(); r.x=homePos.x-3; r.y=homePos.y+2; r.rx=r.x; r.ry=r.y; r.dir=1; r.energy=100;
+    r.inv={wood:6,stone:0,iron:2,crystal:0,water:0};
+    doAction(r,{t:'bankAll'});
+    const banked = JSON.stringify(stash);
+    const bagAfterBank = bagCount(r);
+    // now build a chest (needs 5 wood) with an EMPTY bag — must pull from the bank
+    // find an empty grass tile ahead
+    let ok=false;
+    for(let d=0;d<4&&!ok;d++){ r.dir=d; const a={x:r.x+DX[d],y:r.y+DY[d]};
+      if(inB(a.x,a.y)&&terrain[key(a.x,a.y)]!==0&&!objects.get(key(a.x,a.y))){ok=true;} }
+    doAction(r,{t:'build',opt:'chest'});
+    const woodLeft = stash.wood;
+    return JSON.stringify({banked, bagAfterBank, ok, woodLeft, chestUp: !!objects.get(key(r.x+DX[r.dir],r.y+DY[r.dir]))});
+  })()`);
+  const BK = JSON.parse(bank);
+  check("Bank All empties the bag into the bank", BK.bagAfterBank === 0 && JSON.parse(BK.banked).wood === 6, bank);
+  check("Build pulls materials from the bank when the bag is empty", BK.ok && BK.woodLeft === 1 && BK.chestUp === true, bank);
+
+  console.log("▶ move / delete a player build");
+  const md = await ev(`(()=>{
+    const k=key(homePos.x+4,homePos.y);
+    objects.set(k,{type:'proj',em:'🏡'});
+    openObjMenu(k, objects.get(k));
+    const menuOpen = document.getElementById('objMenu').classList.contains('open');
+    // delete it
+    document.getElementById('objDelete').click();
+    const gone = !objects.get(k);
+    // move flow
+    const k2=key(homePos.x+4,homePos.y+1);
+    objects.set(k2,{type:'proj',em:'🚗'});
+    openObjMenu(k2, objects.get(k2));
+    document.getElementById('objMove').click();
+    const moving = !!movingObj;
+    return JSON.stringify({menuOpen, gone, moving});
+  })()`);
+  const MD = JSON.parse(md);
+  check("tapping a build opens a Move/Delete menu", MD.menuOpen === true, md);
+  check("Delete removes the build from the world", MD.gone === true, md);
+  check("Move arms relocation for the next tap", MD.moving === true, md);
+  await ev(`movingObj=null; 'ok'`);
+
+  console.log("▶ challenge creator: size + full-palette VM (if + variables)");
+  const cre = await ev(`(()=>{
+    mgEnterCreator();
+    mgSetSize(2,1); // 8->10 wide, 6->7 tall (clamped to DB limits)
+    const p=mgState.proj;
+    return JSON.stringify({gw:p.gw, gh:p.gh, blocks:CHALLENGE_BLOCKS.length});
+  })()`);
+  const CRE = JSON.parse(cre);
+  check("creator can resize the map (clamped to 10x8)", CRE.gw === 10 && CRE.gh === 7, cre);
+  check("challenges expose the full programming palette", CRE.blocks >= 11, cre);
+  // solve a custom challenge using a Count loop + an If — proves the extended challenge interpreter
+  const solve = await ev(`(()=>{
+    mgSetSize(-6,-3); // back to a small 4x4-ish grid
+    const p=mgState.proj; p.gw=6; p.gh=4; p.start={x:0,y:0,dir:1};
+    p.cells=[[0,0],[1,0],[2,0],[3,0]]; // a 4-tile line
+    mgState.robot={x:0,y:0,dir:1,bricks:new Set()};
+    // program: count i 1..4 { build; move } using the challenge VM
+    const cl=newBlock('countLoop'); cl.name='i'; cl.to=4;
+    cl.body.push(newBlock('build'));
+    const iff=newBlock('if'); iff.cond={var:'i',op:'<',val:4}; iff.body.push(newBlock('move'));
+    cl.body.push(iff);
+    mgRobot.program=[cl];
+    mgRun();
+    return 'running';
+  })()`);
+  await sleep(2500);
+  check("custom challenge solved via count-loop + if in the challenge VM", await ev("mgState && mgState.solved === true") === true, await ev("mgState && JSON.stringify([...mgState.robot.bricks])"));
+  await ev(`mgExit(false); document.getElementById('editor').classList.remove('open','max'); 'ok'`);
+
   check("no uncaught exceptions during entire run", exceptions.length === 0, exceptions.join(" | "));
 
   console.log(`\n${passed} passed, ${failed} failed`);

@@ -327,6 +327,9 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .mg-top button{background:var(--panel3);border-radius:10px;padding:7px 11px;font-size:12.5px;font-weight:700;color:var(--ink);
   border-bottom:3px solid rgba(0,0,0,.3);transition:transform .08s,border-bottom-width .08s;}
 .mg-top button:active{transform:translateY(2px);border-bottom-width:1px;}
+.mg-top .clab{font-size:11px;font-weight:800;color:var(--ink2);margin-left:4px;}
+#mgCreatorBar{flex-wrap:wrap;gap:4px;}
+#mgCreatorBar .num{min-width:20px;text-align:center;font-weight:900;}
 #mgGoal{color:var(--ink2);font-size:12.5px;line-height:1.45;margin:7px 0;}
 #mgCanvas{width:100%;border-radius:10px;display:block;touch-action:none;}
 #boardTab{overflow-y:auto;}
@@ -334,6 +337,17 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #mgBoardHint{color:var(--ink2);font-size:12px;text-align:center;padding:10px 6px 2px;line-height:1.4;}
 #tabs #boardTabBtn{background:linear-gradient(180deg,#c07c22,#9a5f15);color:#fff;}
 #tabs #boardTabBtn.on{background:linear-gradient(180deg,#d8912f,#b06f1a);}
+/* ---------- world object action menu ---------- */
+#objMenu{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(var(--sab) + 90px);z-index:60;
+  background:var(--panel);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:12px 14px;
+  box-shadow:0 12px 34px rgba(0,0,0,.5);display:none;opacity:0;transition:opacity .18s,transform .18s;max-width:90vw;}
+#objMenu.open{display:block;opacity:1;transform:translateX(-50%) translateY(0);}
+#objMenu .om-title{font-size:13.5px;font-weight:700;margin-bottom:9px;text-align:center;color:var(--ink);}
+#objMenu .om-row{display:flex;gap:7px;justify-content:center;}
+#objMenu button{background:var(--panel3);border-radius:11px;padding:10px 15px;font-size:13.5px;font-weight:800;color:var(--ink);
+  border-bottom:3px solid rgba(0,0,0,.3);transition:transform .08s,border-bottom-width .08s;}
+#objMenu button:active{transform:translateY(2px);border-bottom-width:1px;}
+#objMenu button.danger{background:#b53a4d;border-bottom-color:#7c2536;}
 /* ---------- tutorial coach ---------- */
 #coach{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--sab) + 96px);z-index:60;background:#171230;
   border:2px solid var(--accent);border-radius:16px;padding:12px 18px;font-size:14.5px;font-weight:600;max-width:88vw;
@@ -446,7 +460,9 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
         <button id="mgResetBtn">↺ Reset</button><button id="mgExitBtn">✕ Exit</button></div>
       <div class="mg-top" id="mgCreatorBar" style="display:none">
         <button id="mgModePaint">🖌️ Paint</button><button id="mgModeBot">🤖 Start</button>
-        <button id="mgBudDec">−</button><span id="mgBudget" class="num"></span><button id="mgBudInc">＋</button>
+        <span class="clab">🧩</span><button id="mgBudDec">−</button><span id="mgBudget" class="num"></span><button id="mgBudInc">＋</button>
+        <span class="clab">📐W</span><button id="mgWDec">−</button><span id="mgW" class="num"></span><button id="mgWInc">＋</button>
+        <span class="clab">H</span><button id="mgHDec">−</button><span id="mgH" class="num"></span><button id="mgHInc">＋</button>
         <span class="spacer"></span>
         <button id="mgName">✏️ Name</button><button id="mgPublish">🌍 Publish</button>
       </div>
@@ -520,6 +536,14 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   </div>
 </div>
 
+<div id="objMenu">
+  <div class="om-title"></div>
+  <div class="om-row">
+    <button id="objMove">🚚 Move</button>
+    <button id="objDelete" class="danger">🗑 Delete</button>
+    <button id="objCancel">✖</button>
+  </div>
+</div>
 <div id="toasts"></div>
 <div id="coach"></div>
 <input type="file" id="importFile" accept=".json,application/json" style="display:none">
@@ -840,6 +864,13 @@ function makeRobot(x,y,name){
 }
 const bagCount=r=>r.inv.wood+r.inv.stone+r.inv.iron+r.inv.crystal+(r.inv.water||0);
 const MAX_ENERGY=100;
+// materials: robot bag first, then the shared 🏦 Bank (stash). Returns amount taken from the bank.
+function haveMat(r,res,n){return (r.inv[res]||0)+(stash[res]||0)>=n;}
+function drawMat(r,res,n){
+  const fi=Math.min(r.inv[res]||0,n);r.inv[res]=(r.inv[res]||0)-fi;
+  const fb=n-fi;if(fb>0)stash[res]=(stash[res]||0)-fb;return fb;
+}
+function bankTotal(){return Object.keys(RES).reduce((s,k2)=>s+(stash[k2]||0),0);}
 function useEnergy(r,cost){
   const c=Math.max(1,Math.round(cost*(1-skills.agility.lvl*0.03))); // agility eases fatigue
   if((r.energy||0)<c){r.blocked=true;r.tired=true;mentorFlag("tired");return false;}
@@ -899,6 +930,7 @@ const DEFS={
   faceNearest:{cat:"smart",ic:"🧭",lbl:"Face Nearest"},
   goHome:{cat:"smart",ic:"🏠",lbl:"Go Home"},
   sellAll:{cat:"smart",ic:"💰",lbl:"Sell All"},
+  bankAll:{cat:"smart",ic:"🏦",lbl:"Bank All"},
   setVar:{cat:"vars",ic:"📦",lbl:"Set"},
   changeVar:{cat:"vars",ic:"➕",lbl:"Change"},
   countLoop:{cat:"vars",ic:"🔢",lbl:"Count",container:true},
@@ -908,7 +940,7 @@ const CATS=[
   {id:"basic",name:"Basics",types:["move","turnL","turnR","collect","chop","mine","scoop","drop","build","rest","wait"],lock:null},
   {id:"loops",name:"Loops",types:["repeat","forever"],lock:"loops",need:"Collect 5 resources to unlock 🔁 loops!"},
   {id:"logic",name:"Logic",types:["if"],lock:"logic",need:"Sell something at the market 🏪 to unlock ❓ logic!"},
-  {id:"smart",name:"Smart",types:["faceNearest","goHome","sellAll"],lock:"smart",need:"Earn 150 🪙 total (or own 2 robots) to unlock 🧭 smart blocks!"},
+  {id:"smart",name:"Smart",types:["faceNearest","goHome","sellAll","bankAll"],lock:"smart",need:"Earn 150 🪙 total (or own 2 robots) to unlock 🧭 smart blocks!"},
   {id:"vars",name:"Memory",types:["setVar","changeVar","countLoop","say"],lock:"vars",need:"Earn 250 🪙 total to unlock 🧠 memory & variables!"},
 ];
 function newBlock(t){
@@ -1075,7 +1107,7 @@ function doAction(r,b){
       break;}
     case "scoop": scoopWater(r,a,k); break;
     case "drop":{
-      if(o&&o.type==="chest"){ for(const res in r.inv){stash[res]+=r.inv[res];r.inv[res]=0;} sfxIf(r,500,.06); break;}
+      if(o&&o.type==="chest"){ for(const res in r.inv){stash[res]=(stash[res]||0)+r.inv[res];r.inv[res]=0;} r.pop=1;addPop(r.x,r.y,"🏦");sfxIf(r,500,.06);updateHud(); break;}
       if(o&&o.type==="market"){ sellInv(r); break;}
       const order=Object.keys(r.inv).sort((p,q)=>r.inv[q]-r.inv[p]);
       const it=order.find(x=>r.inv[x]>0);
@@ -1089,18 +1121,18 @@ function doAction(r,b){
       if(!inB(a.x,a.y)||o){r.blocked=true;break;}
       const bcost=Math.max(1,Math.round(4*(1-skills.agility.lvl*0.03)));
       if((r.energy||0)<bcost){r.blocked=true;r.tired=true;mentorFlag("tired");break;}
-      if(b.opt==="sapling"){
-        if(terrain[k]!==T_GRASS||r.inv.wood<1){r.blocked=true;break;}
-        r.inv.wood--;objects.set(k,{type:"tree",stage:0,growAt:now+20000});
-      }else if(b.opt==="bridge"){
-        if(terrain[k]!==T_WATER||r.inv.stone<2){r.blocked=true;break;}
-        r.inv.stone-=2;objects.set(k,{type:"bridge"});
-      }else if(b.opt==="chest"){
-        if(terrain[k]===T_WATER||r.inv.wood<5){r.blocked=true;break;}
-        r.inv.wood-=5;objects.set(k,{type:"chest"});
-      }
+      // materials come from the robot's bag first, then the 🏦 Bank
+      const need=b.opt==="sapling"?["wood",1]:b.opt==="bridge"?["stone",2]:["wood",5];
+      const okTerrain=b.opt==="sapling"?terrain[k]===T_GRASS:b.opt==="bridge"?terrain[k]===T_WATER:terrain[k]!==T_WATER;
+      let fromBank=0;
+      if(!okTerrain||!haveMat(r,need[0],need[1])){r.blocked=true;break;}
+      fromBank=drawMat(r,need[0],need[1]);
+      if(b.opt==="sapling")objects.set(k,{type:"tree",stage:0,growAt:now+20000});
+      else if(b.opt==="bridge")objects.set(k,{type:"bridge"});
+      else objects.set(k,{type:"chest"});
       if(!r.blocked){
         r.energy-=bcost;r.tired=false;
+        if(fromBank>0)addPop(a.x,a.y,"🏦 from bank");
         sfxIf(r,420,.07);r.pop=1;addXP(5);qProg("build",b.opt);skillXP("build",5);
         burst(a.x,a.y,b.opt==="sapling"?"leaf":"stone");
         if(Math.random()<skills.build.lvl*.05){
@@ -1123,6 +1155,12 @@ function doAction(r,b){
     case "sellAll":{
       if(Math.abs(r.x-marketPos.x)<=2&&Math.abs(r.y-marketPos.y)<=2)sellInv(r);
       else{r.blocked=true;mentorFlag("farFromMarket");}
+      break;}
+    case "bankAll":{
+      let moved=0;
+      for(const res in r.inv){stash[res]=(stash[res]||0)+r.inv[res];moved+=r.inv[res];r.inv[res]=0;}
+      if(moved>0){r.pop=1;addPop(r.x,r.y,"🏦 +"+moved);sfxIf(r,520,.06);updateHud();}
+      else r.blocked=true;
       break;}
     case "setVar": r.vars[b.name]=resolveVal(r,b.val); break;
     case "changeVar": r.vars[b.name]=(Number(r.vars[b.name])||0)+(b.n|0); break;
@@ -1239,6 +1277,7 @@ function toPy(list,ind){
       case "faceNearest":P.push(ind+'robot.face_nearest("'+b.opt+'")');break;
       case "goHome":P.push(ind+"robot.go_home()");break;
       case "sellAll":P.push(ind+"robot.sell_all()");break;
+      case "bankAll":P.push(ind+"robot.bank_all()");break;
       case "repeat":
         P.push(ind+"for i in range("+(b.src?b.src:b.n)+"):");
         P.push(b.body.length?toPy(b.body,ind+"    "):ind+"    pass");break;
@@ -1617,15 +1656,16 @@ $("mvDn").addEventListener("click",()=>moveSel(1));
 function renderPalette(){
   const pal=$("palette");pal.innerHTML="";
   if(mgState){
-    // challenge mode: only the project's toolbox, no locks
-    const div=document.createElement("div");div.className="pcat";
-    let html='<h4>🧰 Project Toolbox</h4><div class="row">';
-    for(const t of mgState.proj.allowed){
-      const d=DEFS[t];
-      html+='<button class="pblk c-'+d.cat+'" data-t="'+t+'">'+d.ic+' '+d.lbl+'</button>';
+    // challenge mode: the FULL programming toolbox (loops, conditions, variables) — everything unlocked
+    const allow=mgState.proj.allowed||CHALLENGE_BLOCKS;
+    for(const cat of CATS){
+      const types=cat.types.filter(t=>allow.indexOf(t)>=0);
+      if(!types.length)continue;
+      const div=document.createElement("div");div.className="pcat";
+      let html='<h4>'+cat.name+'</h4><div class="row">';
+      for(const t of types){const d=DEFS[t];html+='<button class="pblk c-'+d.cat+'" data-t="'+t+'">'+d.ic+' '+d.lbl+'</button>';}
+      div.innerHTML=html+'</div>';pal.appendChild(div);
     }
-    div.innerHTML=html+'</div>';
-    pal.appendChild(div);
     pal.querySelectorAll(".pblk").forEach(btn=>btn.addEventListener("click",()=>addBlock(btn.dataset.t)));
     return;
   }
@@ -1788,20 +1828,22 @@ function dailyGift(){
 }
 
 /* ---------------- build projects (mini-games) ---------------- */
+// full programming toolbox available inside every challenge (loops, conditions, variables, values)
+const CHALLENGE_BLOCKS=["move","turnL","turnR","build","wait","repeat","countLoop","if","setVar","changeVar","say"];
 const PROJECTS=[
   {id:"house",em:"🏡",name:"Big House",diff:1,coins:150,xp:60,maxBlocks:8,gw:8,gh:7,
    desc:"Lay the walls of the Big House: paint every tile of the 4×4 outline. Your robot drops a brick on the tile it's STANDING on. Budget: 8 blocks — you'll need a loop inside a loop!",
-   allowed:["move","turnL","turnR","build","repeat","countLoop"],
+   allowed:CHALLENGE_BLOCKS,
    start:{x:2,y:2,dir:1},
    cells:[[2,2],[3,2],[4,2],[5,2],[5,3],[5,4],[5,5],[4,5],[3,5],[2,5],[2,4],[2,3]]},
   {id:"car",em:"🚗",name:"Race Car",diff:2,coins:250,xp:100,maxBlocks:12,gw:8,gh:6,needs:"house",
    desc:"Build the car body: fill the whole 5×2 plate. Paint one row, make a U-turn, paint the row back. Budget: 12 blocks.",
-   allowed:["move","turnL","turnR","build","repeat","countLoop"],
+   allowed:CHALLENGE_BLOCKS,
    start:{x:1,y:2,dir:1},
    cells:[[1,2],[2,2],[3,2],[4,2],[5,2],[1,3],[2,3],[3,3],[4,3],[5,3]]},
   {id:"park",em:"🎡",name:"Theme Park",diff:3,coins:400,xp:160,maxBlocks:9,gw:8,gh:7,needs:"car",
    desc:"Fence the whole Theme Park: paint the 6×5 outline. The sides have DIFFERENT lengths — two loops inside one loop. Budget: 9 blocks. This is expert work!",
-   allowed:["move","turnL","turnR","build","repeat","countLoop"],
+   allowed:CHALLENGE_BLOCKS,
    start:{x:1,y:1,dir:1},
    cells:[[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],[6,2],[6,3],[6,4],[6,5],[5,5],[4,5],[3,5],[2,5],[1,5],[1,4],[1,3],[1,2]]},
 ];
@@ -1888,7 +1930,7 @@ function ccToProj(row){
   return {id:"cc_"+row.id,community:row.id,em:"🌍",name:row.name,diff:2,coins:60,xp:30,
     maxBlocks:row.max_blocks,gw:row.gw,gh:row.gh,
     desc:"Community challenge by "+row.author_name+" — paint the whole blueprint within "+row.max_blocks+" blocks!",
-    allowed:CC_ALLOWED,start:{x:row.start_x,y:row.start_y,dir:row.start_dir},cells:row.cells};
+    allowed:CHALLENGE_BLOCKS,start:{x:row.start_x,y:row.start_y,dir:row.start_dir},cells:row.cells};
 }
 async function loadCommunity(){
   const el=$("ccList");if(!el)return;
@@ -1912,8 +1954,8 @@ async function loadCommunity(){
 }
 function mgEnterCreator(){
   mgEnter({id:"custom",em:"✏️",name:"My Challenge",diff:2,coins:0,xp:0,maxBlocks:12,gw:8,gh:6,
-    desc:"Design mode: tap grid tiles to paint your blueprint (🖌️), place the robot start (🤖), set the block budget — then solve it yourself and publish!",
-    allowed:CC_ALLOWED,start:{x:0,y:0,dir:1},cells:[]});
+    desc:"Design mode: tap grid tiles to paint your blueprint (🖌️), place the robot start (🤖), set the map size 📐 and block budget 🧩 — then solve it yourself (all blocks are available!) and publish!",
+    allowed:CHALLENGE_BLOCKS,start:{x:0,y:0,dir:1},cells:[]});
   mgState.creator=true;mgState.solved=false;mgState.paintMode="paint";
   $("mgCreatorBar").style.display="flex";
   mgCreatorUI();
@@ -1923,7 +1965,21 @@ function mgCreatorUI(){
   $("mgModePaint").style.opacity=mgState.paintMode==="paint"?"1":".5";
   $("mgModeBot").style.opacity=mgState.paintMode==="bot"?"1":".5";
   $("mgBudget").textContent=mgState.proj.maxBlocks;
+  $("mgW").textContent=mgState.proj.gw;
+  $("mgH").textContent=mgState.proj.gh;
   $("mgTitle").textContent="✏️ "+mgState.proj.name;
+}
+function mgSetSize(dw,dh){
+  if(!mgState||!mgState.creator)return;
+  const p=mgState.proj;
+  p.gw=clamp(p.gw+dw,4,10); p.gh=clamp(p.gh+dh,4,8); // DB limits: gw 4-10, gh 4-8
+  p.cells=p.cells.filter(c=>c[0]<p.gw&&c[1]<p.gh);
+  if(p.start.x>=p.gw)p.start.x=p.gw-1;
+  if(p.start.y>=p.gh)p.start.y=p.gh-1;
+  mgState.robot.x=Math.min(mgState.robot.x,p.gw-1);
+  mgState.robot.y=Math.min(mgState.robot.y,p.gh-1);
+  mgState.solved=false;
+  mgCreatorUI();mgDraw();
 }
 async function publishChallenge(){
   const p=mgState.proj;
@@ -1994,6 +2050,7 @@ function mgRun(){
   if(n>mgState.proj.maxBlocks){toast("🚫 Too many blocks ("+n+"/"+mgState.proj.maxBlocks+") — squeeze more into loops! 🔁");return;}
   setTab("board"); // watch the robot build
   mgReset();
+  mgRobot.vars={};mgRobot.say=null;
   mgState.running=true;mgRobot.running=true;
   mgState.frames=[{blocks:prog,i:0,reps:1}];
   mgState.timer=setInterval(mgTick,170);
@@ -2027,13 +2084,20 @@ function mgTick(){
     }
     const b=fr.blocks[fr.i];
     if(b.t==="repeat"){
-      if(!b.body.length||(b.n|0)<1){fr.i++;continue;}
-      st.frames.push({blocks:b.body,i:0,reps:Math.max(1,b.n|0)});continue;
+      const times=b.src?Math.floor(Number(mgRobot.vars[b.src])||0):Math.max(1,b.n|0);
+      if(!b.body.length||times<1){fr.i++;continue;}
+      st.frames.push({blocks:b.body,i:0,reps:times});continue;
     }
     if(b.t==="countLoop"){
       if(!b.body.length||(b.to|0)<1){fr.i++;continue;}
       mgRobot.vars[b.name]=1;
       st.frames.push({blocks:b.body,i:0,reps:Math.max(1,b.to|0),cv:b.name,cur:1});continue;
+    }
+    if(b.t==="if"){
+      const br=mgCond(st,b.cond)?b.body:(b.els||[]);
+      if(br.length){mgRobot.curUid=b.uid;st.frames.push({blocks:br,i:0,reps:1});}
+      else fr.i++;
+      continue;
     }
     mgRobot.curUid=b.uid;
     const rb=st.robot;
@@ -2044,10 +2108,23 @@ function mgTick(){
     else if(b.t==="turnL")rb.dir=(rb.dir+3)%4;
     else if(b.t==="turnR")rb.dir=(rb.dir+1)%4;
     else if(b.t==="build"){rb.bricks.add(rb.x+"_"+rb.y);sfx(430,.03);}
+    else if(b.t==="setVar")mgRobot.vars[b.name]=resolveVal(mgRobot,b.val);
+    else if(b.t==="changeVar")mgRobot.vars[b.name]=(Number(mgRobot.vars[b.name])||0)+(b.n|0);
+    else if(b.t==="say")mgRobot.say={txt:String(resolveVal(mgRobot,b.val)).slice(0,24),until:1e18};
+    // wait and any world-only action are harmless no-ops on the challenge grid
     fr.i++;
     mgDraw();
     return;
   }
+}
+function mgCond(st,c){
+  if(c&&typeof c==="object"){
+    const v=Number(mgRobot.vars[c.var])||0;
+    return c.op===">"?v>c.val:c.op==="<"?v<c.val:v===c.val;
+  }
+  if(c==="blocked"){const rb=st.robot,nx=rb.x+DX[rb.dir],ny=rb.y+DY[rb.dir];return nx<0||ny<0||nx>=st.proj.gw||ny>=st.proj.gh;}
+  if(c==="bagEmpty")return true; // no bag in a challenge
+  return false; // world-sensing conditions don't apply on the blank grid
 }
 function mgFinish(){
   const st=mgState;
@@ -2182,8 +2259,8 @@ function renderShop(){
      can:coins>=60,fn(){coins-=60;r.cap+=4;toast("🎒 "+r.name+" bag upgraded to "+r.cap+"!");}},
     {em:"⚡",b:"Speed Boost — 80 🪙",s:r.name+" runs code 25% faster. (x"+r.speed.toFixed(2)+" now, max x2)",
      can:coins>=80&&r.speed<2,fn(){coins-=80;r.speed=Math.min(2,r.speed*1.25);toast("⚡ "+r.name+" is faster!");}},
-    {em:"📦",b:"Sell chest storage — +"+stashSum+" 🪙",s:"Wood "+stash.wood+" · Stone "+stash.stone+" · Iron "+stash.iron+" · Crystal "+stash.crystal,
-     can:stashSum>0,fn(){coins+=stashSum;totals.earned+=stashSum;stash={wood:0,stone:0,iron:0,crystal:0,water:0};toast("💰 Storage sold for "+stashSum+" 🪙");sfx(880,.1);checkUnlocks();}},
+    {em:"🏦",b:"Sell the Bank — +"+stashSum+" 🪙",s:"Bank: "+RES.wood.em+stash.wood+" "+RES.stone.em+stash.stone+" "+RES.iron.em+stash.iron+" "+RES.crystal.em+stash.crystal+(stash.water?" "+RES.water.em+stash.water:"")+" — or keep it and let robots 🔨 Build from it!",
+     can:stashSum>0,fn(){coins+=stashSum;totals.earned+=stashSum;stash={wood:0,stone:0,iron:0,crystal:0,water:0};toast("💰 Bank sold for "+stashSum+" 🪙");sfx(880,.1);checkUnlocks();}},
   ];
   el.innerHTML="";
   for(const it of items){
@@ -2285,8 +2362,9 @@ const BRAIN=[
   {k:["function","array","advanced"],a:"Great question! In this world:\n• A robot's program is like a function — a reusable recipe\n• 📦 Memory blocks ARE variables — real ones\n• Your robot team is like an array of workers\n\nSwitch to the 🐍 Python tab to see the real syntax. When you're ready, try Python on a computer — you already know the ideas!"},
   {k:["quest","level","xp","hat","gift","daily","treasure"],a:"⭐ Ways to grow:\n• 📜 Quests — finish goals, claim coins & XP\n• ⭐ Level up — every action gives XP; levels give coins and 🎩 hats for your robots (🛒 → Style)\n• ⚡ Skills — the more you chop/mine/build/sell, the better you get at it!\n• 🎁 Daily gift — a present every day you play\n• 🎁 Treasure chests are hidden FAR from home… send an explorer robot!"},
   {k:["skill","perk","better","chop","stronger"],a:"⚡ Skills level up slowly as your robots WORK (check 📜 → Skills):\n• 🪓 Woodcutting — chance of bonus wood per chop\n• ⛏️ Mining — chance of bonus ore\n• 🏃 Agility — all robots run a bit faster\n• 🔨 Building — chance the materials are free\n• 💰 Trading — better prices at the market\n\nEvery level is earned with real practice — just like real skills!"},
-  {k:["project","workshop","challenge","mini","harder"],a:"🏗️ Build Projects (📜 → Build Projects) are coding challenges a few levels above normal play!\n\nYou get a blueprint and a tiny block budget — the only way to fit is smart loops (even loops inside loops!). Finish one and the building appears next to your home base forever.\n\nStart with the 🏡 Big House, then unlock the 🚗 Race Car and the 🎡 Theme Park!"},
-  {k:["smart","nearest","home","pathfind"],a:"🧭 Smart blocks (unlock by earning 150 🪙 or owning 2 robots):\n• Face Nearest — auto-aims at the closest tree/rock/iron/crystal\n• Go Home — pathfinds back to base, walking around obstacles\n• Sell All — sells your bag when near the market\n\nThe ultimate combo: Forever → Face Nearest tree → If tree ahead: Collect, else Move → If bag full: Go Home + Sell All."},
+  {k:["project","workshop","challenge","mini","harder","create","publish"],a:"🏗️ Build Projects (📜 → Build Projects) are coding challenges a few levels above normal play!\n\nYou get a blueprint and a tiny block budget — the only way to fit is smart loops (even loops inside loops!). Finished builds appear near home (tap one to 🚚 Move or 🗑 Delete it).\n\n✏️ Make your OWN: paint a blueprint, set the map size 📐 and budget, use ANY blocks (loops, variables, conditions!), solve it, and 🌍 Publish it for other players to try!"},
+  {k:["smart","nearest","home","pathfind"],a:"🧭 Smart blocks (unlock by earning 150 🪙 or owning 2 robots):\n• Face Nearest — auto-aims at the closest tree/rock/iron/crystal\n• Go Home — pathfinds back to base, walking around obstacles\n• Sell All — sells your bag when near the market\n• 🏦 Bank All — stores your whole bag in the Bank\n\nThe ultimate combo: Forever → Face Nearest tree → If tree ahead: Collect, else Move → If bag full: Go Home + Sell All."},
+  {k:["bank","save","store","stash","deposit"],a:"🏦 The Bank is your shared storage — it never gets sold unless YOU sell it (🛒 shop).\n\n• 🏦 Bank All block stores a robot's whole bag\n• Dropping into a chest 📦 also banks it\n• Any robot can 🔨 Build using bank materials when its own bag runs short — so stockpile wood, then send a builder to raise saplings, bridges and chests from the reserve!"},
   {k:["unlock","lock","locked"],a:"🔓 You unlock powers by PLAYING:\n• 🔁 Loops — collect 5 resources\n• ❓ Logic — sell anything at the market\n• 🧭 Smart blocks — earn 150 🪙 total or own 2 robots\n\nNo lessons, no levels — just build stuff!"},
   {k:["hello","hi","hey"],a:"Hey there, world-builder! 👋 I'm Byte. Ask me about loops, selling, building… or tap 💡 Give me an idea and I'll suggest a project!"},
 ];
@@ -2426,6 +2504,10 @@ $("mgModePaint").addEventListener("click",()=>{if(mgState){mgState.paintMode="pa
 $("mgModeBot").addEventListener("click",()=>{if(mgState){mgState.paintMode="bot";mgCreatorUI();}});
 $("mgBudDec").addEventListener("click",()=>{if(mgState){mgState.proj.maxBlocks=Math.max(3,mgState.proj.maxBlocks-1);mgState.solved=false;mgCreatorUI();mgUpdateCount();}});
 $("mgBudInc").addEventListener("click",()=>{if(mgState){mgState.proj.maxBlocks=Math.min(30,mgState.proj.maxBlocks+1);mgCreatorUI();mgUpdateCount();}});
+$("mgWDec").addEventListener("click",()=>mgSetSize(-1,0));
+$("mgWInc").addEventListener("click",()=>mgSetSize(1,0));
+$("mgHDec").addEventListener("click",()=>mgSetSize(0,-1));
+$("mgHInc").addEventListener("click",()=>mgSetSize(0,1));
 $("mgName").addEventListener("click",()=>{
   if(!mgState)return;
   const n=prompt("Challenge name:",mgState.proj.name);
@@ -2526,19 +2608,51 @@ function endPointer(e){
 canvas.addEventListener("pointerup",endPointer);
 canvas.addEventListener("pointercancel",e=>pointers.delete(e.pointerId));
 canvas.addEventListener("wheel",e=>{cam.scale=clamp(cam.scale*(e.deltaY<0?1.1:0.9),.4,2.2);follow=false;e.preventDefault();},{passive:false});
+const PLAYER_BUILT={proj:1,chest:1,bridge:1}; // things the player made and may move/remove
 function handleTap(sx,sy){
   const wx=(sx-innerWidth/2)/cam.scale+cam.x, wy=(sy-innerHeight/2)/cam.scale+cam.y;
   const tx=Math.floor(wx/TILE), ty=Math.floor(wy/TILE);
+  if(!inB(tx,ty)){closeObjMenu();return;}
+  // relocating a build: second tap drops it on an empty walkable tile
+  if(movingObj){
+    const nk=key(tx,ty), no=objects.get(nk);
+    if(!no && ((movingObj.o.type==="bridge")?terrain[nk]===T_WATER:(terrain[nk]!==T_WATER))){
+      objects.delete(movingObj.k);objects.set(nk,movingObj.o);
+      burst(tx,ty,"sparkle");toast("🚚 Moved!");sfx(600,.06);saveSoon();
+      movingObj=null;return;
+    }
+    toast(movingObj.o.type==="bridge"?"🌉 Bridges go on water.":"🚫 Pick an empty spot on land.");
+    return;
+  }
   const ri=robots.findIndex(r=>Math.round(r.rx)===tx&&Math.round(r.ry)===ty);
   if(ri>=0){selRobot=ri;selBlock=null;elseSel=null;follow=true;updateChips();updateHud();updateFab();renderProgram();renderPy();toast("🤖 Selected "+robots[ri].name);sfx(500,.05);return;}
-  if(!inB(tx,ty))return;
   const o=objects.get(key(tx,ty));
-  const names={tree:"🌳 Tree — collect for wood!",rock:"🪨 Rock — collect for stone!",iron:"⛓️ Iron ore — worth 6🪙!",crystal:"💎 Crystal — worth 15🪙!",home:"🏠 Home base",market:"🏪 Market — sell resources here!",chest:"📦 Chest — drop items in to store them",bridge:"🌉 Bridge",flower:"🌼 Just a pretty flower",item:"📦 Dropped items — a robot can collect these!",gift:"🎁 Treasure! Send a robot to collect it!",proj:"🏗️ Your finished Build Project — you coded this!"};
+  if(o&&PLAYER_BUILT[o.type]){openObjMenu(key(tx,ty),o);return;}
+  const names={tree:"🌳 Tree — chop it for wood!",rock:"🪨 Rock — mine it for stone!",iron:"⛓️ Iron ore — mine it, worth 6🪙!",crystal:"💎 Crystal — mine it, worth 15🪙!",home:"🏠 Home base",market:"🏪 Market — sell resources here!",flower:"🌼 Just a pretty flower",item:"📦 Dropped items — a robot can collect these!",gift:"🎁 Treasure! Send a robot to collect it!"};
   if(o){
     if(o.type==="tree"&&o.stage<2)toast("🌱 A young tree… it's still growing!");
     else toast(names[o.type]||o.type);
   }else if(terrain[key(tx,ty)]===T_WATER)toast("🌊 Water — face it and 🪣 Scoop for water 💧, or 🔨 Build a bridge (2🪨) to cross!");
 }
+let movingObj=null;
+function closeObjMenu(){const m=$("objMenu");if(m)m.classList.remove("open");}
+function openObjMenu(k,o){
+  const m=$("objMenu");
+  const label={proj:"🏗️ "+((o.em||"")+" build"),chest:"📦 Chest",bridge:"🌉 Bridge"}[o.type]||"Build";
+  m.querySelector(".om-title").textContent=label+" — what to do?";
+  m.dataset.k=k;m.classList.add("open");sfx(500,.04);
+}
+$("objMove").addEventListener("click",()=>{
+  const k=+$("objMenu").dataset.k, o=objects.get(k);
+  if(o){movingObj={k,o};toast("🚚 Tap an empty spot to move it there.");}
+  closeObjMenu();
+});
+$("objDelete").addEventListener("click",()=>{
+  const k=+$("objMenu").dataset.k, o=objects.get(k);
+  if(o){objects.delete(k);burst(k%W,(k/W)|0,"stone");toast("🗑 Removed.");sfx(300,.06);saveSoon();}
+  closeObjMenu();
+});
+$("objCancel").addEventListener("click",closeObjMenu);
 
 /* ---------------- sprites ---------------- */
 const spriteCache=new Map();

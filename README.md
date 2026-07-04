@@ -45,7 +45,9 @@ Plus an **Inventor Level** (XP from everything you do), an endless **quest board
 
 **⚡ Skills** level up slowly with real practice — Woodcutting, Mining, Agility, Building and Trading each grant a growing perk (bonus resources, faster robots, free builds, better prices).
 
-**🏗️ Build Projects** are mini-game coding challenges a few levels above normal play: solve a blueprint (Big House → Race Car → Theme Park) inside a tight block budget that forces nested loops — finished builds appear in your world forever. In the maximized editor you can also double-tap a block to delete it.
+**🏗️ Build Projects** are mini-game coding challenges a few levels above normal play: solve a blueprint (Big House → Race Car → Theme Park) inside a tight block budget that forces nested loops — finished builds appear in your world forever (tap one to 🚚 move or 🗑 delete it). Making your own challenge? Set the **map size** and budget and use the **full block palette** (loops, conditions, variables) — challenges run on the same interpreter, so they can be as clever as you like. In the maximized editor you can also double-tap a block to delete it.
+
+**🏦 Bank:** deposit a robot's whole bag with the Bank All block (or by dropping into a chest); the bank is never sold unless you sell it, and any robot can **build straight from the bank** when its own bag runs short — stockpile now, build later.
 
 **🌍 Online (optional):** minimal email + password accounts and **community challenges** — design your own blueprint challenge (you must solve it yourself first), publish it, and let players everywhere try it. Powered by Supabase with row-level security; the game stays fully playable offline if online mode isn't configured.
 
