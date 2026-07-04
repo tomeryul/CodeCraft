@@ -160,7 +160,7 @@ async function ev(expr) {
   await ev(`(()=>{
     const r=R();
     r.x=homePos.x-3; r.y=homePos.y+2; r.rx=r.x; r.ry=r.y; r.dir=1;
-    objects.set(key(r.x+1,r.y),{type:'tree',stage:2});
+    objects.set(key(r.x+1,r.y),{type:'tree',stage:2,hp:1}); // hp:1 → one collect harvests it
     r.program=[newBlock('collect')]; startRobot(r); return 'ok';
   })()`);
   await sleep(1200);
@@ -315,6 +315,80 @@ async function ev(expr) {
   await ev(`mgExit(false); document.getElementById('editor').classList.remove('open','max'); 'ok'`);
   check("online configured: auth box shows email/password login form", await ev(`(()=>{renderAuthBox();return !!document.getElementById('authEmail')&&!!document.getElementById('authPass');})()`) === true);
   check("Supabase project is wired up", await ev("sbReady()") === true);
+
+  console.log("▶ world actions: multi-hit nodes need loops");
+  const chop = await ev(`(()=>{
+    mgState=null; mgRobot=null;
+    const r=R(); r.x=homePos.x-3; r.y=homePos.y+2; r.rx=r.x; r.ry=r.y; r.dir=1; r.energy=100;
+    const before=r.inv.wood;
+    objects.set(key(r.x+1,r.y),{type:'tree',stage:2}); // full HP (3)
+    r.program=[newBlock('chop')]; startRobot(r);
+    return before;
+  })()`);
+  await sleep(900);
+  check("one Chop does NOT fell a full tree (needs repeats)", await ev(`objects.get(key(R().x+1,R().y)) && objects.get(key(R().x+1,R().y)).type==='tree'`) === true);
+  const looped = await ev(`(()=>{
+    const r=R(); r.dir=1; r.energy=100;
+    if(!objects.get(key(r.x+1,r.y))) objects.set(key(r.x+1,r.y),{type:'tree',stage:2});
+    const rep=newBlock('repeat'); rep.n=5; rep.body.push(newBlock('chop'));
+    r.program=[rep]; startRobot(r); return 'ok';
+  })()`);
+  await sleep(2600);
+  check("a loop of Chop fells the tree and yields wood", await ev("R().inv.wood") >= 1, await ev("R().inv.wood"));
+
+  console.log("▶ energy & rest");
+  const tired = await ev(`(()=>{
+    const r=R(); r.energy=3; r.dir=1;
+    objects.set(key(r.x+1,r.y),{type:'rock',hp:9});
+    r.program=[newBlock('mine')]; startRobot(r);
+    return 'ok';
+  })()`);
+  await sleep(700);
+  check("a worn-out robot is too tired to work", await ev("R().tired") === true, await ev("JSON.stringify({e:R().energy,tired:R().tired})"));
+  check("Rest restores energy", await ev(`(()=>{const r=R();stopRobot(r);r.energy=5;doAction(r,{t:'rest',n:2});return r.energy;})()`) >= 60);
+
+  console.log("▶ scoop water");
+  const water = await ev(`(()=>{
+    const r=R(); stopRobot(r); r.energy=100;
+    // find a water tile and face it
+    let placed=false;
+    for(let y=0;y<H&&!placed;y++)for(let x=1;x<W&&!placed;x++){
+      if(terrain[key(x,y)]===T_WATER && canWalk(x-1,y) && !objects.get(key(x-1,y))){
+        r.x=x-1; r.y=y; r.rx=r.x; r.ry=r.y; r.dir=1; placed=true;
+      }
+    }
+    const before=r.inv.water||0;
+    doAction(r,{t:'scoop'});
+    return JSON.stringify([placed, before, r.inv.water]);
+  })()`);
+  check("Scoop collects water from the river", JSON.parse(water)[0] && JSON.parse(water)[2] === 1, water);
+
+  console.log("▶ mini-game Board tab");
+  await ev(`mgEnter(PROJECTS[0]); 'ok'`);
+  check("challenge opens on the Board tab", await ev(`document.getElementById('boardTab').style.display!=='none' && document.getElementById('boardTabBtn').style.display!=='none'`) === true);
+  check("Blocks tab is full code (no canvas eating space)", await ev(`document.getElementById('blocksTab').contains(document.getElementById('mgCanvas'))`) === false);
+  await ev(`mgExit(false); document.getElementById('editor').classList.remove('open','max'); 'ok'`);
+  check("Board tab hidden after leaving a challenge", await ev(`document.getElementById('boardTabBtn').style.display==='none'`) === true);
+
+  console.log("▶ drag & drop (moveBlock core)");
+  const dnd = await ev(`(()=>{
+    const r=R(); r.program=[]; r.hist=[]; r.redoS=[];
+    const rep=newBlock('repeat'); const mv=newBlock('move'); const col=newBlock('collect');
+    r.program=[rep, mv, col];
+    // drag 'move' INTO the repeat loop
+    const ok1=moveBlock(mv.uid,'into',rep.uid);
+    const inLoop = rep.body.length===1 && rep.body[0].uid===mv.uid && r.program.length===2;
+    // forbid dropping a container into its own child
+    const ok2=moveBlock(rep.uid,'into',mv.uid);
+    // reorder: move 'collect' before the repeat at root
+    const ok3=moveBlock(col.uid,'before',rep.uid);
+    const order = r.program.map(b=>b.t).join(',');
+    return JSON.stringify({ok1,inLoop,ok2,ok3,order});
+  })()`);
+  const D = JSON.parse(dnd);
+  check("drag a block into a loop nests it", D.ok1 === true && D.inLoop === true, dnd);
+  check("cannot drop a container into its own descendant", D.ok2 === false, dnd);
+  check("drag to reorder at root works", D.ok3 === true && D.order === "collect,repeat", dnd);
 
   check("no uncaught exceptions during entire run", exceptions.length === 0, exceptions.join(" | "));
 

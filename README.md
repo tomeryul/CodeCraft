@@ -10,11 +10,13 @@ Built as a single `index.html` — no dependencies, no build step, works offline
 
 You start with one small robot in a big procedurally generated world. You never control it directly — you **program** it with drag-free, tap-to-build code blocks:
 
-- ⬆️ Move, ↩️ Turn, ✋ Collect, ⤵️ Drop, 🔨 Build, ⏱️ Wait
+- ⬆️ Move, ↩️ Turn, ✋ Collect, 🪓 Chop, ⛏️ Mine, 🪣 Scoop (water), ⤵️ Drop, 🔨 Build, 😴 Rest, ⏱️ Wait
 - 🔁 Repeat and ♾️ Forever loops (repeat count can be a variable!)
-- ❓ If / Else conditions (tree ahead? blocked? bag full? `x > 5`?)
+- ❓ If / Else conditions (tree ahead? blocked? bag full? tired? `x > 5`?)
 - 🧭 Face Nearest, 🏠 Go Home (pathfinding), 💰 Sell All
 - 🧠 Memory: 📦 Set (numbers & strings), ➕ Change, 🔢 Count loops with a rising index, 💬 Say (speech bubbles!) — with a **live variable watch** in the editor
+
+Big resources take **several hits** to harvest (a tree needs a few chops), so gathering naturally pushes you toward loops — and every job burns **⚡ energy**, so a busy robot must 😴 Rest (put it in the loop!) before it gets too tired to work. Blocks can be **long-press dragged** to nest or reorder them, and in the maximized editor a double-tap deletes.
 
 The editor has undo/redo and block duplication, and a 3-step interactive tutorial gets first-time players to their first running program in under a minute.
 

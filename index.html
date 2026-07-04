@@ -112,7 +112,12 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   box-shadow:inset 0 1.5px 0 rgba(255,255,255,.16);border-bottom:3px solid rgba(0,0,0,.3);}
 .tabbody{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:0 12px 10px;}
 /* program and palette share the editor half-and-half — comfortable to code everywhere */
-#programWrap{flex:1 1 0;min-height:0;overflow-y:auto;background:rgba(0,0,0,.24);border-radius:14px;padding:9px;}
+#programWrap{position:relative;flex:1 1 0;min-height:0;overflow-y:auto;background:rgba(0,0,0,.24);border-radius:14px;padding:9px;}
+#programWrap.dragging{overflow:hidden;touch-action:none;}
+.blk.drag-src{opacity:.32;}
+.drag-clone{position:fixed;z-index:300;pointer-events:none;opacity:.96;transform:scale(1.04) rotate(-1.5deg);box-shadow:0 12px 28px rgba(0,0,0,.55);}
+.blk.dz-into{outline:3px solid var(--accent);outline-offset:1px;box-shadow:0 0 0 4px rgba(255,184,48,.28);}
+#dropline{position:absolute;height:4px;border-radius:2px;background:var(--accent);box-shadow:0 0 8px var(--accent);display:none;z-index:6;pointer-events:none;}
 #programWrap .empty{color:var(--ink2);text-align:center;padding:26px 12px;font-size:14px;line-height:1.5;}
 
 /* blocks */
@@ -323,7 +328,12 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   border-bottom:3px solid rgba(0,0,0,.3);transition:transform .08s,border-bottom-width .08s;}
 .mg-top button:active{transform:translateY(2px);border-bottom-width:1px;}
 #mgGoal{color:var(--ink2);font-size:12.5px;line-height:1.45;margin:7px 0;}
-#mgCanvas{width:100%;border-radius:10px;display:block;}
+#mgCanvas{width:100%;border-radius:10px;display:block;touch-action:none;}
+#boardTab{overflow-y:auto;}
+#boardTab #mgPanel{background:none;padding:0;margin:0;}
+#mgBoardHint{color:var(--ink2);font-size:12px;text-align:center;padding:10px 6px 2px;line-height:1.4;}
+#tabs #boardTabBtn{background:linear-gradient(180deg,#c07c22,#9a5f15);color:#fff;}
+#tabs #boardTabBtn.on{background:linear-gradient(180deg,#d8912f,#b06f1a);}
 /* ---------- tutorial coach ---------- */
 #coach{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--sab) + 96px);z-index:60;background:#171230;
   border:2px solid var(--accent);border-radius:16px;padding:12px 18px;font-size:14.5px;font-weight:600;max-width:88vw;
@@ -394,6 +404,7 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   <div class="chip" id="lvlChip">⭐ <span id="lvlEl">1</span><div id="xpBar"><i id="xpFill"></i></div></div>
   <div class="chip" id="coinChip">🪙 <span id="coinsEl">0</span></div>
   <div class="chip" id="bagChip">🎒 <span id="bagEl">0/8</span></div>
+  <div class="chip" id="energyChip"><span id="energyEl">⚡100</span></div>
   <div class="spacer"></div>
   <button class="iconbtn" id="questBtn" title="Quests">📜</button>
   <button class="iconbtn" id="shopBtn" title="Shop">🛒</button>
@@ -425,11 +436,12 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
     </div>
   </div>
   <div id="tabs">
+    <button data-tab="board" id="boardTabBtn" style="display:none">🗺️ Board</button>
     <button data-tab="blocks" class="on">🧩 Blocks</button>
     <button data-tab="python">🐍 Python</button>
   </div>
-  <div class="tabbody" id="blocksTab">
-    <div id="mgPanel" style="display:none">
+  <div class="tabbody" id="boardTab" style="display:none">
+    <div id="mgPanel">
       <div class="mg-top"><b id="mgTitle"></b><span id="mgCount"></span><span class="spacer"></span>
         <button id="mgResetBtn">↺ Reset</button><button id="mgExitBtn">✕ Exit</button></div>
       <div class="mg-top" id="mgCreatorBar" style="display:none">
@@ -440,7 +452,10 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
       </div>
       <div id="mgGoal"></div>
       <canvas id="mgCanvas"></canvas>
+      <div id="mgBoardHint">✏️ Tap <b>🧩 Blocks</b> to write your program, then press ▶ to run it here.</div>
     </div>
+  </div>
+  <div class="tabbody" id="blocksTab">
     <div id="varWatch"></div>
     <div id="programWrap"><div id="programEl"></div></div>
     <div id="selActions">
@@ -712,13 +727,16 @@ let uidN=1; const uid=()=>uidN++;
 const W=80, H=80, TILE=48;
 const DX=[0,1,0,-1], DY=[-1,0,1,0];
 const T_WATER=0,T_SAND=1,T_GRASS=2,T_ROCKY=3;
-const RES={wood:{em:"🪵",price:2},stone:{em:"🪨",price:3},iron:{em:"⛓️",price:6},crystal:{em:"💎",price:15}};
+const RES={wood:{em:"🪵",price:2},stone:{em:"🪨",price:3},iron:{em:"⛓️",price:6},crystal:{em:"💎",price:15},water:{em:"💧",price:1}};
+const NODE_HP={tree:3,rock:4,iron:5,crystal:6}; // hits needed to harvest — forces loops
+const NODE_YIELD={tree:"wood",rock:"stone",iron:"iron",crystal:"crystal"};
+const NODE_RESPAWN={tree:25000,rock:50000,iron:70000,crystal:120000};
 const ROBOT_COLORS=["#ffb830","#5ab8ff","#ff5d73","#54d66a","#b184ff","#ff9d6b","#4dd4c0","#f06bd4"];
 const SAVE_KEY="codecraft_save_v1";
 
 /* ---------------- state ---------------- */
 let terrain, objects, robots=[], animals=[], respawnQ=[];
-let seed=0, coins=0, stash={wood:0,stone:0,iron:0,crystal:0};
+let seed=0, coins=0, stash={wood:0,stone:0,iron:0,crystal:0,water:0};
 let totals={collected:0,earned:0};
 let unlocks={loops:false,logic:false,smart:false};
 let homePos={x:0,y:0}, marketPos={x:0,y:0};
@@ -816,17 +834,49 @@ function genAnimals(){
 function makeRobot(x,y,name){
   return {id:uid(),x,y,rx:x,ry:y,dir:1,name:name||("Robo-"+(robots.length+1)),
     color:ROBOT_COLORS[robots.length%ROBOT_COLORS.length],
-    inv:{wood:0,stone:0,iron:0,crystal:0},cap:8,speed:1,
-    vars:{},hat:null,say:null,pop:0,
+    inv:{wood:0,stone:0,iron:0,crystal:0,water:0},cap:8,speed:1,energy:100,
+    vars:{},hat:null,say:null,pop:0,tired:false,
     program:[],frames:null,running:false,wait:0,path:null,blocked:false,curUid:null,nextAct:0};
 }
-const bagCount=r=>r.inv.wood+r.inv.stone+r.inv.iron+r.inv.crystal;
+const bagCount=r=>r.inv.wood+r.inv.stone+r.inv.iron+r.inv.crystal+(r.inv.water||0);
+const MAX_ENERGY=100;
+function useEnergy(r,cost){
+  const c=Math.max(1,Math.round(cost*(1-skills.agility.lvl*0.03))); // agility eases fatigue
+  if((r.energy||0)<c){r.blocked=true;r.tired=true;mentorFlag("tired");return false;}
+  r.energy-=c;r.tired=false;return true;
+}
+// hit a resource node ahead; harvest only when its HP reaches 0 (so gathering needs repetition/loops)
+function hitNode(r,a,k,o){
+  if(bagCount(r)>=r.cap){r.blocked=true;sfxIf(r,150,.05);mentorFlag("bagFull");return;}
+  if(!useEnergy(r,5))return;
+  if(o.hp===undefined)o.hp=NODE_HP[o.type]||1;
+  o.hp--;r.pop=1;
+  burst(a.x,a.y,o.type==="tree"?"leaf":o.type==="crystal"?"sparkle":"stone");
+  sfxIf(r,o.type==="tree"?300:210,.04);
+  if(o.hp>0){addPop(a.x,a.y,o.type==="tree"?"🪓":"⛏️");return;}
+  const got=NODE_YIELD[o.type];
+  objects.delete(k);
+  respawnQ.push({at:now+NODE_RESPAWN[o.type],x:a.x,y:a.y,type:o.type});
+  r.inv[got]++;totals.collected++;addPop(a.x,a.y,"+1 "+RES[got].em);
+  addXP(o.type==="crystal"?4:2);qProg("collect",got);
+  const sk=o.type==="tree"?"wood":"mine";
+  skillXP(sk,o.type==="crystal"?6:o.type==="iron"?4:3);
+  if(bagCount(r)<r.cap&&Math.random()<skills[sk].lvl*.06){r.inv[got]++;totals.collected++;addPop(a.x,a.y,"✨ +1 "+RES[got].em);}
+  sfxIf(r,660,.06);checkUnlocks();
+}
+function scoopWater(r,a,k){
+  if(bagCount(r)>=r.cap){r.blocked=true;sfxIf(r,150,.05);mentorFlag("bagFull");return;}
+  if(!inB(a.x,a.y)||terrain[k]!==T_WATER||(objects.get(k)&&objects.get(k).type==="bridge")){r.blocked=true;return;}
+  if(!useEnergy(r,4))return;
+  r.inv.water=(r.inv.water||0)+1;totals.collected++;r.pop=1;addPop(a.x,a.y,"+1 💧");burst(a.x,a.y,"sparkle");
+  addXP(1);qProg("collect","water");skillXP("agility",1);sfxIf(r,720,.05);checkUnlocks();
+}
 let mgRobot=null, mgState=null; // active build-project challenge; editor targets mgRobot while set
 const R=()=>mgRobot||robots[selRobot];
 
 /* ---------------- blocks ---------------- */
-const CONDS=["treeAhead","rockAhead","ironAhead","waterAhead","blocked","bagFull","bagEmpty"];
-const COND_LBL={treeAhead:"tree ahead 🌳",rockAhead:"rock ahead 🪨",ironAhead:"iron ahead ⛓️",waterAhead:"water ahead 🌊",blocked:"blocked 🚧",bagFull:"bag full 🎒",bagEmpty:"bag empty 🕳️"};
+const CONDS=["treeAhead","rockAhead","ironAhead","waterAhead","blocked","bagFull","bagEmpty","tired"];
+const COND_LBL={treeAhead:"tree ahead 🌳",rockAhead:"rock ahead 🪨",ironAhead:"iron ahead ⛓️",waterAhead:"water ahead 🌊",blocked:"blocked 🚧",bagFull:"bag full 🎒",bagEmpty:"bag empty 🕳️",tired:"tired 😴"};
 const BUILDS=["sapling","bridge","chest"];
 const BUILD_LBL={sapling:"🌱 sapling (1🪵)",bridge:"🌉 bridge (2🪨)",chest:"📦 chest (5🪵)"};
 const TARGETS=["tree","rock","iron","crystal"];
@@ -836,8 +886,12 @@ const DEFS={
   turnL:{cat:"basic",ic:"↩️",lbl:"Turn Left"},
   turnR:{cat:"basic",ic:"↪️",lbl:"Turn Right"},
   collect:{cat:"basic",ic:"✋",lbl:"Collect"},
+  chop:{cat:"basic",ic:"🪓",lbl:"Chop"},
+  mine:{cat:"basic",ic:"⛏️",lbl:"Mine"},
+  scoop:{cat:"basic",ic:"🪣",lbl:"Scoop"},
   drop:{cat:"basic",ic:"⤵️",lbl:"Drop"},
   build:{cat:"basic",ic:"🔨",lbl:"Build"},
+  rest:{cat:"basic",ic:"😴",lbl:"Rest"},
   wait:{cat:"basic",ic:"⏱️",lbl:"Wait"},
   repeat:{cat:"loops",ic:"🔁",lbl:"Repeat",container:true},
   forever:{cat:"loops",ic:"♾️",lbl:"Forever",container:true},
@@ -851,7 +905,7 @@ const DEFS={
   say:{cat:"vars",ic:"💬",lbl:"Say"},
 };
 const CATS=[
-  {id:"basic",name:"Basics",types:["move","turnL","turnR","collect","drop","build","wait"],lock:null},
+  {id:"basic",name:"Basics",types:["move","turnL","turnR","collect","chop","mine","scoop","drop","build","rest","wait"],lock:null},
   {id:"loops",name:"Loops",types:["repeat","forever"],lock:"loops",need:"Collect 5 resources to unlock 🔁 loops!"},
   {id:"logic",name:"Logic",types:["if"],lock:"logic",need:"Sell something at the market 🏪 to unlock ❓ logic!"},
   {id:"smart",name:"Smart",types:["faceNearest","goHome","sellAll"],lock:"smart",need:"Earn 150 🪙 total (or own 2 robots) to unlock 🧭 smart blocks!"},
@@ -863,6 +917,7 @@ function newBlock(t){
   if(t==="forever"){b.body=[];}
   if(t==="if"){b.cond="treeAhead";b.body=[];b.els=[];}
   if(t==="wait")b.n=1;
+  if(t==="rest")b.n=2;
   if(t==="build")b.opt="sapling";
   if(t==="faceNearest")b.opt="tree";
   if(t==="setVar"){b.name="x";b.val={k:"num",n:5};}
@@ -911,6 +966,7 @@ function evalCond(r,c){
     case "blocked":return !canWalk(a.x,a.y);
     case "bagFull":return bagCount(r)>=r.cap;
     case "bagEmpty":return bagCount(r)===0;
+    case "tired":return (r.energy==null?100:r.energy)<10;
   } return false;
 }
 
@@ -986,41 +1042,38 @@ function doAction(r,b){
     case "turnL": r.dir=(r.dir+3)%4; break;
     case "turnR": r.dir=(r.dir+1)%4; break;
     case "wait": r.wait=Math.max(0,(b.n|0)-1); break;
+    case "rest":
+      r.energy=Math.min(MAX_ENERGY,(r.energy||0)+30*Math.max(1,b.n|0));
+      r.wait=Math.max(0,(b.n|0)-1);r.tired=false;r.pop=1;
+      if(sfxIf)sfxIf(r,420,.05);
+      break;
     case "collect":{
-      if(!o){r.blocked=true;break;}
-      if(o.type==="gift"){
+      // generic gather: dropped items, treasure, chop trees, mine rocks/ore, scoop water
+      if(o&&o.type==="gift"){
         objects.delete(k);
         const c2=30+Math.floor(Math.random()*40);
         coins+=c2;addXP(20);addPop(a.x,a.y,"🎁 +"+c2+" 🪙");burst(a.x,a.y,"coin");
         coinFlash();qProg("gift");r.pop=1;sfxIf(r,880,.1);updateHud();break;
       }
-      if(bagCount(r)>=r.cap){r.blocked=true;sfxIf(r,150,.05);mentorFlag("bagFull");break;}
-      let got=null;
-      if(o.type==="tree"&&o.stage===2){got="wood";objects.delete(k);respawnQ.push({at:now+25000,x:a.x,y:a.y,type:"tree"});}
-      else if(o.type==="rock"){got="stone";objects.delete(k);respawnQ.push({at:now+50000,x:a.x,y:a.y,type:"rock"});}
-      else if(o.type==="iron"){got="iron";objects.delete(k);respawnQ.push({at:now+70000,x:a.x,y:a.y,type:"iron"});}
-      else if(o.type==="crystal"){got="crystal";objects.delete(k);respawnQ.push({at:now+120000,x:a.x,y:a.y,type:"crystal"});}
-      else if(o.type==="item"){
+      if(o&&o.type==="item"){
+        if(bagCount(r)>=r.cap){r.blocked=true;mentorFlag("bagFull");break;}
         const space=r.cap-bagCount(r), take=Math.min(space,o.n);
         r.inv[o.item]+=take;o.n-=take;if(o.n<=0)objects.delete(k);
-        totals.collected+=take;got="__stack";
-        addPop(a.x,a.y,"+"+take+" "+RES[o.item].em);
-        addXP(take);qProg("collect",o.item?o.item:null,take);
+        totals.collected+=take;r.pop=1;addPop(a.x,a.y,"+"+take+" "+RES[o.item].em);
+        addXP(take);qProg("collect",o.item);sfxIf(r,660,.06);break;
       }
-      if(got&&got!=="__stack"){
-        r.inv[got]++;totals.collected++;addPop(a.x,a.y,"+1 "+RES[got].em);
-        addXP(1);qProg("collect",got);
-        burst(a.x,a.y,got==="wood"?"leaf":got==="crystal"?"sparkle":"stone");
-        // action skills: slow XP + a chance of a bonus resource per level
-        const sk=got==="wood"?"wood":"mine";
-        skillXP(sk,got==="crystal"?6:got==="iron"?4:3);
-        if(bagCount(r)<r.cap&&Math.random()<skills[sk].lvl*.06){
-          r.inv[got]++;totals.collected++;
-          addPop(a.x,a.y,"✨ +1 "+RES[got].em);
-        }
-      }
-      if(got){sfxIf(r,660,.06);r.pop=1;checkUnlocks();}else r.blocked=true;
+      if(o&&NODE_YIELD[o.type]&&!(o.type==="tree"&&o.stage<2)){hitNode(r,a,k,o);break;}
+      if(inB(a.x,a.y)&&terrain[k]===T_WATER&&!(o&&o.type==="bridge")){scoopWater(r,a,k);break;}
+      r.blocked=true;break;}
+    case "chop":{
+      if(o&&o.type==="tree"&&o.stage===2)hitNode(r,a,k,o);
+      else{r.blocked=true;sfxIf(r,150,.05);}
       break;}
+    case "mine":{
+      if(o&&(o.type==="rock"||o.type==="iron"||o.type==="crystal"))hitNode(r,a,k,o);
+      else{r.blocked=true;sfxIf(r,150,.05);}
+      break;}
+    case "scoop": scoopWater(r,a,k); break;
     case "drop":{
       if(o&&o.type==="chest"){ for(const res in r.inv){stash[res]+=r.inv[res];r.inv[res]=0;} sfxIf(r,500,.06); break;}
       if(o&&o.type==="market"){ sellInv(r); break;}
@@ -1034,6 +1087,8 @@ function doAction(r,b){
       break;}
     case "build":{
       if(!inB(a.x,a.y)||o){r.blocked=true;break;}
+      const bcost=Math.max(1,Math.round(4*(1-skills.agility.lvl*0.03)));
+      if((r.energy||0)<bcost){r.blocked=true;r.tired=true;mentorFlag("tired");break;}
       if(b.opt==="sapling"){
         if(terrain[k]!==T_GRASS||r.inv.wood<1){r.blocked=true;break;}
         r.inv.wood--;objects.set(k,{type:"tree",stage:0,growAt:now+20000});
@@ -1045,6 +1100,7 @@ function doAction(r,b){
         r.inv.wood-=5;objects.set(k,{type:"chest"});
       }
       if(!r.blocked){
+        r.energy-=bcost;r.tired=false;
         sfxIf(r,420,.07);r.pop=1;addXP(5);qProg("build",b.opt);skillXP("build",5);
         burst(a.x,a.y,b.opt==="sapling"?"leaf":"stone");
         if(Math.random()<skills.build.lvl*.05){
@@ -1173,7 +1229,11 @@ function toPy(list,ind){
       case "turnL":P.push(ind+"robot.turn_left()");break;
       case "turnR":P.push(ind+"robot.turn_right()");break;
       case "collect":P.push(ind+"robot.collect()");break;
+      case "chop":P.push(ind+"robot.chop()");break;
+      case "mine":P.push(ind+"robot.mine()");break;
+      case "scoop":P.push(ind+"robot.scoop_water()");break;
       case "drop":P.push(ind+"robot.drop()");break;
+      case "rest":P.push(ind+"robot.rest("+b.n+")");break;
       case "wait":P.push(ind+"robot.wait("+b.n+")");break;
       case "build":P.push(ind+'robot.build("'+b.opt+'")');break;
       case "faceNearest":P.push(ind+'robot.face_nearest("'+b.opt+'")');break;
@@ -1216,6 +1276,7 @@ function pyCond(c){
     case "blocked":return "robot.is_blocked()";
     case "bagFull":return "robot.bag_full()";
     case "bagEmpty":return "robot.bag_empty()";
+    case "tired":return "robot.is_tired()";
   } return "True";
 }
 function renderPy(){
@@ -1233,6 +1294,44 @@ function findList(list,blk){
     if(list[i].els){const f=findList(list[i].els,blk);if(f)return f;}
   }
   return null;
+}
+function byUid(list,uid){
+  for(const b of list){
+    if(b.uid===uid)return b;
+    if(b.body){const f=byUid(b.body,uid);if(f)return f;}
+    if(b.els){const f=byUid(b.els,uid);if(f)return f;}
+  }
+  return null;
+}
+function isDescendant(parent,node){
+  if(!parent||parent===node)return false;
+  const scan=l=>l&&l.some(b=>b===node||scan(b.body)||scan(b.els));
+  return scan(parent.body)||scan(parent.els);
+}
+/* move a block to a new spot in the program tree (drag & drop core; also unit-tested) */
+function moveBlock(dragUid,mode,anchorUid,which){
+  const prog=R().program;
+  const dragBlk=byUid(prog,dragUid);
+  if(!dragBlk)return false;
+  let anchor=null;
+  if(mode!=="root-end"){
+    anchor=byUid(prog,anchorUid);
+    if(!anchor||anchor===dragBlk||isDescendant(dragBlk,anchor))return false;
+  }
+  pushUndo();
+  const f=findList(prog,dragBlk);f.list.splice(f.i,1);
+  if(mode==="root-end")prog.push(dragBlk);
+  else if(mode==="into"){
+    const tgt=which==="els"?(anchor.els=anchor.els||[]):(anchor.body=anchor.body||[]);
+    tgt.push(dragBlk);
+  }else{
+    const g=findList(prog,anchor);
+    if(!g)prog.push(dragBlk);
+    else g.list.splice(mode==="before"?g.i:g.i+1,0,dragBlk);
+  }
+  selBlock=dragBlk;elseSel=null;
+  programChanged();
+  return true;
 }
 function pushUndo(){
   const r=R();
@@ -1324,7 +1423,10 @@ function renderList(list,parent){
     if(b.t==="build")inner+='<button class="pbtn" data-p="build">'+BUILD_LBL[b.opt]+'</button>';
     if(b.t==="faceNearest")inner+='<button class="pbtn" data-p="tgt">'+TGT_EM[b.opt]+' '+b.opt+'</button>';
     row.innerHTML=inner;
+    row.title="Hold & drag to move";
+    attachDrag(row,b);
     row.addEventListener("click",e=>{
+      if(dragSuppress){dragSuppress=false;e.stopPropagation();return;}
       const p=e.target.dataset&&e.target.dataset.p;
       if(p){
         pushUndo();
@@ -1394,6 +1496,86 @@ function renderList(list,parent){
     }
   }
 }
+/* ---------------- drag & drop blocks ---------------- */
+let dragCtx=null, dragSuppress=false;
+function attachDrag(row,b){
+  row.addEventListener("pointerdown",e=>{
+    if(e.target.closest(".pbtn"))return;
+    if(e.pointerType==="mouse"&&e.button!==0)return;
+    const sx=e.clientX, sy=e.clientY;
+    let hold=setTimeout(()=>{hold=null;beginDrag(b,row,sx,sy);},240);
+    const mv=ev=>{
+      if(hold){ if(Math.hypot(ev.clientX-sx,ev.clientY-sy)>10){clearTimeout(hold);hold=null;done();} return; }
+      if(dragCtx){ev.preventDefault();dragMove(ev.clientX,ev.clientY);}
+    };
+    const up=ev=>{ if(hold){clearTimeout(hold);hold=null;} if(dragCtx){dragEnd(ev.clientX,ev.clientY);dragSuppress=true;} done(); };
+    function done(){document.removeEventListener("pointermove",mv);document.removeEventListener("pointerup",up);document.removeEventListener("pointercancel",up);}
+    document.addEventListener("pointermove",mv,{passive:false});
+    document.addEventListener("pointerup",up);
+    document.addEventListener("pointercancel",up);
+  });
+}
+function isDescUid(uid){return !!byUid(dragCtx.b.body||[],uid)||!!byUid(dragCtx.b.els||[],uid);}
+function beginDrag(b,row,x,y){
+  dragCtx={b,uid:b.uid,w:row.offsetWidth,h:row.offsetHeight};
+  row.classList.add("drag-src");
+  const clone=row.cloneNode(true);
+  clone.className="blk c-"+DEFS[b.t].cat+" drag-clone";
+  clone.style.width=row.offsetWidth+"px";
+  document.body.appendChild(clone);
+  dragCtx.clone=clone;
+  $("programWrap").classList.add("dragging");
+  if(navigator.vibrate)navigator.vibrate(15);
+  sfx(600,.04);
+  dragMove(x,y);
+}
+function dragMove(x,y){
+  const c=dragCtx.clone;
+  c.style.left=(x-dragCtx.w*0.5)+"px";
+  c.style.top=(y-dragCtx.h*0.6)+"px";
+  dragCtx.target=computeDrop(x,y);
+  paintDrop(dragCtx.target);
+}
+function computeDrop(x,y){
+  const rows=[...$("programEl").querySelectorAll(".blk[data-uid]")]
+    .filter(el=>+el.dataset.uid!==dragCtx.uid && !isDescUid(+el.dataset.uid));
+  let hit=null;
+  for(const el of rows){const r=el.getBoundingClientRect();if(y>=r.top&&y<=r.bottom){hit={el,r};break;}}
+  if(!hit){
+    if(rows.length){const fr=rows[0].getBoundingClientRect();if(y<fr.top)return {mode:"before",uid:+rows[0].dataset.uid,el:rows[0]};}
+    return {mode:"root-end"};
+  }
+  const blk=byUid(R().program,+hit.el.dataset.uid), isC=!!blk.body, rel=(y-hit.r.top)/hit.r.height;
+  if(isC){ if(rel<0.28)return {mode:"before",uid:blk.uid,el:hit.el}; if(rel>0.72)return {mode:"after",uid:blk.uid,el:hit.el}; return {mode:"into",uid:blk.uid,el:hit.el}; }
+  return {mode:rel<0.5?"before":"after",uid:blk.uid,el:hit.el};
+}
+function paintDrop(t){
+  $("programEl").querySelectorAll(".blk.dz-into").forEach(el=>el.classList.remove("dz-into"));
+  let line=$("dropline");
+  if(!line){line=document.createElement("div");line.id="dropline";$("programWrap").appendChild(line);}
+  const wr=$("programWrap").getBoundingClientRect(), sc=$("programWrap").scrollTop;
+  if(!t||t.mode==="root-end"){
+    const pe=$("programEl").getBoundingClientRect();
+    line.style.display="block";line.style.left="6px";line.style.width="calc(100% - 12px)";
+    line.style.top=(sc+(pe.bottom-wr.top))+"px";return;
+  }
+  if(t.mode==="into"){t.el.classList.add("dz-into");line.style.display="none";return;}
+  const r=t.el.getBoundingClientRect();
+  line.style.display="block";
+  line.style.top=(sc+((t.mode==="before"?r.top:r.bottom)-wr.top))+"px";
+  line.style.left=(r.left-wr.left)+"px";line.style.width=r.width+"px";
+}
+function dragEnd(x,y){
+  const t=dragCtx.target||computeDrop(x,y), ctx=dragCtx;
+  if(ctx.clone)ctx.clone.remove();
+  const line=$("dropline");if(line)line.style.display="none";
+  $("programEl").querySelectorAll(".blk.dz-into").forEach(el=>el.classList.remove("dz-into"));
+  $("programWrap").classList.remove("dragging");
+  dragCtx=null;
+  if(t){moveBlock(ctx.uid,t.mode,t.uid);sfx(780,.05);}
+  else renderProgram();
+}
+
 function updateSelUI(){
   const bar=$("selActions");
   if(selBlock||elseSel){
@@ -1468,7 +1650,8 @@ function updateChips(){
   if(mgState){
     const c=document.createElement("button");
     c.className="rchip sel";
-    c.innerHTML="🏗️ "+mgState.proj.name+(mgState.running?' <span class="live">●RUN</span>':'');
+    const nb=countBlocks(mgRobot.program), over=nb>mgState.proj.maxBlocks;
+    c.innerHTML="🏗️ "+esc(mgState.proj.name)+' <span class="rbudget" style="color:'+(over?"#ff5d73":"#ffd66b")+'">🧩'+nb+"/"+mgState.proj.maxBlocks+"</span>"+(mgState.running?' <span class="live">●RUN</span>':'');
     wrap.appendChild(c);
     return;
   }
@@ -1761,12 +1944,13 @@ function mgEnter(proj){
     steps:0,running:false,frames:null,timer:null,prevMax:$("editor").classList.contains("max")};
   $("projects").classList.remove("open");
   $("editor").classList.add("open","max");
-  $("mgPanel").style.display="block";
+  $("boardTabBtn").style.display="";
   $("mgTitle").textContent=proj.em+" "+proj.name;
   $("mgGoal").textContent=proj.desc;
   selBlock=null;elseSel=null;
   renderPalette();updateChips();renderProgram();renderPy();updateUndoBtns();
-  mgUpdateCount();mgDraw();
+  mgUpdateCount();
+  setTab("board"); // show the goal & blueprint first, code is one tap away
 }
 function mgExit(reopen){
   if(!mgState)return;
@@ -1774,8 +1958,9 @@ function mgExit(reopen){
   player.projPrograms[mgState.proj.id]=mgRobot.program;
   const wasMax=mgState.prevMax;
   mgState=null;mgRobot=null;
-  $("mgPanel").style.display="none";
+  $("boardTabBtn").style.display="none";
   $("mgCreatorBar").style.display="none";
+  setTab("blocks");
   if(!wasMax)$("editor").classList.remove("max");
   selBlock=null;elseSel=null;
   renderPalette();updateChips();renderProgram();renderPy();updateUndoBtns();
@@ -1794,9 +1979,11 @@ function mgReset(){
 function mgUpdateCount(){
   if(!mgState)return;
   const n=countBlocks(mgRobot.program);
+  const over=n>mgState.proj.maxBlocks;
   const el=$("mgCount");
   el.textContent="🧩 "+n+"/"+mgState.proj.maxBlocks;
-  el.style.color=n>mgState.proj.maxBlocks?"#ff5d73":"";
+  el.style.color=over?"#ff5d73":"";
+  updateChips(); // keep the block budget visible on the challenge chip while coding
 }
 function mgRun(){
   if(!mgState)return;
@@ -1805,6 +1992,7 @@ function mgRun(){
   if(!prog.length){toast("🧩 Add some blocks first!");return;}
   const n=countBlocks(prog);
   if(n>mgState.proj.maxBlocks){toast("🚫 Too many blocks ("+n+"/"+mgState.proj.maxBlocks+") — squeeze more into loops! 🔁");return;}
+  setTab("board"); // watch the robot build
   mgReset();
   mgState.running=true;mgRobot.running=true;
   mgState.frames=[{blocks:prog,i:0,reps:1}];
@@ -1909,6 +2097,7 @@ function mgSuccess(){
 }
 function mgDraw(){
   if(!mgState)return;
+  if($("boardTab").style.display==="none")return; // board hidden — nothing to draw
   const cv=$("mgCanvas"),st=mgState,p=st.proj;
   const cw=cv.clientWidth||300;
   const cell=Math.floor(cw/p.gw);
@@ -1994,7 +2183,7 @@ function renderShop(){
     {em:"⚡",b:"Speed Boost — 80 🪙",s:r.name+" runs code 25% faster. (x"+r.speed.toFixed(2)+" now, max x2)",
      can:coins>=80&&r.speed<2,fn(){coins-=80;r.speed=Math.min(2,r.speed*1.25);toast("⚡ "+r.name+" is faster!");}},
     {em:"📦",b:"Sell chest storage — +"+stashSum+" 🪙",s:"Wood "+stash.wood+" · Stone "+stash.stone+" · Iron "+stash.iron+" · Crystal "+stash.crystal,
-     can:stashSum>0,fn(){coins+=stashSum;totals.earned+=stashSum;stash={wood:0,stone:0,iron:0,crystal:0};toast("💰 Storage sold for "+stashSum+" 🪙");sfx(880,.1);checkUnlocks();}},
+     can:stashSum>0,fn(){coins+=stashSum;totals.earned+=stashSum;stash={wood:0,stone:0,iron:0,crystal:0,water:0};toast("💰 Storage sold for "+stashSum+" 🪙");sfx(880,.1);checkUnlocks();}},
   ];
   el.innerHTML="";
   for(const it of items){
@@ -2089,7 +2278,9 @@ const BRAIN=[
   {k:["python","code","real","text"],a:"🐍 Tap the Python tab in the editor! Every block you place is shown as real Python code — the same language used at NASA, Google and in AI.\n\nrobot.move() is a function call, for i in range(3): is a loop… you're already writing it!"},
   {k:["fast","faster","speed","slow","optimi"],a:"⚡ Ways to go faster:\n1️⃣ Buy Speed Boost in the shop\n2️⃣ Write smarter code — 🧭 Face Nearest beats wandering randomly\n3️⃣ Bigger bag = fewer trips\n4️⃣ MORE ROBOTS working in parallel — that's real optimization thinking!"},
   {k:["robot","new","another","fleet","team"],a:"🤖 Buy extra robots in the 🛒 shop (100 🪙). Each robot has its OWN program and runs at the same time.\n\nPro move: give each robot one job — one harvests, one hauls, one sells. That's called division of labor, and it's how real factories (and real software!) work."},
-  {k:["water","river","lake","cross","island"],a:"🌊 Robots can't swim! Collect 2 stone, stand at the shore facing the water, and use 🔨 Build → bridge. Chain bridges to cross big rivers and reach islands full of treasure."},
+  {k:["water","river","lake","cross","island","scoop"],a:"🌊 At a river you can 🪣 Scoop water 💧 (face the water first!). To cross, collect 2 stone and 🔨 Build → bridge. Chain bridges to reach islands full of treasure."},
+  {k:["chop","mine","action","tool","harvest","hit"],a:"🪓 Different jobs, different tools!\n• 🪓 Chop — trees (into wood)\n• ⛏️ Mine — rocks, iron & crystal\n• 🪣 Scoop — water from a river\n• ✋ Collect — does the right thing to whatever is in front (and picks up dropped items)\n\nBig things take SEVERAL hits — a tree needs a few chops — so put the action in a 🔁 loop!"},
+  {k:["tired","energy","rest","sleep","worn"],a:"😴 Working uses energy (see the ⚡ meter up top). When a robot runs out it gets too tired to chop, mine or build!\n\nAdd a 😴 Rest block to recover — the smart trick is to put Rest INSIDE your loop, or use ❓ If tired → Rest, so your robot paces itself and never conks out. ⚡"},
   {k:["variable","memory","set","count","number","string"],a:"🧠 Memory blocks (unlock by earning 250 🪙):\n• 📦 Set x = 5 — store a number or text\n• ➕ Change x by 1 — count things!\n• 🔢 Count i from 1 to N — a loop where i goes UP each time\n• 💬 Say — your robot shows the value in a speech bubble\n\nTry: Set c = 0 → Forever → Collect → Change c by 1 → Say c. A robot that counts its harvest!\n\nIn Python: for i in range(1, 6): — you're writing real code!"},
   {k:["function","array","advanced"],a:"Great question! In this world:\n• A robot's program is like a function — a reusable recipe\n• 📦 Memory blocks ARE variables — real ones\n• Your robot team is like an array of workers\n\nSwitch to the 🐍 Python tab to see the real syntax. When you're ready, try Python on a computer — you already know the ideas!"},
   {k:["quest","level","xp","hat","gift","daily","treasure"],a:"⭐ Ways to grow:\n• 📜 Quests — finish goals, claim coins & XP\n• ⭐ Level up — every action gives XP; levels give coins and 🎩 hats for your robots (🛒 → Style)\n• ⚡ Skills — the more you chop/mine/build/sell, the better you get at it!\n• 🎁 Daily gift — a present every day you play\n• 🎁 Treasure chests are hidden FAR from home… send an explorer robot!"},
@@ -2117,6 +2308,7 @@ function mentorFlag(f){
   if(mentorFlags[f])return;mentorFlags[f]=true;
   if(f==="bagFull")toast("🎒 A robot's bag is full! Sell at the market 🏪 or Drop into a chest 📦.");
   if(f==="farFromMarket")toast("💰 Sell All only works within 2 tiles of the market 🏪.");
+  if(f==="tired")toast("😴 Your robot is worn out! Add a Rest 😴 block (put it in the loop so it rests as it works).");
 }
 function say(txt,me){
   const d=document.createElement("div");
@@ -2211,6 +2403,9 @@ function updateHud(){
   parts.slice(0,2).forEach(res=>{inv+=" "+RES[res].em+r.inv[res];});
   if(parts.length>2)inv+=" +";
   $("bagEl").textContent=bagCount(r)+"/"+r.cap+inv;
+  const en=Math.round(r.energy==null?100:r.energy);
+  $("energyEl").textContent=(r.tired?"😴":"⚡")+en;
+  $("energyChip").style.opacity=en<100?"1":".7";
 }
 function updateFab(){
   const r=R(), f=$("fabRun");
@@ -2278,12 +2473,15 @@ $("edMax").addEventListener("click",()=>{
 });
 $("centerBtn").addEventListener("click",()=>{follow=true;toast("🎯 Following "+R().name);});
 document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{
-  document.querySelectorAll("#tabs button").forEach(x=>x.classList.remove("on"));
-  b.classList.add("on");
-  $("blocksTab").style.display=b.dataset.tab==="blocks"?"flex":"none";
-  $("pyTab").style.display=b.dataset.tab==="python"?"flex":"none";
-  if(b.dataset.tab==="python")renderPy();
+  const tab=b.dataset.tab;
+  document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x===b));
+  $("blocksTab").style.display=tab==="blocks"?"flex":"none";
+  $("pyTab").style.display=tab==="python"?"flex":"none";
+  $("boardTab").style.display=tab==="board"?"flex":"none";
+  if(tab==="python")renderPy();
+  if(tab==="board")mgDraw();
 }));
+function setTab(t){const b=document.querySelector('#tabs button[data-tab="'+t+'"]');if(b)b.click();}
 
 /* ---------------- camera & input ---------------- */
 const canvas=$("game"), ctx=canvas.getContext("2d");
@@ -2339,7 +2537,7 @@ function handleTap(sx,sy){
   if(o){
     if(o.type==="tree"&&o.stage<2)toast("🌱 A young tree… it's still growing!");
     else toast(names[o.type]||o.type);
-  }else if(terrain[key(tx,ty)]===T_WATER)toast("🌊 Water — build a bridge (2 stone) to cross!");
+  }else if(terrain[key(tx,ty)]===T_WATER)toast("🌊 Water — face it and 🪣 Scoop for water 💧, or 🔨 Build a bridge (2🪨) to cross!");
 }
 
 /* ---------------- sprites ---------------- */
@@ -2561,7 +2759,15 @@ function draw(t){
       }
     }
     if(r.blocked){
-      const sp=sprite("💢",14);ctx.drawImage(sp,cx+s2*.35,cy-s2*.8);
+      const sp=sprite(r.tired?"😴":"💢",r.tired?16:14);ctx.drawImage(sp,cx+s2*.35,cy-s2*.85);
+    }
+    // energy bar under the robot when not full
+    const en=r.energy==null?100:r.energy;
+    if(en<100){
+      const bw=s2*.9, bx=cx-bw/2, by=cy+s2*.52;
+      ctx.fillStyle="rgba(0,0,0,.4)";rr(ctx,bx,by,bw,4,2);ctx.fill();
+      ctx.fillStyle=en<25?"#ff5d73":en<55?"#ffb830":"#54d66a";
+      rr(ctx,bx,by,Math.max(2,bw*en/100),4,2);ctx.fill();
     }
   });
   // world particles
@@ -2652,6 +2858,8 @@ function loop(t){
   slowAcc+=dt;
   if(slowAcc>=1000){
     slowAcc=0;
+    // robots slowly catch their breath even without resting (kids never get permanently stuck)
+    for(const r2 of robots){r2.energy=Math.min(MAX_ENERGY,(r2.energy==null?MAX_ENERGY:r2.energy)+3);if(r2.energy>15)r2.tired=false;}
     for(const [k2,o] of objects){
       if(o.type==="tree"&&o.stage<2&&o.growAt!==undefined&&now>=o.growAt){
         o.stage++;o.growAt=now+20000;if(o.stage>=2)delete o.growAt;
@@ -2709,7 +2917,7 @@ function saveNow(){
   try{
     // timers are stored as ms-remaining so they survive reloads and enable offline fast-forward
     const data={v:2,savedAt:Date.now(),seed,coins,stash,totals,unlocks,muted,selRobot,tutDone:tut.done,player,skills,
-      robots:robots.map(r=>({x:r.x,y:r.y,dir:r.dir,name:r.name,color:r.color,inv:r.inv,cap:r.cap,speed:r.speed,program:r.program,vars:r.vars,hat:r.hat})),
+      robots:robots.map(r=>({x:r.x,y:r.y,dir:r.dir,name:r.name,color:r.color,inv:r.inv,cap:r.cap,speed:r.speed,energy:r.energy,program:r.program,vars:r.vars,hat:r.hat})),
       objects:[...objects.entries()].map(([k2,o])=>{
         const c={...o};
         if(c.growAt!==undefined){c.growIn=Math.max(0,c.growAt-now);delete c.growAt;}
@@ -2728,7 +2936,7 @@ function load(){
     if(d.v!==1&&d.v!==2)return false;
     seed=d.seed;buildTerrain();
     objects=new Map(d.objects);
-    coins=d.coins;stash=d.stash;totals=d.totals;
+    coins=d.coins;stash=Object.assign({wood:0,stone:0,iron:0,crystal:0,water:0},d.stash);totals=d.totals;
     unlocks=Object.assign({loops:false,logic:false,smart:false,vars:false},d.unlocks);
     muted=!!d.muted;
     tut.done=d.v===1?true:!!d.tutDone;
@@ -2737,7 +2945,9 @@ function load(){
     if(d.skills)for(const k in skills)if(d.skills[k])skills[k]=d.skills[k];
     robots=d.robots.map(rd=>{
       const r=makeRobot(rd.x,rd.y,rd.name);
-      Object.assign(r,{dir:rd.dir,color:rd.color,inv:rd.inv,cap:rd.cap,speed:rd.speed,program:rd.program||[],vars:rd.vars||{},hat:rd.hat||null});
+      Object.assign(r,{dir:rd.dir,color:rd.color,cap:rd.cap,speed:rd.speed,program:rd.program||[],vars:rd.vars||{},hat:rd.hat||null,
+        inv:Object.assign({wood:0,stone:0,iron:0,crystal:0,water:0},rd.inv),
+        energy:rd.energy==null?100:rd.energy});
       reUid(r.program);
       return r;
     });
@@ -2780,7 +2990,7 @@ document.addEventListener("visibilitychange",()=>{if(document.hidden)saveNow();}
 function newGame(){
   seed=(Math.random()*1e9)|0;
   buildTerrain();genObjects();genAnimals();
-  coins=0;stash={wood:0,stone:0,iron:0,crystal:0};
+  coins=0;stash={wood:0,stone:0,iron:0,crystal:0,water:0};
   totals={collected:0,earned:0,dist:0};
   unlocks={loops:false,logic:false,smart:false,vars:false};
   player={xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{}};

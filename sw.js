@@ -1,4 +1,4 @@
-const CACHE = "codecraft-v5";
+const CACHE = "codecraft-v6";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
