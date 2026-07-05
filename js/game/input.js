@@ -4,11 +4,13 @@ const canvas=$("game"), ctx=canvas.getContext("2d");
 let cam={x:0,y:0,scale:1}, follow=true, DPR=1, VW=innerWidth, VH=innerHeight;
 // A <canvas> is a *replaced* element, so `#game{inset:0}` will NOT stretch it
 // to fill the screen (it falls back to its intrinsic buffer size). We must set
-// an explicit CSS pixel size. To get the TRUE full-bleed area — including the
-// iOS bottom home-indicator inset that innerHeight leaves out — we measure a
-// plain <div> pinned with inset:0: a non-replaced element DOES stretch to the
-// full fixed viewport, giving us the exact edge-to-edge width/height.
-let _fillProbe;
+// an explicit CSS pixel size. Two probe <div>s give us the true full-bleed box:
+//  • _fillProbe (inset:0) measures the fixed viewport. On iOS standalone the
+//    top status bar is covered (black-translucent) but this box STOPS at the
+//    bottom home-indicator inset — leaving the purple body showing there.
+//  • _sabProbe reads env(safe-area-inset-bottom); we add that so the canvas
+//    overflows past the viewport bottom and reaches the real screen edge.
+let _fillProbe,_sabProbe;
 function fillSize(){
   if(!_fillProbe){
     _fillProbe=document.createElement("div");
@@ -18,10 +20,18 @@ function fillSize(){
   const r=_fillProbe.getBoundingClientRect();
   return {w:Math.round(r.width)||innerWidth, h:Math.round(r.height)||innerHeight};
 }
+function insetBottom(){
+  if(!_sabProbe){
+    _sabProbe=document.createElement("div");
+    _sabProbe.style.cssText="position:fixed;left:0;bottom:0;width:1px;height:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none;";
+    document.body.appendChild(_sabProbe);
+  }
+  return Math.round(_sabProbe.getBoundingClientRect().height)||0;
+}
 function resize(){
   DPR=Math.min(3,window.devicePixelRatio||1);
   const s=fillSize();
-  VW=s.w; VH=s.h;
+  VW=s.w; VH=s.h+insetBottom();   // stretch under the home indicator to the physical screen bottom
   canvas.style.width=VW+"px";canvas.style.height=VH+"px"; // replaced element needs explicit CSS size
   canvas.width=Math.round(VW*DPR);canvas.height=Math.round(VH*DPR);
 }
