@@ -4,7 +4,7 @@
   "description": "An open-world game where kids learn programming by automating robots and shaping a living world.",
   "start_url": ".",
   "scope": ".",
-  "display": "fullscreen",
+  "display": "standalone",
   "orientation": "portrait",
   "background_color": "#79c34e",
   "theme_color": "#79c34e",
