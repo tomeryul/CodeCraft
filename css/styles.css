@@ -29,8 +29,11 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#79c34e;
 button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 /* Size to the LARGE viewport so the canvas covers the FULL physical screen on
    iOS standalone — including the bottom home-indicator strip. `inset:0` / 100%
-   only fill the shorter layout viewport and leave a purple gap at the bottom. */
-#game{position:fixed;top:0;left:0;width:100vw;height:100vh;height:100lvh;display:block;background:#2c7fb8;}
+   only fill the shorter layout viewport and leave a gap at the bottom. The extra
+   env(safe-area-inset-bottom) overshoots a hair past the home indicator so there
+   is never a sliver below the canvas; the overshoot is off-screen. Background is
+   grass (not ocean-blue) so nothing ever flashes a blue band. */
+#game{position:fixed;top:0;left:0;width:100vw;height:100vh;height:calc(100lvh + env(safe-area-inset-bottom, 0px));display:block;background:#79c34e;}
 
 /* ---------- top bar ---------- */
 #topbar{position:fixed;top:calc(var(--sat) + 10px);left:10px;right:10px;display:flex;gap:8px;align-items:flex-start;justify-content:space-between;z-index:20;pointer-events:none;}

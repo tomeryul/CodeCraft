@@ -2,19 +2,24 @@
 /* ---------------- camera & input ---------------- */
 const canvas=$("game"), ctx=canvas.getContext("2d");
 let cam={x:0,y:0,scale:1}, follow=true, DPR=1, VW=innerWidth, VH=innerHeight;
-// The canvas element is sized by CSS to the LARGE viewport (100vw x 100lvh) —
-// the full physical screen, edge to edge, incl. the iOS bottom home-indicator
-// area (a fixed inset:0 box would stop short at the layout-viewport bottom and
-// leave the purple body showing). Here we just match the drawing buffer to the
-// element's real client size so nothing is stretched or offset.
+// CSS sizes #game to the LARGE viewport (full physical screen, edge to edge,
+// incl. the iOS home-indicator area). We keep the drawing BUFFER exactly matched
+// to the element's real rendered size — measured with getBoundingClientRect — so
+// the canvas always fully paints the element and its background never shows
+// through as a band. A ResizeObserver re-syncs the buffer whenever the element's
+// box changes (e.g. when 100lvh / safe-area insets settle a frame after load),
+// which is what left a blue strip at the bottom before.
 function resize(){
   DPR=Math.min(3,window.devicePixelRatio||1);
-  VW=canvas.clientWidth||innerWidth; VH=canvas.clientHeight||innerHeight;
+  const r=canvas.getBoundingClientRect();
+  VW=Math.round(r.width)||innerWidth; VH=Math.round(r.height)||innerHeight;
   canvas.width=Math.round(VW*DPR);canvas.height=Math.round(VH*DPR);
 }
 addEventListener("resize",resize);
 addEventListener("orientationchange",()=>setTimeout(resize,150));
+addEventListener("load",resize);
 if(window.visualViewport)visualViewport.addEventListener("resize",resize);
+if(window.ResizeObserver)new ResizeObserver(resize).observe(canvas);
 resize();
 
 const pointers=new Map();
