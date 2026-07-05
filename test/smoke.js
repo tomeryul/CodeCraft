@@ -464,6 +464,17 @@ async function ev(expr) {
   check("custom challenge solved via count-loop + if in the challenge VM", await ev("mgState && mgState.solved === true") === true, await ev("mgState && JSON.stringify([...mgState.robot.bricks])"));
   await ev(`mgExit(false); document.getElementById('editor').classList.remove('open','max'); 'ok'`);
 
+  console.log("▶ onboarding coach never covers a challenge");
+  const tg = await ev(`(()=>{
+    tut.done=false;
+    mgEnter(PROJECTS[0]);
+    tutSet(1); // pretend the onboarding timer fires while a challenge is open
+    const res={shown:document.getElementById('coach').classList.contains('show'), step:tut.step};
+    mgExit(false); document.getElementById('editor').classList.remove('open','max'); tut.done=true;
+    return JSON.stringify(res);
+  })()`);
+  check("onboarding coach is suppressed inside a challenge", JSON.parse(tg).shown === false && JSON.parse(tg).step === 0, tg);
+
   check("no uncaught exceptions during entire run", exceptions.length === 0, exceptions.join(" | "));
 
   console.log(`\n${passed} passed, ${failed} failed`);

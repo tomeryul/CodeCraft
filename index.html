@@ -92,7 +92,8 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #editor.max #edMax .ic-max{display:none;}
 #editor.max #edMax .ic-min{display:block;}
 .ed-head{display:flex;align-items:center;gap:8px;padding:6px 12px 4px;flex:0 0 auto;}
-#robotChips{display:flex;gap:6px;overflow-x:auto;flex:1;padding:2px 0;scrollbar-width:none;}
+#robotChips{display:flex;gap:6px;overflow-x:auto;flex:1 1 0;min-width:0;padding:2px 0;scrollbar-width:none;
+  -webkit-mask:linear-gradient(90deg,#000 calc(100% - 14px),transparent);mask:linear-gradient(90deg,#000 calc(100% - 14px),transparent);}
 #robotChips::-webkit-scrollbar{display:none;}
 .rchip{flex:0 0 auto;display:flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;
   background:var(--panel2);border:2px solid transparent;color:var(--ink);white-space:nowrap;}
@@ -1999,6 +2000,7 @@ function mgEnter(proj){
   mgState={proj,robot:{x:proj.start.x,y:proj.start.y,dir:proj.start.dir,bricks:new Set()},
     steps:0,running:false,frames:null,timer:null,prevMax:$("editor").classList.contains("max")};
   $("projects").classList.remove("open");
+  tutSet(0); // dismiss the onboarding coach — it doesn't belong over a challenge
   $("editor").classList.add("open","max");
   $("boardTabBtn").style.display="";
   $("mgTitle").textContent=proj.em+" "+proj.name;
@@ -2444,6 +2446,8 @@ function sfxIf(r,f,d){if(robots[selRobot]===r)sfx(f,d);}
 /* ---------------- tutorial ---------------- */
 let tutTarget=null;
 function tutSet(step){
+  // never interrupt a build-challenge / creator with the onboarding coach
+  if(step>0&&mgState)step=0;
   tut.step=step;
   if(tutTarget){tutTarget.classList.remove("tut-pulse");tutTarget=null;}
   const coach=$("coach");
