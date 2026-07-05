@@ -656,6 +656,8 @@ function img(name){
 }
 window.CC_SPRITES={
   has:ch=>!!MAP[ch],
+  svg:ch=>{const n=MAP[ch];return n?SVGS[n]:null;},
+  list:()=>Object.keys(MAP),
   /* returns a canvas sized like the game's emoji sprites (s*1.3 square,
      sprite drawn centered at s), or null if this emoji isn't in the set */
   canvas(ch,s){
@@ -764,6 +766,139 @@ document.addEventListener("DOMContentLoaded",()=>{
 });
 
 window.CC_EXTRAS={celebrate,maybeCelebrate,hl,lighten};
+})();
+</script>
+
+<script>
+/* =====================================================================
+   CodeCraft — UI icon pack (drop-in)
+   Replaces emoji / keyboard glyphs in ALL DOM UI (buttons, chips, tabs,
+   block palette, sheets) with inline SVG icons. World emojis reuse the
+   CC_SPRITES art via CC_SPRITES.svg(). A MutationObserver keeps
+   JS-generated UI (palette blocks, shop rows, quest lists) covered.
+   ===================================================================== */(function(){
+"use strict";
+const CC='currentColor';
+const W=(b)=>'<svg viewBox="0 0 24 24" fill="none">'+b+'</svg>';
+const ST='stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"';
+const ICONS={
+"▶":W('<path d="M8.2 5.6 L18.4 12 L8.2 18.4 Z" fill="'+CC+'" stroke="'+CC+'" stroke-width="2" stroke-linejoin="round"/>'),
+"⏹":W('<rect x="6.3" y="6.3" width="11.4" height="11.4" rx="2.6" fill="'+CC+'"/>'),
+"✕":W('<path d="M6.5 6.5 L17.5 17.5 M17.5 6.5 L6.5 17.5" '+ST+' stroke-width="2.7"/>'),
+"✖":W('<path d="M6.5 6.5 L17.5 17.5 M17.5 6.5 L6.5 17.5" '+ST+' stroke-width="2.7"/>'),
+"↺":W('<path d="M6.2 9.2 A7.2 7.2 0 1 1 5.4 15" '+ST+' stroke-width="2.4"/><path d="M6.8 4.4 L6.2 9.6 L11.4 9" '+ST+' stroke-width="2.4"/>'),
+"↻":W('<g transform="scale(-1,1) translate(-24,0)"><path d="M6.2 9.2 A7.2 7.2 0 1 1 5.4 15" '+ST+' stroke-width="2.4"/><path d="M6.8 4.4 L6.2 9.6 L11.4 9" '+ST+' stroke-width="2.4"/></g>'),
+"↑":W('<path d="M12 19.5 V5.5 M6.5 11 L12 5.5 L17.5 11" '+ST+' stroke-width="2.5"/>'),
+"↓":W('<path d="M12 4.5 V18.5 M6.5 13 L12 18.5 L17.5 13" '+ST+' stroke-width="2.5"/>'),
+"⬆️":W('<path d="M12 19.5 V5.5 M6.5 11 L12 5.5 L17.5 11" '+ST+' stroke-width="2.5"/>'),
+"↩️":W('<path d="M18.5 19 V12.5 A5.5 5.5 0 0 0 13 7 H5.5 M9.3 3 L5 7 L9.3 11" '+ST+' stroke-width="2.4"/>'),
+"↪️":W('<g transform="scale(-1,1) translate(-24,0)"><path d="M18.5 19 V12.5 A5.5 5.5 0 0 0 13 7 H5.5 M9.3 3 L5 7 L9.3 11" '+ST+' stroke-width="2.4"/></g>'),
+"⤵️":W('<path d="M4.5 6.5 H12.5 A5.5 5.5 0 0 1 18 12 V18.5 M14 15.5 L18 19.5 L22 15.5" '+ST+' stroke-width="2.4"/>'),
+"⧉":W('<rect x="8.5" y="8.5" width="11" height="11" rx="2.2" '+ST+' stroke-width="2.2"/><path d="M15.5 4.8 H7 A2.2 2.2 0 0 0 4.8 7 V15.5" '+ST+' stroke-width="2.2"/>'),
+"➤":W('<path d="M3.5 11.6 L20.5 4.2 L13.6 20.6 L11.1 13.6 Z" fill="'+CC+'"/>'),
+"↔️":W('<path d="M4 12 H20 M7.5 8.5 L4 12 L7.5 15.5 M16.5 8.5 L20 12 L16.5 15.5" '+ST+' stroke-width="2.3"/>'),
+"↕️":W('<path d="M12 4 V20 M8.5 7.5 L12 4 L15.5 7.5 M8.5 16.5 L12 20 L15.5 16.5" '+ST+' stroke-width="2.3"/>'),
+"🔍":W('<circle cx="10.5" cy="10.5" r="5.8" '+ST+' stroke-width="2.3"/><path d="M15 15 L20 20" '+ST+' stroke-width="2.6"/>'),
+"🗑":W('<path d="M4.7 7 H19.3 M9.5 7 V5.6 A1.6 1.6 0 0 1 11.1 4 H12.9 A1.6 1.6 0 0 1 14.5 5.6 V7 M6.6 7 L7.5 18.8 A2 2 0 0 0 9.5 20.6 H14.5 A2 2 0 0 0 16.5 18.8 L17.4 7 M10 10.5 V16.8 M14 10.5 V16.8" '+ST+' stroke-width="2.1"/>'),
+"⏱️":W('<circle cx="12" cy="13" r="7.5" '+ST+' stroke-width="2.2"/><path d="M12 9.5 V13 L14.8 15 M9.8 3.5 H14.2" '+ST+' stroke-width="2.2"/>'),
+"🔁":W('<path d="M6.8 8 H16 M12.8 4.5 L16.3 8 L12.8 11.5 M17.2 16 H8 M11.2 12.5 L7.7 16 L11.2 19.5" '+ST+' stroke-width="2.2"/>'),
+"♾️":W('<path d="M12 12 c-2.2-3.4-7.2-3.2-7.2 0 s5 3.4 7.2 0 c2.2-3.4 7.2-3.2 7.2 0 s-5 3.4-7.2 0" '+ST+' stroke-width="2.4"/>'),
+"❓":W('<path d="M8.5 9 a3.5 3.5 0 1 1 5.4 3 c-1.2.8-1.9 1.5-1.9 3" '+ST+' stroke-width="2.4"/><circle cx="12" cy="19" r="1.5" fill="'+CC+'"/>'),
+"🧭":W('<circle cx="12" cy="12" r="8.6" '+ST+' stroke-width="2.2"/><path d="M15.4 8.6 L13.4 13.4 L8.6 15.4 L10.6 10.6 Z" fill="'+CC+'"/>'),
+"⚙️":W('<circle cx="12" cy="12" r="4.4" '+ST+' stroke-width="2.2"/><path d="M12 2.8 v2.8 M12 18.4 v2.8 M2.8 12 h2.8 M18.4 12 h2.8 M5.5 5.5 l2 2 M16.5 16.5 l2 2 M18.5 5.5 l-2 2 M7.5 16.5 l-2 2" '+ST+' stroke-width="2.2"/>'),
+"📜":W('<rect x="5.4" y="3.6" width="13.2" height="16.8" rx="2.6" fill="#f4e7d0"/><path d="M9 8.6 H15.2 M9 12 H15.2 M9 15.4 H12.6" stroke="#b98a4e" stroke-width="1.9" stroke-linecap="round"/>'),
+"🛒":W('<path d="M3.6 4.8 H6.4 L9 15.4 H17.6 L20.4 7.6 H7.1" '+ST+' stroke-width="2.2"/><circle cx="10" cy="19.2" r="1.7" fill="'+CC+'"/><circle cx="16.6" cy="19.2" r="1.7" fill="'+CC+'"/>'),
+"💡":W('<path d="M12 3.2 a5.6 5.6 0 0 1 3.1 10.3 c-.8.6-1.1 1.4-1.1 2.5 h-4 c0-1.1-.3-1.9-1.1-2.5 A5.6 5.6 0 0 1 12 3.2 Z" fill="#ffd66b"/><path d="M10 18.6 h4 M10.6 21 h2.8" stroke="#e8b23e" stroke-width="2" stroke-linecap="round"/>'),
+"🎯":W('<circle cx="12" cy="12" r="8.6" fill="#ff5d73"/><circle cx="12" cy="12" r="5.4" fill="#fff"/><circle cx="12" cy="12" r="2.4" fill="#ff5d73"/>'),
+"⭐":W('<path d="M12 3.2 L14.6 8.8 L20.8 9.5 L16.2 13.7 L17.5 19.8 L12 16.7 L6.5 19.8 L7.8 13.7 L3.2 9.5 L9.4 8.8 Z" fill="#ffd66b" stroke="#e8b23e" stroke-width="1.2" stroke-linejoin="round"/>'),
+"🎒":W('<rect x="5.4" y="7.6" width="13.2" height="12.4" rx="4" fill="#ff5d73"/><path d="M8.6 7.6 a3.4 3.4 0 0 1 6.8 0" stroke="#e04a5f" stroke-width="2.4" fill="none"/><rect x="9" y="12.4" width="6" height="4.6" rx="1.6" fill="#ffd66b"/>'),
+"⚡":W('<path d="M13.2 2.4 L5.4 13.4 H11 L9.6 21.6 L18.6 9.6 H12.4 Z" fill="#ffd66b" stroke="#e8b23e" stroke-width="1.1" stroke-linejoin="round"/>'),
+"🧩":W('<path d="M5 9.2 A2.6 2.6 0 0 1 7.6 6.6 H9.5 a2.5 2.5 0 0 1 5 0 h1.9 A2.6 2.6 0 0 1 19 9.2 v1.9 a2.5 2.5 0 0 1 0 5 V18 a2.6 2.6 0 0 1 -2.6 2.6 H7.6 A2.6 2.6 0 0 1 5 18 Z" fill="#54d66a"/>'),
+"🗺️":W('<rect x="4.4" y="4.4" width="15.2" height="15.2" rx="2.6" '+ST+' stroke-width="2.1"/><path d="M4.4 12 H19.6 M12 4.4 V19.6" '+ST+' stroke-width="2.1"/>'),
+"🐍":W('<path d="M9 5.5 L4.5 12 L9 18.5 M15 5.5 L19.5 12 L15 18.5" '+ST+' stroke-width="2.4"/>'),
+"🖌️":W('<path d="M13.8 4.2 l6 6 L12 18 l-6-6 Z" fill="#5ab8ff"/><path d="M5.6 12.4 l6 6 -1.4 1.4 c-2 2-6.6 2.2-6.6 2.2 s.2-4.6 2.2-6.6 Z" fill="#ffb830"/>'),
+"🤖":W('<rect x="5.4" y="8" width="13.2" height="10.8" rx="3.2" fill="#5ab8ff"/><circle cx="9.4" cy="12.6" r="1.7" fill="#241b45"/><circle cx="14.6" cy="12.6" r="1.7" fill="#241b45"/><path d="M10 16 h4" stroke="#241b45" stroke-width="1.8" stroke-linecap="round"/><rect x="11" y="4.4" width="2" height="3.4" rx="1" fill="#5ab8ff"/><circle cx="12" cy="3.8" r="1.5" fill="#ff5d73"/>'),
+"✏️":W('<path d="M4.4 19.6 v-4.2 L15.4 4.4 a1.9 1.9 0 0 1 2.7 0 l1.5 1.5 a1.9 1.9 0 0 1 0 2.7 L8.6 19.6 Z" '+ST+' stroke-width="2.2"/>'),
+"🦉":W('<circle cx="12" cy="12.6" r="8.6" fill="#c98d4b"/><circle cx="8.9" cy="10.8" r="2.9" fill="#fff"/><circle cx="15.1" cy="10.8" r="2.9" fill="#fff"/><circle cx="8.9" cy="10.8" r="1.3" fill="#241b45"/><circle cx="15.1" cy="10.8" r="1.3" fill="#241b45"/><path d="M12 13 l-1.6 2.2 h3.2 Z" fill="#ffb830"/>'),
+"🚚":W('<rect x="2.8" y="6.8" width="11.2" height="8.8" rx="1.6" fill="#5ab8ff"/><path d="M14 9.8 h4.2 L20.8 13 v2.6 H14 Z" fill="#4aa3e8"/><circle cx="7.4" cy="17.2" r="2.1" fill="#241b45"/><circle cx="16.6" cy="17.2" r="2.1" fill="#241b45"/>'),
+"🎉":W('<path d="M4 20.4 L9 8.4 L15.6 15 Z" fill="#ff5d73"/><path d="M9 8.4 c2 0 5 1.6 6.6 6.6" fill="none" stroke="#ffd66b" stroke-width="1.6"/><circle cx="17.6" cy="6" r="1.5" fill="#ffd66b"/><circle cx="13" cy="4.4" r="1.2" fill="#5ab8ff"/><circle cx="20" cy="11" r="1.2" fill="#54d66a"/>'),
+"🔊":W('<path d="M4 9.6 v4.8 h3.4 L12 18.8 V5.2 L7.4 9.6 Z" fill="'+CC+'"/><path d="M15 9.2 a4.4 4.4 0 0 1 0 5.6 M17.6 6.6 a8 8 0 0 1 0 10.8" '+ST+' stroke-width="2"/>'),
+"🔇":W('<path d="M4 9.6 v4.8 h3.4 L12 18.8 V5.2 L7.4 9.6 Z" fill="'+CC+'"/><path d="M15.4 9.6 L20.2 14.4 M20.2 9.6 L15.4 14.4" '+ST+' stroke-width="2.2"/>'),
+"💾":W('<path d="M4.8 6.4 a1.6 1.6 0 0 1 1.6-1.6 H16 l3.2 3.2 V17.6 a1.6 1.6 0 0 1 -1.6 1.6 H6.4 a1.6 1.6 0 0 1 -1.6-1.6 Z" fill="#5ab8ff"/><rect x="8" y="12.6" width="8" height="6.6" rx="1" fill="#fff"/><rect x="8.8" y="4.8" width="6" height="4" rx="1" fill="#fff"/>'),
+"🏅":W('<path d="M9 2.8 h6 l-1.9 5 h-2.2 Z" fill="#ff5d73"/><circle cx="12" cy="14.2" r="6.2" fill="#ffd66b" stroke="#e8b23e" stroke-width="1.4"/><path d="M12 10.8 l1.1 2.1 2.3.3 -1.7 1.6 .4 2.3 -2.1-1.1 -2.1 1.1 .4-2.3 -1.7-1.6 2.3-.3 Z" fill="#e8b23e"/>'),
+"✅":W('<circle cx="12" cy="12" r="9" fill="#54d66a"/><path d="M7.6 12.4 L10.8 15.6 L16.6 8.8" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'),
+"🔒":W('<rect x="5.8" y="10.4" width="12.4" height="9.4" rx="2.6" fill="#ffb830"/><path d="M8.4 10.4 V8 a3.6 3.6 0 0 1 7.2 0 v2.4" stroke="#b8bec9" stroke-width="2.4" fill="none"/><circle cx="12" cy="14.6" r="1.5" fill="#8a5a1a"/>'),
+"🔢":W('<text x="12" y="16" text-anchor="middle" font-size="10.5" font-weight="900" font-family="inherit" fill="'+CC+'">123</text>'),
+"🔤":W('<text x="12" y="16" text-anchor="middle" font-size="10.5" font-weight="900" font-family="inherit" fill="'+CC+'">abc</text>'),
+"✋":W('<path d="M8 13.5 V6.2 a1.4 1.4 0 0 1 2.8 0 V5.2 a1.4 1.4 0 0 1 2.8 0 v1.2 a1.4 1.4 0 0 1 2.8 0 v7.2 a5.6 5.6 0 0 1 -5.6 5.6 c-2.4 0-3.7-1.2-4.9-3.2 l-2.2-3.6 a1.45 1.45 0 0 1 2.4-1.6 Z" fill="#ffd6a8"/>'),
+"🪓":W('<rect x="10.9" y="6" width="2.4" height="14.5" rx="1.2" transform="rotate(35 12 13)" fill="#c98d4b"/><path d="M6 4.2 c3.6-1.6 7.2.1 8.2 3.2 l-4.6 4 C7.4 9.8 6 7.4 6 4.2 Z" fill="#9aa1b0"/>'),
+"⛏️":W('<rect x="10.8" y="5" width="2.4" height="15" rx="1.2" transform="rotate(45 12 12)" fill="#c98d4b"/><path d="M3.8 8.2 C8 4.4 14.4 3.8 19.6 7.6 c-4.2-1-8.4-.4-12 1.8 Z" fill="#9aa1b0"/>'),
+"🪣":W('<path d="M6 7.6 h12 l-1.4 10.4 a2 2 0 0 1 -2 1.8 h-5.2 a2 2 0 0 1 -2-1.8 Z" fill="#5ab8ff"/><path d="M7.2 7.4 a4.8 4.8 0 0 1 9.6 0" stroke="#9aa1b0" stroke-width="2" fill="none"/>'),
+"🔨":W('<rect x="10.7" y="9" width="2.6" height="11.4" rx="1.3" transform="rotate(-38 12 14)" fill="#c98d4b"/><rect x="4.8" y="4.2" width="11.4" height="5.6" rx="2.2" transform="rotate(18 10.5 7)" fill="#9aa1b0"/>'),
+"🌊":W('<path d="M3 9.4 c2-2.2 4-2.2 6 0 s4 2.2 6 0 4-2.2 6 0 M3 15 c2-2.2 4-2.2 6 0 s4 2.2 6 0 4-2.2 6 0" stroke="#5ab8ff" stroke-width="2.2" stroke-linecap="round" fill="none"/>'),
+"🚧":W('<rect x="3.6" y="8.2" width="16.8" height="6.2" rx="1.6" fill="#ffd66b"/><path d="M7.2 14.4 l3.6-6.2 M12.4 14.4 l3.6-6.2" stroke="#241b45" stroke-width="2.2"/><path d="M6.5 14.4 v4.8 M17.5 14.4 v4.8" stroke="#241b45" stroke-width="2"/>'),
+"🕳️":W('<ellipse cx="12" cy="13" rx="8" ry="4.6" fill="#241b45"/>'),
+"💰":W('<path d="M9.2 7.4 c-3 2-4.9 4.8-4.9 7.6 a5 5 0 0 0 5 5 h5.4 a5 5 0 0 0 5-5 c0-2.8-1.9-5.6-4.9-7.6 Z" fill="#ffb830"/><path d="M9.2 7.4 L7.6 4.6 h8.8 L14.8 7.4 Z" fill="#e8b23e"/><text x="12" y="17.2" font-size="8.5" font-weight="900" text-anchor="middle" font-family="inherit" fill="#8a5a1a">$</text>'),
+"🏃":W('<circle cx="15" cy="4.8" r="2" fill="'+CC+'"/><path d="M8.6 21 l3.2-5 -2.6-3 3-4.2 3.4 2.6 3.4-1 M6 10.4 l3.6-2.8 2.6.2" '+ST+' stroke-width="2.2"/>'),
+"🏗️":W('<rect x="4.4" y="6" width="15.2" height="12.4" rx="1.8" fill="#ff9d5a"/><path d="M4.4 10.2 h15.2 M4.4 14.2 h15.2 M9.5 6 v4.2 M14.5 10.2 v4 M9.5 14.2 v4.2" stroke="#e07840" stroke-width="1.7"/>'),
+"⚠️":W('<path d="M12 3.6 L21.2 19.6 H2.8 Z" fill="#ffd66b" stroke="#e8b23e" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 9.4 v4.6" stroke="#241b45" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.3" fill="#241b45"/>'),
+"🚀":W('<path d="M12 2.8 c3.2 2.2 4.6 6.2 3 11.2 l-3 2 -3-2 C7.4 9 8.8 5 12 2.8 Z" fill="#f6f3ff"/><circle cx="12" cy="9" r="1.9" fill="#5ab8ff"/><path d="M9 14.2 c-2 .6-3.1 2-3.6 4.6 2.6-.5 4.1-1.6 4.6-3.6 Z M15 14.2 c2 .6 3.1 2 3.6 4.6 -2.6-.5-4.1-1.6-4.6-3.6 Z" fill="#ff5d73"/><path d="M12 16.4 v3.6" stroke="#ffb830" stroke-width="2" stroke-linecap="round"/>')
+};
+/* longest keys first so variation-selector forms win */
+function buildRX(){
+  const keys=Object.keys(ICONS).concat(window.CC_SPRITES?CC_SPRITES.list():[]);
+  const uniq=[...new Set(keys)].sort((a,b)=>b.length-a.length);
+  return new RegExp('('+uniq.map(k=>k.replace(/[.*+?^$\{\}()|[\]\\]/g,'\\$&')).join('|')+')','gu');
+}
+let RX=buildRX();
+function svgFor(ch){
+  if(ICONS[ch])return ICONS[ch];
+  const base=ch.replace(/\uFE0F/g,'');
+  if(ICONS[base])return ICONS[base];
+  if(window.CC_SPRITES){const s=CC_SPRITES.svg(ch)||CC_SPRITES.svg(base)||CC_SPRITES.svg(ch+'\uFE0F');if(s)return s;}
+  return null;
+}
+const SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,PRE:1,svg:1,SVG:1,CANVAS:1,INPUT:1};
+function processText(tn){
+  if(!tn.parentNode)return; // node was detached before this batched mutation ran
+  const s=tn.nodeValue; if(!s)return;
+  RX.lastIndex=0; if(!RX.test(s))return;
+  const frag=document.createDocumentFragment();
+  let last=0; RX.lastIndex=0; let m;
+  while((m=RX.exec(s))){
+    const svg=svgFor(m[1]);
+    if(!svg)continue;
+    if(m.index>last)frag.appendChild(document.createTextNode(s.slice(last,m.index)));
+    const sp=document.createElement('span');sp.className='ui-emoji';sp.innerHTML=svg;
+    frag.appendChild(sp);
+    last=m.index+m[1].length;
+  }
+  if(last===0)return;
+  if(last<s.length)frag.appendChild(document.createTextNode(s.slice(last)));
+  tn.parentNode.replaceChild(frag,tn);
+}
+function walk(node){
+  if(node.nodeType===3){processText(node);return;}
+  if(node.nodeType!==1||SKIP[node.tagName])return;
+  if(node.classList&&node.classList.contains('ui-emoji'))return;
+  const kids=[...node.childNodes];
+  for(const k of kids)walk(k);
+}
+const css=document.createElement('style');
+css.textContent='.ui-emoji{display:inline-flex;width:1.18em;height:1.18em;vertical-align:-0.21em;flex:0 0 auto;}.ui-emoji svg{width:100%;height:100%;display:block;}';
+document.head.appendChild(css);
+function start(){
+  RX=buildRX();
+  walk(document.body);
+  new MutationObserver(muts=>{
+    for(const mu of muts){
+      if(mu.type==='characterData'){processText(mu.target);continue;}
+      for(const n of mu.addedNodes)walk(n);
+    }
+  }).observe(document.body,{childList:true,subtree:true,characterData:true});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);
+else start();
 })();
 </script>
 
@@ -2482,8 +2617,7 @@ function sfxIf(r,f,d){if(robots[selRobot]===r)sfx(f,d);}
 /* ---------------- tutorial ---------------- */
 let tutTarget=null;
 function tutSet(step){
-  // never interrupt a build-challenge / creator with the onboarding coach
-  if(step>0&&mgState)step=0;
+  if(step>0&&mgState)step=0; // never let the onboarding coach cover a challenge
   tut.step=step;
   if(tutTarget){tutTarget.classList.remove("tut-pulse");tutTarget=null;}
   const coach=$("coach");
