@@ -1,5 +1,39 @@
-const CACHE = "codecraft-v10";
-const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
+const CACHE = "codecraft-v11";
+const ASSETS = [
+  "./",
+  "./index.html",
+  "./manifest.json",
+  "./icon-192.png",
+  "./icon-512.png",
+  "./apple-touch-icon.png",
+  "./css/styles.css",
+  "./js/font.js",
+  "./js/sprites.js",
+  "./js/extras.js",
+  "./js/ui-icons.js",
+  "./js/game/blocks.js",
+  "./js/game/boot.js",
+  "./js/game/challenges.js",
+  "./js/game/constants.js",
+  "./js/game/dragdrop.js",
+  "./js/game/editor.js",
+  "./js/game/engagement.js",
+  "./js/game/fx.js",
+  "./js/game/hud.js",
+  "./js/game/input.js",
+  "./js/game/interpreter.js",
+  "./js/game/loop.js",
+  "./js/game/mentor.js",
+  "./js/game/python.js",
+  "./js/game/render.js",
+  "./js/game/robot.js",
+  "./js/game/save.js",
+  "./js/game/shop.js",
+  "./js/game/state.js",
+  "./js/game/tutorial.js",
+  "./js/game/util.js",
+  "./js/game/world.js"
+];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));

@@ -1,0 +1,67 @@
+"use strict";
+/* ---------------- blocks ---------------- */
+const CONDS=["treeAhead","rockAhead","ironAhead","waterAhead","blocked","bagFull","bagEmpty","tired"];
+const COND_LBL={treeAhead:"tree ahead 🌳",rockAhead:"rock ahead 🪨",ironAhead:"iron ahead ⛓️",waterAhead:"water ahead 🌊",blocked:"blocked 🚧",bagFull:"bag full 🎒",bagEmpty:"bag empty 🕳️",tired:"tired 😴"};
+const BUILDS=["sapling","bridge","chest"];
+const BUILD_LBL={sapling:"🌱 sapling (1🪵)",bridge:"🌉 bridge (2🪨)",chest:"📦 chest (5🪵)"};
+const TARGETS=["tree","rock","iron","crystal"];
+const TGT_EM={tree:"🌳",rock:"🪨",iron:"⛓️",crystal:"💎"};
+const DEFS={
+  move:{cat:"basic",ic:"⬆️",lbl:"Move"},
+  turnL:{cat:"basic",ic:"↩️",lbl:"Turn Left"},
+  turnR:{cat:"basic",ic:"↪️",lbl:"Turn Right"},
+  collect:{cat:"basic",ic:"✋",lbl:"Collect"},
+  chop:{cat:"basic",ic:"🪓",lbl:"Chop"},
+  mine:{cat:"basic",ic:"⛏️",lbl:"Mine"},
+  scoop:{cat:"basic",ic:"🪣",lbl:"Scoop"},
+  drop:{cat:"basic",ic:"⤵️",lbl:"Drop"},
+  build:{cat:"basic",ic:"🔨",lbl:"Build"},
+  rest:{cat:"basic",ic:"😴",lbl:"Rest"},
+  wait:{cat:"basic",ic:"⏱️",lbl:"Wait"},
+  repeat:{cat:"loops",ic:"🔁",lbl:"Repeat",container:true},
+  forever:{cat:"loops",ic:"♾️",lbl:"Forever",container:true},
+  "if":{cat:"logic",ic:"❓",lbl:"If",container:true},
+  faceNearest:{cat:"smart",ic:"🧭",lbl:"Face Nearest"},
+  goHome:{cat:"smart",ic:"🏠",lbl:"Go Home"},
+  sellAll:{cat:"smart",ic:"💰",lbl:"Sell All"},
+  bankAll:{cat:"smart",ic:"🏦",lbl:"Bank All"},
+  setVar:{cat:"vars",ic:"📦",lbl:"Set"},
+  changeVar:{cat:"vars",ic:"➕",lbl:"Change"},
+  countLoop:{cat:"vars",ic:"🔢",lbl:"Count",container:true},
+  say:{cat:"vars",ic:"💬",lbl:"Say"},
+};
+const CATS=[
+  {id:"basic",name:"Basics",types:["move","turnL","turnR","collect","chop","mine","scoop","drop","build","rest","wait"],lock:null},
+  {id:"loops",name:"Loops",types:["repeat","forever"],lock:"loops",need:"Collect 5 resources to unlock 🔁 loops!"},
+  {id:"logic",name:"Logic",types:["if"],lock:"logic",need:"Sell something at the market 🏪 to unlock ❓ logic!"},
+  {id:"smart",name:"Smart",types:["faceNearest","goHome","sellAll","bankAll"],lock:"smart",need:"Earn 150 🪙 total (or own 2 robots) to unlock 🧭 smart blocks!"},
+  {id:"vars",name:"Memory",types:["setVar","changeVar","countLoop","say"],lock:"vars",need:"Earn 250 🪙 total to unlock 🧠 memory & variables!"},
+];
+function newBlock(t){
+  const b={t,uid:uid()};
+  if(t==="repeat"){b.n=3;b.body=[];}
+  if(t==="forever"){b.body=[];}
+  if(t==="if"){b.cond="treeAhead";b.body=[];b.els=[];}
+  if(t==="wait")b.n=1;
+  if(t==="rest")b.n=2;
+  if(t==="build")b.opt="sapling";
+  if(t==="faceNearest")b.opt="tree";
+  if(t==="setVar"){b.name="x";b.val={k:"num",n:5};}
+  if(t==="changeVar"){b.name="x";b.n=1;}
+  if(t==="countLoop"){b.name="i";b.to=5;b.body=[];}
+  if(t==="say")b.val={k:"str",s:"Hello!"};
+  return b;
+}
+function resolveVal(r,v){
+  if(!v)return 0;
+  if(v.k==="num")return v.n;
+  if(v.k==="str")return v.s;
+  if(v.k==="var")return r.vars[v.name]!==undefined?r.vars[v.name]:0;
+  return 0;
+}
+function promptName(cur){
+  const nm=prompt("Variable name:",cur||"x");
+  if(nm===null)return cur||"x";
+  const cl=nm.trim().replace(/\W+/g,"_").slice(0,10);
+  return cl||cur||"x";
+}
