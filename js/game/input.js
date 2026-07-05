@@ -1,13 +1,21 @@
 "use strict";
 /* ---------------- camera & input ---------------- */
 const canvas=$("game"), ctx=canvas.getContext("2d");
-let cam={x:0,y:0,scale:1}, follow=true, DPR=1;
+let cam={x:0,y:0,scale:1}, follow=true, DPR=1, VW=innerWidth, VH=innerHeight;
 function resize(){
   DPR=Math.min(3,window.devicePixelRatio||1);
-  canvas.width=innerWidth*DPR;canvas.height=innerHeight*DPR;
-  canvas.style.width=innerWidth+"px";canvas.style.height=innerHeight+"px";
+  // Let CSS (#game{inset:0}) own the element geometry so the canvas always
+  // fills the true screen — top AND bottom, under the iOS status bar and over
+  // the home indicator. Setting an explicit pixel style.height here would
+  // override that fill and leave a gap (the purple body background) at the
+  // bottom. Size the drawing buffer from the element's real client size so
+  // nothing is stretched.
+  VW=canvas.clientWidth||innerWidth; VH=canvas.clientHeight||innerHeight;
+  canvas.width=Math.round(VW*DPR);canvas.height=Math.round(VH*DPR);
 }
-addEventListener("resize",resize);resize();
+addEventListener("resize",resize);
+if(window.visualViewport)visualViewport.addEventListener("resize",resize);
+resize();
 
 const pointers=new Map();
 let pinchD=0, panMoved=false;
@@ -44,7 +52,7 @@ canvas.addEventListener("pointercancel",e=>pointers.delete(e.pointerId));
 canvas.addEventListener("wheel",e=>{cam.scale=clamp(cam.scale*(e.deltaY<0?1.1:0.9),.4,2.2);follow=false;e.preventDefault();},{passive:false});
 const PLAYER_BUILT={proj:1,chest:1,bridge:1}; // things the player made and may move/remove
 function handleTap(sx,sy){
-  const wx=(sx-innerWidth/2)/cam.scale+cam.x, wy=(sy-innerHeight/2)/cam.scale+cam.y;
+  const wx=(sx-VW/2)/cam.scale+cam.x, wy=(sy-VH/2)/cam.scale+cam.y;
   const tx=Math.floor(wx/TILE), ty=Math.floor(wy/TILE);
   if(!inB(tx,ty)){closeObjMenu();return;}
   // relocating a build: second tap drops it on an empty walkable tile
