@@ -6,10 +6,14 @@
 <meta name="theme-color" content="#79c34e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CodeCraft">
 <!-- draw the game full-bleed UNDER the iOS status bar (no reserved purple strip); buttons stay in the safe area -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="manifest" href="./manifest.json?v=5">
+<!-- NO web manifest linked on purpose: on iOS a manifest with a background_color
+     makes the system reserve & paint the bottom safe-area OUTSIDE the web view,
+     which no CSS can cover. Relying on the apple-mobile-web-app-* metas only (as
+     the full-screen PairUp app does) lets the web view run truly edge-to-edge. -->
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=3">
 <link rel="icon" href="./icon-192.png?v=3">
 <meta name="description" content="CodeCraft — an open-world game where kids learn programming by automating robots, building factories and shaping a living world.">
