@@ -2,18 +2,31 @@
 /* ---------------- camera & input ---------------- */
 const canvas=$("game"), ctx=canvas.getContext("2d");
 let cam={x:0,y:0,scale:1}, follow=true, DPR=1, VW=innerWidth, VH=innerHeight;
+// A <canvas> is a *replaced* element, so `#game{inset:0}` will NOT stretch it
+// to fill the screen (it falls back to its intrinsic buffer size). We must set
+// an explicit CSS pixel size. To get the TRUE full-bleed area — including the
+// iOS bottom home-indicator inset that innerHeight leaves out — we measure a
+// plain <div> pinned with inset:0: a non-replaced element DOES stretch to the
+// full fixed viewport, giving us the exact edge-to-edge width/height.
+let _fillProbe;
+function fillSize(){
+  if(!_fillProbe){
+    _fillProbe=document.createElement("div");
+    _fillProbe.style.cssText="position:fixed;inset:0;visibility:hidden;pointer-events:none;z-index:-1;";
+    document.body.appendChild(_fillProbe);
+  }
+  const r=_fillProbe.getBoundingClientRect();
+  return {w:Math.round(r.width)||innerWidth, h:Math.round(r.height)||innerHeight};
+}
 function resize(){
   DPR=Math.min(3,window.devicePixelRatio||1);
-  // Let CSS (#game{inset:0}) own the element geometry so the canvas always
-  // fills the true screen — top AND bottom, under the iOS status bar and over
-  // the home indicator. Setting an explicit pixel style.height here would
-  // override that fill and leave a gap (the purple body background) at the
-  // bottom. Size the drawing buffer from the element's real client size so
-  // nothing is stretched.
-  VW=canvas.clientWidth||innerWidth; VH=canvas.clientHeight||innerHeight;
+  const s=fillSize();
+  VW=s.w; VH=s.h;
+  canvas.style.width=VW+"px";canvas.style.height=VH+"px"; // replaced element needs explicit CSS size
   canvas.width=Math.round(VW*DPR);canvas.height=Math.round(VH*DPR);
 }
 addEventListener("resize",resize);
+addEventListener("orientationchange",()=>setTimeout(resize,150));
 if(window.visualViewport)visualViewport.addEventListener("resize",resize);
 resize();
 
