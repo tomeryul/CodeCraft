@@ -475,6 +475,23 @@ async function ev(expr) {
   })()`);
   check("onboarding coach is suppressed inside a challenge", JSON.parse(tg).shown === false && JSON.parse(tg).step === 0, tg);
 
+  console.log("▶ cloud save round-trip (buildSave / applySave)");
+  const rt = await ev(`(()=>{
+    mgState=null; mgRobot=null;
+    coins=777; player.level=9; skills.wood.lvl=4; R().hat='🎩'; R().inv.wood=5;
+    const snap=JSON.stringify(buildSave());
+    coins=0; player.level=1; skills.wood.lvl=0; R().hat=null; R().inv.wood=0;
+    const ok=applySave(JSON.parse(snap));
+    return JSON.stringify({ok, coins, lvl:player.level, wood:skills.wood.lvl, hat:R().hat, inv:R().inv.wood});
+  })()`);
+  const RT = JSON.parse(rt);
+  check("applySave restores coins/level/skills/hat/inventory", RT.ok && RT.coins===777 && RT.lvl===9 && RT.wood===4 && RT.hat==='🎩' && RT.inv===5, rt);
+  check("cloud helpers exist (cloudSave/cloudLoad)", await ev("typeof cloudSave==='function' && typeof cloudLoad==='function'") === true);
+
+  console.log("▶ splash login gate");
+  check("splash shows an email/password login card when online is configured",
+    await ev(`(()=>{renderSplashAuth();return !!document.getElementById('spEmail')&&!!document.getElementById('spLogin')&&!!document.getElementById('spSignup');})()`) === true);
+
   check("no uncaught exceptions during entire run", exceptions.length === 0, exceptions.join(" | "));
 
   console.log(`\n${passed} passed, ${failed} failed`);

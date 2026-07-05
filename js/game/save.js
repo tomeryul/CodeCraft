@@ -1,28 +1,33 @@
 "use strict";
 /* ---------------- save / load ---------------- */
-let saveT=null;
+const GROW_MS=20000;
+// serialize the whole game into a plain object (used for both localStorage and the cloud)
+function buildSave(){
+  return {v:2,savedAt:Date.now(),seed,coins,stash,totals,unlocks,muted,selRobot,tutDone:tut.done,player,skills,
+    robots:robots.map(r=>({x:r.x,y:r.y,dir:r.dir,name:r.name,color:r.color,inv:r.inv,cap:r.cap,speed:r.speed,energy:r.energy,program:r.program,vars:r.vars,hat:r.hat})),
+    objects:[...objects.entries()].map(([k2,o])=>{
+      const c={...o};
+      if(c.growAt!==undefined){c.growIn=Math.max(0,c.growAt-now);delete c.growAt;} // timers as ms-remaining
+      return [k2,c];
+    }),
+    respawns:respawnQ.map(e=>({rin:Math.max(0,e.at-now),x:e.x,y:e.y,type:e.type}))};
+}
+let saveT=null, cloudT=null;
 function saveSoon(){clearTimeout(saveT);saveT=setTimeout(saveNow,1500);}
 function saveNow(){
-  try{
-    // timers are stored as ms-remaining so they survive reloads and enable offline fast-forward
-    const data={v:2,savedAt:Date.now(),seed,coins,stash,totals,unlocks,muted,selRobot,tutDone:tut.done,player,skills,
-      robots:robots.map(r=>({x:r.x,y:r.y,dir:r.dir,name:r.name,color:r.color,inv:r.inv,cap:r.cap,speed:r.speed,energy:r.energy,program:r.program,vars:r.vars,hat:r.hat})),
-      objects:[...objects.entries()].map(([k2,o])=>{
-        const c={...o};
-        if(c.growAt!==undefined){c.growIn=Math.max(0,c.growAt-now);delete c.growAt;}
-        return [k2,c];
-      }),
-      respawns:respawnQ.map(e=>({rin:Math.max(0,e.at-now),x:e.x,y:e.y,type:e.type}))};
-    localStorage.setItem(SAVE_KEY,JSON.stringify(data));
-  }catch(_){}
+  const data=buildSave();
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(data));}catch(_){}
+  scheduleCloud(data); // logged-in players also sync to their account
 }
-const GROW_MS=20000;
-function load(){
+function scheduleCloud(data){
+  if(!(sbUser&&sbReady()))return;
+  clearTimeout(cloudT);
+  cloudT=setTimeout(()=>{cloudSave(data||buildSave()).catch(()=>{});},4000);
+}
+// rebuild live game state from a save object (localStorage OR cloud). Returns true on success.
+function applySave(d){
   try{
-    const raw=localStorage.getItem(SAVE_KEY);
-    if(!raw)return false;
-    const d=JSON.parse(raw);
-    if(d.v!==1&&d.v!==2)return false;
+    if(!d||(d.v!==1&&d.v!==2))return false;
     seed=d.seed;buildTerrain();
     objects=new Map(d.objects);
     coins=d.coins;stash=Object.assign({wood:0,stone:0,iron:0,crystal:0,water:0},d.stash);totals=d.totals;
@@ -70,6 +75,19 @@ function load(){
     genAnimals();
     return true;
   }catch(_){return false;}
+}
+function load(){ // load from this device's localStorage
+  try{
+    const raw=localStorage.getItem(SAVE_KEY);
+    if(!raw)return false;
+    return applySave(JSON.parse(raw));
+  }catch(_){return false;}
+}
+// refresh every screen after the world was swapped in (e.g. cloud save applied post-login)
+function refreshAllUI(){
+  cam.x=(homePos.x+.5)*TILE;cam.y=(homePos.y+.5)*TILE;follow=true;
+  fillQuests();updateQuestBadge();
+  renderPalette();updateChips();updateHud();updateFab();updateUndoBtns();renderProgram();renderPy();
 }
 function reUid(list){for(const b of list){b.uid=uid();if(b.t==="if"&&!b.els)b.els=[];if(b.body)reUid(b.body);if(b.els)reUid(b.els);}}
 setInterval(saveNow,8000);

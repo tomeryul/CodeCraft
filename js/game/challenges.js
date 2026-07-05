@@ -63,6 +63,18 @@ async function sbRest(path,opts){
   if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d.message||("error "+res.status));}
   return res.status===204?null:res.json();
 }
+/* ---- cloud player save (Supabase 'saves' table, one row per user) ---- */
+async function cloudLoad(){
+  if(!sbUser||!sbReady())return null;
+  const rows=await sbRest("saves?select=data&user_id=eq."+encodeURIComponent(sbUser.uid),{method:"GET"});
+  return (rows&&rows[0])?rows[0].data:null;
+}
+async function cloudSave(data){
+  if(!sbUser||!sbReady())return;
+  await sbRest("saves?on_conflict=user_id",{method:"POST",
+    headers:Object.assign(sbHeaders(true),{Prefer:"resolution=merge-duplicates,return=minimal"}),
+    body:JSON.stringify({user_id:sbUser.uid,data,updated_at:new Date().toISOString()})});
+}
 function renderAuthBox(){
   const box=$("authBox");
   if(!sbReady()){box.innerHTML='<div class="authnote">🔌 Online accounts & shared challenges are coming online soon — everything else works offline!</div>';return;}
