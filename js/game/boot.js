@@ -22,28 +22,8 @@ $("qClose").addEventListener("click",()=>$("quests").classList.remove("open"));
 
 /* ---------------- splash login gate ---------------- */
 function splashMsg(t){const el=$("splashStatus");if(el)el.textContent=t||"";}
-/* TEMP viewport diagnostics for the iOS bottom-strip bug — shown on the splash
-   only, removed when the game starts. Delete once the bug is closed. */
-function vpDebug(){
-  let el=document.getElementById("vpDbg");
-  if(!el){
-    el=document.createElement("div");el.id="vpDbg";
-    el.style.cssText="position:fixed;left:10px;top:calc(env(safe-area-inset-top,0px) + 58px);z-index:200;font:10px/1.5 ui-monospace,monospace;color:#fff;opacity:.8;background:rgba(0,0,0,.5);padding:4px 8px;border-radius:8px;pointer-events:none;white-space:pre;text-align:left;";
-    document.body.appendChild(el);
-  }
-  const probe=css=>{const d=document.createElement("div");
-    d.style.cssText="position:fixed;left:0;top:0;width:1px;visibility:hidden;pointer-events:none;"+css;
-    document.body.appendChild(d);const v=d.getBoundingClientRect().height;d.remove();return Math.round(v);};
-  el.textContent=
-    "ih "+innerHeight+"  vv "+Math.round(window.visualViewport?visualViewport.height:0)+"  scr "+screen.height+
-    "\nlvh "+probe("height:100lvh")+"  svh "+probe("height:100svh")+"  dvh "+probe("height:100dvh")+
-    "\nsat "+probe("height:env(safe-area-inset-top,0px)")+"  sab "+probe("height:env(safe-area-inset-bottom,0px)")+
-    "  game "+Math.round(canvas.getBoundingClientRect().height)+"  dpr "+(window.devicePixelRatio||1);
-}
-vpDebug();setTimeout(vpDebug,700);setTimeout(vpDebug,2500);addEventListener("resize",vpDebug);
 function startGame(){
   if(started)return;
-  const dbg=document.getElementById("vpDbg");if(dbg)dbg.remove();
   $("splash").classList.add("hide");
   started=true;
   sfx(660,.08);sfx(880,.08,.1);

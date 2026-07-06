@@ -67,7 +67,7 @@ function getChunk(cx,cy){
 const clouds=Array.from({length:6},(_,i)=>({
   x:(i*1319)%(W*TILE),y:((i*761)%(H*TILE)),s:.7+(i%3)*.35,v:6+(i%4)*3}));
 function draw(t){
-  const w=VW,h=VH;
+  const w=innerWidth,h=innerHeight;
   ctx.setTransform(DPR,0,0,DPR,0,0);
   ctx.fillStyle="#2c7fb8";ctx.fillRect(0,0,w,h);
   if(follow){

@@ -241,7 +241,7 @@ function burst(x,y,kind){
 const fx=[];
 function confetti(){
   for(let i=0;i<70;i++)
-    fx.push({x:VW/2+(Math.random()-.5)*140,y:VH*.22,
+    fx.push({x:innerWidth/2+(Math.random()-.5)*140,y:innerHeight*.22,
       vx:(Math.random()-.5)*380,vy:-220-Math.random()*260,
       rot:Math.random()*6.3,vr:(Math.random()-.5)*14,
       c:["#ffb830","#5ab8ff","#ff5d73","#54d66a","#b184ff","#fff"][i%6],

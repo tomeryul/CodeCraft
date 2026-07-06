@@ -1,26 +1,13 @@
 "use strict";
 /* ---------------- camera & input ---------------- */
 const canvas=$("game"), ctx=canvas.getContext("2d");
-let cam={x:0,y:0,scale:1}, follow=true, DPR=1, VW=innerWidth, VH=innerHeight;
-// CSS sizes #game to the LARGE viewport (full physical screen, edge to edge,
-// incl. the iOS home-indicator area). We keep the drawing BUFFER exactly matched
-// to the element's real rendered size — measured with getBoundingClientRect — so
-// the canvas always fully paints the element and its background never shows
-// through as a band. A ResizeObserver re-syncs the buffer whenever the element's
-// box changes (e.g. when 100lvh / safe-area insets settle a frame after load),
-// which is what left a blue strip at the bottom before.
+let cam={x:0,y:0,scale:1}, follow=true, DPR=1;
 function resize(){
   DPR=Math.min(3,window.devicePixelRatio||1);
-  const r=canvas.getBoundingClientRect();
-  VW=Math.round(r.width)||innerWidth; VH=Math.round(r.height)||innerHeight;
-  canvas.width=Math.round(VW*DPR);canvas.height=Math.round(VH*DPR);
+  canvas.width=innerWidth*DPR;canvas.height=innerHeight*DPR;
+  canvas.style.width=innerWidth+"px";canvas.style.height=innerHeight+"px";
 }
-addEventListener("resize",resize);
-addEventListener("orientationchange",()=>setTimeout(resize,150));
-addEventListener("load",resize);
-if(window.visualViewport)visualViewport.addEventListener("resize",resize);
-if(window.ResizeObserver)new ResizeObserver(resize).observe(canvas);
-resize();
+addEventListener("resize",resize);resize();
 
 const pointers=new Map();
 let pinchD=0, panMoved=false;
@@ -57,7 +44,7 @@ canvas.addEventListener("pointercancel",e=>pointers.delete(e.pointerId));
 canvas.addEventListener("wheel",e=>{cam.scale=clamp(cam.scale*(e.deltaY<0?1.1:0.9),.4,2.2);follow=false;e.preventDefault();},{passive:false});
 const PLAYER_BUILT={proj:1,chest:1,bridge:1}; // things the player made and may move/remove
 function handleTap(sx,sy){
-  const wx=(sx-VW/2)/cam.scale+cam.x, wy=(sy-VH/2)/cam.scale+cam.y;
+  const wx=(sx-innerWidth/2)/cam.scale+cam.x, wy=(sy-innerHeight/2)/cam.scale+cam.y;
   const tx=Math.floor(wx/TILE), ty=Math.floor(wy/TILE);
   if(!inB(tx,ty)){closeObjMenu();return;}
   // relocating a build: second tap drops it on an empty walkable tile
