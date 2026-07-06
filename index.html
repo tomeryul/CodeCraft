@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#3b2f63">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<!-- full-bleed under the iOS status bar; the paint layers are IN-FLOW (not
+     position:fixed) because fixed layers get clipped to the short standalone
+     layout viewport and can never reach the bottom of the screen -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="manifest" href="./manifest.json?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=3">

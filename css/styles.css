@@ -21,11 +21,19 @@
   --radius:16px; --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{margin:0;padding:0;height:100%;overflow:hidden;background:var(--bg);
+/* NO height:100%/overflow:hidden here: on iOS standalone (black-translucent)
+   the layout viewport is SHORTER than the real screen, and clipping the
+   document to it leaves an unpaintable strip at the bottom. Instead the
+   document flows naturally (in-flow content paints to the physical bottom,
+   like any scrollable page) and JS pins the scroll position to 0. */
+html,body{margin:0;padding:0;background:var(--bg);overscroll-behavior:none;
   font-family:"Fredoka",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--ink);
   touch-action:none;user-select:none;-webkit-user-select:none;}
 button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
-#game{position:fixed;inset:0;display:block;background:#2c7fb8;}
+/* IN-FLOW canvas (first element of body, at 0,0) — JS sets its px size to the
+   real screen height (--vh). Fixed positioning would clip it to the short
+   standalone viewport; normal flow paints all the way down. */
+#game{display:block;background:#2c7fb8;}
 
 /* ---------- top bar ---------- */
 #topbar{position:fixed;top:calc(var(--sat) + 10px);left:10px;right:10px;display:flex;gap:8px;align-items:flex-start;justify-content:space-between;z-index:20;pointer-events:none;}
@@ -181,7 +189,7 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   border-bottom:3.5px solid #4c2bb0;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.3);}
 
 /* ---------- shop ---------- */
-#shopWrap{position:fixed;inset:0;z-index:45;background:rgba(10,6,25,.55);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:18px;}
+#shopWrap{position:absolute;top:0;left:0;right:0;height:var(--vh,100lvh);z-index:45;background:rgba(10,6,25,.55);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:18px;}
 #shopWrap.open{display:flex;}
 #shopWrap.open #shop{animation:popIn .3s cubic-bezier(.34,1.6,.64,1);}
 @keyframes popIn{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
@@ -201,7 +209,9 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #shop .closerow button{background:var(--panel2);border-radius:12px;padding:11px 30px;font-weight:700;font-size:14px;border-bottom:3px solid rgba(0,0,0,.3);}
 
 /* ---------- splash ---------- */
-#splash{position:fixed;inset:0;z-index:100;
+/* absolute (document space), not fixed: covers the in-flow canvas fully and,
+   like it, paints past the short standalone viewport to the physical bottom */
+#splash{position:absolute;top:0;left:0;right:0;height:var(--vh,100lvh);z-index:100;
   background:linear-gradient(168deg,#7350d4 0%,#4a2f9e 46%,#241b56 100%);background-size:100% 170%;animation:sky 11s ease-in-out infinite alternate;
   display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;transition:opacity .5s;}
 @keyframes sky{from{background-position:50% 0}to{background-position:50% 80%}}
@@ -388,7 +398,7 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 }
 
 /* ---------- v2 extras: celebration overlay ---------- */
-#ccCele{position:fixed;inset:0;z-index:95;background:radial-gradient(90% 70% at 50% 42%,rgba(20,13,45,.55),rgba(12,7,30,.88));
+#ccCele{position:absolute;top:0;left:0;right:0;height:var(--vh,100lvh);z-index:95;background:radial-gradient(90% 70% at 50% 42%,rgba(20,13,45,.55),rgba(12,7,30,.88));
   display:flex;align-items:center;justify-content:center;padding:28px;transition:opacity .3s;}
 #ccCele.out{opacity:0;}
 .cc-card{text-align:center;animation:popIn .45s cubic-bezier(.34,1.6,.64,1);max-width:360px;position:relative;z-index:1;}

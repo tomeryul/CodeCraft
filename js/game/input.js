@@ -1,13 +1,38 @@
 "use strict";
 /* ---------------- camera & input ---------------- */
 const canvas=$("game"), ctx=canvas.getContext("2d");
-let cam={x:0,y:0,scale:1}, follow=true, DPR=1;
+let cam={x:0,y:0,scale:1}, follow=true, DPR=1, VW=innerWidth, VH=innerHeight;
+// Real screen height: on iOS standalone (black-translucent) innerHeight is the
+// SHORT layout viewport; visualViewport.height / 100lvh usually know the true
+// size. Take the biggest signal — the canvas is in normal flow, so painting
+// past the short viewport down to the physical bottom actually works.
+function realVH(){
+  let lvh=0;
+  try{
+    const d=document.createElement("div");
+    d.style.cssText="position:absolute;left:0;top:0;width:1px;height:100lvh;visibility:hidden;pointer-events:none;";
+    document.body.appendChild(d);lvh=d.getBoundingClientRect().height;d.remove();
+  }catch(_){}
+  return Math.ceil(Math.max(innerHeight,window.visualViewport?visualViewport.height:0,lvh));
+}
 function resize(){
   DPR=Math.min(3,window.devicePixelRatio||1);
-  canvas.width=innerWidth*DPR;canvas.height=innerHeight*DPR;
-  canvas.style.width=innerWidth+"px";canvas.style.height=innerHeight+"px";
+  VW=innerWidth;VH=realVH();
+  canvas.width=VW*DPR;canvas.height=VH*DPR;
+  canvas.style.width=VW+"px";canvas.style.height=VH+"px";
+  document.documentElement.style.setProperty("--vh",VH+"px"); // splash/shop/celebration overlays match
 }
-addEventListener("resize",resize);resize();
+addEventListener("resize",resize);
+if(window.visualViewport)visualViewport.addEventListener("resize",resize);
+resize();
+// the document may be a hair taller than the short viewport — never let it scroll
+// (except while the keyboard needs an input in view on the splash)
+addEventListener("scroll",()=>{
+  const a=document.activeElement;
+  if(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"))return;
+  if(scrollX||scrollY)scrollTo(0,0);
+},{passive:true});
+document.addEventListener("focusout",()=>setTimeout(()=>scrollTo(0,0),60));
 
 const pointers=new Map();
 let pinchD=0, panMoved=false;
@@ -44,7 +69,7 @@ canvas.addEventListener("pointercancel",e=>pointers.delete(e.pointerId));
 canvas.addEventListener("wheel",e=>{cam.scale=clamp(cam.scale*(e.deltaY<0?1.1:0.9),.4,2.2);follow=false;e.preventDefault();},{passive:false});
 const PLAYER_BUILT={proj:1,chest:1,bridge:1}; // things the player made and may move/remove
 function handleTap(sx,sy){
-  const wx=(sx-innerWidth/2)/cam.scale+cam.x, wy=(sy-innerHeight/2)/cam.scale+cam.y;
+  const wx=(sx-VW/2)/cam.scale+cam.x, wy=(sy-VH/2)/cam.scale+cam.y;
   const tx=Math.floor(wx/TILE), ty=Math.floor(wy/TILE);
   if(!inB(tx,ty)){closeObjMenu();return;}
   // relocating a build: second tap drops it on an empty walkable tile
