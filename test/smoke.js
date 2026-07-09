@@ -390,6 +390,25 @@ async function ev(expr) {
   check("cannot drop a container into its own descendant", D.ok2 === false, dnd);
   check("drag to reorder at root works", D.ok3 === true && D.order === "collect,repeat", dnd);
 
+  console.log("▶ copy / paste blocks");
+  const cp = await ev(`(()=>{
+    const r=R(); r.program=[]; r.hist=[]; r.redoS=[];
+    const a=newBlock('move'); const b=newBlock('collect');
+    r.program=[a,b]; renderProgram();
+    selBlock=a; elseSel=null;
+    document.getElementById('copyBlk').click();            // copy 'move'
+    const clipOk = !!blkClip && blkClip.t==='move';
+    selBlock=b; elseSel=null;
+    document.getElementById('pasteBlk').click();           // paste after 'collect'
+    const types = r.program.map(x=>x.t).join(',');
+    const pasted = r.program[2];
+    const freshUid = !!pasted && pasted.uid!==a.uid;       // pasted copy gets a new uid
+    return JSON.stringify({clipOk, types, freshUid});
+  })()`);
+  const CP = JSON.parse(cp);
+  check("copy stores the selected block on the clipboard", CP.clipOk === true, cp);
+  check("paste inserts a fresh-uid copy after the selection", CP.types === "move,collect,move" && CP.freshUid === true, cp);
+
   console.log("▶ bank: deposit + build from bank");
   const bank = await ev(`(()=>{
     mgState=null; mgRobot=null;

@@ -5,22 +5,29 @@ function attachDrag(row,b){
   row.addEventListener("pointerdown",e=>{
     if(e.target.closest(".pbtn"))return;
     if(e.pointerType==="mouse"&&e.button!==0)return;
-    const sx=e.clientX, sy=e.clientY;
-    let hold=setTimeout(()=>{hold=null;beginDrag(b,row,sx,sy);},240);
+    const pid=e.pointerId, sx=e.clientX, sy=e.clientY;
+    let hold=setTimeout(()=>{hold=null;beginDrag(b,row,sx,sy,pid);},240);
     const mv=ev=>{
+      if(ev.pointerId!==pid)return;
       if(hold){ if(Math.hypot(ev.clientX-sx,ev.clientY-sy)>10){clearTimeout(hold);hold=null;done();} return; }
       if(dragCtx){ev.preventDefault();dragMove(ev.clientX,ev.clientY);}
     };
-    const up=ev=>{ if(hold){clearTimeout(hold);hold=null;} if(dragCtx){dragEnd(ev.clientX,ev.clientY);dragSuppress=true;} done(); };
-    function done(){document.removeEventListener("pointermove",mv);document.removeEventListener("pointerup",up);document.removeEventListener("pointercancel",up);}
+    const up=ev=>{ if(ev.pointerId!==pid)return; if(hold){clearTimeout(hold);hold=null;} if(dragCtx){dragEnd(ev.clientX,ev.clientY);dragSuppress=true;} done(); };
+    // pointercancel (iOS interrupting the gesture) must NOT commit a move — that
+    // was dropping blocks at the bottom of the program. Abort cleanly instead.
+    const cancel=ev=>{ if(ev.pointerId!==pid)return; if(hold){clearTimeout(hold);hold=null;} if(dragCtx)dragAbort(); done(); };
+    function done(){document.removeEventListener("pointermove",mv);document.removeEventListener("pointerup",up);document.removeEventListener("pointercancel",cancel);}
     document.addEventListener("pointermove",mv,{passive:false});
     document.addEventListener("pointerup",up);
-    document.addEventListener("pointercancel",up);
+    document.addEventListener("pointercancel",cancel);
   });
 }
 function isDescUid(uid){return !!byUid(dragCtx.b.body||[],uid)||!!byUid(dragCtx.b.els||[],uid);}
-function beginDrag(b,row,x,y){
-  dragCtx={b,uid:b.uid,w:row.offsetWidth,h:row.offsetHeight};
+function beginDrag(b,row,x,y,pid){
+  dragCtx={b,uid:b.uid,w:row.offsetWidth,h:row.offsetHeight,row,pid};
+  // capture the pointer so subsequent moves keep flowing to us and the OS is far
+  // less likely to fire pointercancel mid-drag (the root cause of the drag bug)
+  try{if(pid!=null)row.setPointerCapture(pid);}catch(_){}
   row.classList.add("drag-src");
   const clone=row.cloneNode(true);
   clone.className="blk c-"+DEFS[b.t].cat+" drag-clone";
@@ -32,10 +39,16 @@ function beginDrag(b,row,x,y){
   sfx(600,.04);
   dragMove(x,y);
 }
+function releaseDrag(ctx){try{if(ctx&&ctx.pid!=null&&ctx.row)ctx.row.releasePointerCapture(ctx.pid);}catch(_){}}
 function dragMove(x,y){
   const c=dragCtx.clone;
   c.style.left=(x-dragCtx.w*0.5)+"px";
   c.style.top=(y-dragCtx.h*0.6)+"px";
+  // auto-scroll the program list when dragging near its top/bottom edge so long
+  // programs stay fully reachable (otherwise you can't reach far-away targets)
+  const wrap=$("programWrap"), wr=wrap.getBoundingClientRect(), EDGE=44;
+  if(y<wr.top+EDGE)wrap.scrollTop-=9;
+  else if(y>wr.bottom-EDGE)wrap.scrollTop+=9;
   dragCtx.target=computeDrop(x,y);
   paintDrop(dragCtx.target);
 }
@@ -70,6 +83,7 @@ function paintDrop(t){
 }
 function dragEnd(x,y){
   const t=dragCtx.target||computeDrop(x,y), ctx=dragCtx;
+  releaseDrag(ctx);
   if(ctx.clone)ctx.clone.remove();
   const line=$("dropline");if(line)line.style.display="none";
   $("programEl").querySelectorAll(".blk.dz-into").forEach(el=>el.classList.remove("dz-into"));
@@ -77,6 +91,17 @@ function dragEnd(x,y){
   dragCtx=null;
   if(t){moveBlock(ctx.uid,t.mode,t.uid);sfx(780,.05);}
   else renderProgram();
+}
+// aborted drag (OS cancel): tear down without moving anything
+function dragAbort(){
+  const ctx=dragCtx; dragCtx=null;
+  releaseDrag(ctx);
+  if(ctx&&ctx.clone)ctx.clone.remove();
+  if(ctx&&ctx.row)ctx.row.classList.remove("drag-src");
+  const line=$("dropline");if(line)line.style.display="none";
+  $("programEl").querySelectorAll(".blk.dz-into").forEach(el=>el.classList.remove("dz-into"));
+  $("programWrap").classList.remove("dragging");
+  renderProgram();
 }
 
 function updateSelUI(){
@@ -86,7 +111,35 @@ function updateSelUI(){
     $("insNote").textContent = elseSel ? "new blocks → inside Else" :
       (selBlock.body ? "new blocks → inside "+DEFS[selBlock.t].lbl : "new blocks → after selection");
   }else bar.classList.remove("show");
+  updatePasteBtn();
 }
+
+/* ---- copy / paste blocks ---- */
+let blkClip=null;
+function updatePasteBtn(){const b=$("pasteBlk");if(b)b.disabled=!blkClip;}
+$("copyBlk").addEventListener("click",()=>{
+  if(!selBlock)return;
+  blkClip=JSON.parse(JSON.stringify(selBlock));   // deep copy incl. any nested blocks
+  updatePasteBtn();
+  sfx(700,.05);
+  toast("📋 Copied "+(DEFS[selBlock.t]?DEFS[selBlock.t].lbl:"block"));
+});
+$("pasteBlk").addEventListener("click",()=>{
+  if(!blkClip)return;
+  const r=R();
+  pushUndo();
+  const copy=JSON.parse(JSON.stringify(blkClip));
+  reUid([copy]);
+  // paste where a new block would go: inside the selected container, else after it
+  if(elseSel){elseSel.els.push(copy);}
+  else if(selBlock&&selBlock.body){selBlock.body.push(copy);}
+  else if(selBlock){const f=findList(r.program,selBlock);if(f)f.list.splice(f.i+1,0,copy);else r.program.push(copy);}
+  else r.program.push(copy);
+  selBlock=copy;elseSel=null;
+  programChanged();
+  sfx(820,.05);
+});
+updatePasteBtn();
 $("delBlk").addEventListener("click",()=>{
   if(!selBlock)return;
   pushUndo();
