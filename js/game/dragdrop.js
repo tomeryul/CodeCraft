@@ -25,9 +25,9 @@ function attachDrag(row,b){
 function isDescUid(uid){return !!byUid(dragCtx.b.body||[],uid)||!!byUid(dragCtx.b.els||[],uid);}
 function beginDrag(b,row,x,y,pid){
   dragCtx={b,uid:b.uid,w:row.offsetWidth,h:row.offsetHeight,row,pid};
-  // capture the pointer so subsequent moves keep flowing to us and the OS is far
-  // less likely to fire pointercancel mid-drag (the root cause of the drag bug)
-  try{if(pid!=null)row.setPointerCapture(pid);}catch(_){}
+  // NOTE: do NOT setPointerCapture here — on iOS capturing a pointer inside a
+  // scroll container fires an immediate pointercancel, which kills the drag on
+  // the first move. Document-level listeners already receive every move.
   row.classList.add("drag-src");
   const clone=row.cloneNode(true);
   clone.className="blk c-"+DEFS[b.t].cat+" drag-clone";
@@ -39,7 +39,6 @@ function beginDrag(b,row,x,y,pid){
   sfx(600,.04);
   dragMove(x,y);
 }
-function releaseDrag(ctx){try{if(ctx&&ctx.pid!=null&&ctx.row)ctx.row.releasePointerCapture(ctx.pid);}catch(_){}}
 function dragMove(x,y){
   const c=dragCtx.clone;
   c.style.left=(x-dragCtx.w*0.5)+"px";
@@ -83,7 +82,6 @@ function paintDrop(t){
 }
 function dragEnd(x,y){
   const t=dragCtx.target||computeDrop(x,y), ctx=dragCtx;
-  releaseDrag(ctx);
   if(ctx.clone)ctx.clone.remove();
   const line=$("dropline");if(line)line.style.display="none";
   $("programEl").querySelectorAll(".blk.dz-into").forEach(el=>el.classList.remove("dz-into"));
@@ -95,7 +93,6 @@ function dragEnd(x,y){
 // aborted drag (OS cancel): tear down without moving anything
 function dragAbort(){
   const ctx=dragCtx; dragCtx=null;
-  releaseDrag(ctx);
   if(ctx&&ctx.clone)ctx.clone.remove();
   if(ctx&&ctx.row)ctx.row.classList.remove("drag-src");
   const line=$("dropline");if(line)line.style.display="none";
