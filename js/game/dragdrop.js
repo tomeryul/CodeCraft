@@ -1,6 +1,11 @@
 "use strict";
 /* ---------------- drag & drop blocks ---------------- */
 let dragCtx=null, dragSuppress=false;
+// iOS decides whether a touch can scroll at touchstart and ignores touch-action
+// changes made mid-gesture — so a class added when the drag begins can't stop the
+// list from scrolling and cancelling the drag. Cancel scrolling imperatively:
+// while a drag is active, preventDefault every touchmove. Must be non-passive.
+document.addEventListener("touchmove",e=>{ if(dragCtx)e.preventDefault(); },{passive:false});
 function attachDrag(row,b){
   row.addEventListener("pointerdown",e=>{
     if(e.target.closest(".pbtn"))return;
