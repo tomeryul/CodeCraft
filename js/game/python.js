@@ -12,6 +12,7 @@ function toPy(list,ind){
       case "mine":P.push(ind+"robot.mine()");break;
       case "scoop":P.push(ind+"robot.scoop_water()");break;
       case "drop":P.push(ind+"robot.drop()");break;
+      case "pickUp":P.push(ind+"robot.lift()");break;
       case "rest":P.push(ind+"robot.rest("+b.n+")");break;
       case "wait":P.push(ind+"robot.wait("+b.n+")");break;
       case "build":P.push(ind+'robot.build("'+b.opt+'")');break;

@@ -175,14 +175,16 @@ $("mvDn").addEventListener("click",()=>moveSel(1));
 function renderPalette(){
   const pal=$("palette");pal.innerHTML="";
   if(mgState){
-    // challenge mode: the FULL programming toolbox (loops, conditions, variables) — everything unlocked
+    // challenge mode: render exactly the project's allowed blocks (incl. challenge-
+    // only ones like Lift/Drop that aren't in the normal CATS), grouped by category
     const allow=mgState.proj.allowed||CHALLENGE_BLOCKS;
-    for(const cat of CATS){
-      const types=cat.types.filter(t=>allow.indexOf(t)>=0);
-      if(!types.length)continue;
+    const catName={};for(const c of CATS)catName[c.id]=c.name;
+    const groups={},order=[];
+    for(const t of allow){ if(!DEFS[t])continue; const c=DEFS[t].cat; if(!groups[c]){groups[c]=[];order.push(c);} groups[c].push(t); }
+    for(const c of order){
       const div=document.createElement("div");div.className="pcat";
-      let html='<h4>'+cat.name+'</h4><div class="row">';
-      for(const t of types){const d=DEFS[t];html+='<button class="pblk c-'+d.cat+'" data-t="'+t+'">'+d.ic+' '+d.lbl+'</button>';}
+      let html='<h4>'+(catName[c]||c)+'</h4><div class="row">';
+      for(const t of groups[c]){const d=DEFS[t];html+='<button class="pblk c-'+d.cat+'" data-t="'+t+'">'+d.ic+' '+d.lbl+'</button>';}
       div.innerHTML=html+'</div>';pal.appendChild(div);
     }
     pal.querySelectorAll(".pblk").forEach(btn=>btn.addEventListener("click",()=>addBlock(btn.dataset.t)));

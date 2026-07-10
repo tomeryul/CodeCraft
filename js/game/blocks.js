@@ -15,6 +15,7 @@ const DEFS={
   mine:{cat:"basic",ic:"⛏️",lbl:"Mine"},
   scoop:{cat:"basic",ic:"🪣",lbl:"Scoop"},
   drop:{cat:"basic",ic:"⤵️",lbl:"Drop"},
+  pickUp:{cat:"basic",ic:"✊",lbl:"Lift"},   // challenge-only: lift a numbered brick to carry it
   build:{cat:"basic",ic:"🔨",lbl:"Build"},
   rest:{cat:"basic",ic:"😴",lbl:"Rest"},
   wait:{cat:"basic",ic:"⏱️",lbl:"Wait"},

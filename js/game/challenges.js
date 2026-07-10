@@ -2,6 +2,10 @@
 /* ---------------- build projects (mini-games) ---------------- */
 // full programming toolbox available inside every challenge (loops, conditions, variables, values)
 const CHALLENGE_BLOCKS=["move","turnL","turnR","build","wait","repeat","countLoop","if","setVar","changeVar","say"];
+// sorting toolbox: lift/drop instead of build — for rearranging numbered bricks
+const SORT_BLOCKS=["move","turnL","turnR","pickUp","drop","wait","repeat","countLoop","if","setVar","changeVar","say"];
+// creators get everything so they can design either kind of challenge
+const CREATOR_BLOCKS=CHALLENGE_BLOCKS.concat(["pickUp","drop"]);
 const PROJECTS=[
   {id:"house",em:"🏡",name:"Big House",diff:1,coins:150,xp:60,maxBlocks:8,gw:8,gh:7,
    desc:"Lay the walls of the Big House: paint every tile of the 4×4 outline. Your robot drops a brick on the tile it's STANDING on. Budget: 8 blocks — you'll need a loop inside a loop!",
@@ -18,6 +22,13 @@ const PROJECTS=[
    allowed:CHALLENGE_BLOCKS,
    start:{x:1,y:1,dir:1},
    cells:[[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],[6,2],[6,3],[6,4],[6,5],[5,5],[4,5],[3,5],[2,5],[1,5],[1,4],[1,3],[1,2]]},
+  {id:"sort",em:"🔢",name:"Sort the Blocks",diff:2,coins:300,xp:120,maxBlocks:30,gw:3,gh:2,needs:"house",
+   desc:"The numbered blocks are jumbled! The top row is free space. Use ✊ Lift and ⤵️ Drop to arrange them 1·2·3 across the bottom row — your very first sorting algorithm!",
+   allowed:SORT_BLOCKS,
+   start:{x:0,y:0,dir:1},
+   initial:[[0,1,2],[1,1,3],[2,1,1]],      // pre-placed numbered bricks (x,y,number) to rearrange
+   goalOrder:[[0,1,1],[1,1,2],[2,1,3]],    // each target cell must end up holding this number
+   cells:[]},
 ];
 function countBlocks(list){let n=0;for(const b of list){n++;if(b.body)n+=countBlocks(b.body);if(b.els)n+=countBlocks(b.els);}return n;}
 
@@ -139,7 +150,7 @@ async function loadCommunity(){
 function mgEnterCreator(){
   mgEnter({id:"custom",em:"✏️",name:"My Challenge",diff:2,coins:0,xp:0,maxBlocks:12,gw:8,gh:6,
     desc:"Design mode: tap grid tiles to paint your blueprint (🖌️), place the robot start (🤖), set the map size 📐 and block budget 🧩 — then solve it yourself (all blocks are available!) and publish!",
-    allowed:CHALLENGE_BLOCKS,start:{x:0,y:0,dir:1},cells:[]});
+    allowed:CREATOR_BLOCKS,start:{x:0,y:0,dir:1},cells:[]});
   mgState.creator=true;mgState.solved=false;mgState.paintMode="paint";
   $("mgCreatorBar").classList.add("on");
   mgCreatorUI();
@@ -176,11 +187,22 @@ async function publishChallenge(){
     mgExit(true);
   }catch(e){toast("⚠️ Publish failed: "+e.message);}
 }
+// (re)build the challenge robot's brick state, seeding any pre-placed numbered
+// bricks from proj.initial. bricks = Set of "x_y"; brickNo = {"x_y":order#};
+// held = number being carried (null if empty hand); nextNo = next auto number.
+function mgSeed(rs,proj){
+  rs.bricks=new Set(); rs.brickNo={}; rs.held=null; rs.nextNo=1;
+  if(proj.initial)for(const c of proj.initial){
+    const kk=c[0]+"_"+c[1]; rs.bricks.add(kk); rs.brickNo[kk]=c[2];
+    if(c[2]>=rs.nextNo)rs.nextNo=c[2]+1;
+  }
+}
 function mgEnter(proj){
   mgRobot=makeRobot(0,0,proj.name);
   mgRobot.program=(player.projPrograms[proj.id]||[]).map(b=>JSON.parse(JSON.stringify(b)));
   reUid(mgRobot.program);
-  mgState={proj,robot:{x:proj.start.x,y:proj.start.y,dir:proj.start.dir,bricks:new Set()},
+  const rs={x:proj.start.x,y:proj.start.y,dir:proj.start.dir};mgSeed(rs,proj);
+  mgState={proj,robot:rs,
     steps:0,running:false,frames:null,timer:null,prevMax:$("editor").classList.contains("max")};
   $("projects").classList.remove("open");
   tutSet(0); // dismiss the onboarding coach — it doesn't belong over a challenge
@@ -214,7 +236,8 @@ function mgExit(reopen){
 function mgReset(){
   if(!mgState)return;
   const p=mgState.proj;
-  mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir,bricks:new Set()};
+  const rs={x:p.start.x,y:p.start.y,dir:p.start.dir};mgSeed(rs,p);
+  mgState.robot=rs;
   mgState.steps=0;mgDraw();
 }
 function mgUpdateCount(){
@@ -292,7 +315,13 @@ function mgTick(){
     }
     else if(b.t==="turnL")rb.dir=(rb.dir+3)%4;
     else if(b.t==="turnR")rb.dir=(rb.dir+1)%4;
-    else if(b.t==="build"){rb.bricks.add(rb.x+"_"+rb.y);sfx(430,.03);}
+    else if(b.t==="build"){const kk=rb.x+"_"+rb.y;if(!rb.bricks.has(kk)){rb.bricks.add(kk);rb.brickNo[kk]=rb.nextNo++;}sfx(430,.03);}
+    else if(b.t==="pickUp"){const kk=rb.x+"_"+rb.y;
+      if(rb.held==null&&rb.bricks.has(kk)){rb.held=rb.brickNo[kk]!=null?rb.brickNo[kk]:rb.nextNo++;rb.bricks.delete(kk);delete rb.brickNo[kk];sfx(560,.03);}
+      else sfx(200,.05);}
+    else if(b.t==="drop"){const kk=rb.x+"_"+rb.y;
+      if(rb.held!=null&&!rb.bricks.has(kk)){rb.bricks.add(kk);rb.brickNo[kk]=rb.held;rb.held=null;sfx(400,.03);}
+      else sfx(200,.05);}
     else if(b.t==="setVar")mgRobot.vars[b.name]=resolveVal(mgRobot,b.val);
     else if(b.t==="changeVar")mgRobot.vars[b.name]=(Number(mgRobot.vars[b.name])||0)+(b.n|0);
     else if(b.t==="say")mgRobot.say={txt:String(resolveVal(mgRobot,b.val)).slice(0,24),until:1e18};
@@ -314,6 +343,13 @@ function mgCond(st,c){
 function mgFinish(){
   const st=mgState;
   mgStop();
+  // sorting-style goal: each target cell must hold its required number
+  if(st.proj.goalOrder){
+    const ok=st.proj.goalOrder.every(g=>st.robot.brickNo[g[0]+"_"+g[1]]===g[2]);
+    if(ok){mgSuccess();return;}
+    toast("🔢 Not sorted yet — get every numbered block onto its target cell!");
+    sfx(220,.12);return;
+  }
   const bp=new Set(st.proj.cells.map(c=>c[0]+"_"+c[1]));
   const stray=[...st.robot.bricks].some(k2=>!bp.has(k2));
   const missing=[...bp].filter(k2=>!st.robot.bricks.has(k2)).length;
@@ -375,11 +411,24 @@ function mgDraw(){
       g.fillRect(x*cell+2,y*cell+2,cell-4,cell-4);
       g.fillStyle="rgba(0,0,0,.25)";g.fillRect(x*cell+2,y*cell+cell-7,cell-4,5);
       g.fillStyle="rgba(255,255,255,.3)";g.fillRect(x*cell+4,y*cell+4,cell-8,3);
+      const no=st.robot.brickNo[k2];
+      if(no!=null){ // stamp the brick's order number on it
+        g.fillStyle="#fff";g.font="900 "+Math.floor(cell*0.42)+"px Fredoka,sans-serif";
+        g.textAlign="center";g.textBaseline="middle";
+        g.fillText(no,x*cell+cell/2,y*cell+cell/2+1);
+      }
     }else if(bp.has(k2)){
       g.strokeStyle="rgba(255,214,107,.85)";g.lineWidth=2;g.setLineDash([5,4]);
       g.strokeRect(x*cell+3,y*cell+3,cell-6,cell-6);g.setLineDash([]);
       g.fillStyle="rgba(255,214,107,.12)";g.fillRect(x*cell+3,y*cell+3,cell-6,cell-6);
     }
+  }
+  // sorting goal hints: show each target's required number in its corner
+  if(p.goalOrder)for(const gg of p.goalOrder){
+    if(st.robot.brickNo[gg[0]+"_"+gg[1]]===gg[2])continue; // already correct
+    g.fillStyle="rgba(255,214,107,.9)";g.font="900 "+Math.floor(cell*0.24)+"px Fredoka,sans-serif";
+    g.textAlign="right";g.textBaseline="top";
+    g.fillText("→"+gg[2],gg[0]*cell+cell-4,gg[1]*cell+3);
   }
   // challenge robot
   const rb=st.robot,cx=rb.x*cell+cell/2,cy=rb.y*cell+cell/2,s=cell*.68;
@@ -392,6 +441,15 @@ function mgDraw(){
   g.fillStyle="#241b45";
   const ex=DX[rb.dir]*s*.06,ey=DY[rb.dir]*s*.06;
   g.beginPath();g.arc(cx-s*.18+ex,cy-s*.08+ey,s*.07,0,7);g.arc(cx+s*.18+ex,cy-s*.08+ey,s*.07,0,7);g.fill();
+  // brick being carried, floating above the robot's head
+  if(rb.held!=null){
+    const hs=cell*0.42, hx=cx-hs/2, hy=cy-s*0.5-hs-3;
+    g.fillStyle="#e8a53a";g.fillRect(hx,hy,hs,hs);
+    g.fillStyle="rgba(0,0,0,.25)";g.fillRect(hx,hy+hs-4,hs,4);
+    g.fillStyle="#241b45";g.font="900 "+Math.floor(hs*0.7)+"px Fredoka,sans-serif";
+    g.textAlign="center";g.textBaseline="middle";
+    g.fillText(rb.held,cx,hy+hs/2);
+  }
 }
 function renderProjects(){
   renderAuthBox();

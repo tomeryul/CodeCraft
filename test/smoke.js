@@ -370,6 +370,26 @@ async function ev(expr) {
   await ev(`mgExit(false); document.getElementById('editor').classList.remove('open','max'); 'ok'`);
   check("Board tab hidden after leaving a challenge", await ev(`document.getElementById('boardTabBtn').style.display==='none'`) === true);
 
+  console.log("▶ mini-game: numbered bricks + lift/drop sorting");
+  const sortRes = await ev(`(()=>{
+    mgEnter(PROJECTS.find(p=>p.id==='sort'));
+    const rb=mgState.robot;
+    // run exactly one action block through the challenge interpreter
+    const act=t=>{ mgState.frames=[{blocks:[{t,uid:1}],i:0,reps:1}]; mgState.running=true; mgTick(); mgState.running=false; };
+    // seeded scrambled bricks: (0,1)=2 (1,1)=3 (2,1)=1
+    const seeded = rb.brickNo['0_1']+','+rb.brickNo['1_1']+','+rb.brickNo['2_1'];
+    rb.x=2; rb.y=1; act('pickUp');                       // lift the '1'
+    const heldOne = rb.held===1 && !rb.bricks.has('2_1');
+    rb.x=0; rb.y=0; act('drop');                         // carry it to the free top-left
+    const droppedTop = rb.held===null && rb.brickNo['0_0']===1;
+    mgExit(false); document.getElementById('editor').classList.remove('open','max');
+    return JSON.stringify({seeded, heldOne, droppedTop});
+  })()`);
+  const SR = JSON.parse(sortRes);
+  check("sort challenge seeds pre-placed numbered bricks", SR.seeded === "2,3,1", sortRes);
+  check("Lift carries a numbered brick (cell emptied)", SR.heldOne === true, sortRes);
+  check("Drop places the carried brick, keeping its number", SR.droppedTop === true, sortRes);
+
   console.log("▶ drag & drop (moveBlock core)");
   const dnd = await ev(`(()=>{
     const r=R(); r.program=[]; r.hist=[]; r.redoS=[];
