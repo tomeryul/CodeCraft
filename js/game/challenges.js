@@ -196,8 +196,9 @@ async function publishChallenge(){
 function saveMyChallenge(){
   if(!mgState||!mgState.creator)return;
   const p=mgState.proj, sort=mgHasNumbers(p);
-  if(!p.cells.length){toast("🖌️ Paint the target tiles first (where blocks must end up)!");return;}
-  if(sort&&!mgState.solved){toast("🧪 Prove it's solvable first: write a program and press ▶!");return;}
+  // Save keeps your design as-is (a draft) — no need to solve it first. The only
+  // requirement is a goal to aim at: painted target tiles and/or placed blocks.
+  if(!p.cells.length&&!(p.initial&&p.initial.length)){toast("🖌️ Paint target tiles or 🔢 place some blocks first!");return;}
   const copy=JSON.parse(JSON.stringify({
     id:"my_"+Date.now(), mine:true, em:sort?"🔢":"🧩", name:p.name, diff:2,
     coins:0, xp:0, maxBlocks:p.maxBlocks, gw:p.gw, gh:p.gh,

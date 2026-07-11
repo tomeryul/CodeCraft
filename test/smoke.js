@@ -426,6 +426,30 @@ async function ev(expr) {
   check("applySave records the save's owner", OWN.afterApply === 'userA', own);
   check("buildSave carries the owner tag forward", OWN.rebuilt === 'userA', own);
 
+  console.log("▶ saved sort challenge keeps numbered bricks through save→reload→replay");
+  const rtSort = await ev(`(()=>{
+    mgEnterCreator();
+    const p=mgState.proj; mgState.paintMode='brick';
+    const place=(x,y,n)=>{ mgState.brickNum=n; p.initial=p.initial||[];
+      const i=p.initial.findIndex(c=>c[0]===x&&c[1]===y);
+      if(i>=0)p.initial.splice(i,1); else p.initial.push(n!=null?[x,y,n]:[x,y]);
+      mgSeed(mgState.robot,p); };
+    place(0,3,2); place(1,3,3); place(2,3,1);
+    p.cells=[[0,3],[1,3],[2,3]];
+    player.myChallenges=[]; mgState.solved=false; saveMyChallenge(); // draft save, unsolved
+    mgExit(false); document.getElementById('editor').classList.remove('open','max');
+    applySave(JSON.parse(JSON.stringify(buildSave()))); // true serialize round-trip (localStorage/cloud)
+    const sp=player.myChallenges[0];
+    const savedInitial=JSON.stringify(sp.initial||null);
+    mgEnter(sp);                                 // replay the saved challenge
+    const bricks=mgState.robot.bricks.size;
+    const nums=[mgState.robot.brickNo['0_3'],mgState.robot.brickNo['1_3'],mgState.robot.brickNo['2_3']].join(',');
+    mgExit(false); document.getElementById('editor').classList.remove('open','max');
+    return JSON.stringify({savedInitial,bricks,nums});
+  })()`);
+  const RTS = JSON.parse(rtSort);
+  check("saved sort challenge replays with its 3 numbered bricks", RTS.bricks===3 && RTS.nums==='2,3,1', rtSort);
+
   console.log("▶ drag & drop (moveBlock core)");
   const dnd = await ev(`(()=>{
     const r=R(); r.program=[]; r.hist=[]; r.redoS=[];
