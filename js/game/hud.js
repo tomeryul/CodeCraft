@@ -31,6 +31,10 @@ $("projClose").addEventListener("click",()=>$("projects").classList.remove("open
 /* --- challenge creator controls --- */
 $("mgModePaint").addEventListener("click",()=>{if(mgState){mgState.paintMode="paint";mgCreatorUI();}});
 $("mgModeBot").addEventListener("click",()=>{if(mgState){mgState.paintMode="bot";mgCreatorUI();}});
+$("mgModeBrick").addEventListener("click",()=>{if(mgState){mgState.paintMode="brick";mgCreatorUI();}});
+$("mgBrickDec").addEventListener("click",()=>{if(mgState){mgState.brickNum=mgState.brickNum==null?null:(mgState.brickNum<=1?null:mgState.brickNum-1);mgCreatorUI();}});
+$("mgBrickInc").addEventListener("click",()=>{if(mgState){mgState.brickNum=mgState.brickNum==null?1:Math.min(20,mgState.brickNum+1);mgCreatorUI();}});
+$("mgSave").addEventListener("click",()=>saveMyChallenge());
 $("mgBudDec").addEventListener("click",()=>{if(mgState){mgState.proj.maxBlocks=Math.max(3,mgState.proj.maxBlocks-1);mgState.solved=false;mgCreatorUI();mgUpdateCount();}});
 $("mgBudInc").addEventListener("click",()=>{if(mgState){mgState.proj.maxBlocks=Math.min(30,mgState.proj.maxBlocks+1);mgCreatorUI();mgUpdateCount();}});
 $("mgWDec").addEventListener("click",()=>mgSetSize(-1,0));
@@ -46,6 +50,7 @@ $("mgName").addEventListener("click",()=>{
 $("mgPublish").addEventListener("click",()=>{
   if(!mgState||!mgState.creator)return;
   const p=mgState.proj;
+  if(p.initial&&p.initial.length){toast("🔢 Challenges with pre-placed blocks can't be shared to the community yet — use 💾 Save to keep them!");return;}
   if(p.cells.length<3){toast("🖌️ Paint at least 3 blueprint tiles first!");return;}
   if(!mgState.solved){toast("🧪 First prove it's solvable: build a program within the budget and press ▶!");return;}
   if(!sbReady()){toast("🔌 Online mode isn't connected yet.");return;}
@@ -61,6 +66,13 @@ $("mgCanvas").addEventListener("pointerdown",e=>{
   if(mgState.paintMode==="bot"){
     p.start={x,y,dir:1};
     mgState.robot.x=x;mgState.robot.y=y;mgState.robot.dir=1;
+  }else if(mgState.paintMode==="brick"){
+    // toggle a pre-placed brick at this cell (with the chosen number, or plain)
+    p.initial=p.initial||[];
+    const i=p.initial.findIndex(c=>c[0]===x&&c[1]===y);
+    if(i>=0)p.initial.splice(i,1);
+    else p.initial.push(mgState.brickNum!=null?[x,y,mgState.brickNum]:[x,y]);
+    mgSeed(mgState.robot,p); // re-seed so the new bricks render immediately
   }else{
     const i=p.cells.findIndex(c=>c[0]===x&&c[1]===y);
     if(i>=0)p.cells.splice(i,1);else p.cells.push([x,y]);

@@ -390,6 +390,31 @@ async function ev(expr) {
   check("Lift carries a numbered brick (cell emptied)", SR.heldOne === true, sortRes);
   check("Drop places the carried brick, keeping its number", SR.droppedTop === true, sortRes);
 
+  console.log("▶ creator: place numbered/plain bricks + derived sort goal + save");
+  const creat = await ev(`(()=>{
+    mgEnterCreator();
+    const p=mgState.proj; mgState.paintMode='brick';
+    const place=(x,y,n)=>{ mgState.brickNum=n; p.initial=p.initial||[];
+      const i=p.initial.findIndex(c=>c[0]===x&&c[1]===y);
+      if(i>=0)p.initial.splice(i,1); else p.initial.push(n!=null?[x,y,n]:[x,y]);
+      mgSeed(mgState.robot,p); };
+    place(0,3,2); place(1,3,3); place(2,3,1);   // scrambled numbered blocks
+    place(3,3,null);                            // a plain (unnumbered) block
+    const hasPlain = p.initial.some(c=>c.length===2);
+    p.cells=[[0,3],[1,3],[2,3]];                // target cells (row-major)
+    const goal = JSON.stringify(mgSortGoalOrder(p));
+    const isSort = mgHasNumbers(p);
+    player.myChallenges=[]; mgState.solved=true; saveMyChallenge();
+    const saved = player.myChallenges.length===1 && player.myChallenges[0].mine===true && player.myChallenges[0].initial.length===4;
+    mgExit(false); document.getElementById('editor').classList.remove('open','max');
+    return JSON.stringify({hasPlain,goal,isSort,saved});
+  })()`);
+  const CR = JSON.parse(creat);
+  check("creator can place a plain (unnumbered) brick", CR.hasPlain === true, creat);
+  check("numbered bricks make it a sort challenge", CR.isSort === true, creat);
+  check("sort goal = target cells hold ascending numbers", CR.goal === JSON.stringify([[0,3,1],[1,3,2],[2,3,3]]), creat);
+  check("Save stores the design in My Challenges", CR.saved === true, creat);
+
   console.log("▶ drag & drop (moveBlock core)");
   const dnd = await ev(`(()=>{
     const r=R(); r.program=[]; r.hist=[]; r.redoS=[];

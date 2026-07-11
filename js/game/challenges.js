@@ -149,9 +149,9 @@ async function loadCommunity(){
 }
 function mgEnterCreator(){
   mgEnter({id:"custom",em:"✏️",name:"My Challenge",diff:2,coins:0,xp:0,maxBlocks:12,gw:8,gh:6,
-    desc:"Design mode: tap grid tiles to paint your blueprint (🖌️), place the robot start (🤖), set the map size 📐 and block budget 🧩 — then solve it yourself (all blocks are available!) and publish!",
-    allowed:CREATOR_BLOCKS,start:{x:0,y:0,dir:1},cells:[]});
-  mgState.creator=true;mgState.solved=false;mgState.paintMode="paint";
+    desc:"Design mode: 🖌️ Paint the target tiles, 🤖 set the robot start, 🔢 Bricks to pre-place blocks (pick a number, or “—” for a plain block) — for a sorting game place numbered blocks + paint where they must end up (they'll need to finish in order). Solve it, then 💾 Save (or 🌍 Publish).",
+    allowed:CREATOR_BLOCKS,start:{x:0,y:0,dir:1},cells:[],initial:[]});
+  mgState.creator=true;mgState.solved=false;mgState.paintMode="paint";mgState.brickNum=1;
   $("mgCreatorBar").classList.add("on");
   mgCreatorUI();
 }
@@ -159,9 +159,11 @@ function mgCreatorUI(){
   if(!mgState||!mgState.creator)return;
   $("mgModePaint").classList.toggle("on",mgState.paintMode==="paint");
   $("mgModeBot").classList.toggle("on",mgState.paintMode==="bot");
+  $("mgModeBrick").classList.toggle("on",mgState.paintMode==="brick");
   $("mgBudget").textContent=mgState.proj.maxBlocks;
   $("mgW").textContent=mgState.proj.gw;
   $("mgH").textContent=mgState.proj.gh;
+  $("mgBrickN").textContent=mgState.brickNum==null?"—":mgState.brickNum;
   $("mgTitle").textContent="✏️ "+mgState.proj.name;
 }
 function mgSetSize(dw,dh){
@@ -187,15 +189,47 @@ async function publishChallenge(){
     mgExit(true);
   }catch(e){toast("⚠️ Publish failed: "+e.message);}
 }
+// save the current creator design into the player's own library (persisted with
+// the normal save + cloud sync). Sorting designs live here since the community
+// table can't yet store pre-placed bricks.
+function saveMyChallenge(){
+  if(!mgState||!mgState.creator)return;
+  const p=mgState.proj, sort=mgHasNumbers(p);
+  if(!p.cells.length){toast("🖌️ Paint the target tiles first (where blocks must end up)!");return;}
+  if(sort&&!mgState.solved){toast("🧪 Prove it's solvable first: write a program and press ▶!");return;}
+  const copy=JSON.parse(JSON.stringify({
+    id:"my_"+Date.now(), mine:true, em:sort?"🔢":"🧩", name:p.name, diff:2,
+    coins:0, xp:0, maxBlocks:p.maxBlocks, gw:p.gw, gh:p.gh,
+    allowed:p.allowed, start:p.start, cells:p.cells, initial:p.initial||[],
+    desc:(sort?"Sort the numbered blocks into order ":"Fill the blueprint ")+"— your custom challenge!"}));
+  player.myChallenges=player.myChallenges||[];
+  player.myChallenges.push(copy);
+  saveNow();
+  toast("💾 Saved to “My Challenges”!");
+  sfx(760,.06);
+}
 // (re)build the challenge robot's brick state, seeding any pre-placed numbered
 // bricks from proj.initial. bricks = Set of "x_y"; brickNo = {"x_y":order#};
 // held = number being carried (null if empty hand); nextNo = next auto number.
 function mgSeed(rs,proj){
   rs.bricks=new Set(); rs.brickNo={}; rs.held=null; rs.nextNo=1;
   if(proj.initial)for(const c of proj.initial){
-    const kk=c[0]+"_"+c[1]; rs.bricks.add(kk); rs.brickNo[kk]=c[2];
-    if(c[2]>=rs.nextNo)rs.nextNo=c[2]+1;
+    const kk=c[0]+"_"+c[1]; rs.bricks.add(kk);
+    if(c.length>2&&c[2]!=null){ rs.brickNo[kk]=c[2]; if(c[2]>=rs.nextNo)rs.nextNo=c[2]+1; } // numbered brick
   }
+}
+// does this project use numbered bricks (→ it's a sorting challenge)?
+function mgHasNumbers(proj){return (proj.initial||[]).some(c=>c.length>2&&c[2]!=null);}
+// the win target: an explicit goalOrder, or (for numbered challenges) derived as
+// "the blueprint cells, row-major, must hold the brick numbers in ascending order".
+function mgSortGoalOrder(proj){
+  if(proj.goalOrder)return proj.goalOrder;
+  if(!mgHasNumbers(proj))return null;
+  const cells=proj.cells.slice().sort((a,b)=>a[1]-b[1]||a[0]-b[0]);
+  const nums=proj.initial.filter(c=>c.length>2&&c[2]!=null).map(c=>c[2]).sort((a,b)=>a-b);
+  const n=Math.min(cells.length,nums.length),g=[];
+  for(let i=0;i<n;i++)g.push([cells[i][0],cells[i][1],nums[i]]);
+  return g.length?g:null;
 }
 function mgEnter(proj){
   mgRobot=makeRobot(0,0,proj.name);
@@ -344,10 +378,11 @@ function mgFinish(){
   const st=mgState;
   mgStop();
   // sorting-style goal: each target cell must hold its required number
-  if(st.proj.goalOrder){
-    const ok=st.proj.goalOrder.every(g=>st.robot.brickNo[g[0]+"_"+g[1]]===g[2]);
+  const goal=mgSortGoalOrder(st.proj);
+  if(goal){
+    const ok=goal.every(g=>st.robot.brickNo[g[0]+"_"+g[1]]===g[2]);
     if(ok){mgSuccess();return;}
-    toast("🔢 Not sorted yet — get every numbered block onto its target cell!");
+    toast("🔢 Not sorted yet — get every numbered block onto its target cell in order!");
     sfx(220,.12);return;
   }
   const bp=new Set(st.proj.cells.map(c=>c[0]+"_"+c[1]));
@@ -366,6 +401,13 @@ function mgSuccess(){
     if(sbUser&&sbReady()){publishChallenge();return;}
     toast(sbReady()?"✅ It works! Log in (account box in Projects) then press 🌍 Publish!":"✅ It works! Publishing opens once online mode is connected.");
     sfx(880,.1);confetti();
+    return;
+  }
+  if(proj.mine){ // solving your own saved challenge — celebrate, no farmable reward
+    confetti();
+    if(window.CC_EXTRAS)CC_EXTRAS.celebrate(proj.em,"SOLVED!",proj.name,"You solved your own challenge! 🎉","Nice! 🎉");
+    else bigToast("🎉 Solved your challenge!");
+    mgExit(true);
     return;
   }
   if(proj.community){
@@ -424,7 +466,8 @@ function mgDraw(){
     }
   }
   // sorting goal hints: show each target's required number in its corner
-  if(p.goalOrder)for(const gg of p.goalOrder){
+  const goalHints=mgSortGoalOrder(p);
+  if(goalHints)for(const gg of goalHints){
     if(st.robot.brickNo[gg[0]+"_"+gg[1]]===gg[2])continue; // already correct
     g.fillStyle="rgba(255,214,107,.9)";g.font="900 "+Math.floor(cell*0.24)+"px Fredoka,sans-serif";
     g.textAlign="right";g.textBaseline="top";
@@ -468,6 +511,19 @@ function renderProjects(){
     if(!locked)b.addEventListener("click",()=>mgEnter(p));
     div.appendChild(b);
     el.appendChild(div);
+  }
+  // player's own saved challenges (incl. sorting games) — persisted + cloud-synced
+  if(player.myChallenges&&player.myChallenges.length){
+    const mh=document.createElement("h4");mh.className="qsec";mh.textContent="🛠️ My Challenges";el.appendChild(mh);
+    for(const p of player.myChallenges){
+      const div=document.createElement("div");div.className="quest proj";
+      div.innerHTML='<div class="qt"><span>'+p.em+' <b>'+esc(p.name)+'</b></span></div><small class="pdesc">'+esc(p.desc||"")+'</small>';
+      const play=document.createElement("button");play.textContent="🏗️ Play";
+      play.addEventListener("click",()=>mgEnter(p));
+      const del=document.createElement("button");del.className="authbtn";del.textContent="🗑";del.style.marginLeft="6px";
+      del.addEventListener("click",()=>{player.myChallenges=player.myChallenges.filter(x=>x!==p);saveNow();renderProjects();});
+      div.appendChild(play);div.appendChild(del);el.appendChild(div);
+    }
   }
   // create-your-own + community section
   const cb=document.createElement("button");cb.id="ccCreate";

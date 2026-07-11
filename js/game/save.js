@@ -34,7 +34,7 @@ function applySave(d){
     unlocks=Object.assign({loops:false,logic:false,smart:false,vars:false},d.unlocks);
     muted=!!d.muted;
     tut.done=d.v===1?true:!!d.tutDone;
-    player=Object.assign({xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{}},d.player||{});
+    player=Object.assign({xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{},myChallenges:[]},d.player||{});
     skills=freshSkills();
     if(d.skills)for(const k in skills)if(d.skills[k])skills[k]=d.skills[k];
     robots=d.robots.map(rd=>{

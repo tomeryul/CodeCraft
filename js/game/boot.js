@@ -6,7 +6,7 @@ function newGame(){
   coins=0;stash={wood:0,stone:0,iron:0,crystal:0,water:0};
   totals={collected:0,earned:0,dist:0};
   unlocks={loops:false,logic:false,smart:false,vars:false};
-  player={xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{}};
+  player={xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{},myChallenges:[]};
   skills=freshSkills();
   robots=[makeRobot(homePos.x-1,homePos.y+1,"Robo-1")];
   selRobot=0;
