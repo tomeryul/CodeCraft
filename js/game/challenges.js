@@ -1,11 +1,12 @@
 "use strict";
 /* ---------------- build projects (mini-games) ---------------- */
 // full programming toolbox available inside every challenge (loops, conditions, variables, values)
-const CHALLENGE_BLOCKS=["move","turnL","turnR","build","wait","repeat","countLoop","if","setVar","changeVar","say"];
-// sorting toolbox: lift/drop instead of build — for rearranging numbered bricks
+// every challenge (built-in, community, custom) gets the full toolbox — incl.
+// ✊ Lift / ⤵️ Drop so bricks can be moved when PLAYING, not just while editing
+const CHALLENGE_BLOCKS=["move","turnL","turnR","build","pickUp","drop","wait","repeat","countLoop","if","setVar","changeVar","say"];
+// sorting toolbox: lift/drop, no build — for rearranging numbered bricks
 const SORT_BLOCKS=["move","turnL","turnR","pickUp","drop","wait","repeat","countLoop","if","setVar","changeVar","say"];
-// creators get everything so they can design either kind of challenge
-const CREATOR_BLOCKS=CHALLENGE_BLOCKS.concat(["pickUp","drop"]);
+const CREATOR_BLOCKS=CHALLENGE_BLOCKS;
 const PROJECTS=[
   {id:"house",em:"🏡",name:"Big House",diff:1,coins:150,xp:60,maxBlocks:8,gw:8,gh:7,
    desc:"Lay the walls of the Big House: paint every tile of the 4×4 outline. Your robot drops a brick on the tile it's STANDING on. Budget: 8 blocks — you'll need a loop inside a loop!",
@@ -521,7 +522,7 @@ function renderProjects(){
       const play=document.createElement("button");play.textContent="🏗️ Play";
       play.addEventListener("click",()=>mgEnter(p));
       const del=document.createElement("button");del.className="authbtn";del.textContent="🗑";del.style.marginLeft="6px";
-      del.addEventListener("click",()=>{player.myChallenges=player.myChallenges.filter(x=>x!==p);saveNow();renderProjects();});
+      del.addEventListener("click",()=>{if(!confirm("Delete “"+p.name+"”?"))return;player.myChallenges=player.myChallenges.filter(x=>x!==p);saveNow();renderProjects();});
       div.appendChild(play);div.appendChild(del);el.appendChild(div);
     }
   }

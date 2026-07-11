@@ -415,6 +415,17 @@ async function ev(expr) {
   check("sort goal = target cells hold ascending numbers", CR.goal === JSON.stringify([[0,3,1],[1,3,2],[2,3,3]]), creat);
   check("Save stores the design in My Challenges", CR.saved === true, creat);
 
+  console.log("▶ save owner tag (per-account isolation)");
+  const own = await ev(`(()=>{
+    const s=buildSave(); s.owner='userA'; applySave(s);   // adopt a save owned by userA
+    const afterApply = saveOwner;
+    const rebuilt = buildSave().owner;                     // no sbUser → owner tag persists
+    return JSON.stringify({afterApply, rebuilt});
+  })()`);
+  const OWN = JSON.parse(own);
+  check("applySave records the save's owner", OWN.afterApply === 'userA', own);
+  check("buildSave carries the owner tag forward", OWN.rebuilt === 'userA', own);
+
   console.log("▶ drag & drop (moveBlock core)");
   const dnd = await ev(`(()=>{
     const r=R(); r.program=[]; r.hist=[]; r.redoS=[];

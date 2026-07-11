@@ -40,8 +40,15 @@ async function enterGame(tryCloud){
     splashMsg("☁️ Loading your world…");
     try{
       const cloud=await cloudLoad();
-      if(cloud){ if(applySave(cloud)){isNew=false;refreshAllUI();} }
-      else { await cloudSave(buildSave()); } // first login on this account → keep current progress
+      if(cloud){ if(applySave(cloud)){isNew=false;saveOwner=sbUser.uid;refreshAllUI();} }
+      else {
+        // brand-new account with no cloud save yet. Only keep the current on-screen
+        // progress if it's this account's own (or a guest's) — never inherit a
+        // DIFFERENT signed-in user's local data (that leaked their My Challenges etc.)
+        if(saveOwner&&saveOwner!==sbUser.uid){ newGame(); isNew=true; refreshAllUI(); }
+        saveOwner=sbUser.uid;
+        await cloudSave(buildSave());
+      }
     }catch(_){ splashMsg("⚠️ Couldn't reach the cloud — playing on this device."); }
   }
   entering=false;

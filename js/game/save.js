@@ -1,9 +1,12 @@
 "use strict";
 /* ---------------- save / load ---------------- */
 const GROW_MS=20000;
+// which account this in-memory/local save belongs to (null = guest / never signed in).
+// Used to stop one signed-in user's local progress leaking into a different new account.
+let saveOwner=null;
 // serialize the whole game into a plain object (used for both localStorage and the cloud)
 function buildSave(){
-  return {v:2,savedAt:Date.now(),seed,coins,stash,totals,unlocks,muted,selRobot,tutDone:tut.done,player,skills,
+  return {v:2,owner:(typeof sbUser!=="undefined"&&sbUser)?sbUser.uid:saveOwner,savedAt:Date.now(),seed,coins,stash,totals,unlocks,muted,selRobot,tutDone:tut.done,player,skills,
     robots:robots.map(r=>({x:r.x,y:r.y,dir:r.dir,name:r.name,color:r.color,inv:r.inv,cap:r.cap,speed:r.speed,energy:r.energy,program:r.program,vars:r.vars,hat:r.hat})),
     objects:[...objects.entries()].map(([k2,o])=>{
       const c={...o};
@@ -28,6 +31,7 @@ function scheduleCloud(data){
 function applySave(d){
   try{
     if(!d||(d.v!==1&&d.v!==2))return false;
+    saveOwner=d.owner||null; // remember whose data this is (null for old/guest saves)
     seed=d.seed;buildTerrain();
     objects=new Map(d.objects);
     coins=d.coins;stash=Object.assign({wood:0,stone:0,iron:0,crystal:0,water:0},d.stash);totals=d.totals;
