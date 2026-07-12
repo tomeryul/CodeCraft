@@ -1,4 +1,4 @@
-const CACHE = "codecraft-v35";
+const CACHE = "codecraft-v36";
 const ASSETS = [
   "./",
   "./index.html",
@@ -45,13 +45,16 @@ self.addEventListener("activate", e => {
       .then(() => self.clients.claim())
   );
 });
-// network-first so game updates propagate; cache fallback keeps it playable offline
+// network-first so game updates propagate; cache fallback keeps it playable offline.
+// IMPORTANT: fetch with cache:"no-store" so we bypass the browser HTTP cache — on
+// iOS the standalone PWA otherwise kept serving stale JS/CSS for GitHub Pages'
+// cache lifetime, so code updates (like publishing sort challenges) never landed.
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
-  // never cache cross-origin requests (Supabase API, fonts CDN)
+  // never touch cross-origin requests (Supabase API, fonts CDN)
   if (new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
-    fetch(e.request).then(r => {
+    fetch(e.request, { cache: "no-store" }).then(r => {
       const cp = r.clone();
       caches.open(CACHE).then(c => c.put(e.request, cp));
       return r;

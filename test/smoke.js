@@ -463,6 +463,23 @@ async function ev(expr) {
   check("community challenge loads its pre-placed bricks", CC.hasInitial===3 && CC.seeded===3, cc);
   check("community sort goal derives ascending order", CC.goal===JSON.stringify([[0,1,1],[1,1,2],[2,1,3]]) && CC.em==='🔢', cc);
 
+  console.log("▶ publish payload includes pre-placed bricks");
+  const pub = await ev(`(()=>{
+    mgEnterCreator();
+    const p=mgState.proj; p.initial=[[0,1,2],[1,1,3],[2,1,1]]; p.cells=[[0,1],[1,1],[2,1]];
+    let body=null; const origRest=sbRest, origUser=sbUser;
+    sbRest=(path,opts)=>{ if(path==='challenges'&&opts&&opts.method==='POST'&&body==null)body=opts.body; return Promise.resolve([]); };
+    sbUser={uid:'u1',email:'k@x.com'};
+    return publishChallenge().then(()=>{
+      sbRest=origRest; sbUser=origUser;
+      mgExit(false); document.getElementById('editor').classList.remove('open','max');
+      const b=JSON.parse(body||'{}');
+      return JSON.stringify({initialN:(b.initial||[]).length, cellsN:(b.cells||[]).length});
+    });
+  })()`);
+  const PUB = JSON.parse(pub);
+  check("publishChallenge sends the pre-placed bricks to the DB", PUB.initialN===3 && PUB.cellsN===3, pub);
+
   console.log("▶ drag & drop (moveBlock core)");
   const dnd = await ev(`(()=>{
     const r=R(); r.program=[]; r.hist=[]; r.redoS=[];
