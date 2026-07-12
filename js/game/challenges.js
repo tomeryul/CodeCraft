@@ -123,10 +123,11 @@ function renderAuthBox(){
 }
 const CC_ALLOWED=["move","turnL","turnR","build","repeat","countLoop"];
 function ccToProj(row){
-  return {id:"cc_"+row.id,community:row.id,em:"🌍",name:row.name,diff:2,coins:60,xp:30,
+  const initial=row.initial||[], sort=initial.some(c=>c.length>2&&c[2]!=null);
+  return {id:"cc_"+row.id,community:row.id,em:sort?"🔢":"🌍",name:row.name,diff:2,coins:60,xp:30,
     maxBlocks:row.max_blocks,gw:row.gw,gh:row.gh,
-    desc:"Community challenge by "+row.author_name+" — paint the whole blueprint within "+row.max_blocks+" blocks!",
-    allowed:CHALLENGE_BLOCKS,start:{x:row.start_x,y:row.start_y,dir:row.start_dir},cells:row.cells};
+    desc:"Community challenge by "+row.author_name+(sort?" — sort the numbered blocks into order":" — paint the whole blueprint")+" within "+row.max_blocks+" blocks!",
+    allowed:CHALLENGE_BLOCKS,start:{x:row.start_x,y:row.start_y,dir:row.start_dir},cells:row.cells,initial:initial};
 }
 async function loadCommunity(){
   const el=$("ccList");if(!el)return;
@@ -139,7 +140,8 @@ async function loadCommunity(){
     for(const row of rows){
       const div=document.createElement("div");div.className="quest proj";
       const solved=!!player.projects["cc_"+row.id];
-      div.innerHTML='<div class="qt"><span>🌍 <b>'+esc(row.name)+'</b></span><span class="qr">🧩 '+row.max_blocks+' · ✅ '+row.solves+'</span></div>'+
+      const sortC=(row.initial||[]).some(c=>c.length>2&&c[2]!=null);
+      div.innerHTML='<div class="qt"><span>'+(sortC?"🔢":"🌍")+' <b>'+esc(row.name)+'</b></span><span class="qr">🧩 '+row.max_blocks+' · ✅ '+row.solves+'</span></div>'+
         '<small class="pdesc">by '+esc(row.author_name)+(solved?" — you solved this! 🏅":"")+'</small>';
       const b=document.createElement("button");
       b.textContent=solved?"🏅 Solve again":"🌍 Try this challenge";
@@ -184,7 +186,7 @@ async function publishChallenge(){
   try{
     await sbRest("challenges",{method:"POST",headers:Object.assign(sbHeaders(true),{Prefer:"return=minimal"}),
       body:JSON.stringify({name:p.name,gw:p.gw,gh:p.gh,start_x:p.start.x,start_y:p.start.y,
-        start_dir:p.start.dir,cells:p.cells,max_blocks:p.maxBlocks,
+        start_dir:p.start.dir,cells:p.cells,initial:p.initial||[],max_blocks:p.maxBlocks,
         author_name:(sbUser.email||"builder").split("@")[0].slice(0,20)})});
     if(window.CC_EXTRAS)CC_EXTRAS.celebrate("🌍","PUBLISHED!",p.name+" is live!","Players everywhere can now try to solve your challenge!","Awesome! 🎉");
     mgExit(true);

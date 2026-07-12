@@ -50,8 +50,7 @@ $("mgName").addEventListener("click",()=>{
 $("mgPublish").addEventListener("click",()=>{
   if(!mgState||!mgState.creator)return;
   const p=mgState.proj;
-  if(p.initial&&p.initial.length){toast("🔢 Challenges with pre-placed blocks can't be shared to the community yet — use 💾 Save to keep them!");return;}
-  if(p.cells.length<3){toast("🖌️ Paint at least 3 blueprint tiles first!");return;}
+  if(p.cells.length<1){toast("🖌️ Paint the target tiles first (where blocks must end up)!");return;}
   if(!mgState.solved){toast("🧪 First prove it's solvable: build a program within the budget and press ▶!");return;}
   if(!sbReady()){toast("🔌 Online mode isn't connected yet.");return;}
   if(!sbUser){toast("🔐 Log in first — account box at the top of Projects.");return;}

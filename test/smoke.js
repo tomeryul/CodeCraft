@@ -450,6 +450,19 @@ async function ev(expr) {
   const RTS = JSON.parse(rtSort);
   check("saved sort challenge replays with its 3 numbered bricks", RTS.bricks===3 && RTS.nums==='2,3,1', rtSort);
 
+  console.log("▶ community row → challenge carries pre-placed bricks");
+  const cc = await ev(`(()=>{
+    const row={id:'abc',name:'Sortie',author_name:'kid',gw:3,gh:2,start_x:0,start_y:0,start_dir:1,
+      max_blocks:20,solves:0,cells:[[0,1],[1,1],[2,1]],initial:[[0,1,2],[1,1,3],[2,1,1]]};
+    const proj=ccToProj(row);
+    const rs={x:0,y:0,dir:1}; mgSeed(rs,proj);
+    return JSON.stringify({hasInitial:(proj.initial||[]).length, em:proj.em,
+      seeded:rs.bricks.size, goal:JSON.stringify(mgSortGoalOrder(proj))});
+  })()`);
+  const CC = JSON.parse(cc);
+  check("community challenge loads its pre-placed bricks", CC.hasInitial===3 && CC.seeded===3, cc);
+  check("community sort goal derives ascending order", CC.goal===JSON.stringify([[0,1,1],[1,1,2],[2,1,3]]) && CC.em==='🔢', cc);
+
   console.log("▶ drag & drop (moveBlock core)");
   const dnd = await ev(`(()=>{
     const r=R(); r.program=[]; r.hist=[]; r.redoS=[];
