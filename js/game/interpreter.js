@@ -86,9 +86,13 @@ function tickRobot(r){
 function faceTo(r,x,y){
   if(x>r.x)r.dir=1;else if(x<r.x)r.dir=3;else if(y>r.y)r.dir=2;else if(y<r.y)r.dir=0;
 }
+/* actions that get a draw-time animation (see robot drawing in render.js) */
+const ANIM_ACTS={move:1,turnL:1,turnR:1,collect:1,chop:1,mine:1,scoop:1,drop:1,build:1,rest:1,wait:1};
 function doAction(r,b){
   const a=ahead(r), k=inB(a.x,a.y)?key(a.x,a.y):-1, o=k>=0?objects.get(k):null;
   r.blocked=false;
+  // animation hook: render.js reads r.anim to play a short per-action "tell"
+  if(ANIM_ACTS[b.t])r.anim={type:b.t,t0:(typeof performance!=="undefined"?performance.now():Date.now())};
   switch(b.t){
     case "move":
       if(canWalk(a.x,a.y)){
@@ -241,7 +245,7 @@ function burst(x,y,kind){
 const fx=[];
 function confetti(){
   for(let i=0;i<70;i++)
-    fx.push({x:innerWidth/2+(Math.random()-.5)*140,y:innerHeight*.22,
+    fx.push({x:VW/2+(Math.random()-.5)*140,y:VH*.22,
       vx:(Math.random()-.5)*380,vy:-220-Math.random()*260,
       rot:Math.random()*6.3,vr:(Math.random()-.5)*14,
       c:["#ffb830","#5ab8ff","#ff5d73","#54d66a","#b184ff","#fff"][i%6],

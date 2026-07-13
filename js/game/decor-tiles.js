@@ -94,27 +94,58 @@ function drawFloor(g,px,py,mask,h){
   g.restore();
 }
 
-/* ============ WALL (+ door / window embedded) ============ */
+/* ============ WALL (+ door / window embedded) ============
+   Fake height: light from top-left. The tile top is the lit wall "cap";
+   an exposed SOUTH edge grows a shaded vertical front face; exposed E/W
+   edges get thin side shading; a soft shadow drops onto the tile below/
+   right. All gated on the bitmask so joined walls stay seamless. */
+const WALL_H=13;       // apparent extrusion height (front-face px)
 function drawWallBody(g,px,py,mask,h){
-  const N=mask&1,S=mask&4;
+  const N=mask&1,E=mask&2,S=mask&4,Wd=mask&8;
+  // 1. drop shadow onto ground below/right (only where the base is exposed)
+  if(S||E){
+    g.save();
+    g.fillStyle="rgba(30,20,8,.20)";
+    if(S){g.beginPath();g.ellipse(px+T/2+3,py+T+3,T*0.5,6,0,0,7);g.fill();}
+    if(E&&!S){g.fillRect(px+T,py+6,5,T-8);}
+    g.restore();
+  }
+  // 2. wall top ("cap") surface
   tilePath(g,px,py,mask,2,9);
   g.fillStyle="#e9d6b0";g.fill();
   g.save();tilePath(g,px,py,mask,2,9);g.clip();
   const top=N?py:py+13;
-  if(!N){ // exposed top: lighter "cap" face
+  if(!N){ // exposed top: lighter cap face catching the light
     g.fillStyle="#f7edd4";g.fillRect(px,py,T,13);
     g.fillStyle="rgba(140,95,45,.35)";g.fillRect(px,py+12,T,1.8);
   }
   // brick seams (continue across joined tiles: coords are world-aligned)
   g.strokeStyle="rgba(150,100,50,.30)";g.lineWidth=1.6;
-  for(let yy=py+13;yy<py+T-4;yy+=11){
+  const seamBot=S?py+T-4:py+T-WALL_H; // stop seams where the front face begins
+  for(let yy=py+13;yy<seamBot;yy+=11){
     if(yy>top){g.beginPath();g.moveTo(px,yy);g.lineTo(px+T,yy);g.stroke();}
     const row=Math.round((yy-py)/11), off=(row%2)?0:12;
     for(let xx=px+off;xx<px+T;xx+=24){
-      if(yy>top){g.beginPath();g.moveTo(xx,yy);g.lineTo(xx,Math.min(yy+11,py+T-4));g.stroke();}
+      if(yy>top){g.beginPath();g.moveTo(xx,yy);g.lineTo(xx,Math.min(yy+11,seamBot));g.stroke();}
     }
   }
-  if(!S){g.fillStyle="rgba(100,60,25,.30)";g.fillRect(px,py+T-5,T,5);}
+  // 3. side shading on exposed vertical edges (lit W, shaded E)
+  if(E){g.fillStyle="rgba(90,55,22,.22)";g.fillRect(px+T-6,py,6,T);}
+  if(Wd){g.fillStyle="rgba(255,247,225,.22)";g.fillRect(px,py,5,T);}
+  // 4. extruded front face on the exposed south edge
+  if(S){
+    const fy=py+T-WALL_H;
+    const fg=g.createLinearGradient(0,fy,0,py+T);
+    fg.addColorStop(0,"#cdb488");fg.addColorStop(1,"#a9885c");
+    g.fillStyle=fg;g.fillRect(px,fy,T,WALL_H);
+    g.fillStyle="rgba(60,38,14,.28)";g.fillRect(px,fy,T,2);      // eave-line AO under the cap
+    g.fillStyle="rgba(30,18,6,.30)";g.fillRect(px,py+T-3,T,3);   // grounding shadow at the base
+    // vertical brick joints on the face
+    g.strokeStyle="rgba(90,55,22,.28)";g.lineWidth=1.4;
+    for(let xx=px+12;xx<px+T;xx+=24){g.beginPath();g.moveTo(xx,fy+2);g.lineTo(xx,py+T-2);g.stroke();}
+  } else {
+    g.fillStyle="rgba(100,60,25,.30)";g.fillRect(px,py+T-5,T,5);
+  }
   g.restore();
   tilePath(g,px,py,mask,2,9);
   g.strokeStyle="rgba(100,60,25,.38)";g.lineWidth=2;g.stroke();
@@ -163,6 +194,11 @@ function drawWindow(g,px,py,mask,h){
 /* ============ ROOF ============ */
 function drawRoof(g,px,py,mask,h){
   const N=mask&1,E=mask&2,S=mask&4,Wd=mask&8;
+  // roof sits ABOVE the walls: shadow under the exposed eave first, then
+  // the whole roof is drawn lifted up a few px so it reads as elevated.
+  const LIFT=6;
+  if(S){g.fillStyle="rgba(30,18,6,.26)";g.fillRect(px,py+T-LIFT,T,LIFT+3);}
+  g.save();g.translate(0,-LIFT);
   tilePath(g,px,py,mask,2,11);
   const gr=g.createLinearGradient(0,py,0,py+T);
   gr.addColorStop(0,N?"#e2694f":"#f08a67");
@@ -194,6 +230,7 @@ function drawRoof(g,px,py,mask,h){
   g.restore();
   tilePath(g,px,py,mask,2,11);
   g.strokeStyle="rgba(120,35,20,.42)";g.lineWidth=2;g.stroke();
+  g.restore();
 }
 
 /* ============ FENCE ============ */
