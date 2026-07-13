@@ -115,6 +115,7 @@ function draw(t){
     if(o.type==="tree")ch=o.stage===0?"🌱":o.stage===1?"🌿":"🌳";
     else if(o.type==="item"){ch=RES[o.item].em;sz=es*.6;}
     else if(o.type==="proj"){ch=o.em;sz=es*1.2;}
+    else if(o.type==="decor")ch=o.em; // player-placed build-mode piece
     else ch=OBJ_EM[o.type];
     if(o.type==="home"||o.type==="market")sz=es*1.12;
     if(ch){

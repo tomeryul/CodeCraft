@@ -480,6 +480,29 @@ async function ev(expr) {
   const PUB = JSON.parse(pub);
   check("publishChallenge sends the pre-placed bricks to the DB", PUB.initialN===3 && PUB.cellsN===3, pub);
 
+  console.log("▶ manual build mode: place & remove decor with resources");
+  const bld = await ev(`(()=>{
+    mgState=null; mgRobot=null;
+    let tx=-1,ty=-1;
+    for(let y=2;y<24&&tx<0;y++)for(let x=2;x<24&&tx<0;x++){
+      if(terrain[key(x,y)]!==T_WATER && !objects.get(key(x,y)) && !robots.some(r=>Math.round(r.rx)===x&&Math.round(r.ry)===y)){tx=x;ty=y;}
+    }
+    stash={wood:5,stone:5,iron:0,crystal:2,water:2};
+    const r=R(); r.inv={wood:0,stone:0,iron:0,crystal:0,water:0};
+    buildMode=true; buildSel='wall';                 // Wall costs 🪨1
+    const before=stash.stone;
+    buildTap(tx,ty);
+    const p=objects.get(key(tx,ty));
+    const okPlace = !!p && p.type==='decor' && p.deco==='wall' && stash.stone===before-1;
+    buildTap(tx,ty);                                  // tap again → remove + refund
+    const gone = !objects.get(key(tx,ty)) && stash.stone===before;
+    buildMode=false; buildSel=null;
+    return JSON.stringify({okPlace,gone});
+  })()`);
+  const BLD = JSON.parse(bld);
+  check("build mode places a decor and spends resources", BLD.okPlace===true, bld);
+  check("removing a decor refunds the resources", BLD.gone===true, bld);
+
   console.log("▶ drag & drop (moveBlock core)");
   const dnd = await ev(`(()=>{
     const r=R(); r.program=[]; r.hist=[]; r.redoS=[];

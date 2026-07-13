@@ -48,6 +48,7 @@ js/
     tutorial.js     3-step onboarding coach
     hud.js          Top-bar HUD, fab/run wiring, challenge-creator controls
     input.js        Camera, pan/pinch/tap, object move/delete menu
+    build.js        Manual (Minecraft-style) build mode: place/remove decor with gathered resources
     render.js       Canvas draw loop bits: sprite cache, terrain chunks, world render
     loop.js         Fixed-step simulation loop
     save.js         localStorage save/load (+ offline fast-forward)

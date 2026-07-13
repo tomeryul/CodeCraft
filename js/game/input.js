@@ -2,6 +2,7 @@
 /* ---------------- camera & input ---------------- */
 const canvas=$("game"), ctx=canvas.getContext("2d");
 let cam={x:0,y:0,scale:1}, follow=true, DPR=1, VW=innerWidth, VH=innerHeight;
+let buildMode=false, buildSel=null; // manual (Minecraft-style) build mode — see build.js
 // Real screen height: on iOS standalone (black-translucent) innerHeight is the
 // SHORT layout viewport; visualViewport.height / 100lvh usually know the true
 // size. Take the biggest signal — the canvas is in normal flow, so painting
@@ -72,6 +73,7 @@ function handleTap(sx,sy){
   const wx=(sx-VW/2)/cam.scale+cam.x, wy=(sy-VH/2)/cam.scale+cam.y;
   const tx=Math.floor(wx/TILE), ty=Math.floor(wy/TILE);
   if(!inB(tx,ty)){closeObjMenu();return;}
+  if(buildMode){buildTap(tx,ty);return;} // manual build mode owns taps (place/remove decor)
   // relocating a build: second tap drops it on an empty walkable tile
   if(movingObj){
     const nk=key(tx,ty), no=objects.get(nk);
@@ -87,7 +89,7 @@ function handleTap(sx,sy){
   if(ri>=0){selRobot=ri;selBlock=null;elseSel=null;follow=true;updateChips();updateHud();updateFab();renderProgram();renderPy();toast("🤖 Selected "+robots[ri].name);sfx(500,.05);return;}
   const o=objects.get(key(tx,ty));
   if(o&&PLAYER_BUILT[o.type]){openObjMenu(key(tx,ty),o);return;}
-  const names={tree:"🌳 Tree — chop it for wood!",rock:"🪨 Rock — mine it for stone!",iron:"⛓️ Iron ore — mine it, worth 6🪙!",crystal:"💎 Crystal — mine it, worth 15🪙!",home:"🏠 Home base",market:"🏪 Market — sell resources here!",flower:"🌼 Just a pretty flower",item:"📦 Dropped items — a robot can collect these!",gift:"🎁 Treasure! Send a robot to collect it!"};
+  const names={tree:"🌳 Tree — chop it for wood!",rock:"🪨 Rock — mine it for stone!",iron:"⛓️ Iron ore — mine it, worth 6🪙!",crystal:"💎 Crystal — mine it, worth 15🪙!",home:"🏠 Home base",market:"🏪 Market — sell resources here!",flower:"🌼 Just a pretty flower",item:"📦 Dropped items — a robot can collect these!",gift:"🎁 Treasure! Send a robot to collect it!",decor:"🔨 Your creation — tap 🔨 Build to move or remove it."};
   if(o){
     if(o.type==="tree"&&o.stage<2)toast("🌱 A young tree… it's still growing!");
     else toast(names[o.type]||o.type);
