@@ -107,6 +107,12 @@ function draw(t){
   ctx.setLineDash([12,8]);ctx.lineDashOffset=-t/40;
   ctx.strokeRect((homePos.x-3.5)*TILE,(homePos.y-3.5)*TILE,7*TILE,7*TILE);
   ctx.setLineDash([]);
+  // player-built ground layer (paths / wooden floors) — under everything
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+    const o=objects.get(key(x,y));
+    if(o&&o.type==="decor"&&window.CC_DECOR&&CC_DECOR.layer(o.deco)==="ground")
+      CC_DECOR.draw(ctx,o.deco,x,y,t);
+  }
   // objects
   const es=TILE*.88;
   for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
@@ -115,7 +121,14 @@ function draw(t){
     if(o.type==="tree")ch=o.stage===0?"🌱":o.stage===1?"🌿":"🌳";
     else if(o.type==="item"){ch=RES[o.item].em;sz=es*.6;}
     else if(o.type==="proj"){ch=o.em;sz=es*1.2;}
-    else if(o.type==="decor")ch=o.em; // player-placed build-mode piece
+    else if(o.type==="decor"){ // player-placed build-mode piece
+      if(window.CC_DECOR){
+        const ly=CC_DECOR.layer(o.deco);
+        if(ly==="ground"||ly==="roof")continue;       // handled in their own passes
+        if(ly==="mid"&&CC_DECOR.draw(ctx,o.deco,x,y,t))continue; // autotiled / procedural
+      }
+      ch=o.em;
+    }
     else ch=OBJ_EM[o.type];
     if(o.type==="home"||o.type==="market")sz=es*1.12;
     if(ch){
@@ -144,6 +157,11 @@ function draw(t){
         ctx.fillText("x"+o.n,(x+.5)*TILE+10,(y+.5)*TILE+12);
       }
     }
+  }
+  // roof layer — drawn above walls so buildings read as solid structures
+  if(window.CC_DECOR)for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+    const o=objects.get(key(x,y));
+    if(o&&o.type==="decor"&&CC_DECOR.layer(o.deco)==="roof")CC_DECOR.draw(ctx,o.deco,x,y,t);
   }
   // animals
   for(const a of animals){

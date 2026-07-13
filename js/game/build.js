@@ -3,22 +3,36 @@
    Your robots gather resources (with your algorithms); YOU spend them to place
    decor wherever you like and design your own base. Pieces are cosmetic and
    non-solid, so they never break robot pathing. They live in the objects map, so
-   they save to localStorage and cloud-sync like everything else. */
+   they save to localStorage and cloud-sync like everything else.
+   Rendering: connecting pieces (walls, roofs, fences, paths, hedges…) are
+   autotiled procedurally by CC_DECOR (js/game/decor-tiles.js). */
 const DECOR=[
-  {id:"wall",    em:"🧱", name:"Wall",     cost:{stone:1}},
-  {id:"roof",    em:"🛖", name:"Roof",     cost:{wood:1}},
-  {id:"door",    em:"🚪", name:"Door",     cost:{wood:1}},
-  {id:"window",  em:"🪟", name:"Window",   cost:{stone:1}},
-  {id:"fence",   em:"🚧", name:"Fence",    cost:{wood:1}},
-  {id:"path",    em:"⬜", name:"Path",     cost:{stone:1}},
-  {id:"tree",    em:"🌳", name:"Tree",     cost:{wood:1}},
-  {id:"bush",    em:"🌿", name:"Bush",     cost:{water:1}},
-  {id:"flower",  em:"🌷", name:"Flower",   cost:{water:1}},
-  {id:"lamp",    em:"🏮", name:"Lamp",     cost:{crystal:1}},
-  {id:"fountain",em:"⛲", name:"Fountain", cost:{stone:2}},
-  {id:"gem",     em:"💠", name:"Gem",      cost:{crystal:1}},
+  /* structure */
+  {id:"wall",    em:"🧱", name:"Wall",     cat:"structure", cost:{stone:1}},
+  {id:"roof",    em:"🛖", name:"Roof",     cat:"structure", cost:{wood:1}},
+  {id:"door",    em:"🚪", name:"Door",     cat:"structure", cost:{wood:1}},
+  {id:"window",  em:"🪟", name:"Window",   cat:"structure", cost:{stone:1}},
+  /* ground */
+  {id:"path",    em:"⬜", name:"Path",     cat:"ground",    cost:{stone:1}},
+  {id:"floor",   em:"🟫", name:"Floor",    cat:"ground",    cost:{wood:1}},
+  /* nature */
+  {id:"tree",    em:"🌳", name:"Tree",     cat:"nature",    cost:{wood:1}},
+  {id:"bush",    em:"🌿", name:"Hedge",    cat:"nature",    cost:{water:1}},
+  {id:"flower",  em:"🌷", name:"Flower",   cat:"nature",    cost:{water:1}},
+  /* decoration */
+  {id:"fence",   em:"🚧", name:"Fence",    cat:"decor",     cost:{wood:1}},
+  {id:"lamp",    em:"🏮", name:"Lamp",     cat:"decor",     cost:{crystal:1}},
+  {id:"fountain",em:"⛲", name:"Fountain", cat:"decor",     cost:{stone:2}},
+  {id:"gem",     em:"💠", name:"Gem",      cat:"decor",     cost:{crystal:1}},
 ];
 const DECOR_BY={}; for(const _d of DECOR)DECOR_BY[_d.id]=_d;
+const DECOR_CATS=[
+  {id:"structure",name:"🧱 Build"},
+  {id:"ground",   name:"⬜ Ground"},
+  {id:"nature",   name:"🌳 Nature"},
+  {id:"decor",    name:"🏮 Decor"},
+];
+let buildCat="structure";
 const RES_EM={wood:"🪵",stone:"🪨",iron:"⛓️",crystal:"💎",water:"💧"};
 
 // resource pool = the Bank (stash) + the selected robot's bag
@@ -36,18 +50,35 @@ function toggleBuild(on){
   if(buildMode){follow=false;toast("🔨 Build mode — tap a tile to place, tap a piece to remove it.");}
   renderBuildBar();
 }
+function decorIconHTML(d){
+  if(window.CC_DECOR){
+    const url=CC_DECOR.icon(d.id);
+    if(url)return '<img class="be-img" src="'+url+'" alt="'+d.name+'">';
+  }
+  return '<span class="be">'+d.em+'</span>';
+}
 function renderBuildBar(){
   const bar=$("buildBar"); if(!bar)return;
   if(!buildMode){bar.innerHTML="";return;}
   const p=resPool();
-  let html='<div class="bb-res">'+Object.keys(RES_EM).map(k=>'<span>'+RES_EM[k]+" "+(p[k]||0)+'</span>').join("")+'</div><div class="bb-items">';
+  let html='<div class="bb-res">'+Object.keys(RES_EM).map(k=>'<span>'+RES_EM[k]+" "+(p[k]||0)+'</span>').join("")+'</div>';
+  html+='<div class="bb-cats">'+DECOR_CATS.map(c=>
+    '<button class="bb-cat'+(c.id===buildCat?" sel":"")+'" data-c="'+c.id+'">'+c.name+'</button>').join("")+'</div>';
+  html+='<div class="bb-items">';
   for(const d of DECOR){
+    if(d.cat!==buildCat)continue;
     const ok=decorAfford(d);
     html+='<button class="bb-item'+(d.id===buildSel?" sel":"")+(ok?"":" poor")+'" data-d="'+d.id+'">'+
-      '<span class="be">'+d.em+'</span><span class="bc">'+costStr(d)+'</span></button>';
+      decorIconHTML(d)+'<span class="bn">'+d.name+'</span><span class="bc">'+costStr(d)+'</span></button>';
   }
   html+='</div>';
   bar.innerHTML=html;
+  bar.querySelectorAll(".bb-cat").forEach(b=>b.addEventListener("click",()=>{
+    buildCat=b.dataset.c;
+    const first=DECOR.find(d=>d.cat===buildCat);
+    if(first&&(!DECOR_BY[buildSel]||DECOR_BY[buildSel].cat!==buildCat))buildSel=first.id;
+    renderBuildBar();sfx(480,.03);
+  }));
   bar.querySelectorAll(".bb-item").forEach(b=>b.addEventListener("click",()=>{buildSel=b.dataset.d;renderBuildBar();sfx(560,.03);}));
 }
 // place / remove a decor piece at a tapped tile (called from handleTap in build mode)
@@ -61,6 +92,6 @@ function buildTap(tx,ty){
   if(!decorAfford(d)){ toast("😕 Need "+costStr(d)+" — send robots to gather & bank more!");sfx(200,.08);return; }
   decorPay(d);
   objects.set(k,{type:"decor",deco:d.id,em:d.em});
-  burst(tx,ty,"leaf");if(typeof addPop==="function")addPop(tx,ty,d.em);sfx(520,.05);saveSoon();updateHud();renderBuildBar();
+  burst(tx,ty,"leaf");sfx(520,.05);saveSoon();updateHud();renderBuildBar();
 }
 if($("buildBtn"))$("buildBtn").addEventListener("click",()=>toggleBuild());

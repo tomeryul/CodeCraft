@@ -49,6 +49,7 @@ js/
     hud.js          Top-bar HUD, fab/run wiring, challenge-creator controls
     input.js        Camera, pan/pinch/tap, object move/delete menu
     build.js        Manual (Minecraft-style) build mode: place/remove decor with gathered resources
+    decor-tiles.js  CC_DECOR: autotiling — walls/roofs/paths/fences/hedges connect to neighbours, drawn procedurally
     render.js       Canvas draw loop bits: sprite cache, terrain chunks, world render
     loop.js         Fixed-step simulation loop
     save.js         localStorage save/load (+ offline fast-forward)

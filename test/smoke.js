@@ -503,6 +503,19 @@ async function ev(expr) {
   check("build mode places a decor and spends resources", BLD.okPlace===true, bld);
   check("removing a decor refunds the resources", BLD.gone===true, bld);
 
+  console.log("▶ decor autotiling module (CC_DECOR)");
+  const dec = await ev(`(()=>{
+    const has = typeof CC_DECOR==='object';
+    const layers = [CC_DECOR.layer('wall'),CC_DECOR.layer('path'),CC_DECOR.layer('roof'),CC_DECOR.layer('lamp')].join(',');
+    const c=document.createElement('canvas');c.width=c.height=48;const g=c.getContext('2d');
+    const drew = CC_DECOR.draw(g,'wall',0,0,0);           // procedural piece → true
+    const ic = CC_DECOR.icon('wall');                     // palette preview data URL
+    return JSON.stringify({has, layers, drew, icon: typeof ic==='string' && ic.indexOf('data:image')===0});
+  })()`);
+  const DEC = JSON.parse(dec);
+  check("CC_DECOR classifies render layers (mid/ground/roof)", DEC.has && DEC.layers==='mid,ground,roof,mid', dec);
+  check("CC_DECOR draws pieces + renders palette icons", DEC.drew===true && DEC.icon===true, dec);
+
   console.log("▶ drag & drop (moveBlock core)");
   const dnd = await ev(`(()=>{
     const r=R(); r.program=[]; r.hist=[]; r.redoS=[];
