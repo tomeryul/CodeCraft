@@ -221,6 +221,9 @@ function mgSeed(rs,proj){
     const kk=c[0]+"_"+c[1]; rs.bricks.add(kk);
     if(c.length>2&&c[2]!=null){ rs.brickNo[kk]=c[2]; if(c[2]>=rs.nextNo)rs.nextNo=c[2]+1; } // numbered brick
   }
+  // tutorial props: choppable trees + collectable gems (Academy stages)
+  rs.trees=new Set((proj.trees||[]).map(c=>c[0]+"_"+c[1]));
+  rs.items=new Set((proj.items||[]).map(c=>c[0]+"_"+c[1]));
 }
 // does this project use numbered bricks (→ it's a sorting challenge)?
 function mgHasNumbers(proj){return (proj.initial||[]).some(c=>c.length>2&&c[2]!=null);}
@@ -360,6 +363,14 @@ function mgTick(){
     else if(b.t==="drop"){const kk=rb.x+"_"+rb.y;
       if(rb.held!=null&&!rb.bricks.has(kk)){rb.bricks.add(kk);rb.brickNo[kk]=rb.held;rb.held=null;sfx(400,.03);}
       else sfx(200,.05);}
+    else if(b.t==="chop"){ // fell a tree on the tile the robot stands on, else the one it faces
+      const kk=rb.x+"_"+rb.y, ka=(rb.x+DX[rb.dir])+"_"+(rb.y+DY[rb.dir]);
+      const hit=rb.trees&&(rb.trees.has(kk)?kk:rb.trees.has(ka)?ka:null);
+      if(hit){rb.trees.delete(hit);sfx(300,.05);}else sfx(200,.04);}
+    else if(b.t==="collect"){ // gather a gem on the current tile, else the one ahead
+      const kk=rb.x+"_"+rb.y, ka=(rb.x+DX[rb.dir])+"_"+(rb.y+DY[rb.dir]);
+      const hit=rb.items&&(rb.items.has(kk)?kk:rb.items.has(ka)?ka:null);
+      if(hit){rb.items.delete(hit);sfx(660,.05);}else sfx(200,.04);}
     else if(b.t==="setVar")mgRobot.vars[b.name]=resolveVal(mgRobot,b.val);
     else if(b.t==="changeVar")mgRobot.vars[b.name]=(Number(mgRobot.vars[b.name])||0)+(b.n|0);
     else if(b.t==="say")mgRobot.say={txt:String(resolveVal(mgRobot,b.val)).slice(0,24),until:1e18};
@@ -374,6 +385,7 @@ function mgCond(st,c){
     const v=Number(mgRobot.vars[c.var])||0;
     return c.op===">"?v>c.val:c.op==="<"?v<c.val:v===c.val;
   }
+  if(c==="treeAhead"){const rb=st.robot,ka=(rb.x+DX[rb.dir])+"_"+(rb.y+DY[rb.dir]);return !!(rb.trees&&rb.trees.has(ka));}
   if(c==="blocked"){const rb=st.robot,nx=rb.x+DX[rb.dir],ny=rb.y+DY[rb.dir];return nx<0||ny<0||nx>=st.proj.gw||ny>=st.proj.gh;}
   if(c==="bagEmpty")return true; // no bag in a challenge
   return false; // world-sensing conditions don't apply on the blank grid
@@ -381,6 +393,19 @@ function mgCond(st,c){
 function mgFinish(){
   const st=mgState;
   mgStop();
+  // Academy goals: reach the flag / chop every tree / collect every gem
+  if(st.proj.goalType){
+    const rb=st.robot,gt=st.proj.goalType;
+    let ok=false;
+    if(gt==="reach")ok=(st.proj.goal&&rb.x===st.proj.goal[0]&&rb.y===st.proj.goal[1]);
+    else if(gt==="chop")ok=(rb.trees&&rb.trees.size===0);
+    else if(gt==="collect")ok=(rb.items&&rb.items.size===0);
+    if(ok){mgSuccess();return;}
+    toast(gt==="reach"?"🚩 Not on the flag yet — guide the robot onto it, then run again!":
+      gt==="chop"?"🌳 Trees still standing — make sure the robot chops every one!":
+      "💎 Gems left behind — collect them all!");
+    sfx(220,.12);return;
+  }
   // sorting-style goal: each target cell must hold its required number
   const goal=mgSortGoalOrder(st.proj);
   if(goal){
@@ -399,6 +424,7 @@ function mgFinish(){
 }
 function mgSuccess(){
   const proj=mgState.proj;
+  if(proj.tut){academySolved(proj);return;} // Academy stage: record + advance to the next lesson
   if(mgState.creator){
     // creator proved their challenge is solvable
     mgState.solved=true;
@@ -447,7 +473,7 @@ function mgDraw(){
   const cell=Math.floor(cw/p.gw);
   cv.width=p.gw*cell;cv.height=p.gh*cell;
   const g=cv.getContext("2d");
-  const bp=new Set(p.cells.map(c=>c[0]+"_"+c[1]));
+  const bp=new Set((p.cells||[]).map(c=>c[0]+"_"+c[1]));
   for(let y=0;y<p.gh;y++)for(let x=0;x<p.gw;x++){
     g.fillStyle=(x+y)%2?"#71ba47":"#79c34e";
     g.fillRect(x*cell,y*cell,cell,cell);
@@ -477,6 +503,18 @@ function mgDraw(){
     g.textAlign="right";g.textBaseline="top";
     g.fillText("→"+gg[2],gg[0]*cell+cell-4,gg[1]*cell+3);
   }
+  // Academy props: goal flag, choppable trees, collectable gems
+  const emAt=(txt,gx,gy,scale)=>{g.font="900 "+Math.floor(cell*(scale||.6))+"px Fredoka,'Apple Color Emoji','Segoe UI Emoji',sans-serif";
+    g.textAlign="center";g.textBaseline="middle";g.fillText(txt,gx*cell+cell/2,gy*cell+cell/2+2);};
+  if(p.goal&&p.goalType==="reach"){
+    const gx=p.goal[0],gy=p.goal[1];
+    const rg=g.createRadialGradient(gx*cell+cell/2,gy*cell+cell/2,2,gx*cell+cell/2,gy*cell+cell/2,cell*.46);
+    rg.addColorStop(0,"rgba(255,214,107,.4)");rg.addColorStop(1,"rgba(255,214,107,0)");
+    g.fillStyle=rg;g.fillRect(gx*cell,gy*cell,cell,cell);
+    emAt("🚩",gx,gy,.62);
+  }
+  if(st.robot.trees)for(const k of st.robot.trees){const p2=k.split("_");emAt("🌳",+p2[0],+p2[1],.66);}
+  if(st.robot.items)for(const k of st.robot.items){const p2=k.split("_");emAt("💎",+p2[0],+p2[1],.58);}
   // challenge robot
   const rb=st.robot,cx=rb.x*cell+cell/2,cy=rb.y*cell+cell/2,s=cell*.68;
   g.fillStyle="rgba(0,0,0,.2)";g.beginPath();g.ellipse(cx,cy+s*.4,s*.4,s*.14,0,0,7);g.fill();
@@ -501,6 +539,8 @@ function mgDraw(){
 function renderProjects(){
   renderAuthBox();
   const el=$("projList");el.innerHTML="";
+  if(typeof renderAcademySection==="function")renderAcademySection(el); // 🎓 starter tutorials first
+  const bh=document.createElement("h4");bh.className="qsec";bh.textContent="🏗️ Build Projects";el.appendChild(bh);
   for(const p of PROJECTS){
     const done=!!player.projects[p.id];
     const locked=p.needs&&!player.projects[p.needs];

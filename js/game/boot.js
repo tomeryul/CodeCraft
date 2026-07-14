@@ -6,7 +6,7 @@ function newGame(){
   coins=0;stash={wood:0,stone:0,iron:0,crystal:0,water:0};
   totals={collected:0,earned:0,dist:0};
   unlocks={loops:false,logic:false,smart:false,vars:false};
-  player={xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{},myChallenges:[]};
+  player={xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{},myChallenges:[],academy:{}};
   skills=freshSkills();
   robots=[makeRobot(homePos.x-1,homePos.y+1,"Robo-1")];
   selRobot=0;
@@ -27,8 +27,11 @@ function startGame(){
   $("splash").classList.add("hide");
   started=true;
   sfx(660,.08);sfx(880,.08,.1);
-  if(isNew)say("👋 Hi! I'm Byte, your coding mentor. Follow the 3 quick steps on screen to wake up your robot — then ask me anything, anytime! 🦉",false);
-  if(!tut.done)setTimeout(()=>tutSet(1),800);
+  if(isNew)say("👋 Hi! I'm Byte, your coding mentor. Let's run through a few quick lessons at the Academy — then the whole open world is yours! 🦉",false);
+  // brand-new players start with the guided Academy; returning players get the map coach
+  if(isNew&&typeof academyComplete==="function"&&!academyComplete())
+    setTimeout(()=>academyStart(),750);
+  else if(!tut.done)setTimeout(()=>tutSet(1),800);
   if(pendingAway){const msg=pendingAway;pendingAway=null;setTimeout(()=>bigToast(msg),1400);}
   setTimeout(dailyGift,tut.done?900:9000);
 }

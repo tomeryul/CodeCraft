@@ -113,7 +113,9 @@ async function ev(expr) {
   await sleep(2200);
   check("page loads without JS errors", (await ev("document.title")).indexOf("JSERR") < 0, await ev("document.title"));
   check("one robot exists", await ev("robots.length") === 1);
-  await ev(`localStorage.removeItem(SAVE_KEY); document.getElementById('playBtn').click(); 'ok'`);
+  // mark the Academy complete so the guided tutorial doesn't auto-launch over the
+  // world-mechanics tests below (dedicated Academy tests drive it explicitly later)
+  await ev(`localStorage.removeItem(SAVE_KEY); player.academy={}; TUTS.forEach(t=>player.academy[t.id]=1); document.getElementById('playBtn').click(); 'ok'`);
   await sleep(600);
 
   console.log("▶ VM: repeat loop");
@@ -656,6 +658,51 @@ async function ev(expr) {
   console.log("▶ splash login gate");
   check("splash shows an email/password login card when online is configured",
     await ev(`(()=>{renderSplashAuth();return !!document.getElementById('spEmail')&&!!document.getElementById('spLogin')&&!!document.getElementById('spSignup');})()`) === true);
+
+  console.log("▶ Academy: guided starter tutorials");
+  const acad = await ev(`(()=>{
+    const out={};
+    out.count=TUTS.length;
+    out.grows=JSON.stringify(TUTS.map(t=>t.allowed.length));
+    const enter=id=>mgEnter(JSON.parse(JSON.stringify(TUTS.find(t=>t.id===id))));
+    const run=prog=>{ mgRobot.program=prog; mgReset(); mgRobot.vars={};
+      mgState.running=true; mgRobot.running=true; mgState.frames=[{blocks:prog,i:0,reps:1}];
+      let g=0; while(mgState&&mgState.running&&g++<400)mgTick(); };
+    player.academy={};
+    enter('t_move');
+    run([{t:'move',uid:1},{t:'move',uid:2},{t:'move',uid:3},{t:'move',uid:4}]);
+    out.moveSolved=!!player.academy.t_move;
+    enter('t_chop');
+    run([{t:'move',uid:1},{t:'move',uid:2},{t:'move',uid:3},{t:'move',uid:4},{t:'chop',uid:5}]);
+    out.chopSolved=!!player.academy.t_chop;
+    enter('t_collect');
+    run([{t:'move',uid:1},{t:'move',uid:2},{t:'move',uid:3},{t:'move',uid:4},{t:'collect',uid:5}]);
+    out.collectSolved=!!player.academy.t_collect;
+    enter('t_loop');
+    const loopProg=[{t:'repeat',n:5,uid:1,body:[{t:'move',uid:2},{t:'chop',uid:3}]}];
+    out.loopBudget=countBlocks(loopProg)<=TUTS.find(t=>t.id==='t_loop').maxBlocks;
+    run(loopProg);
+    out.loopSolved=!!player.academy.t_loop;
+    enter('t_if');
+    mgState.robot.x=0; mgState.robot.y=1; mgState.robot.dir=1;
+    out.treeAhead=mgCond(mgState,'treeAhead');
+    mgState.robot.dir=3;
+    out.noTree=mgCond(mgState,'treeAhead');
+    mgState=null; mgRobot=null;
+    out.incomplete=(academyComplete()===false); // t_turn & t_if not solved
+    out.hasCard=(()=>{renderProjects();return !!document.querySelector('#projList .acad-card');})();
+    return JSON.stringify(out);
+  })()`);
+  const AC = JSON.parse(acad);
+  check("Academy defines a full ladder of stages", AC.count === 6, acad);
+  check("stages unlock a growing block set", AC.grows === "[1,3,4,4,5,6]", AC.grows);
+  check("reach goal: landing on the flag solves the stage", AC.moveSolved === true, acad);
+  check("chop goal: felling the tree solves the stage", AC.chopSolved === true, acad);
+  check("collect goal: gathering the gem solves the stage", AC.collectSolved === true, acad);
+  check("loop stage is solvable within its tight block budget", AC.loopBudget && AC.loopSolved === true, acad);
+  check("treeAhead sensing works on the tutorial board", AC.treeAhead === true && AC.noTree === false, acad);
+  check("Academy tracks partial progress", AC.incomplete === true, acad);
+  check("Projects sheet shows the cohesive Academy section", AC.hasCard === true, acad);
 
   check("no uncaught exceptions during entire run", exceptions.length === 0, exceptions.join(" | "));
 

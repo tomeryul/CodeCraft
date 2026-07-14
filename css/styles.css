@@ -358,6 +358,15 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #projList{flex:1;overflow-y:auto;padding:4px 14px 14px;}
 .proj .pdesc{display:block;color:var(--ink2);font-size:12px;line-height:1.45;margin-top:6px;}
 .proj.locked{opacity:.55;}
+/* 🎓 Academy card — reuses the .quest/.proj look, adds a lesson track */
+.acad-card{border-color:rgba(122,77,255,.5);box-shadow:0 0 22px rgba(122,77,255,.14), inset 0 1px 0 rgba(255,255,255,.08);}
+.acad-track{display:flex;gap:6px;margin:9px 0 2px;flex-wrap:wrap;}
+.acad-dot{width:30px;height:30px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:16px;background:var(--panel3);border:1.5px solid transparent;filter:grayscale(.5);opacity:.5;}
+.acad-dot.done{filter:none;opacity:1;background:rgba(88,204,120,.22);border-color:rgba(88,204,120,.6);}
+.acad-dot.now{filter:none;opacity:1;background:rgba(255,184,48,.2);border-color:rgba(255,184,48,.75);
+  box-shadow:0 0 12px rgba(255,184,48,.35);animation:acadPulse 1.4s ease-in-out infinite;}
+@keyframes acadPulse{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
 #mgPanel{flex:0 0 auto;background:rgba(0,0,0,.22);border-radius:14px;padding:10px;margin-bottom:8px;}
 .mg-top{display:flex;align-items:center;gap:8px;min-width:0;}
 .mg-top b{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:0 1 auto;}
