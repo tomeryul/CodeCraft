@@ -12,6 +12,12 @@ const DECOR=[
   {id:"roof",    em:"🛖", name:"Roof",     cat:"structure", cost:{wood:1}},
   {id:"door",    em:"🚪", name:"Door",     cat:"structure", cost:{wood:1}},
   {id:"window",  em:"🪟", name:"Window",   cat:"structure", cost:{stone:1}},
+  {id:"glass",   em:"🏬", name:"Storefront",cat:"structure", cost:{stone:1}},
+  {id:"awning",  em:"⛱️", name:"Awning",    cat:"structure", cost:{wood:1}},
+  {id:"roofBlue",  em:"🔵", name:"Blue Roof",  cat:"structure", cost:{wood:1}},
+  {id:"roofGreen", em:"🟢", name:"Green Roof", cat:"structure", cost:{wood:1}},
+  {id:"roofPurple",em:"🟣", name:"Purple Roof",cat:"structure", cost:{wood:1}},
+  {id:"sign",    em:"🪧", name:"Sign",      cat:"structure", cost:{wood:1}},
   /* ground */
   {id:"path",    em:"⬜", name:"Path",     cat:"ground",    cost:{stone:1}},
   {id:"floor",   em:"🟫", name:"Floor",    cat:"ground",    cost:{wood:1}},

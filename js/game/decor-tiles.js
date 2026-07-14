@@ -11,11 +11,13 @@
 (function(){
 const T=48; // logical tile size (matches TILE)
 /* bit values: N=1 E=2 S=4 W=8 */
-const GROUP={wall:"wall",door:"wall",window:"wall",roof:"roof",fence:"fence",path:"path",floor:"floor",bush:"bush"};
+const GROUP={wall:"wall",door:"wall",window:"wall",roof:"roof",fence:"fence",path:"path",floor:"floor",bush:"bush",
+  roofBlue:"roofB",roofGreen:"roofG",roofPurple:"roofP",glass:"glass",awning:"awning"};
 /* which render layer owns each piece */
 const LAYER={path:"ground",floor:"ground",roof:"roof",
   wall:"mid",door:"mid",window:"mid",fence:"mid",bush:"mid",
-  lamp:"mid",fountain:"mid",gem:"mid",flower:"mid"};
+  lamp:"mid",fountain:"mid",gem:"mid",flower:"mid",
+  roofBlue:"roof",roofGreen:"roof",roofPurple:"roof",awning:"roof",glass:"mid",sign:"mid"};
 
 function grpAt(x,y){
   if(x<0||y<0||x>=W||y>=H)return null;
@@ -238,9 +240,17 @@ function scallopPath(g,x0,x1,ey,close){
   if(close){g.lineTo(x1,ey-7);g.closePath();}
 }
 
-/* ============ ROOF ============ */
-function drawRoof(g,px,py,mask,h){
+/* ============ ROOF (color variants share one machinery) ============ */
+const ROOF_PAL={
+  roof:  {lt:"#f08a67",dk:"#cd5540",tp:"#e2694f",ridge:"#f6ac8b",edge:"120,35,20",eave:"#b2412f"},
+  roofB: {lt:"#8fc2ec",dk:"#4a86c4",tp:"#6aa7db",ridge:"#b4dcf6",edge:"28,66,112",eave:"#3d72ad"},
+  roofG: {lt:"#88cf74",dk:"#4e9c46",tp:"#63b552",ridge:"#b0e79f",edge:"30,88,30", eave:"#3f8438"},
+  roofP: {lt:"#bd97e6",dk:"#8a5fc0",tp:"#a279d4",ridge:"#dabdf5",edge:"74,44,116",eave:"#7550ac"},
+};
+function drawRoof(g,px,py,mask,h,pal){
+  pal=pal||ROOF_PAL.roof;
   const N=mask&1,E=mask&2,S=mask&4,Wd=mask&8;
+  const EDG=a=>"rgba("+pal.edge+","+a+")";
   // shadow the roof casts on the ground to its east (2.5D light from top-left)
   if(!E){
     const rg=g.createLinearGradient(px+T,py,px+T+8,py);
@@ -249,12 +259,12 @@ function drawRoof(g,px,py,mask,h){
   }
   tilePath(g,px,py,mask,2,11);
   const gr=g.createLinearGradient(0,py,0,py+T);
-  gr.addColorStop(0,N?"#e2694f":"#f08a67");
-  gr.addColorStop(1,S?"#e2694f":"#cd5540");
+  gr.addColorStop(0,N?pal.tp:pal.lt);
+  gr.addColorStop(1,S?pal.tp:pal.dk);
   g.fillStyle=gr;g.fill();
   g.save();tilePath(g,px,py,mask,2,11);g.clip();
   // shingle scallops, world-aligned so rows continue across tiles
-  g.strokeStyle="rgba(120,35,20,.25)";g.lineWidth=1.8;
+  g.strokeStyle=EDG(".25");g.lineWidth=1.8;
   for(let r=0;r<4;r++){
     const yy=py+10+r*11, off=(r%2)?6:0;
     g.beginPath();
@@ -264,19 +274,19 @@ function drawRoof(g,px,py,mask,h){
   }
   // ridge cap on exposed top
   if(!N){
-    g.fillStyle="#f6ac8b";
+    g.fillStyle=pal.ridge;
     const rx0=px+(Wd?-6:5), rx1=px+T-(E?-6:5);
     rrd(g,rx0,py+2.5,rx1-rx0,7,3.5);
     g.fill();
-    g.fillStyle="rgba(120,35,20,.25)";g.fillRect(px,py+10,T,1.6);
+    g.fillStyle=EDG(".25");g.fillRect(px,py+10,T,1.6);
   }
   // eave lip on exposed bottom
-  if(!S){g.fillStyle="rgba(110,28,16,.30)";g.fillRect(px,py+T-8,T,8);}
+  if(!S){g.fillStyle=EDG(".30");g.fillRect(px,py+T-8,T,8);}
   // rakes on exposed sides
-  if(!E){g.fillStyle="rgba(110,28,16,.22)";g.fillRect(px+T-5,py,5,T);}
+  if(!E){g.fillStyle=EDG(".22");g.fillRect(px+T-5,py,5,T);}
   if(!Wd){g.fillStyle="rgba(255,255,255,.14)";g.fillRect(px,py,4,T);}
   g.restore();
-  g.strokeStyle="rgba(120,35,20,.42)";g.lineWidth=2;strokeEdges(g,px,py,mask,2,11);
+  g.strokeStyle=EDG(".42");g.lineWidth=2;strokeEdges(g,px,py,mask,2,11);
   // wavy shingle eave: scallops hang over the wall below (fused) or past the
   // outer bottom edge, so the roof ends like real overlapping tiles
   const FW=mask&64;
@@ -285,12 +295,116 @@ function drawRoof(g,px,py,mask,h){
     g.fillStyle="rgba(60,25,12,.25)";
     scallopPath(g,px,px+T,ey+3,true);g.fill();
     const sg2=g.createLinearGradient(0,ey-7,0,ey+6);
-    sg2.addColorStop(0,"#cd5540");sg2.addColorStop(1,"#b2412f");
+    sg2.addColorStop(0,pal.dk);sg2.addColorStop(1,pal.eave);
     g.fillStyle=sg2;
     scallopPath(g,px,px+T,ey,true);g.fill();
-    g.strokeStyle="rgba(120,35,20,.42)";g.lineWidth=2;
+    g.strokeStyle=EDG(".42");g.lineWidth=2;
     scallopPath(g,px,px+T,ey,false);g.stroke();
   }
+}
+
+/* ============ GLASS STOREFRONT (shops / malls) ============
+   Same footprint machinery as the wall, but the facade is a big glazed
+   panel with cream mullions that continue across tiles => a row reads as
+   one long shop window. Cream frame + brick foundation tie it to houses. */
+function drawGlass(g,px,py,mask,h){
+  const N=mask&1,E=mask&2,S=mask&4,Wd=mask&8,RN=mask&32;
+  if(!S){
+    g.fillStyle="rgba(30,20,8,.22)";g.fillRect(px,py+T,T+(!E?4:0),6);
+    g.fillStyle="rgba(30,20,8,.12)";g.fillRect(px+(!Wd?3:0),py+T+6,T-(!Wd?3:0)+(!E?4:0),4);
+  }
+  if(!E){
+    const eg=g.createLinearGradient(px+T,py,px+T+7,py);
+    eg.addColorStop(0,"rgba(30,20,8,.18)");eg.addColorStop(1,"rgba(30,20,8,0)");
+    g.fillStyle=eg;g.fillRect(px+T,py+(N?0:4),7,T-(N?0:4)+(!S?6:0));
+  }
+  tilePath(g,px,py,mask,2,9);
+  g.save();g.clip();
+  g.fillStyle="#f2e6c8";g.fillRect(px,py,T,T);
+  // glass panel
+  const gy0=py+(N?0:9), gy1=py+T-(S?0:11);
+  const gg=g.createLinearGradient(0,gy0,0,gy1);
+  gg.addColorStop(0,"#c7e8ff");gg.addColorStop(1,"#79bced");
+  g.fillStyle=gg;g.fillRect(px,gy0,T,gy1-gy0);
+  // diagonal sheen streaks
+  g.save();g.beginPath();g.rect(px,gy0,T,gy1-gy0);g.clip();
+  g.strokeStyle="rgba(255,255,255,.4)";g.lineWidth=6;
+  g.beginPath();g.moveTo(px-14,gy1+12);g.lineTo(px+26,gy0-12);
+  g.moveTo(px+16,gy1+12);g.lineTo(px+56,gy0-12);g.stroke();
+  g.restore();
+  // eave shade if a roof sits above
+  if(RN){const sg=g.createLinearGradient(0,py,0,py+14);sg.addColorStop(0,"rgba(60,30,12,.42)");sg.addColorStop(1,"rgba(60,30,12,0)");g.fillStyle=sg;g.fillRect(px,py,T,14);}
+  // cream mullions (world-aligned vertical + one horizontal)
+  g.fillStyle="#f2e6c8";
+  for(let mx=Math.ceil((px-8)/16)*16;mx<px+T;mx+=16)g.fillRect(mx-1.5,gy0,3,gy1-gy0);
+  g.fillRect(px,(gy0+gy1)/2-1.5,T,3);
+  // brick foundation
+  if(!S){
+    const fy=py+T-11;
+    const fg=g.createLinearGradient(0,fy,0,py+T);fg.addColorStop(0,"#c9a06b");fg.addColorStop(1,"#a87f4f");
+    g.fillStyle=fg;g.fillRect(px,fy,T,11);
+    g.fillStyle="rgba(90,58,25,.35)";g.fillRect(px,fy,T,1.8);
+    g.strokeStyle="rgba(120,80,35,.35)";g.lineWidth=1.4;
+    g.beginPath();g.moveTo(px,fy+5.5);g.lineTo(px+T,fy+5.5);g.stroke();
+    for(let xx=px;xx<px+T;xx+=12){g.beginPath();g.moveTo(xx+6,fy+1.8);g.lineTo(xx+6,fy+5.5);g.moveTo(xx,fy+5.5);g.lineTo(xx,py+T-2);g.stroke();}
+    g.fillStyle="rgba(30,18,6,.28)";g.fillRect(px,py+T-3,T,3);
+  }
+  // corner trim on outer edges
+  if(!Wd){g.fillStyle="#e4cfa4";g.fillRect(px,py,6,T);g.fillStyle="rgba(255,252,240,.5)";g.fillRect(px,py,2,T);}
+  if(!E){g.fillStyle="#dbc294";g.fillRect(px+T-6,py,6,T);g.fillStyle="rgba(120,80,35,.35)";g.fillRect(px+T-1.5,py,1.5,T);}
+  if(!N&&!RN){g.fillStyle="#d9bd8d";g.fillRect(px,py,T,7);g.fillStyle="rgba(255,252,240,.5)";g.fillRect(px,py,T,2);}
+  g.restore();
+  g.strokeStyle="rgba(100,60,25,.38)";g.lineWidth=2;strokeEdges(g,px,py,mask,2,9);
+}
+
+/* ============ AWNING (striped shop canopy) ============ */
+function drawAwning(g,px,py,mask,h){
+  const N=mask&1,E=mask&2,S=mask&4,Wd=mask&8, FW=mask&64;
+  if(!E){
+    const rg=g.createLinearGradient(px+T,py,px+T+8,py);
+    rg.addColorStop(0,"rgba(30,20,8,.16)");rg.addColorStop(1,"rgba(30,20,8,0)");
+    g.fillStyle=rg;g.fillRect(px+T,py+(N?0:6),8,T-(N?0:6));
+  }
+  const STR=sx=>((Math.floor(sx/16))&1);
+  tilePath(g,px,py,mask,2,10);
+  g.save();g.clip();
+  for(let sx=Math.floor(px/16)*16;sx<px+T;sx+=16){
+    g.fillStyle=STR(sx)?"#e2624a":"#f4ede0";g.fillRect(sx,py-2,16,T+6);
+  }
+  if(!N){g.fillStyle="rgba(255,255,255,.3)";g.fillRect(px,py+2,T,4);
+    g.fillStyle="rgba(120,35,20,.22)";g.fillRect(px,py+9,T,1.4);}
+  g.restore();
+  g.strokeStyle="rgba(120,35,20,.42)";g.lineWidth=2;strokeEdges(g,px,py,mask,2,10);
+  // scalloped hanging valance (over the storefront below, or the outer edge)
+  if(FW||!S){
+    const ey=FW?py+T:py+T-2;
+    g.fillStyle="rgba(60,25,12,.22)";scallopPath(g,px,px+T,ey+3,true);g.fill();
+    g.save();scallopPath(g,px,px+T,ey,true);g.clip();
+    for(let sx=Math.floor(px/16)*16;sx<px+T;sx+=16){
+      g.fillStyle=STR(sx)?"#c9502f":"#e6ddca";g.fillRect(sx,ey-9,16,16);
+    }
+    g.restore();
+    g.strokeStyle="rgba(120,35,20,.42)";g.lineWidth=1.8;scallopPath(g,px,px+T,ey,false);g.stroke();
+  }
+}
+
+/* ============ SHOP SIGN (single tile) ============ */
+function drawSign(g,px,py){
+  const cx=px+T/2;
+  g.fillStyle="rgba(0,0,0,.14)";g.beginPath();g.ellipse(cx,py+T-6,13,3,0,0,7);g.fill();
+  g.fillStyle="#8a5a2c";g.fillRect(cx-15,py+13,4,27);g.fillRect(cx+11,py+13,4,27);
+  const bg=g.createLinearGradient(0,py+7,0,py+31);bg.addColorStop(0,"#efc588");bg.addColorStop(1,"#c8934f");
+  g.fillStyle=bg;rrd(g,cx-19,py+7,38,24,7);g.fill();
+  g.strokeStyle="rgba(90,55,20,.6)";g.lineWidth=2.4;rrd(g,cx-19,py+7,38,24,7);g.stroke();
+  g.fillStyle="rgba(255,255,255,.35)";rrd(g,cx-15,py+9,30,4,2);g.fill();
+  // 4-point star emblem
+  g.fillStyle="#7a4dff";
+  g.save();g.translate(cx,py+19);
+  g.beginPath();
+  for(let i=0;i<8;i++){const a=i/8*6.283,r=(i%2)?3:8;g.lineTo(Math.cos(a)*r,Math.sin(a)*r);}
+  g.closePath();g.fill();
+  g.fillStyle="rgba(255,255,255,.85)";g.beginPath();g.arc(-1.5,-1.5,1.8,0,7);g.fill();
+  g.restore();
 }
 
 /* ============ FENCE ============ */
@@ -414,7 +528,15 @@ function drawGem(g,px,py,mask,h,t){
 
 const DRAW={path:drawPath,floor:drawFloor,wall:drawWall,door:drawDoor,window:drawWindow,
   roof:drawRoof,fence:drawFence,bush:drawBush,flower:drawFlower,lamp:drawLamp,
-  fountain:drawFountain,gem:drawGem};
+  fountain:drawFountain,gem:drawGem,
+  roofBlue:(g,x,y,m,h)=>drawRoof(g,x,y,m,h,ROOF_PAL.roofB),
+  roofGreen:(g,x,y,m,h)=>drawRoof(g,x,y,m,h,ROOF_PAL.roofG),
+  roofPurple:(g,x,y,m,h)=>drawRoof(g,x,y,m,h,ROOF_PAL.roofP),
+  glass:drawGlass,awning:drawAwning,sign:drawSign};
+
+/* which groups behave as roof-over-wall for cross-group fusion */
+const ROOFISH={roof:1,roofB:1,roofG:1,roofP:1,awning:1};
+const WALLISH={wall:1,glass:1};
 
 /* icon previews for the build palette — rendered from the same draw fns */
 const iconCache={};
@@ -425,7 +547,7 @@ function icon(id,variant){
   const g=c.getContext("2d");g.scale(2,2);
   const fn=DRAW[id];if(!fn)return null;
   /* preview walls/roofs/paths as a horizontal run so kids see they connect */
-  const mask=(id==="wall"||id==="roof"||id==="path"||id==="floor"||id==="bush"||id==="fence")?10:0; // E+W
+  const mask=(id==="wall"||id==="roof"||id==="path"||id==="floor"||id==="bush"||id==="fence"||id==="roofBlue"||id==="roofGreen"||id==="roofPurple"||id==="glass"||id==="awning")?10:0; // E+W
   fn(g,0,0,mask,.5,0);
   iconCache[k]=c.toDataURL();
   return iconCache[k];
@@ -438,11 +560,11 @@ window.CC_DECOR={
     const fn=DRAW[id];if(!fn)return false;
     const gp=GROUP[id];
     let m=gp?maskAt(x,y,gp):0;
-    // cross-group bits: a roof fuses onto the wall below it exactly like a
-    // wall-to-wall join (the shared edge simply disappears), and the wall
-    // top under a roof falls into its shade
-    if(gp==="roof"&&grpAt(x,y+1)==="wall")m|=4|64;
-    if(gp==="wall"&&grpAt(x,y-1)==="roof")m|=1|32;
+    // cross-group bits: a roof/awning fuses onto the wall/glass below it just
+    // like a wall-to-wall join (shared edge vanishes); the wall top under it
+    // falls into the roof's shade
+    if(ROOFISH[gp]&&WALLISH[grpAt(x,y+1)])m|=4|64;
+    if(WALLISH[gp]&&ROOFISH[grpAt(x,y-1)])m|=1|32;
     fn(g,x*T,y*T,m,dhash(x,y),t);
     return true;
   },
