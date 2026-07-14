@@ -116,49 +116,74 @@ function drawFloor(g,px,py,mask,h){
    shadows and rims only appear on exposed edges, and use world-aligned
    coords + full-width rects, so adjacent tiles fuse into a single building
    instead of reading as per-tile steps. */
-const FACE_Y=.42;      // front face starts at this fraction of the tile
+/* RPG-facade wall: the whole tile is a flat front facade (like classic
+   top-down RPG villages) — plaster with horizontal siding, corner trim
+   boards on outer edges, and a short brick foundation at ground level. */
+const FOUND_H=11;      // foundation strip height at the exposed south rim
 function drawWallBody(g,px,py,mask,h){
   const N=mask&1,E=mask&2,S=mask&4,Wd=mask&8,RN=mask&32; // RN: roof directly above
   // continuous drop shadow under the exposed south rim (plain rect => rows merge)
   if(!S){
-    g.fillStyle="rgba(30,20,8,.18)";
-    g.fillRect(px,py+T,T+(!E?3:0),5);
-    g.fillStyle="rgba(30,20,8,.10)";
-    g.fillRect(px+(!Wd?2:0),py+T+5,T-(!Wd?2:0)+(!E?3:0),3);
+    g.fillStyle="rgba(30,20,8,.22)";
+    g.fillRect(px,py+T,T+(!E?4:0),6);
+    g.fillStyle="rgba(30,20,8,.12)";
+    g.fillRect(px+(!Wd?3:0),py+T+6,T-(!Wd?3:0)+(!E?4:0),4);
+  }
+  // side shadow cast to the east (light from top-left => shadow falls right)
+  if(!E){
+    const eg2=g.createLinearGradient(px+T,py,px+T+7,py);
+    eg2.addColorStop(0,"rgba(30,20,8,.18)");eg2.addColorStop(1,"rgba(30,20,8,0)");
+    g.fillStyle=eg2;g.fillRect(px+T,py+(N?0:4),7,T-(N?0:4)+(!S?6:0));
   }
   tilePath(g,px,py,mask,2,9);
   g.save();g.clip();
-  // flat top surface — uniform across the whole blob
+  // facade base
   g.fillStyle="#f2e6c8";g.fillRect(px,py,T,T);
-  // lit rim along exposed north / west (light from top-left); under a roof
-  // the wall top sits in the roof's shade instead
-  if(!N){
-    if(RN){g.fillStyle="rgba(60,38,14,.24)";g.fillRect(px,py,T,6);}
-    else{g.fillStyle="rgba(255,252,240,.65)";g.fillRect(px,py,T,3);}
+  // horizontal siding boards (world-aligned => continuous across tiles)
+  g.strokeStyle="rgba(150,110,60,.16)";g.lineWidth=1.4;
+  for(let yy=Math.ceil(py/10)*10;yy<py+T;yy+=10){
+    g.beginPath();g.moveTo(px,yy);g.lineTo(px+T,yy);g.stroke();
+    g.strokeStyle="rgba(255,252,240,.30)";
+    g.beginPath();g.moveTo(px,yy+1.4);g.lineTo(px+T,yy+1.4);g.stroke();
+    g.strokeStyle="rgba(150,110,60,.16)";
   }
-  if(!Wd){g.fillStyle="rgba(255,252,240,.4)";g.fillRect(px,py,3,T);}
-  // shaded rim along exposed east
-  if(!E){g.fillStyle="rgba(120,80,35,.22)";g.fillRect(px+T-4,py,4,T);}
-  // tall brick front face along the exposed south rim
+  // eave shadow cast by the roof onto the facade
+  if(RN){
+    const sg=g.createLinearGradient(0,py,0,py+14);
+    sg.addColorStop(0,"rgba(60,30,12,.42)");sg.addColorStop(1,"rgba(60,30,12,0)");
+    g.fillStyle=sg;g.fillRect(px,py,T,14);
+  }else if(!N){ // open wall top: simple cap board
+    g.fillStyle="#d9bd8d";g.fillRect(px,py,T,7);
+    g.fillStyle="rgba(255,252,240,.5)";g.fillRect(px,py,T,2);
+    g.fillStyle="rgba(120,80,35,.3)";g.fillRect(px,py+6,T,1.6);
+  }
+  // corner trim boards on outer edges (classic RPG facade corners)
+  if(!Wd){
+    g.fillStyle="#e4cfa4";g.fillRect(px,py,6,T);
+    g.fillStyle="rgba(255,252,240,.5)";g.fillRect(px,py,2,T);
+    g.fillStyle="rgba(120,80,35,.25)";g.fillRect(px+5,py,1.5,T);
+  }
+  if(!E){
+    g.fillStyle="#dbc294";g.fillRect(px+T-6,py,6,T);
+    g.fillStyle="rgba(120,80,35,.35)";g.fillRect(px+T-1.5,py,1.5,T);
+    g.fillStyle="rgba(255,252,240,.35)";g.fillRect(px+T-6,py,1.5,T);
+  }
+  // brick foundation strip at ground level
   if(!S){
-    const fy=py+T*FACE_Y, fh=py+T-fy;
+    const fy=py+T-FOUND_H;
     const fg=g.createLinearGradient(0,fy,0,py+T);
-    fg.addColorStop(0,"#e0c491");fg.addColorStop(1,"#b28d5b");
-    g.fillStyle=fg;g.fillRect(px,fy,T,fh);
-    // cornice line where top meets face
-    g.fillStyle="rgba(90,58,25,.35)";g.fillRect(px,fy,T,2);
-    g.fillStyle="rgba(255,250,235,.35)";g.fillRect(px,fy+2,T,1.5);
-    // brick courses on the FACE (world-aligned => continuous across tiles)
-    g.strokeStyle="rgba(120,80,35,.30)";g.lineWidth=1.5;
-    for(let yy=fy+9;yy<py+T-3;yy+=9){
-      g.beginPath();g.moveTo(px,yy);g.lineTo(px+T,yy);g.stroke();
-      const row=Math.round((yy-fy)/9), off=(row%2)?0:12;
-      for(let xx=px+off;xx<px+T;xx+=24){
-        g.beginPath();g.moveTo(xx,yy);g.lineTo(xx,Math.min(yy+9,py+T-3));g.stroke();
-      }
+    fg.addColorStop(0,"#c9a06b");fg.addColorStop(1,"#a87f4f");
+    g.fillStyle=fg;g.fillRect(px,fy,T,FOUND_H);
+    g.fillStyle="rgba(90,58,25,.35)";g.fillRect(px,fy,T,1.8);
+    // brick joints (world-aligned)
+    g.strokeStyle="rgba(120,80,35,.35)";g.lineWidth=1.4;
+    g.beginPath();g.moveTo(px,fy+5.5);g.lineTo(px+T,fy+5.5);g.stroke();
+    for(let xx=px;xx<px+T;xx+=12){
+      g.beginPath();g.moveTo(xx+6,fy+1.8);g.lineTo(xx+6,fy+5.5);
+      g.moveTo(xx,fy+5.5);g.lineTo(xx,py+T-2);g.stroke();
     }
     // grounding AO at the base
-    g.fillStyle="rgba(30,18,6,.28)";g.fillRect(px,py+T-3.5,T,3.5);
+    g.fillStyle="rgba(30,18,6,.28)";g.fillRect(px,py+T-3,T,3);
   }
   g.restore();
   g.strokeStyle="rgba(100,60,25,.38)";g.lineWidth=2;strokeEdges(g,px,py,mask,2,9);
@@ -204,14 +229,24 @@ function drawWindow(g,px,py,mask,h){
   g.fillStyle="#ff5d73";g.beginPath();g.arc(wx+5,wy+wh+4.5,2.2,0,7);g.arc(wx+ww-5,wy+wh+4.5,2.2,0,7);g.fill();
 }
 
+/* scalloped shingle edge along y=ey (world-aligned 12px pitch => continuous) */
+function scallopPath(g,x0,x1,ey,close){
+  g.beginPath();
+  g.moveTo(x0,close?ey-7:ey);
+  if(close)g.lineTo(x0,ey);
+  for(let cx=x0+6;cx-6<x1;cx+=12)g.arc(cx,ey,6,Math.PI,0,false);
+  if(close){g.lineTo(x1,ey-7);g.closePath();}
+}
+
 /* ============ ROOF ============ */
 function drawRoof(g,px,py,mask,h){
   const N=mask&1,E=mask&2,S=mask&4,Wd=mask&8;
-  // roof sits ABOVE the walls: shadow under the exposed eave first, then
-  // the whole roof is drawn lifted up a few px so it reads as elevated.
-  const LIFT=6, WS=mask&16; // WS: a wall sits directly below — fuse roof to it
-  if(!S&&!WS){g.fillStyle="rgba(30,18,6,.26)";g.fillRect(px,py+T-LIFT,T,LIFT+3);}
-  g.save();g.translate(0,-LIFT);
+  // shadow the roof casts on the ground to its east (2.5D light from top-left)
+  if(!E){
+    const rg=g.createLinearGradient(px+T,py,px+T+8,py);
+    rg.addColorStop(0,"rgba(30,20,8,.16)");rg.addColorStop(1,"rgba(30,20,8,0)");
+    g.fillStyle=rg;g.fillRect(px+T,py+(N?0:6),8,T-(N?0:6));
+  }
   tilePath(g,px,py,mask,2,11);
   const gr=g.createLinearGradient(0,py,0,py+T);
   gr.addColorStop(0,N?"#e2694f":"#f08a67");
@@ -236,27 +271,25 @@ function drawRoof(g,px,py,mask,h){
     g.fillStyle="rgba(120,35,20,.25)";g.fillRect(px,py+10,T,1.6);
   }
   // eave lip on exposed bottom
-  if(!S){g.fillStyle="rgba(110,28,16,.38)";g.fillRect(px,py+T-6,T,6);}
+  if(!S){g.fillStyle="rgba(110,28,16,.30)";g.fillRect(px,py+T-8,T,8);}
   // rakes on exposed sides
   if(!E){g.fillStyle="rgba(110,28,16,.22)";g.fillRect(px+T-5,py,5,T);}
   if(!Wd){g.fillStyle="rgba(255,255,255,.14)";g.fillRect(px,py,4,T);}
   g.restore();
   g.strokeStyle="rgba(120,35,20,.42)";g.lineWidth=2;strokeEdges(g,px,py,mask,2,11);
-  g.restore();
-  // eave overhang: the roof edge hangs OVER the wall below, so the two
-  // read as one building (soft shadow cast onto the wall top, then a
-  // roof-colored flap bridging the LIFT gap down onto the wall)
-  if(!S&&WS){
-    const ex0=px+(Wd?0:2), ex1=px+T-(E?0:2);
-    g.fillStyle="rgba(60,25,12,.24)";g.fillRect(ex0,py+T+2,ex1-ex0,6);
-    const eg=g.createLinearGradient(0,py+T-LIFT-3,0,py+T+4);
-    eg.addColorStop(0,"#d75f48");eg.addColorStop(1,"#b2412f");
-    g.fillStyle=eg;
-    g.beginPath();
-    if(g.roundRect)g.roundRect(ex0,py+T-LIFT-3,ex1-ex0,LIFT+7,[Wd?0:3,E?0:3,E?0:3,Wd?0:3]);
-    else g.rect(ex0,py+T-LIFT-3,ex1-ex0,LIFT+7);
-    g.fill();
-    g.fillStyle="rgba(255,255,255,.18)";g.fillRect(ex0,py+T-LIFT-2,ex1-ex0,1.6);
+  // wavy shingle eave: scallops hang over the wall below (fused) or past the
+  // outer bottom edge, so the roof ends like real overlapping tiles
+  const FW=mask&64;
+  if(FW||!S){
+    const ey=FW?py+T:py+T-2;
+    g.fillStyle="rgba(60,25,12,.25)";
+    scallopPath(g,px,px+T,ey+3,true);g.fill();
+    const sg2=g.createLinearGradient(0,ey-7,0,ey+6);
+    sg2.addColorStop(0,"#cd5540");sg2.addColorStop(1,"#b2412f");
+    g.fillStyle=sg2;
+    scallopPath(g,px,px+T,ey,true);g.fill();
+    g.strokeStyle="rgba(120,35,20,.42)";g.lineWidth=2;
+    scallopPath(g,px,px+T,ey,false);g.stroke();
   }
 }
 
@@ -405,9 +438,11 @@ window.CC_DECOR={
     const fn=DRAW[id];if(!fn)return false;
     const gp=GROUP[id];
     let m=gp?maskAt(x,y,gp):0;
-    // cross-group bits so roof + wall fuse into one building
-    if(gp==="roof"&&grpAt(x,y+1)==="wall")m|=16;
-    if(gp==="wall"&&grpAt(x,y-1)==="roof")m|=32;
+    // cross-group bits: a roof fuses onto the wall below it exactly like a
+    // wall-to-wall join (the shared edge simply disappears), and the wall
+    // top under a roof falls into its shade
+    if(gp==="roof"&&grpAt(x,y+1)==="wall")m|=4|64;
+    if(gp==="wall"&&grpAt(x,y-1)==="roof")m|=1|32;
     fn(g,x*T,y*T,m,dhash(x,y),t);
     return true;
   },
