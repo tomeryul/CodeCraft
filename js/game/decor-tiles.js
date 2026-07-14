@@ -54,12 +54,28 @@ function rrd(g,x,y,w,h,r){
   if(g.roundRect){g.roundRect(x,y,w,h,r);return;}
   g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();
 }
+/* stroke ONLY the exposed edges of a tile blob (interior seams between
+   joined tiles stay invisible, so a building outlines as one shape) */
+function strokeEdges(g,px,py,mask,inset,rad){
+  const N=mask&1,E=mask&2,S=mask&4,Wd=mask&8;
+  if(N&&E&&S&&Wd)return;
+  const x0=px+(Wd?0:inset), x1=px+T-(E?0:inset);
+  const y0=py+(N?0:inset), y1=py+T-(S?0:inset);
+  const rNW=(!N&&!Wd)?rad:0, rNE=(!N&&!E)?rad:0,
+        rSE=(!S&&!E)?rad:0, rSW=(!S&&!Wd)?rad:0;
+  g.beginPath();
+  if(!N){g.moveTo(x0+rNW,y0);g.lineTo(x1-rNE,y0);if(rNE)g.arcTo(x1,y0,x1,y0+rNE,rNE);}
+  if(!E){if(N)g.moveTo(x1,y0);else if(!rNE)g.moveTo(x1,y0);g.lineTo(x1,y1-rSE);if(rSE)g.arcTo(x1,y1,x1-rSE,y1,rSE);}
+  if(!S){if(E)g.moveTo(x1,y1);else if(!rSE)g.moveTo(x1-rSE,y1);g.lineTo(x0+rSW,y1);if(rSW)g.arcTo(x0,y1,x0,y1-rSW,rSW);}
+  if(!Wd){if(S)g.moveTo(x0,y1);else if(!rSW)g.moveTo(x0,y1);g.lineTo(x0,y0+rNW);if(rNW)g.arcTo(x0,y0,x0+rNW,y0,rNW);}
+  g.stroke();
+}
 
 /* ============ GROUND ============ */
 function drawPath(g,px,py,mask,h){
   tilePath(g,px,py,mask,4,13);
   g.fillStyle="#ddd3bf";g.fill();
-  g.strokeStyle="rgba(95,78,50,.28)";g.lineWidth=2;g.stroke();
+  g.strokeStyle="rgba(95,78,50,.28)";g.lineWidth=2;strokeEdges(g,px,py,mask,4,13);
   g.save();tilePath(g,px,py,mask,4,13);g.clip();
   // cobbles: soft 2x2 slabs with jitter
   const cs=["#e7ddc9","#d5c9b0","#e2d7c2","#cfc3a8"];
@@ -77,7 +93,7 @@ function drawPath(g,px,py,mask,h){
 function drawFloor(g,px,py,mask,h){
   tilePath(g,px,py,mask,3,10);
   g.fillStyle="#d9a15e";g.fill();
-  g.strokeStyle="rgba(120,70,25,.35)";g.lineWidth=2;g.stroke();
+  g.strokeStyle="rgba(120,70,25,.35)";g.lineWidth=2;strokeEdges(g,px,py,mask,3,10);
   g.save();tilePath(g,px,py,mask,3,10);g.clip();
   g.strokeStyle="rgba(140,85,30,.4)";g.lineWidth=1.6;
   for(let r=0;r<3;r++){
@@ -108,15 +124,12 @@ function drawWallBody(g,px,py,mask,h){
     g.fillStyle="rgba(30,20,8,.18)";
     g.fillRect(px,py+T,T+(!E?3:0),5);
     g.fillStyle="rgba(30,20,8,.10)";
-    g.fillRect(px+2,py+T+5,T+(!E?3:0)-2,3);
+    g.fillRect(px+(!Wd?2:0),py+T+5,T-(!Wd?2:0)+(!E?3:0),3);
   }
   tilePath(g,px,py,mask,2,9);
   g.save();g.clip();
   // flat top surface — uniform across the whole blob
   g.fillStyle="#f2e6c8";g.fillRect(px,py,T,T);
-  // faint plaster texture on the top
-  g.fillStyle="rgba(160,120,70,.10)";
-  if(dhash(px,py)<.5)g.fillRect(px+8+dhash(px,py)*20,py+6+dhash(py,px)*14,7,7);
   // lit rim along exposed north / west (light from top-left); under a roof
   // the wall top sits in the roof's shade instead
   if(!N){
@@ -148,8 +161,7 @@ function drawWallBody(g,px,py,mask,h){
     g.fillStyle="rgba(30,18,6,.28)";g.fillRect(px,py+T-3.5,T,3.5);
   }
   g.restore();
-  tilePath(g,px,py,mask,2,9);
-  g.strokeStyle="rgba(100,60,25,.38)";g.lineWidth=2;g.stroke();
+  g.strokeStyle="rgba(100,60,25,.38)";g.lineWidth=2;strokeEdges(g,px,py,mask,2,9);
 }
 function drawWall(g,px,py,mask,h){drawWallBody(g,px,py,mask,h);}
 function drawDoor(g,px,py,mask,h){
@@ -229,21 +241,22 @@ function drawRoof(g,px,py,mask,h){
   if(!E){g.fillStyle="rgba(110,28,16,.22)";g.fillRect(px+T-5,py,5,T);}
   if(!Wd){g.fillStyle="rgba(255,255,255,.14)";g.fillRect(px,py,4,T);}
   g.restore();
-  tilePath(g,px,py,mask,2,11);
-  g.strokeStyle="rgba(120,35,20,.42)";g.lineWidth=2;g.stroke();
+  g.strokeStyle="rgba(120,35,20,.42)";g.lineWidth=2;strokeEdges(g,px,py,mask,2,11);
   g.restore();
   // eave overhang: the roof edge hangs OVER the wall below, so the two
   // read as one building (soft shadow cast onto the wall top, then a
   // roof-colored flap bridging the LIFT gap down onto the wall)
   if(!S&&WS){
     const ex0=px+(Wd?0:2), ex1=px+T-(E?0:2);
-    g.fillStyle="rgba(60,25,12,.28)";g.fillRect(ex0,py+T+2,ex1-ex0,7);
+    g.fillStyle="rgba(60,25,12,.24)";g.fillRect(ex0,py+T+2,ex1-ex0,6);
     const eg=g.createLinearGradient(0,py+T-LIFT-3,0,py+T+4);
-    eg.addColorStop(0,"#cd5540");eg.addColorStop(1,"#b2412f");
+    eg.addColorStop(0,"#d75f48");eg.addColorStop(1,"#b2412f");
     g.fillStyle=eg;
-    rrd(g,ex0,py+T-LIFT-3,ex1-ex0,LIFT+7,3);g.fill();
-    g.fillStyle="rgba(255,255,255,.16)";g.fillRect(ex0+2,py+T-LIFT-2,ex1-ex0-4,1.6);
-    g.fillStyle="rgba(110,28,16,.5)";g.fillRect(ex0,py+T+2,ex1-ex0,2);
+    g.beginPath();
+    if(g.roundRect)g.roundRect(ex0,py+T-LIFT-3,ex1-ex0,LIFT+7,[Wd?0:3,E?0:3,E?0:3,Wd?0:3]);
+    else g.rect(ex0,py+T-LIFT-3,ex1-ex0,LIFT+7);
+    g.fill();
+    g.fillStyle="rgba(255,255,255,.18)";g.fillRect(ex0,py+T-LIFT-2,ex1-ex0,1.6);
   }
 }
 
@@ -293,8 +306,7 @@ function drawBush(g,px,py,mask,h){
     g.arc(px+24+dhash(py,px)*10,py+26,2.5,0,7);g.fill();
   }
   g.restore();
-  tilePath(g,px,py,mask,5,16);
-  g.strokeStyle="rgba(25,80,25,.4)";g.lineWidth=2;g.stroke();
+  g.strokeStyle="rgba(25,80,25,.4)";g.lineWidth=2;strokeEdges(g,px,py,mask,5,16);
 }
 
 /* ============ single-tile decor (no autotile, but crisp + on-style) ============ */
