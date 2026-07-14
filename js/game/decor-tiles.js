@@ -102,7 +102,7 @@ function drawFloor(g,px,py,mask,h){
    instead of reading as per-tile steps. */
 const FACE_Y=.42;      // front face starts at this fraction of the tile
 function drawWallBody(g,px,py,mask,h){
-  const N=mask&1,E=mask&2,S=mask&4,Wd=mask&8;
+  const N=mask&1,E=mask&2,S=mask&4,Wd=mask&8,RN=mask&32; // RN: roof directly above
   // continuous drop shadow under the exposed south rim (plain rect => rows merge)
   if(!S){
     g.fillStyle="rgba(30,20,8,.18)";
@@ -117,8 +117,12 @@ function drawWallBody(g,px,py,mask,h){
   // faint plaster texture on the top
   g.fillStyle="rgba(160,120,70,.10)";
   if(dhash(px,py)<.5)g.fillRect(px+8+dhash(px,py)*20,py+6+dhash(py,px)*14,7,7);
-  // lit rim along exposed north / west (light from top-left)
-  if(!N){g.fillStyle="rgba(255,252,240,.65)";g.fillRect(px,py,T,3);}
+  // lit rim along exposed north / west (light from top-left); under a roof
+  // the wall top sits in the roof's shade instead
+  if(!N){
+    if(RN){g.fillStyle="rgba(60,38,14,.24)";g.fillRect(px,py,T,6);}
+    else{g.fillStyle="rgba(255,252,240,.65)";g.fillRect(px,py,T,3);}
+  }
   if(!Wd){g.fillStyle="rgba(255,252,240,.4)";g.fillRect(px,py,3,T);}
   // shaded rim along exposed east
   if(!E){g.fillStyle="rgba(120,80,35,.22)";g.fillRect(px+T-4,py,4,T);}
@@ -193,8 +197,8 @@ function drawRoof(g,px,py,mask,h){
   const N=mask&1,E=mask&2,S=mask&4,Wd=mask&8;
   // roof sits ABOVE the walls: shadow under the exposed eave first, then
   // the whole roof is drawn lifted up a few px so it reads as elevated.
-  const LIFT=6;
-  if(!S){g.fillStyle="rgba(30,18,6,.26)";g.fillRect(px,py+T-LIFT,T,LIFT+3);}
+  const LIFT=6, WS=mask&16; // WS: a wall sits directly below — fuse roof to it
+  if(!S&&!WS){g.fillStyle="rgba(30,18,6,.26)";g.fillRect(px,py+T-LIFT,T,LIFT+3);}
   g.save();g.translate(0,-LIFT);
   tilePath(g,px,py,mask,2,11);
   const gr=g.createLinearGradient(0,py,0,py+T);
@@ -228,6 +232,19 @@ function drawRoof(g,px,py,mask,h){
   tilePath(g,px,py,mask,2,11);
   g.strokeStyle="rgba(120,35,20,.42)";g.lineWidth=2;g.stroke();
   g.restore();
+  // eave overhang: the roof edge hangs OVER the wall below, so the two
+  // read as one building (soft shadow cast onto the wall top, then a
+  // roof-colored flap bridging the LIFT gap down onto the wall)
+  if(!S&&WS){
+    const ex0=px+(Wd?0:2), ex1=px+T-(E?0:2);
+    g.fillStyle="rgba(60,25,12,.28)";g.fillRect(ex0,py+T+2,ex1-ex0,7);
+    const eg=g.createLinearGradient(0,py+T-LIFT-3,0,py+T+4);
+    eg.addColorStop(0,"#cd5540");eg.addColorStop(1,"#b2412f");
+    g.fillStyle=eg;
+    rrd(g,ex0,py+T-LIFT-3,ex1-ex0,LIFT+7,3);g.fill();
+    g.fillStyle="rgba(255,255,255,.16)";g.fillRect(ex0+2,py+T-LIFT-2,ex1-ex0-4,1.6);
+    g.fillStyle="rgba(110,28,16,.5)";g.fillRect(ex0,py+T+2,ex1-ex0,2);
+  }
 }
 
 /* ============ FENCE ============ */
@@ -375,7 +392,11 @@ window.CC_DECOR={
   draw(g,id,x,y,t){
     const fn=DRAW[id];if(!fn)return false;
     const gp=GROUP[id];
-    fn(g,x*T,y*T,gp?maskAt(x,y,gp):0,dhash(x,y),t);
+    let m=gp?maskAt(x,y,gp):0;
+    // cross-group bits so roof + wall fuse into one building
+    if(gp==="roof"&&grpAt(x,y+1)==="wall")m|=16;
+    if(gp==="wall"&&grpAt(x,y-1)==="roof")m|=32;
+    fn(g,x*T,y*T,m,dhash(x,y),t);
     return true;
   },
   icon
