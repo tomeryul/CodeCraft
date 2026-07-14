@@ -46,6 +46,7 @@ function loop(t){
     }
   }
   draw(t);
+  if(mgState&&typeof mgDraw==="function")mgDraw(); // keep the mini-game board live & animated
 }
 function updateExecHighlight(){
   if(!$("editor").classList.contains("open"))return;

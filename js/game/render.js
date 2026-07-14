@@ -372,3 +372,59 @@ function rr(c,x,y,w2,h2,r2){
   if(c.roundRect){c.roundRect(x,y,w2,h2,r2);return;}
   c.moveTo(x+r2,y);c.arcTo(x+w2,y,x+w2,y+h2,r2);c.arcTo(x+w2,y+h2,x,y+h2,r2);c.arcTo(x,y+h2,x,y,r2);c.arcTo(x,y,x+w2,y,r2);c.closePath();
 }
+/* ---- shared board visuals: the same toy-bevel robot & bricks as the open
+   world, so the mini-game / Academy board matches the main game exactly.
+   Drawn at the reference size RS=TILE*0.72 and scaled to fit any cell. ---- */
+function drawBoardRobot(g,cx,cy,s2,dir,color,running,t){
+  const RS=TILE*0.72, k=s2/RS;
+  g.save();g.translate(cx,cy);g.scale(k,k);
+  const S=RS;
+  g.fillStyle="rgba(0,0,0,.22)";g.beginPath();g.ellipse(0,S*.42,S*.42,S*.16,0,0,7);g.fill();
+  const bob=running?Math.sin(t/120)*1.6:0; g.translate(0,bob);
+  // body — toy bevel
+  const grd=g.createLinearGradient(0,-S/2,0,S/2);
+  grd.addColorStop(0,window.CC_EXTRAS?CC_EXTRAS.lighten(color,.3):color);grd.addColorStop(1,color);
+  g.fillStyle=grd;rr(g,-S/2,-S/2,S,S,11);g.fill();
+  g.save();rr(g,-S/2,-S/2,S,S,11);g.clip();
+  g.fillStyle="rgba(0,0,0,.25)";g.fillRect(-S/2,S/2-6,S,6);
+  g.fillStyle="rgba(255,255,255,.35)";rr(g,-S/2+4,-S/2+3,S-8,4.5,2.5);g.fill();
+  g.restore();
+  // antenna + status light (green glow while running, gold when idle)
+  g.strokeStyle="#8a6210";g.lineWidth=2.5;g.beginPath();g.moveTo(0,-S/2);g.lineTo(0,-S/2-7);g.stroke();
+  if(running){g.fillStyle="#54d66a";g.shadowColor="#54d66a";g.shadowBlur=4+5*Math.abs(Math.sin(t/160));}
+  else g.fillStyle="#ffd66b";
+  g.beginPath();g.arc(0,-S/2-9,3.5,0,7);g.fill();g.shadowBlur=0;
+  // eyes look toward the facing direction (occasional idle blink when stopped)
+  const ex=DX[dir]*2.5, ey=DY[dir]*2.5;
+  const shut=!running&&((t+cx*7)%3400)<110;
+  g.fillStyle="#fff";
+  g.beginPath();g.arc(-6.5,-3,5,0,7);g.moveTo(11.5,-3);g.arc(6.5,-3,5,0,7);g.fill();
+  if(shut){
+    g.strokeStyle="#241b45";g.lineWidth=2;g.lineCap="round";
+    g.beginPath();g.moveTo(-9,-2.5);g.lineTo(-4,-2.5);g.moveTo(4,-2.5);g.lineTo(9,-2.5);g.stroke();
+  }else{
+    g.fillStyle="#241b45";
+    g.beginPath();g.arc(-6.5+ex,-2.5+ey,2.5,0,7);g.moveTo(9+ex,-2.5+ey);g.arc(6.5+ex,-2.5+ey,2.5,0,7);g.fill();
+  }
+  // smile
+  g.strokeStyle="#1c1638";g.lineWidth=2;g.beginPath();g.arc(ex*.5,4+ey*.5,5,.2*Math.PI,.8*Math.PI);g.stroke();
+  g.restore();
+}
+function drawBoardBrick(g,px,py,cell,onPlan,no){
+  const m=Math.max(3,cell*0.08), x=px+m, y=py+m, s=cell-2*m, rad=Math.max(4,cell*.15);
+  const grd=g.createLinearGradient(0,y,0,y+s);
+  grd.addColorStop(0,onPlan?"#e6bd7d":"#ff8fa0");grd.addColorStop(1,onPlan?"#b9793c":"#e23b57");
+  g.fillStyle="rgba(0,0,0,.18)";g.beginPath();g.ellipse(px+cell/2,y+s-2,s*.42,s*.12,0,0,7);g.fill();
+  g.fillStyle=grd;rr(g,x,y,s,s,rad);g.fill();
+  g.save();rr(g,x,y,s,s,rad);g.clip();
+  g.fillStyle="rgba(0,0,0,.25)";g.fillRect(x,y+s-Math.max(3,s*.16),s,Math.max(3,s*.16));
+  g.fillStyle="rgba(255,255,255,.4)";rr(g,x+3,y+3,s-6,Math.max(3,s*.11),2);g.fill();
+  g.strokeStyle="rgba(0,0,0,.12)";g.lineWidth=1.4;g.beginPath();g.moveTo(x,y+s*.5);g.lineTo(x+s,y+s*.5);g.stroke();
+  g.restore();
+  g.strokeStyle=onPlan?"rgba(120,70,25,.5)":"rgba(150,25,45,.5)";g.lineWidth=1.6;rr(g,x,y,s,s,rad);g.stroke();
+  if(no!=null){
+    g.font="900 "+Math.floor(cell*0.4)+"px Fredoka,sans-serif";g.textAlign="center";g.textBaseline="middle";
+    g.lineWidth=3;g.strokeStyle="rgba(0,0,0,.32)";g.strokeText(no,px+cell/2,y+s/2+1);
+    g.fillStyle="#fff";g.fillText(no,px+cell/2,y+s/2+1);
+  }
+}

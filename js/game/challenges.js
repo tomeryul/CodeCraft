@@ -465,6 +465,8 @@ function mgSuccess(){
   else bigToast("🎉 "+proj.name+" built! +"+proj.coins+" 🪙");
   mgExit(true);
 }
+// deterministic per-cell hash (independent of the world seed) for grass texture
+function mgHash(x,y){let h=(x*374761393+y*668265263)^0x9e3779b9;h=Math.imul(h^(h>>>13),1274126177);return ((h^(h>>>16))>>>0)/4294967296;}
 function mgDraw(){
   if(!mgState)return;
   if($("boardTab").style.display==="none")return; // board hidden — nothing to draw
@@ -474,66 +476,65 @@ function mgDraw(){
   cv.width=p.gw*cell;cv.height=p.gh*cell;
   const g=cv.getContext("2d");
   const bp=new Set((p.cells||[]).map(c=>c[0]+"_"+c[1]));
+  const GR=(typeof GRASS!=="undefined")?GRASS:["#79c34e","#71ba47","#7fc957"];
+  const T=(typeof now!=="undefined"?now:Date.now());
+  // ---- HD grass, matching the open world (base tone + specks + flecks) ----
   for(let y=0;y<p.gh;y++)for(let x=0;x<p.gw;x++){
-    g.fillStyle=(x+y)%2?"#71ba47":"#79c34e";
-    g.fillRect(x*cell,y*cell,cell,cell);
-    const k2=x+"_"+y;
-    if(st.robot.bricks.has(k2)){
-      g.fillStyle=bp.has(k2)?"#c98d4b":"#ff5d73";
-      g.fillRect(x*cell+2,y*cell+2,cell-4,cell-4);
-      g.fillStyle="rgba(0,0,0,.25)";g.fillRect(x*cell+2,y*cell+cell-7,cell-4,5);
-      g.fillStyle="rgba(255,255,255,.3)";g.fillRect(x*cell+4,y*cell+4,cell-8,3);
-      const no=st.robot.brickNo[k2];
-      if(no!=null){ // stamp the brick's order number on it
-        g.fillStyle="#fff";g.font="900 "+Math.floor(cell*0.42)+"px Fredoka,sans-serif";
-        g.textAlign="center";g.textBaseline="middle";
-        g.fillText(no,x*cell+cell/2,y*cell+cell/2+1);
-      }
-    }else if(bp.has(k2)){
-      g.strokeStyle="rgba(255,214,107,.85)";g.lineWidth=2;g.setLineDash([5,4]);
-      g.strokeRect(x*cell+3,y*cell+3,cell-6,cell-6);g.setLineDash([]);
-      g.fillStyle="rgba(255,214,107,.12)";g.fillRect(x*cell+3,y*cell+3,cell-6,cell-6);
-    }
+    const px=x*cell,py=y*cell;
+    g.fillStyle=GR[(x*31+y*17)%3];
+    g.fillRect(px,py,cell+1,cell+1);
+    const h1=mgHash(x,y),h2=mgHash(x*3+1,y),h3=mgHash(x,y*5+2);
+    g.fillStyle="rgba(38,96,24,.28)";
+    g.fillRect(px+h1*(cell-6)+2,py+h2*(cell-8)+2,2,5);
+    g.fillRect(px+h3*(cell-6)+2,py+h1*(cell-8)+2,2,4);
+    if(h2<.14){g.fillStyle="rgba(255,255,255,.5)";g.fillRect(px+h3*(cell-8)+3,py+h2*(cell-8)+3,3,3);}
+  }
+  // vignette so the board reads as a framed little world
+  const vg=g.createRadialGradient(cv.width/2,cv.height/2,cell,cv.width/2,cv.height/2,Math.max(cv.width,cv.height)*.72);
+  vg.addColorStop(0,"rgba(0,0,0,0)");vg.addColorStop(1,"rgba(0,0,0,.14)");
+  g.fillStyle=vg;g.fillRect(0,0,cv.width,cv.height);
+  // ---- blueprint target outlines (unbuilt cells) ----
+  for(const c of (p.cells||[])){
+    const k2=c[0]+"_"+c[1]; if(st.robot.bricks.has(k2))continue;
+    const px=c[0]*cell,py=c[1]*cell;
+    g.fillStyle="rgba(255,214,107,.12)";rr(g,px+4,py+4,cell-8,cell-8,cell*.16);g.fill();
+    g.strokeStyle="rgba(255,214,107,.9)";g.lineWidth=2;g.setLineDash([6,5]);g.lineDashOffset=-T/60;
+    rr(g,px+4,py+4,cell-8,cell-8,cell*.16);g.stroke();g.setLineDash([]);g.lineDashOffset=0;
+  }
+  // ---- placed bricks (HD toy-bevel, like world builds) ----
+  for(const k2 of st.robot.bricks){
+    const q=k2.split("_");
+    drawBoardBrick(g,(+q[0])*cell,(+q[1])*cell,cell,bp.has(k2),st.robot.brickNo[k2]);
   }
   // sorting goal hints: show each target's required number in its corner
   const goalHints=mgSortGoalOrder(p);
   if(goalHints)for(const gg of goalHints){
     if(st.robot.brickNo[gg[0]+"_"+gg[1]]===gg[2])continue; // already correct
-    g.fillStyle="rgba(255,214,107,.9)";g.font="900 "+Math.floor(cell*0.24)+"px Fredoka,sans-serif";
+    g.fillStyle="rgba(255,214,107,.95)";g.font="900 "+Math.floor(cell*0.24)+"px Fredoka,sans-serif";
     g.textAlign="right";g.textBaseline="top";
     g.fillText("→"+gg[2],gg[0]*cell+cell-4,gg[1]*cell+3);
   }
-  // Academy props: goal flag, choppable trees, collectable gems
-  const emAt=(txt,gx,gy,scale)=>{g.font="900 "+Math.floor(cell*(scale||.6))+"px Fredoka,'Apple Color Emoji','Segoe UI Emoji',sans-serif";
-    g.textAlign="center";g.textBaseline="middle";g.fillText(txt,gx*cell+cell/2,gy*cell+cell/2+2);};
+  // ---- Academy props via HD emoji sprites (goal flag, trees, gems) ----
+  const spr=(ch,gx,gy,frac,bob)=>{const s=sprite(ch,cell*frac);g.drawImage(s,gx*cell+cell/2-s.lw/2,gy*cell+cell/2-s.lw/2+(bob||0),s.lw,s.lw);};
   if(p.goal&&p.goalType==="reach"){
-    const gx=p.goal[0],gy=p.goal[1];
-    const rg=g.createRadialGradient(gx*cell+cell/2,gy*cell+cell/2,2,gx*cell+cell/2,gy*cell+cell/2,cell*.46);
-    rg.addColorStop(0,"rgba(255,214,107,.4)");rg.addColorStop(1,"rgba(255,214,107,0)");
+    const gx=p.goal[0],gy=p.goal[1],ccx=gx*cell+cell/2,ccy=gy*cell+cell/2;
+    const rg=g.createRadialGradient(ccx,ccy,2,ccx,ccy,cell*.5);
+    rg.addColorStop(0,"rgba(255,214,107,.5)");rg.addColorStop(1,"rgba(255,214,107,0)");
     g.fillStyle=rg;g.fillRect(gx*cell,gy*cell,cell,cell);
-    emAt("🚩",gx,gy,.62);
+    spr("🚩",gx,gy,.72,Math.sin(T/400)*1.5);
   }
-  if(st.robot.trees)for(const k of st.robot.trees){const p2=k.split("_");emAt("🌳",+p2[0],+p2[1],.66);}
-  if(st.robot.items)for(const k of st.robot.items){const p2=k.split("_");emAt("💎",+p2[0],+p2[1],.58);}
-  // challenge robot
-  const rb=st.robot,cx=rb.x*cell+cell/2,cy=rb.y*cell+cell/2,s=cell*.68;
-  g.fillStyle="rgba(0,0,0,.2)";g.beginPath();g.ellipse(cx,cy+s*.4,s*.4,s*.14,0,0,7);g.fill();
-  g.fillStyle="#ffb830";
-  g.beginPath();g.roundRect?g.roundRect(cx-s/2,cy-s/2,s,s,6):g.rect(cx-s/2,cy-s/2,s,s);g.fill();
-  g.fillStyle="rgba(0,0,0,.22)";g.fillRect(cx-s/2,cy+s/2-4,s,4);
-  g.fillStyle="#fff";
-  g.beginPath();g.arc(cx-s*.18,cy-s*.08,s*.14,0,7);g.arc(cx+s*.18,cy-s*.08,s*.14,0,7);g.fill();
-  g.fillStyle="#241b45";
-  const ex=DX[rb.dir]*s*.06,ey=DY[rb.dir]*s*.06;
-  g.beginPath();g.arc(cx-s*.18+ex,cy-s*.08+ey,s*.07,0,7);g.arc(cx+s*.18+ex,cy-s*.08+ey,s*.07,0,7);g.fill();
+  if(st.robot.trees)for(const k of st.robot.trees){const q=k.split("_");
+    // little shadow + gentle wind sway, like world trees
+    g.fillStyle="rgba(0,0,0,.14)";g.beginPath();g.ellipse((+q[0])*cell+cell/2,(+q[1]+1)*cell-cell*.14,cell*.28,cell*.08,0,0,7);g.fill();
+    spr("🌳",+q[0],+q[1],.86,Math.sin(T/900+(+q[0]*3))*0);}
+  if(st.robot.items)for(const k of st.robot.items){const q=k.split("_");spr("💎",+q[0],+q[1],.6,Math.sin(T/300+(+q[0]))*2);}
+  // ---- robot — the open-world look ----
+  const rb=st.robot;
+  drawBoardRobot(g,rb.x*cell+cell/2,rb.y*cell+cell/2,cell*.72,rb.dir,ROBOT_COLORS[0],!!mgState.running,T);
   // brick being carried, floating above the robot's head
   if(rb.held!=null){
-    const hs=cell*0.42, hx=cx-hs/2, hy=cy-s*0.5-hs-3;
-    g.fillStyle="#e8a53a";g.fillRect(hx,hy,hs,hs);
-    g.fillStyle="rgba(0,0,0,.25)";g.fillRect(hx,hy+hs-4,hs,4);
-    g.fillStyle="#241b45";g.font="900 "+Math.floor(hs*0.7)+"px Fredoka,sans-serif";
-    g.textAlign="center";g.textBaseline="middle";
-    g.fillText(rb.held,cx,hy+hs/2);
+    const hs=cell*0.52, cxp=rb.x*cell+cell/2, hy=rb.y*cell+cell/2-cell*.55-hs+Math.sin(T/260)*2;
+    drawBoardBrick(g,cxp-hs/2,hy,hs,true,rb.held);
   }
 }
 function renderProjects(){
