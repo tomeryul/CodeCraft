@@ -236,7 +236,7 @@ function scallopPath(g,x0,x1,ey,close){
   g.beginPath();
   g.moveTo(x0,close?ey-7:ey);
   if(close)g.lineTo(x0,ey);
-  for(let cx=x0+6;cx-6<x1;cx+=12)g.arc(cx,ey,6,Math.PI,0,false);
+  for(let cx=x0+6;cx-6<x1;cx+=12)g.arc(cx,ey,6,Math.PI,0,true);
   if(close){g.lineTo(x1,ey-7);g.closePath();}
 }
 
@@ -265,7 +265,8 @@ function drawRoof(g,px,py,mask,h,pal){
   gr.addColorStop(1,S?pal.tp:pal.dk);
   g.fillStyle=gr;g.fill();
   g.save();tilePath(g,px,py,mask,2,11);g.clip();
-  // shingle scallops, world-aligned so rows continue across tiles
+  // shingle scallops, world-aligned so rows continue across tiles (tabs
+  // curve upward, ∪∪∪ — the eave fringe below matches this direction)
   g.strokeStyle=EDG(".25");g.lineWidth=1.8;
   for(let r=0;r<4;r++){
     const yy=py+10+r*11, off=(r%2)?6:0;
