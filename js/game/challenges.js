@@ -473,8 +473,15 @@ function mgDraw(){
   const cv=$("mgCanvas"),st=mgState,p=st.proj;
   const cw=cv.clientWidth||300;
   const cell=Math.floor(cw/p.gw);
-  cv.width=p.gw*cell;cv.height=p.gh*cell;
+  const CW=p.gw*cell, CH=p.gh*cell;
+  // render at device-pixel resolution so the board is crisp/HD on retina, then
+  // draw in CSS-pixel space (same handling as the main game canvas)
+  const dpr=(typeof DPR!=="undefined"?DPR:Math.min(3,window.devicePixelRatio||1));
+  cv.width=Math.round(CW*dpr);cv.height=Math.round(CH*dpr);
+  cv.style.height=CH+"px";
   const g=cv.getContext("2d");
+  g.setTransform(dpr,0,0,dpr,0,0);
+  g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
   const bp=new Set((p.cells||[]).map(c=>c[0]+"_"+c[1]));
   const GR=(typeof GRASS!=="undefined")?GRASS:["#79c34e","#71ba47","#7fc957"];
   const T=(typeof now!=="undefined"?now:Date.now());
@@ -489,10 +496,10 @@ function mgDraw(){
     g.fillRect(px+h3*(cell-6)+2,py+h1*(cell-8)+2,2,4);
     if(h2<.14){g.fillStyle="rgba(255,255,255,.5)";g.fillRect(px+h3*(cell-8)+3,py+h2*(cell-8)+3,3,3);}
   }
-  // vignette so the board reads as a framed little world
-  const vg=g.createRadialGradient(cv.width/2,cv.height/2,cell,cv.width/2,cv.height/2,Math.max(cv.width,cv.height)*.72);
+  // vignette so the board reads as a framed little world (CSS-px space)
+  const vg=g.createRadialGradient(CW/2,CH/2,cell,CW/2,CH/2,Math.max(CW,CH)*.72);
   vg.addColorStop(0,"rgba(0,0,0,0)");vg.addColorStop(1,"rgba(0,0,0,.14)");
-  g.fillStyle=vg;g.fillRect(0,0,cv.width,cv.height);
+  g.fillStyle=vg;g.fillRect(0,0,CW,CH);
   // ---- blueprint target outlines (unbuilt cells) ----
   for(const c of (p.cells||[])){
     const k2=c[0]+"_"+c[1]; if(st.robot.bricks.has(k2))continue;
