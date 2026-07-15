@@ -704,6 +704,46 @@ async function ev(expr) {
   check("Academy tracks partial progress", AC.incomplete === true, acad);
   check("Projects sheet shows the cohesive Academy section", AC.hasCard === true, acad);
 
+  console.log("▶ creator: multi-level packs + difficulty");
+  const packSetup = await ev(`(()=>{
+    const out={};
+    mgEnterCreator();
+    const setLevel=()=>{ const p=mgState.proj; p.gw=4;p.gh=4; p.cells=[[0,0]]; p.start={x:0,y:0,dir:1};
+      mgState.robot.x=0;mgState.robot.y=0;mgState.robot.dir=1; mgSeed(mgState.robot,p); mgState.solved=false; };
+    mgState.proj.diff=2;            // Medium
+    setLevel(); mgAddStage();       // bank level 1
+    out.banked=mgState.stages.length;
+    setLevel();                     // current design = level 2
+    player.myChallenges=[];
+    saveMyChallenge();              // -> multi-level pack (banked + current)
+    const pk=player.myChallenges[player.myChallenges.length-1];
+    out.isPack=!!pk.pack; out.levels=pk.stages.length; out.diff=pk.diff;
+    window.__runProg=prog=>{ mgRobot.program=prog; mgReset(); mgState.running=true; mgRobot.running=true;
+      mgState.frames=[{blocks:prog,i:0,reps:1}]; let g=0; while(mgState&&mgState.running&&g++<200)mgTick(); };
+    packEnter(pk,0);
+    out.startCtx=mgState.packCtx.i;
+    window.__runProg([{t:'build',uid:1}]);   // solve level 1 (fills the single target cell)
+    out.hasCard=(()=>{renderProjects();return !!document.querySelector('#projList .proj .qr');})();
+    return JSON.stringify(out);
+  })()`);
+  const PS = JSON.parse(packSetup);
+  check("creator banks a level with Add level", PS.banked === 1, packSetup);
+  check("saving with banked levels creates a multi-level pack", PS.isPack === true && PS.levels === 2, packSetup);
+  check("pack keeps the chosen difficulty", PS.diff === 2, packSetup);
+  check("pack starts on its first level", PS.startCtx === 0, packSetup);
+  await sleep(950); // let the auto-advance timer fire
+  const adv = await ev(`(()=>{
+    const out={};
+    out.advanced = !!(mgState && mgState.packCtx && mgState.packCtx.i===1);
+    if(out.advanced) window.__runProg([{t:'build',uid:1}]); // solve the final level
+    out.packDone = Object.keys(player.projects).some(k=>k.indexOf('pack_')===0);
+    out.exited = (mgState===null);
+    return JSON.stringify(out);
+  })()`);
+  const AD = JSON.parse(adv);
+  check("solving a level auto-advances to the next", AD.advanced === true, adv);
+  check("clearing the last level completes the pack", AD.packDone === true && AD.exited === true, adv);
+
   check("no uncaught exceptions during entire run", exceptions.length === 0, exceptions.join(" | "));
 
   console.log(`\n${passed} passed, ${failed} failed`);

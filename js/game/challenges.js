@@ -124,7 +124,7 @@ function renderAuthBox(){
 const CC_ALLOWED=["move","turnL","turnR","build","repeat","countLoop"];
 function ccToProj(row){
   const initial=row.initial||[], sort=initial.some(c=>c.length>2&&c[2]!=null);
-  return {id:"cc_"+row.id,community:row.id,em:sort?"🔢":"🌍",name:row.name,diff:2,coins:60,xp:30,
+  return {id:"cc_"+row.id,community:row.id,em:sort?"🔢":"🌍",name:row.name,diff:row.diff||2,coins:60,xp:30,
     maxBlocks:row.max_blocks,gw:row.gw,gh:row.gh,
     desc:"Community challenge by "+row.author_name+(sort?" — sort the numbered blocks into order":" — paint the whole blueprint")+" within "+row.max_blocks+" blocks!",
     allowed:CHALLENGE_BLOCKS,start:{x:row.start_x,y:row.start_y,dir:row.start_dir},cells:row.cells,initial:initial};
@@ -151,10 +151,11 @@ async function loadCommunity(){
   }catch(e){el.innerHTML='<div class="authnote">⚠️ Could not load: '+esc(e.message)+'</div>';}
 }
 function mgEnterCreator(){
-  mgEnter({id:"custom",em:"✏️",name:"My Challenge",diff:2,coins:0,xp:0,maxBlocks:12,gw:8,gh:6,
-    desc:"Design mode: 🖌️ Paint the target tiles, 🤖 set the robot start, 🔢 Bricks to pre-place blocks (pick a number, or “—” for a plain block) — for a sorting game place numbered blocks + paint where they must end up (they'll need to finish in order). Solve it, then 💾 Save (or 🌍 Publish).",
+  mgEnter({id:"custom",em:"✏️",name:"My Challenge",diff:1,coins:0,xp:0,maxBlocks:12,gw:8,gh:6,
+    desc:"Design mode: 🖌️ Paint the target tiles, 🤖 set the robot start, 🔢 Bricks to pre-place blocks (pick a number, or “—” for a plain block) — for a sorting game place numbered blocks + paint where they must end up (they'll need to finish in order). Add ➕ levels to build a multi-level minigame. Solve it, then 💾 Save (or 🌍 Publish).",
     allowed:CREATOR_BLOCKS,start:{x:0,y:0,dir:1},cells:[],initial:[]});
   mgState.creator=true;mgState.solved=false;mgState.paintMode="paint";mgState.brickNum=1;
+  mgState.stages=[]; // banked levels for a multi-level pack (empty = single challenge)
   $("mgCreatorBar").classList.add("on");
   mgCreatorUI();
 }
@@ -167,7 +168,34 @@ function mgCreatorUI(){
   $("mgW").textContent=mgState.proj.gw;
   $("mgH").textContent=mgState.proj.gh;
   $("mgBrickN").textContent=mgState.brickNum==null?"—":mgState.brickNum;
-  $("mgTitle").textContent="✏️ "+mgState.proj.name;
+  const dl=["","⭐ Easy","⭐⭐ Medium","⭐⭐⭐ Hard"];
+  if($("mgDiff"))$("mgDiff").textContent=dl[mgState.proj.diff||1];
+  if($("mgStageInfo"))$("mgStageInfo").textContent=((mgState.stages&&mgState.stages.length)||0)+1;
+  const banked=(mgState.stages&&mgState.stages.length)||0;
+  $("mgTitle").textContent="✏️ "+mgState.proj.name+(banked?" · 🎬"+(banked+1):"");
+}
+// a self-contained snapshot of the current creator design (one level of a pack)
+function snapshotStage(p){
+  const sort=mgHasNumbers(p);
+  return JSON.parse(JSON.stringify({
+    em:sort?"🔢":"🧩", name:p.name, diff:p.diff||1, maxBlocks:p.maxBlocks, gw:p.gw, gh:p.gh,
+    allowed:p.allowed, start:p.start, cells:p.cells, initial:p.initial||[],
+    desc:(sort?"Sort the numbered blocks into order":"Fill the whole blueprint")}));
+}
+// bank the current design as a level and clear the board for the next one
+function mgAddStage(){
+  if(!mgState||!mgState.creator)return;
+  const p=mgState.proj;
+  if(!p.cells.length&&!(p.initial&&p.initial.length)){toast("🖌️ Design this level first — paint tiles or 🔢 place blocks.");sfx(200,.06);return;}
+  mgState.stages=mgState.stages||[];
+  mgState.stages.push(snapshotStage(p));
+  // reset the canvas for the next level (keep size / budget / difficulty / name)
+  p.cells=[]; p.initial=[]; p.start={x:0,y:0,dir:1};
+  mgState.robot={x:0,y:0,dir:1}; mgSeed(mgState.robot,p);
+  mgState.solved=false;
+  toast("🎬 Level "+mgState.stages.length+" banked — design the next, then 💾 Save the pack!");
+  sfx(680,.05);sfx(880,.05,.08);
+  mgCreatorUI(); mgDraw();
 }
 function mgSetSize(dw,dh){
   if(!mgState||!mgState.creator)return;
@@ -197,20 +225,54 @@ async function publishChallenge(){
 // table can't yet store pre-placed bricks.
 function saveMyChallenge(){
   if(!mgState||!mgState.creator)return;
-  const p=mgState.proj, sort=mgHasNumbers(p);
-  // Save keeps your design as-is (a draft) — no need to solve it first. The only
-  // requirement is a goal to aim at: painted target tiles and/or placed blocks.
-  if(!p.cells.length&&!(p.initial&&p.initial.length)){toast("🖌️ Paint target tiles or 🔢 place some blocks first!");return;}
+  const p=mgState.proj, sort=mgHasNumbers(p), diff=p.diff||1;
+  const curHas=p.cells.length||(p.initial&&p.initial.length);
+  const banked=mgState.stages||[];
+  player.myChallenges=player.myChallenges||[];
+  // multi-level pack: one or more banked levels (+ the current one if it has content)
+  if(banked.length){
+    const stages=curHas?banked.concat([snapshotStage(p)]):banked.slice();
+    if(!stages.length){toast("🎬 Add at least one level first!");return;}
+    const pack=JSON.parse(JSON.stringify({
+      id:"my_"+Date.now(), mine:true, pack:true, em:"🎬", name:p.name, diff,
+      stages, desc:stages.length+" levels · "+["","Easy","Medium","Hard"][diff]+" — your multi-level minigame!"}));
+    player.myChallenges.push(pack); saveNow();
+    toast("🎬 Saved “"+p.name+"” — "+stages.length+" levels!"); sfx(760,.06);sfx(1040,.06,.08);
+    return;
+  }
+  // single challenge (draft) — needs a goal to aim at, no need to solve it first
+  if(!curHas){toast("🖌️ Paint target tiles or 🔢 place some blocks first!");return;}
   const copy=JSON.parse(JSON.stringify({
-    id:"my_"+Date.now(), mine:true, em:sort?"🔢":"🧩", name:p.name, diff:2,
+    id:"my_"+Date.now(), mine:true, em:sort?"🔢":"🧩", name:p.name, diff,
     coins:0, xp:0, maxBlocks:p.maxBlocks, gw:p.gw, gh:p.gh,
     allowed:p.allowed, start:p.start, cells:p.cells, initial:p.initial||[],
     desc:(sort?"Sort the numbered blocks into order ":"Fill the blueprint ")+"— your custom challenge!"}));
-  player.myChallenges=player.myChallenges||[];
   player.myChallenges.push(copy);
   saveNow();
   toast("💾 Saved to “My Challenges”!");
   sfx(760,.06);
+}
+// ---- play a multi-level pack: run its levels in sequence (like the Academy) ----
+function packEnter(pack,i){
+  const stage=JSON.parse(JSON.stringify(pack.stages[i]));
+  stage.id="pack_"+pack.id+"_"+i; // per-level program storage
+  mgEnter(stage);
+  mgState.packCtx={packId:pack.id,i,total:pack.stages.length,name:pack.name,em:pack.em,stages:pack.stages};
+  mgState.proj.name=pack.name+" — Level "+(i+1)+"/"+pack.stages.length;
+  $("mgTitle").textContent=(pack.em||"🎬")+" "+mgState.proj.name;
+}
+function packStageSolved(){
+  const c=mgState.packCtx, next=c.i+1;
+  confetti();sfx(760,.08);sfx(1040,.09,.09);
+  if(next<c.total){
+    bigToast("✅ Level "+(c.i+1)+" complete! Next: Level "+(next+1)+"/"+c.total);
+    setTimeout(()=>{ if(mgState)packEnter({id:c.packId,name:c.name,em:c.em,stages:c.stages},next); },700);
+  }else{
+    if(!player.projects["pack_"+c.packId]){player.projects["pack_"+c.packId]=1;saveNow();}
+    if(window.CC_EXTRAS)CC_EXTRAS.celebrate(c.em||"🎬","PACK COMPLETE!",c.name,"You cleared all "+c.total+" levels! 🎉","Awesome! 🎉");
+    else bigToast("🎬 "+c.name+" complete — all "+c.total+" levels cleared!");
+    mgExit(true);
+  }
 }
 // (re)build the challenge robot's brick state, seeding any pre-placed numbered
 // bricks from proj.initial. bricks = Set of "x_y"; brickNo = {"x_y":order#};
@@ -425,6 +487,7 @@ function mgFinish(){
 function mgSuccess(){
   const proj=mgState.proj;
   if(proj.tut){academySolved(proj);return;} // Academy stage: record + advance to the next lesson
+  if(mgState.packCtx){packStageSolved();return;} // multi-level pack: advance to the next level
   if(mgState.creator){
     // creator proved their challenge is solvable
     mgState.solved=true;
@@ -569,9 +632,11 @@ function renderProjects(){
     const mh=document.createElement("h4");mh.className="qsec";mh.textContent="🛠️ My Challenges";el.appendChild(mh);
     for(const p of player.myChallenges){
       const div=document.createElement("div");div.className="quest proj";
-      div.innerHTML='<div class="qt"><span>'+p.em+' <b>'+esc(p.name)+'</b></span></div><small class="pdesc">'+esc(p.desc||"")+'</small>';
-      const play=document.createElement("button");play.textContent="🏗️ Play";
-      play.addEventListener("click",()=>mgEnter(p));
+      const stars="⭐".repeat(p.diff||1);
+      const badge=p.pack?'<span class="qr">🎬 '+p.stages.length+' levels</span>':'';
+      div.innerHTML='<div class="qt"><span>'+p.em+' <b>'+esc(p.name)+'</b> '+stars+'</span>'+badge+'</div><small class="pdesc">'+esc(p.desc||"")+'</small>';
+      const play=document.createElement("button");play.textContent=p.pack?"🎬 Play levels":"🏗️ Play";
+      play.addEventListener("click",()=>p.pack?packEnter(p,0):mgEnter(p));
       const del=document.createElement("button");del.className="authbtn";del.textContent="🗑";del.style.marginLeft="6px";
       del.addEventListener("click",()=>{if(!confirm("Delete “"+p.name+"”?"))return;player.myChallenges=player.myChallenges.filter(x=>x!==p);saveNow();renderProjects();});
       div.appendChild(play);div.appendChild(del);el.appendChild(div);

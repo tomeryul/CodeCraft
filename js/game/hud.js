@@ -35,6 +35,8 @@ $("mgModeBrick").addEventListener("click",()=>{if(mgState){mgState.paintMode="br
 $("mgBrickDec").addEventListener("click",()=>{if(mgState){mgState.brickNum=mgState.brickNum==null?null:(mgState.brickNum<=1?null:mgState.brickNum-1);mgCreatorUI();}});
 $("mgBrickInc").addEventListener("click",()=>{if(mgState){mgState.brickNum=mgState.brickNum==null?1:Math.min(20,mgState.brickNum+1);mgCreatorUI();}});
 $("mgSave").addEventListener("click",()=>saveMyChallenge());
+$("mgDiff").addEventListener("click",()=>{if(mgState&&mgState.creator){const d=mgState.proj;d.diff=((d.diff||1)%3)+1;mgCreatorUI();sfx(520,.03);}});
+$("mgAddStage").addEventListener("click",()=>mgAddStage());
 $("mgBudDec").addEventListener("click",()=>{if(mgState){mgState.proj.maxBlocks=Math.max(3,mgState.proj.maxBlocks-1);mgState.solved=false;mgCreatorUI();mgUpdateCount();}});
 $("mgBudInc").addEventListener("click",()=>{if(mgState){mgState.proj.maxBlocks=Math.min(30,mgState.proj.maxBlocks+1);mgCreatorUI();mgUpdateCount();}});
 $("mgWDec").addEventListener("click",()=>mgSetSize(-1,0));
