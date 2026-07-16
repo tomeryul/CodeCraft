@@ -181,10 +181,33 @@ function draw(t){
       ctx.restore();
     }
     ctx.save();ctx.translate(cx,cy);
-    // shadow
-    ctx.fillStyle="rgba(0,0,0,.22)";ctx.beginPath();ctx.ellipse(0,s2*.42,s2*.42,s2*.16,0,0,7);ctx.fill();
-    const bob=r.running?Math.sin(t/120)*1.6:0;
+    // motion state (needed early for the walk cycle)
+    const moving=Math.abs(r.rx-r.x)+Math.abs(r.ry-r.y)>.04;
+    // springy antenna: tip lags behind motion
+    const vx=(r.rx-(r._prx==null?r.rx:r._prx))*TILE, vy=(r.ry-(r._pry==null?r.ry:r._pry))*TILE;
+    r._prx=r.rx;r._pry=r.ry;
+    r._asw=(r._asw||0)+(( -vx*.9)-(r._asw||0))*.25;
+    const asw=Math.max(-6,Math.min(6,r._asw))+Math.sin(t/900+i)*0.6;
+    /* ---- walk cycle: distance-driven phase + eased blend ----
+       The phase advances with pixels actually traveled, so feet never
+       slide, cadence scales with speed upgrades, and each robot keeps its
+       own rhythm. A 0→1 blend eases limbs in/out of the cycle (~180ms) so
+       starting/stopping never pops a limb mid-pose. Ground contact is at
+       max leg split (|sin|=1); the body apex is as the legs pass (|cos|=1). */
+    const spd=Math.hypot(vx,vy);
+    r._wb=(r._wb||0)+((moving?1:0)-(r._wb||0))*Math.min(1,lastDtSec*9);
+    const wb=r._wb<.012?0:r._wb;
+    if(spd>.01)r._wph=(r._wph||i*2.1)+Math.min(spd*(Math.PI/TILE),.4);
+    const wph=r._wph||i*2.1;
+    const wp=Math.sin(wph)*wb;                  // signed stride, fades with blend
+    const hop=Math.abs(Math.cos(wph))*2.7*wb;   // body apex mid-stride
+    // shadow (shrinks while airborne)
+    ctx.fillStyle="rgba(0,0,0,"+(.22-hop*.015)+")";
+    ctx.beginPath();ctx.ellipse(0,s2*.52,s2*(.42-hop*.008),s2*.16,0,0,7);ctx.fill();
+    // bob crossfades between walk-hop and the idle/running breath
+    const bob=-hop+(1-wb)*(r.running?Math.sin(t/120)*1.6:Math.sin(t/520+i*1.7)*1);
     ctx.translate(0,bob);
+    if(wb)ctx.rotate(wp*.04); // step wobble
     /* ---- per-action animation (r.anim set by doAction) ----
        short ease-out tells; purely visual, never blocks the sim */
     const A=r.anim; let ap=1, atype=null;
@@ -198,8 +221,8 @@ function draw(t){
     let armExt=0, rot=0;
     if(atype==="move"){
       // forward lean + step bob + one dust puff behind
-      ctx.translate(DX[r.dir]*2.6*aw,DY[r.dir]*2.6*aw-1.8*aw);
-      if(DX[r.dir])rot=DX[r.dir]*0.07*aw;
+      ctx.translate(DX[r.dir]*2.0*aw,DY[r.dir]*2.0*aw-.7*aw);
+      if(DX[r.dir])rot=DX[r.dir]*0.06*aw;
       if(!A.dust&&typeof parts!=="undefined"){A.dust=1;
         for(let d=0;d<2;d++)parts.push({x:cx-DX[r.dir]*s2*.45+(Math.random()*8-4),y:cy+s2*.34,
           vx:-DX[r.dir]*22+(Math.random()*14-7),vy:-14-Math.random()*10,g:60,s:2.2+Math.random()*1.4,c:"#e4dcbe",t:0,life:.4});}
@@ -209,16 +232,51 @@ function draw(t){
     else if(atype==="collect"||atype==="chop"||atype==="mine"||atype==="scoop")armExt=aw;
     else if(atype==="drop"||atype==="build")ctx.translate(0,3.2*aw); // dip & settle
     if(rot)ctx.rotate(rot);
-    // squash & stretch: pop on actions, lean while moving
+    // squash & stretch: pop on actions, landing squash on each step
     r.pop=Math.max(0,(r.pop||0)-lastDtSec*3);
-    const moving=Math.abs(r.rx-r.x)+Math.abs(r.ry-r.y)>.04;
     let sqx=1,sqy=1;
-    if(moving){ if(DX[r.dir]){sqx=1.08;sqy=.93;} else {sqx=.93;sqy=1.08;} }
+    if(wb){
+      const st=Math.abs(Math.sin(wph));   // 1 at touchdown, 0 at apex
+      sqx=1+(.08*st-.025)*wb;sqy=1+(.045-.08*st)*wb; // stretch in air, squash on contact
+    }
     if(armExt){ if(DX[r.dir]){sqx*=1+.07*armExt;sqy*=1-.05*armExt;} else {sqy*=1+.07*armExt;sqx*=1-.05*armExt;} }
     if(atype==="drop"||atype==="build"){sqy*=1-.06*aw;sqx*=1+.04*aw;}
     let pk=1+r.pop*.22;
     if(atype==="rest")pk*=1+.02*Math.sin(t/280); // gentle breathing
+    else if(!moving&&!r.running)pk*=1+.012*Math.sin(t/500+i*2.3); // idle breathing
     ctx.scale(sqx*pk,sqy*pk);
+    // limbs are drawn BEFORE the body: pivots sit INSIDE the body silhouette
+    // (body = rounded square -s2/2..s2/2, r=11) so every joint is covered by
+    // the body and only the emerging part of the limb shows — always attached.
+    const limbDk=(function(hex){try{const n=parseInt(hex.slice(1),16);const f=c=>Math.max(0,Math.round(c*.72));return "rgb("+f(n>>16&255)+","+f(n>>8&255)+","+f(n&255)+")";}catch(e){return hex;}})(r.color);
+    // legs — hips just inside the bottom edge, alternating gait:
+    // the planted leg stays long with a ground-flat foot; the swinging
+    // leg tucks up ~30% so it clears the ground instead of dragging
+    for(const sgn of [-1,1]){
+      const lang=wp*.36*sgn;
+      const lift=Math.max(0,sgn*Math.cos(wph))*wb;  // 1 while THIS leg swings
+      const len=s2*.16*(1-.3*lift);
+      ctx.save();ctx.translate(sgn*s2*.16,s2/2-4);ctx.rotate(lang);
+      ctx.strokeStyle=limbDk;ctx.lineWidth=5;ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,len);ctx.stroke();
+      // foot counter-rotates to stay flat while planted, relaxes in swing
+      ctx.translate(0,len);ctx.rotate(-lang*(1-.5*lift));
+      ctx.fillStyle=limbDk;rr(ctx,-3.5,-1,7,4.5,2.2);ctx.fill();
+      ctx.restore();
+    }
+    // idle/walk arms — shoulders inside the side edges, hanging down-out
+    if(!(atype==="collect"||atype==="chop"||atype==="mine"||atype==="scoop")){
+      for(const sgn of [-1,1]){
+        // contralateral swing (opposite its own leg) + idle sway crossfade
+        const aang=sgn*.5-sgn*wp*.22+Math.sin(t/700+i)*.05*sgn*(1-wb);
+        const alen=s2*.20+1.2*Math.max(0,-sgn*Math.cos(wph))*wb; // trailing arm reaches a touch
+        ctx.save();ctx.translate(sgn*(s2/2-2.5),2);ctx.rotate(aang);
+        ctx.strokeStyle=limbDk;ctx.lineWidth=4.5;ctx.lineCap="round";
+        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,alen);ctx.stroke();
+        ctx.fillStyle=limbDk;ctx.beginPath();ctx.arc(0,alen,3,0,7);ctx.fill();
+        ctx.restore();
+      }
+    }
     // body — toy bevel
     const grd=ctx.createLinearGradient(0,-s2/2,0,s2/2);
     grd.addColorStop(0,window.CC_EXTRAS?CC_EXTRAS.lighten(r.color,.3):r.color);grd.addColorStop(1,r.color);
@@ -227,24 +285,59 @@ function draw(t){
     ctx.fillStyle="rgba(0,0,0,.25)";ctx.fillRect(-s2/2,s2/2-6,s2,6);
     ctx.fillStyle="rgba(255,255,255,.35)";rr(ctx,-s2/2+4,-s2/2+3,s2-8,4.5,2.5);ctx.fill();
     ctx.restore();
-    // reach/swing arm toward the tile in front (collect / chop / mine / scoop)
+    // working arm — anchored at a FIXED shoulder on the robot's screen-right
+    // side (the face never rotates, so the shoulder must not either). The arm
+    // is one rigid segment rotating around that shoulder like a real joint:
+    // wind-up raised overhead, then a strike sweep toward the facing tile.
     if(armExt>0){
-      const rx2=DX[r.dir]*s2*(.30+.30*armExt), ry2=DY[r.dir]*s2*(.30+.30*armExt);
-      ctx.strokeStyle="rgba(28,22,56,.4)";ctx.lineWidth=5;ctx.lineCap="round";
-      ctx.beginPath();ctx.moveTo(DX[r.dir]*s2*.16,DY[r.dir]*s2*.16);ctx.lineTo(rx2,ry2);ctx.stroke();
-      // tool nub tinted per action
-      const tc=atype==="chop"?"#c98d4b":atype==="mine"?"#9aa1b0":atype==="scoop"?"#5ab8ff":"#cfd4e0";
-      ctx.fillStyle=tc;ctx.beginPath();ctx.arc(rx2,ry2,4.6,0,7);ctx.fill();
-      ctx.strokeStyle="rgba(28,22,56,.45)";ctx.lineWidth=1.6;ctx.stroke();
-      ctx.fillStyle="rgba(255,255,255,.4)";ctx.beginPath();ctx.arc(rx2-1.3,ry2-1.5,1.5,0,7);ctx.fill();
+      const A0=Math.atan2(DY[r.dir],DX[r.dir]);
+      const thUp=-Math.PI/2;                  // overhead wind-up pose
+      let dth=A0-thUp;
+      while(dth>Math.PI)dth-=2*Math.PI; while(dth<-Math.PI)dth+=2*Math.PI;
+      if(dth<-3)dth+=2*Math.PI;               // facing S: sweep through the RIGHT side
+      const th=thUp+dth*aw;                   // swing follows the action wave
+      const L=s2*(.22+.15*aw);                // arm extends into the strike
+      ctx.save();ctx.lineCap="round";
+      ctx.translate(s2/2-5,2);                // shoulder just inside the right edge
+      ctx.rotate(th);
+      ctx.strokeStyle=limbDk;ctx.lineWidth=4.5;
+      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(L,0);ctx.stroke();
+      ctx.fillStyle=limbDk;ctx.beginPath();ctx.arc(L,0,3.2,0,7);ctx.fill();
+      // tool held in the hand, along the arm's axis
+      ctx.translate(L,0);
+      if(atype==="chop"){ // toy axe
+        ctx.strokeStyle="#8a5a2c";ctx.lineWidth=4.5;
+        ctx.beginPath();ctx.moveTo(-3,0);ctx.lineTo(16,0);ctx.stroke();
+        ctx.fillStyle="#cfd4e0";
+        ctx.beginPath();ctx.moveTo(15,-9);ctx.quadraticCurveTo(24,0,15,9);ctx.lineTo(12,5);ctx.lineTo(12,-5);ctx.closePath();ctx.fill();
+        ctx.strokeStyle="rgba(28,22,56,.45)";ctx.lineWidth=1.6;ctx.stroke();
+        ctx.fillStyle="rgba(255,255,255,.4)";ctx.beginPath();ctx.arc(16,-4,1.6,0,7);ctx.fill();
+      }else if(atype==="mine"){ // toy pickaxe
+        ctx.strokeStyle="#8a5a2c";ctx.lineWidth=4.5;
+        ctx.beginPath();ctx.moveTo(-3,0);ctx.lineTo(14,0);ctx.stroke();
+        ctx.strokeStyle="#9aa1b0";ctx.lineWidth=5.5;
+        ctx.beginPath();ctx.moveTo(11,-10);ctx.quadraticCurveTo(22,0,11,10);ctx.stroke();
+        ctx.strokeStyle="rgba(28,22,56,.35)";ctx.lineWidth=1.4;
+        ctx.beginPath();ctx.moveTo(11,-10);ctx.quadraticCurveTo(22,0,11,10);ctx.stroke();
+      }else if(atype==="scoop"){ // little bucket
+        ctx.fillStyle="#5ab8ff";
+        ctx.beginPath();ctx.moveTo(-6,-6);ctx.lineTo(6,-6);ctx.lineTo(4,6);ctx.lineTo(-4,6);ctx.closePath();ctx.fill();
+        ctx.strokeStyle="rgba(28,66,112,.5)";ctx.lineWidth=1.8;ctx.stroke();
+        ctx.fillStyle="rgba(255,255,255,.45)";ctx.fillRect(-4,-5,8,2.5);
+      }
+      // collect: open hands only — already drawn
+      ctx.restore();
     }
-    // antenna
-    ctx.strokeStyle="#8a6210";ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(0,-s2/2);ctx.lineTo(0,-s2/2-7);ctx.stroke();
+    // antenna — springy, tip lags behind movement
+    ctx.strokeStyle="#8a6210";ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(0,-s2/2);ctx.quadraticCurveTo(asw*.4,-s2/2-4,asw,-s2/2-7);ctx.stroke();
     if(r.running){ctx.fillStyle="#54d66a";ctx.shadowColor="#54d66a";ctx.shadowBlur=4+5*Math.abs(Math.sin(t/160));}
     else ctx.fillStyle="#ffd66b";
-    ctx.beginPath();ctx.arc(0,-s2/2-9,3.5,0,7);ctx.fill();ctx.shadowBlur=0;
-    // eyes look toward dir (closed while resting; occasional idle blink)
-    const ex=DX[r.dir]*2.5, ey=DY[r.dir]*2.5;
+    ctx.beginPath();ctx.arc(asw,-s2/2-9,3.5,0,7);ctx.fill();ctx.shadowBlur=0;
+    // eyes look toward dir (closed while resting; occasional idle blink;
+    // curious glance around when idle)
+    let ex=DX[r.dir]*2.5, ey=DY[r.dir]*2.5;
+    if(!r.running&&!moving){const gl=Math.sin(t/1400+i*3.1);if(gl>.6)ex=2.5;else if(gl<-.6)ex=-2.5;}
     const shut=atype==="rest"||r.tired||((!r.running||atype==="wait")&&((t+i*913)%3400)<110);
     ctx.fillStyle="#fff";
     ctx.beginPath();ctx.arc(-6.5,-3,5,0,7);ctx.moveTo(11.5,-3);ctx.arc(6.5,-3,5,0,7);ctx.fill();
@@ -266,10 +359,14 @@ function draw(t){
       ctx.globalAlpha=.6*(1-zp2);ctx.fillText("z",cx+s2*.56,cy-s2*.74-zp2*11);
       ctx.globalAlpha=1;
     }
-    // hat
+    // hat — bounces with the body and tilts with the step wobble
     if(r.hat){
       const hp=sprite(r.hat,TILE*.5);
-      ctx.drawImage(hp,cx-hp.lw/2+2,cy+bob-s2*.62-hp.lw/2-6,hp.lw,hp.lw);
+      ctx.save();
+      ctx.translate(cx+2,cy+bob-s2*.62-6);
+      if(wb)ctx.rotate(wp*.06);
+      ctx.drawImage(hp,-hp.lw/2,-hp.lw/2,hp.lw,hp.lw);
+      ctx.restore();
     }
     // name
     ctx.fillStyle="rgba(20,14,45,.75)";
