@@ -1,4 +1,4 @@
-const CACHE = "codecraft-v51";
+const CACHE = "codecraft-v52";
 const ASSETS = [
   "./",
   "./index.html",

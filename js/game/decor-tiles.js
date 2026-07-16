@@ -250,7 +250,9 @@ const ROOF_PAL={
   roofP: {lt:"#bd97e6",dk:"#8a5fc0",tp:"#a279d4",ridge:"#dabdf5",edge:"74,44,116",eave:"#7550ac"},
 };
 function drawRoof(g,px,py,mask,h,pal){
-  pal=pal||ROOF_PAL.roof;
+  // guard: the DRAW dispatch passes the time value into the 6th slot, so a
+  // bare `roof:drawRoof` would receive a number here instead of a palette.
+  if(!pal||!pal.tp)pal=ROOF_PAL.roof;
   const N=mask&1,E=mask&2,S=mask&4,Wd=mask&8;
   const EDG=a=>"rgba("+pal.edge+","+a+")";
   // shadow the roof casts on the ground to its east (2.5D light from top-left)
@@ -696,7 +698,8 @@ function drawCampfire(g,px,py,mask,h,t){
 }
 
 const DRAW={path:drawPath,floor:drawFloor,wall:drawWall,door:drawDoor,window:drawWindow,
-  roof:drawRoof,fence:drawFence,bush:drawBush,flower:drawFlower,lamp:drawLamp,
+  roof:(g,x,y,m,h)=>drawRoof(g,x,y,m,h,ROOF_PAL.roof),
+  fence:drawFence,bush:drawBush,flower:drawFlower,lamp:drawLamp,
   fountain:drawFountain,gem:drawGem,
   roofBlue:(g,x,y,m,h)=>drawRoof(g,x,y,m,h,ROOF_PAL.roofB),
   roofGreen:(g,x,y,m,h)=>drawRoof(g,x,y,m,h,ROOF_PAL.roofG),

@@ -512,11 +512,20 @@ async function ev(expr) {
     const c=document.createElement('canvas');c.width=c.height=48;const g=c.getContext('2d');
     const drew = CC_DECOR.draw(g,'wall',0,0,0);           // procedural piece → true
     const ic = CC_DECOR.icon('wall');                     // palette preview data URL
-    return JSON.stringify({has, layers, drew, icon: typeof ic==='string' && ic.indexOf('data:image')===0});
+    // draw EVERY decor id with a real time value (the 5th arg lands in some
+    // draw fns' palette slot — a regression guard for the roof addColorStop bug)
+    const ids=['path','floor','wall','door','window','roof','roofBlue','roofGreen','roofPurple',
+      'glass','awning','sign','fence','bush','flower','lamp','fountain','gem','bench','table',
+      'barrel','crate','well','mailbox','statue','flag','stall','planter','rug','campfire'];
+    objects=new Map(); for(let i=0;i<ids.length;i++)objects.set(i,{type:'decor',deco:ids[i],em:''});
+    let threw=null;
+    for(let i=0;i<ids.length;i++){ try{ CC_DECOR.draw(g,ids[i],i%W,0,performance.now()); CC_DECOR.icon(ids[i]); }catch(e){ threw=ids[i]+': '+e.message; break; } }
+    return JSON.stringify({has, layers, drew, icon: typeof ic==='string' && ic.indexOf('data:image')===0, threw, n:ids.length});
   })()`);
   const DEC = JSON.parse(dec);
   check("CC_DECOR classifies render layers (mid/ground/roof)", DEC.has && DEC.layers==='mid,ground,roof,mid', dec);
   check("CC_DECOR draws pieces + renders palette icons", DEC.drew===true && DEC.icon===true, dec);
+  check("every decor id draws with a time arg (no addColorStop crash)", DEC.threw===null, dec);
 
   console.log("▶ drag & drop (moveBlock core)");
   const dnd = await ev(`(()=>{
