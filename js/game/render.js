@@ -188,95 +188,103 @@ function draw(t){
     r._prx=r.rx;r._pry=r.ry;
     r._asw=(r._asw||0)+(( -vx*.9)-(r._asw||0))*.25;
     const asw=Math.max(-6,Math.min(6,r._asw))+Math.sin(t/900+i)*0.6;
-    /* ---- walk cycle: distance-driven phase + eased blend ----
-       The phase advances with pixels actually traveled, so feet never
-       slide, cadence scales with speed upgrades, and each robot keeps its
-       own rhythm. A 0→1 blend eases limbs in/out of the cycle (~180ms) so
-       starting/stopping never pops a limb mid-pose. Ground contact is at
-       max leg split (|sin|=1); the body apex is as the legs pass (|cos|=1). */
+    /* ================= animation driver =================
+       Every pose below is sampled DIRECTLY from the approved
+       robot-animated.svg keyframe tables (GAIT walk/run, IDLE, REST, and the
+       ACT_TL tool timelines) using the SAME transform tree as that asset, so
+       the in-game robot matches the reference frame-for-frame. The only
+       game-side additions are: a distance-driven gait phase (feet never slide,
+       cadence scales with speed upgrades) and smooth blends between states. */
+    const D2R=Math.PI/180;
     const spd=Math.hypot(vx,vy);
-    r._wb=(r._wb||0)+((moving?1:0)-(r._wb||0))*Math.min(1,lastDtSec*9);
-    const wb=r._wb<.012?0:r._wb;
-    if(spd>.01)r._wph=(r._wph||i*2.1)+Math.min(spd*(Math.PI/TILE),.4);
-    const wph=r._wph||i*2.1;
-    const wp=Math.sin(wph)*wb;                  // signed stride, fades with blend
-    const hop=Math.abs(Math.cos(wph))*2.7*wb;   // body apex mid-stride
-    // shadow (shrinks while airborne)
-    ctx.fillStyle="rgba(0,0,0,"+(.22-hop*.015)+")";
-    ctx.beginPath();ctx.ellipse(0,s2*.52,s2*(.42-hop*.008),s2*.16,0,0,7);ctx.fill();
-    // bob crossfades between walk-hop and the idle/running breath
-    const bob=-hop+(1-wb)*(r.running?Math.sin(t/120)*1.6:Math.sin(t/520+i*1.7)*1);
-    ctx.translate(0,bob);
-    if(wb)ctx.rotate(wp*.04); // step wobble
-    /* ---- per-action animation (r.anim set by doAction) ----
-       short ease-out tells; purely visual, never blocks the sim */
+    const tps=spd/Math.max(.0001,lastDtSec)/TILE;
+    r._runk=(r._runk||0)+(Math.max(0,Math.min(1,(tps-3.5)/3.5))-(r._runk||0))*Math.min(1,lastDtSec*6);
+    const runk=r._runk;
+    r._wb=(r._wb||0)+((moving?1:0)-(r._wb||0))*Math.min(1,lastDtSec*8);
+    const wb=r._wb<.01?0:r._wb;
+    // distance-driven gait phase: one full SVG cycle ≈ 1.3 tiles of travel
+    if(spd>.001)r._gp=(((r._gp||i*.37)+spd/(TILE*1.3))%1+1)%1;
+    const gp=(((r._gp||i*.37)%1)+1)%1;
+    // per-action tell (r.anim set by the interpreter)
     const A=r.anim; let ap=1, atype=null;
     if(A){
-      const AD={move:220,turnL:190,turnR:190,collect:280,chop:320,mine:320,scoop:300,drop:260,build:300,rest:700,wait:420};
-      ap=(t-A.t0)/(AD[A.type]||260);
+      const AD={move:220,turnL:190,turnR:190,drop:260,build:300,rest:1400,wait:420};
+      let dur=AD[A.type]||260;
+      if(ACT_TL[A.type]){ // tool swings stretch to fill the gap until the next sim step
+        const stepMs=340/(r.speed||1)/(1+(typeof skills!=="undefined"?skills.agility.lvl*.015:0));
+        dur=Math.max(320,Math.min(1250,stepMs*.95));
+      }
+      ap=(t-A.t0)/dur;
       if(ap>=1||ap<0){r.anim=null;ap=1;}else atype=A.type;
     }
-    const aw=atype?Math.sin(Math.PI*ap):0;      // out-and-back wave 0→1→0
-    const ao=atype?(1-ap)*(1-ap):0;             // ease-out decay 1→0
-    let armExt=0, rot=0;
+    const TL=atype?ACT_TL[atype]:null;
+    const resting=atype==="rest"||(r.tired&&!moving&&!TL);
+    const aw=atype&&!TL&&!resting?Math.sin(Math.PI*ap):0; // out-and-back wave
+    const ao=atype?(1-ap)*(1-ap):0;                        // ease-out decay
+    // ---- sample the current state's body transform ----
+    // gait sampler blends walk↔run by runk (all values are the exact SVG keyframes)
+    const G=(k)=>{const a=kf(GAIT.walk[k],KT9,gp);return a+(kf(GAIT.run[k],KT9,gp)-a)*runk;};
+    let bobY=0,swayDeg=0,sqx=1,sqy=1;
+    let legLd=0,legRd=0,lenL=5.53,lenR=5.53,footLd=0,footRd=0,armLd=10,armRd=-10,antD=0;
+    const ip=(((t/2600+i*.3)%1)+1)%1;
+    const iBob=kf([0,-1.6,0],KT3,ip),iSway=kf([-3,3,-3],KT3,ip),iSx=kf([1,.99,1],KT3,ip),iSy=kf([1,1.01,1],KT3,ip),iArmL=kf([10,16,10],KT3,ip),iArmR=kf([-10,-16,-10],KT3,ip);
+    if(resting){
+      const rp=(((t/3400+i*.3)%1)+1)%1;
+      bobY=kf([.8,1.6,.8],KT3,rp);swayDeg=kf([7,11,7],KT3,rp);
+      sqx=kf([1.01,1.04,1.01],KT3,rp);sqy=kf([.99,.96,.99],KT3,rp);
+      armLd=kf([6,10,6],KT3,rp);armRd=kf([-6,-10,-6],KT3,rp);
+    }else if(TL){
+      bobY=kf(TL.ty,TL.t,ap);const kx=kf(TL.sx,TL.t,ap);sqx=kx;sqy=2-kx;
+    }else{ // idle (wb=0) → gait (wb=1)
+      bobY=iBob*(1-wb)+G("bob")*wb;
+      swayDeg=iSway*(1-wb)+G("sway")*wb;
+      sqx=iSx*(1-wb)+G("sx")*wb;
+      sqy=iSy*(1-wb)+G("sy")*wb;
+      legLd=G("legL")*wb;legRd=G("legR")*wb;
+      lenL=5.53+(G("lenL")-5.53)*wb;lenR=5.53+(G("lenR")-5.53)*wb;
+      footLd=G("footL")*wb;footRd=G("footR")*wb;
+      armLd=iArmL*(1-wb)+G("armL")*wb;armRd=iArmR*(1-wb)+G("armR")*wb;
+      antD=G("ant")*wb;
+    }
+    // shadow on the ground (rx shrinks a touch when the body lifts)
+    const shS=1+bobY*.012;
+    ctx.fillStyle="rgba(0,0,0,.2)";
+    ctx.beginPath();ctx.ellipse(0,s2*.52,s2*.42*shS,s2*.16*shS,0,0,7);ctx.fill();
+    // --- apply the SVG transform tree ---
+    ctx.translate(0,bobY);                                  // 1. body bob
+    if(TL)ctx.rotate(kf(TL.rot,TL.t,ap)*D2R*(DX[r.dir]<0?-1:1)); // tool: lean toward target (mirror when facing left)
+    else{ctx.translate(0,10);ctx.rotate(swayDeg*D2R);ctx.translate(0,-10);} // 2. body sway (pivot near hips)
+    // action-specific extra motion
     if(atype==="move"){
-      // forward lean + step bob + one dust puff behind
       ctx.translate(DX[r.dir]*2.0*aw,DY[r.dir]*2.0*aw-.7*aw);
-      if(DX[r.dir])rot=DX[r.dir]*0.06*aw;
+      if(DX[r.dir])ctx.rotate(DX[r.dir]*0.06*aw);
       if(!A.dust&&typeof parts!=="undefined"){A.dust=1;
         for(let d=0;d<2;d++)parts.push({x:cx-DX[r.dir]*s2*.45+(Math.random()*8-4),y:cy+s2*.34,
           vx:-DX[r.dir]*22+(Math.random()*14-7),vy:-14-Math.random()*10,g:60,s:2.2+Math.random()*1.4,c:"#e4dcbe",t:0,life:.4});}
     }
-    else if(atype==="turnL")rot=0.42*ao;        // settle in from the old facing
-    else if(atype==="turnR")rot=-0.42*ao;
-    else if(atype==="collect"||atype==="chop"||atype==="mine"||atype==="scoop")armExt=aw;
-    else if(atype==="drop"||atype==="build")ctx.translate(0,3.2*aw); // dip & settle
-    if(rot)ctx.rotate(rot);
-    // squash & stretch: pop on actions, landing squash on each step
+    else if(atype==="turnL")ctx.rotate(0.42*ao);
+    else if(atype==="turnR")ctx.rotate(-0.42*ao);
+    else if(atype==="drop"||atype==="build")ctx.translate(0,3.2*aw);
+    // 3. squash & stretch about the ground pivot (y≈18)
     r.pop=Math.max(0,(r.pop||0)-lastDtSec*3);
-    let sqx=1,sqy=1;
-    if(wb){
-      const st=Math.abs(Math.sin(wph));   // 1 at touchdown, 0 at apex
-      sqx=1+(.08*st-.025)*wb;sqy=1+(.045-.08*st)*wb; // stretch in air, squash on contact
-    }
-    if(armExt){ if(DX[r.dir]){sqx*=1+.07*armExt;sqy*=1-.05*armExt;} else {sqy*=1+.07*armExt;sqx*=1-.05*armExt;} }
-    if(atype==="drop"||atype==="build"){sqy*=1-.06*aw;sqx*=1+.04*aw;}
-    let pk=1+r.pop*.22;
-    if(atype==="rest")pk*=1+.02*Math.sin(t/280); // gentle breathing
-    else if(!moving&&!r.running)pk*=1+.012*Math.sin(t/500+i*2.3); // idle breathing
-    ctx.scale(sqx*pk,sqy*pk);
-    // limbs are drawn BEFORE the body: pivots sit INSIDE the body silhouette
-    // (body = rounded square -s2/2..s2/2, r=11) so every joint is covered by
-    // the body and only the emerging part of the limb shows — always attached.
+    const pk=1+r.pop*.22;
+    ctx.translate(0,18);ctx.scale(sqx*pk,sqy*pk);ctx.translate(0,-18);
     const limbDk=(function(hex){try{const n=parseInt(hex.slice(1),16);const f=c=>Math.max(0,Math.round(c*.72));return "rgb("+f(n>>16&255)+","+f(n>>8&255)+","+f(n&255)+")";}catch(e){return hex;}})(r.color);
-    // legs — hips just inside the bottom edge, alternating gait:
-    // the planted leg stays long with a ground-flat foot; the swinging
-    // leg tucks up ~30% so it clears the ground instead of dragging
-    for(const sgn of [-1,1]){
-      const lang=wp*.36*sgn;
-      const lift=Math.max(0,sgn*Math.cos(wph))*wb;  // 1 while THIS leg swings
-      const len=s2*.16*(1-.3*lift);
-      ctx.save();ctx.translate(sgn*s2*.16,s2/2-4);ctx.rotate(lang);
-      ctx.strokeStyle=limbDk;ctx.lineWidth=5;ctx.lineCap="round";
-      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,len);ctx.stroke();
-      // foot counter-rotates to stay flat while planted, relaxes in swing
-      ctx.translate(0,len);ctx.rotate(-lang*(1-.5*lift));
-      ctx.fillStyle=limbDk;rr(ctx,-3.5,-1,7,4.5,2.2);ctx.fill();
-      ctx.restore();
-    }
-    // idle/walk arms — shoulders inside the side edges, hanging down-out
-    if(!(atype==="collect"||atype==="chop"||atype==="mine"||atype==="scoop")){
-      for(const sgn of [-1,1]){
-        // contralateral swing (opposite its own leg) + idle sway crossfade
-        const aang=sgn*.5-sgn*wp*.22+Math.sin(t/700+i)*.05*sgn*(1-wb);
-        const alen=s2*.20+1.2*Math.max(0,-sgn*Math.cos(wph))*wb; // trailing arm reaches a touch
-        ctx.save();ctx.translate(sgn*(s2/2-2.5),2);ctx.rotate(aang);
-        ctx.strokeStyle=limbDk;ctx.lineWidth=4.5;ctx.lineCap="round";
-        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,alen);ctx.stroke();
-        ctx.fillStyle=limbDk;ctx.beginPath();ctx.arc(0,alen,3,0,7);ctx.fill();
+    // ---- legs (drawn behind body) — hips at (±5.53,13.28); thigh rotates at
+    // the hip, foot rounded-rect at the leg end counter-rotates to stay flat.
+    // Planted straight during tool actions (SVG tool groups don't animate legs).
+    (function(){
+      const draw=(hx,rotDeg,len,footDeg)=>{
+        ctx.save();ctx.translate(hx,13.28);ctx.rotate(rotDeg*D2R);
+        ctx.strokeStyle=limbDk;ctx.lineWidth=5;ctx.lineCap="round";
+        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,len);ctx.stroke();
+        ctx.translate(0,len);ctx.rotate(footDeg*D2R);
+        ctx.fillStyle=limbDk;rr(ctx,-3.5,-1,7,4.5,2.2);ctx.fill();
         ctx.restore();
-      }
-    }
+      };
+      if(TL){draw(-5.53,0,5.53,0);draw(5.53,0,5.53,0);}
+      else{draw(-5.53,legLd,lenL,footLd);draw(5.53,legRd,lenR,footRd);}
+    })();
     // body — toy bevel
     const grd=ctx.createLinearGradient(0,-s2/2,0,s2/2);
     grd.addColorStop(0,window.CC_EXTRAS?CC_EXTRAS.lighten(r.color,.3):r.color);grd.addColorStop(1,r.color);
@@ -285,26 +293,32 @@ function draw(t){
     ctx.fillStyle="rgba(0,0,0,.25)";ctx.fillRect(-s2/2,s2/2-6,s2,6);
     ctx.fillStyle="rgba(255,255,255,.35)";rr(ctx,-s2/2+4,-s2/2+3,s2-8,4.5,2.5);ctx.fill();
     ctx.restore();
-    // working arm — anchored at a FIXED shoulder on the robot's screen-right
-    // side (the face never rotates, so the shoulder must not either). The arm
-    // is one rigid segment rotating around that shoulder like a real joint:
-    // wind-up raised overhead, then a strike sweep toward the facing tile.
-    if(armExt>0){
-      const A0=Math.atan2(DY[r.dir],DX[r.dir]);
-      const thUp=-Math.PI/2;                  // overhead wind-up pose
-      let dth=A0-thUp;
-      while(dth>Math.PI)dth-=2*Math.PI; while(dth<-Math.PI)dth+=2*Math.PI;
-      if(dth<-3)dth+=2*Math.PI;               // facing S: sweep through the RIGHT side
-      const th=thUp+dth*aw;                   // swing follows the action wave
-      const L=s2*(.22+.15*aw);                // arm extends into the strike
-      ctx.save();ctx.lineCap="round";
-      ctx.translate(s2/2-5,2);                // shoulder just inside the right edge
-      ctx.rotate(th);
-      ctx.strokeStyle=limbDk;ctx.lineWidth=4.5;
-      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(L,0);ctx.stroke();
-      ctx.fillStyle=limbDk;ctx.beginPath();ctx.arc(L,0,3.2,0,7);ctx.fill();
-      // tool held in the hand, along the arm's axis
-      ctx.translate(L,0);
+    // working arm — two-segment jointed arm (shoulder → elbow → hand) plus a
+    // support arm and tool, geometry & keyframes ported 1:1 from the approved
+    // robot-animated.svg: right shoulder (16.6,5.2), upper len 4.6, forearm
+    // len 5, tool at the hand. Mirrors horizontally when the robot faces left.
+    if(TL){
+      const mir=DX[r.dir]<0?-1:1;
+      ctx.save();if(mir<0)ctx.scale(-1,1);
+      ctx.lineCap="round";ctx.strokeStyle=limbDk;ctx.fillStyle=limbDk;
+      // support (left) arm — single segment
+      ctx.save();
+      ctx.translate(-16.6,5.2);ctx.rotate(kf(TL.larm,TL.t,ap)*D2R);
+      ctx.lineWidth=3.8;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,5.6);ctx.stroke();
+      ctx.beginPath();ctx.arc(0,5.6,2.5,0,7);ctx.fill();
+      ctx.restore();
+      ctx.beginPath();ctx.arc(-16.6,5.2,2.3,0,7);ctx.fill(); // shoulder cap
+      // working (right) arm — upper segment
+      ctx.save();
+      ctx.translate(16.6,5.2);ctx.rotate(kf(TL.upper,TL.t,ap)*D2R);
+      ctx.lineWidth=3.8;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,4.6);ctx.stroke();
+      ctx.beginPath();ctx.arc(0,4.6,2.5,0,7);ctx.fill();
+      // forearm segment (pivots at the elbow)
+      ctx.translate(0,4.6);ctx.rotate(kf(TL.fore,TL.t,ap)*D2R);
+      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,5);ctx.stroke();
+      ctx.beginPath();ctx.arc(0,5,2.5,0,7);ctx.fill();
+      // tool held at the hand (SVG holds it at rotate(90) off the forearm axis)
+      ctx.translate(0,5);ctx.rotate((90+(TL.toolrot?kf(TL.toolrot,TL.t,ap):0))*D2R);
       if(atype==="chop"){ // toy axe
         ctx.strokeStyle="#8a5a2c";ctx.lineWidth=4.5;
         ctx.beginPath();ctx.moveTo(-3,0);ctx.lineTo(16,0);ctx.stroke();
@@ -314,26 +328,46 @@ function draw(t){
         ctx.fillStyle="rgba(255,255,255,.4)";ctx.beginPath();ctx.arc(16,-4,1.6,0,7);ctx.fill();
       }else if(atype==="mine"){ // toy pickaxe
         ctx.strokeStyle="#8a5a2c";ctx.lineWidth=4.5;
-        ctx.beginPath();ctx.moveTo(-3,0);ctx.lineTo(14,0);ctx.stroke();
-        ctx.strokeStyle="#9aa1b0";ctx.lineWidth=5.5;
-        ctx.beginPath();ctx.moveTo(11,-10);ctx.quadraticCurveTo(22,0,11,10);ctx.stroke();
-        ctx.strokeStyle="rgba(28,22,56,.35)";ctx.lineWidth=1.4;
-        ctx.beginPath();ctx.moveTo(11,-10);ctx.quadraticCurveTo(22,0,11,10);ctx.stroke();
-      }else if(atype==="scoop"){ // little bucket
-        ctx.fillStyle="#5ab8ff";
-        ctx.beginPath();ctx.moveTo(-6,-6);ctx.lineTo(6,-6);ctx.lineTo(4,6);ctx.lineTo(-4,6);ctx.closePath();ctx.fill();
-        ctx.strokeStyle="rgba(28,66,112,.5)";ctx.lineWidth=1.8;ctx.stroke();
-        ctx.fillStyle="rgba(255,255,255,.45)";ctx.fillRect(-4,-5,8,2.5);
+        ctx.beginPath();ctx.moveTo(-3,0);ctx.lineTo(15,0);ctx.stroke();
+        ctx.fillStyle="#cfd4e0";
+        ctx.beginPath();ctx.moveTo(13,-11);ctx.quadraticCurveTo(28,0,13,11);ctx.quadraticCurveTo(19.5,0,13,-11);ctx.closePath();ctx.fill();
+        ctx.strokeStyle="rgba(28,22,56,.45)";ctx.lineWidth=1.6;ctx.stroke();
+        ctx.fillStyle="rgba(255,255,255,.4)";ctx.beginPath();ctx.arc(16.5,-4.5,1.4,0,7);ctx.fill();
+      }else if(atype==="scoop"){ // little bucket, dips & tips
+        ctx.fillStyle="#8fa3b8";
+        ctx.beginPath();ctx.moveTo(-4.2,-3.5);ctx.lineTo(4.2,-3.5);ctx.lineTo(3.2,4);ctx.lineTo(-3.2,4);ctx.closePath();ctx.fill();
+        ctx.strokeStyle="rgba(28,22,56,.45)";ctx.lineWidth=1.3;ctx.stroke();
+        ctx.strokeStyle="#6b7f94";ctx.lineWidth=1.4;
+        ctx.beginPath();ctx.moveTo(-4.2,-3.5);ctx.quadraticCurveTo(0,-8.5,4.2,-3.5);ctx.stroke();
+        if(ap>.4&&ap<.82){ctx.fillStyle="#5db8e8";ctx.beginPath();ctx.moveTo(-3.6,-2.6);ctx.lineTo(3.6,-2.6);ctx.lineTo(3.3,-.4);ctx.lineTo(-3.3,-.4);ctx.closePath();ctx.fill();}
       }
-      // collect: open hands only — already drawn
+      // collect: open hand, no tool
       ctx.restore();
+      ctx.restore();
+    }else{
+      // idle / walk / run / rest arms — single segment at shoulders (±16.6,5.2),
+      // rotation sampled from the SVG keyframes (armL/armR). Drawn in front of
+      // the body, exactly as in robot-animated.svg.
+      const arm=(sx,rotDeg)=>{
+        ctx.save();ctx.translate(sx,5.2);ctx.rotate(rotDeg*D2R);
+        ctx.strokeStyle=limbDk;ctx.lineWidth=4.5;ctx.lineCap="round";
+        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,6.2);ctx.stroke();
+        ctx.fillStyle=limbDk;ctx.beginPath();ctx.arc(0,6.2,3,0,7);ctx.fill();
+        ctx.restore();
+      };
+      arm(-16.6,armLd);arm(16.6,armRd);
     }
-    // antenna — springy, tip lags behind movement
+    // antenna — during tool actions it sways on the SVG antenna keyframes; while
+    // walking/running it uses the gait antenna keyframes; idle keeps a springy
+    // tip that lags behind movement for a bit of life
+    const antR=TL?kf(TL.ant,TL.t,ap)*(Math.PI/180)*(DX[r.dir]<0?-1:1):antD*D2R;
+    ctx.save();ctx.translate(0,-s2/2);ctx.rotate(antR);
     ctx.strokeStyle="#8a6210";ctx.lineWidth=2.5;
-    ctx.beginPath();ctx.moveTo(0,-s2/2);ctx.quadraticCurveTo(asw*.4,-s2/2-4,asw,-s2/2-7);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(asw*.4,-4,asw,-7);ctx.stroke();
     if(r.running){ctx.fillStyle="#54d66a";ctx.shadowColor="#54d66a";ctx.shadowBlur=4+5*Math.abs(Math.sin(t/160));}
     else ctx.fillStyle="#ffd66b";
-    ctx.beginPath();ctx.arc(asw,-s2/2-9,3.5,0,7);ctx.fill();ctx.shadowBlur=0;
+    ctx.beginPath();ctx.arc(asw,-9,3.5,0,7);ctx.fill();ctx.shadowBlur=0;
+    ctx.restore();
     // eyes look toward dir (closed while resting; occasional idle blink;
     // curious glance around when idle)
     let ex=DX[r.dir]*2.5, ey=DY[r.dir]*2.5;
@@ -363,8 +397,8 @@ function draw(t){
     if(r.hat){
       const hp=sprite(r.hat,TILE*.5);
       ctx.save();
-      ctx.translate(cx+2,cy+bob-s2*.62-6);
-      if(wb)ctx.rotate(wp*.06);
+      ctx.translate(cx+2,cy+bobY-s2*.62-6);
+      if(!TL)ctx.rotate(swayDeg*Math.PI/180*.5);
       ctx.drawImage(hp,-hp.lw/2,-hp.lw/2,hp.lw,hp.lw);
       ctx.restore();
     }
@@ -464,6 +498,46 @@ function draw(t){
     ctx.restore();
   }
 }
+/* keyframe sampler + tool-action timelines ported 1:1 from the approved SMIL
+   SVG action set (robot-animated.svg): keyTimes/values pairs, ease-in-out
+   between keys (≈ spline .4 0 .6 1). rot in degrees, ty in px, sx = width
+   squash (height gets the inverse), arm: 0 = overhead → 1 = full strike. */
+function kf(vals,times,p){
+  p=p<0?0:p>1?1:p;
+  let j=1;while(j<times.length-1&&times[j]<p)j++;
+  const a=times[j-1],b=times[j],u=b>a?(p-a)/(b-a):1;
+  const e=u<.5?2*u*u:1-2*(1-u)*(1-u);
+  return vals[j-1]+(vals[j]-vals[j-1])*e;
+}
+const KT9=[0,.125,.25,.375,.5,.625,.75,.875,1];
+const KT3=[0,.5,1];
+/* Walk & run gaits — exact keyTimes/values lifted from robot-animated.svg
+   (idle & rest are inline 3-point loops in the driver). legL/legR = thigh
+   rotation; lenL/lenR = leg length (foot lifts as the leg shortens); footL/R =
+   foot counter-rotation; armL/R = arm swing; ant = antenna; bob/sway/sx/sy =
+   body bob, tilt & squash. */
+const GAIT={
+  walk:{bob:[0,-1.9,-2.7,-1.9,0,-1.9,-2.7,-1.9,0], sway:[2.3,1.63,0,-1.63,-2.3,-1.63,0,1.63,2.3],
+    sx:[1.05,1.04,1.01,.99,.97,.99,1.01,1.04,1.05], sy:[.96,.98,1,1.03,1.04,1.03,1,.98,.96],
+    legL:[-20.6,-14.63,0,14.63,20.6,14.63,0,-14.63,-20.6], lenL:[5.53,4.4,3.87,4.4,5.53,5.53,5.53,5.53,5.53], footL:[20.6,14.63,0,-14.63,-20.6,-14.63,0,14.63,20.6],
+    legR:[20.6,14.63,0,-14.63,-20.6,-14.63,0,14.63,20.6], lenR:[5.53,5.53,5.53,5.53,5.53,4.4,3.87,4.4,5.53], footR:[-20.6,-14.63,0,14.63,20.6,14.63,0,-14.63,-20.6],
+    ant:[-4,-2.84,0,2.84,4,2.84,0,-2.84,-4], armL:[10,12.03,17,21.97,24,21.97,17,12.03,10], armR:[-10,-12.03,-17,-21.97,-24,-21.97,-17,-12.03,-10]},
+  run:{bob:[0,-2.4,-3.4,-2.4,0,-2.4,-3.4,-2.4,0], sway:[3.2,2.27,0,-2.27,-3.2,-2.27,0,2.27,3.2],
+    sx:[1.08,1.06,1.02,.98,.96,.98,1.02,1.06,1.08], sy:[.95,.97,1,1.04,1.05,1.04,1,.97,.95],
+    legL:[-32,-22.72,0,22.72,32,22.72,0,-22.72,-32], lenL:[5.53,4.1,3.3,4.1,5.53,5.53,5.53,5.53,5.53], footL:[32,22.72,0,-22.72,-32,-22.72,0,22.72,32],
+    legR:[32,22.72,0,-22.72,-32,-22.72,0,22.72,32], lenR:[5.53,5.53,5.53,5.53,5.53,4.1,3.3,4.1,5.53], footR:[-32,-22.72,0,22.72,32,22.72,0,-22.72,-32],
+    ant:[-8,-5.68,0,5.68,8,5.68,0,-5.68,-8], armL:[12,14.61,21,27.39,30,27.39,21,14.61,12], armR:[-12,-14.61,-21,-27.39,-30,-27.39,-21,-14.61,-12]}
+};
+const ACT_TL={
+  chop:   {t:[0,.1,.36,.46,.53,.6,.68,1], rot:[0,-1,-6,-6,7,6,7,0], ty:[0,0,-1.5,-1.5,1.4,1.2,1.4,0], sx:[1,1,.97,.97,1.07,1.05,1.07,1],
+           ant:[0,-2,6,6,-6,-5,-6,0], larm:[10,12,26,26,2,4,2,10], upper:[-15,-5,-150,-150,-62,-57,-62,-15], fore:[-5,0,-40,-40,12,7,12,-5]},
+  mine:   {t:[0,.1,.36,.46,.53,.6,.68,1], rot:[0,-1,-7,-7,9,8,9,0], ty:[0,0,-1.8,-1.8,2,1.7,2,0], sx:[1,1,.96,.96,1.09,1.07,1.09,1],
+           ant:[0,-2,7,7,-7,-6,-7,0], larm:[10,12,26,26,2,4,2,10], upper:[-15,-5,-140,-140,-12,-8,-12,-15], fore:[-5,2,-45,-45,-2,-6,-2,-5]},
+  collect:{t:[0,.1,.28,.4,.56,.75,1], rot:[0,-2,8,8,-3,-3,0], ty:[0,0,2,2,-1,-1,0], sx:[1,1,1.05,1.05,.98,.98,1],
+           ant:[0,-3,6,6,-4,-4,0], larm:[10,11,20,20,6,6,10], upper:[-15,-8,-42,-42,-80,-80,-15], fore:[-5,-2,-30,-30,-28,-28,-5]},
+  scoop:  {t:[0,.12,.3,.42,.6,.78,1], rot:[0,-2,9,10,-4,-1,0], ty:[0,0,2.2,2.6,-1.2,0,0], sx:[1,1,1.05,1.06,.98,1,1],
+           ant:[0,-3,7,7,-4,-2,0], larm:[10,12,22,22,4,8,10], upper:[-15,-10,-55,-70,-100,-30,-15], fore:[-5,-4,-35,-28,-20,-15,-5], toolrot:[0,0,35,35,-8,0,0]}
+};
 function rr(c,x,y,w2,h2,r2){
   c.beginPath();
   if(c.roundRect){c.roundRect(x,y,w2,h2,r2);return;}
