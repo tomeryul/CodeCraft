@@ -187,6 +187,7 @@ function mgEditCommunity(row){
   p.name=row.name; p.diff=row.diff||2;
   mgState.publishId=row.id;
   const stages=(row.stages&&row.stages.length)?row.stages:null;
+  let sol=[]; // author's solution to reload into the editor
   if(stages){ // already multi-level: load levels into the strip, canvas empty
     mgState.stages=JSON.parse(JSON.stringify(stages));
     p.cells=[]; p.initial=[]; p.start={x:0,y:0,dir:1};
@@ -197,11 +198,20 @@ function mgEditCommunity(row){
     p.initial=JSON.parse(JSON.stringify(row.initial||[]));
     p.start={x:row.start_x||0,y:row.start_y||0,dir:row.start_dir==null?1:row.start_dir};
     mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir}; mgSeed(mgState.robot,p);
+    sol=row.solution||[]; // reload the author's own solution program (edit mode only)
   }
-  mgState.solved=false; if(mgRobot)mgRobot.program=[];
+  mgLoadSolution(sol);
+  mgState.solved=false;
   renderPalette();renderProgram();renderPy();updateUndoBtns();mgUpdateCount();
   mgCreatorUI(); mgDraw();
-  toast("✏️ Editing your published challenge — add ➕ levels or tweak it, prove ▶, then 🌍 Publish to update it.");
+  toast("✏️ Editing your published challenge — your saved solution is loaded. Add ➕ levels or tweak it, prove ▶, then 🌍 Publish to update.");
+}
+// load a saved solution program back into the creator robot (fresh uids). Used
+// only in edit mode — solving a challenge never loads it.
+function mgLoadSolution(prog){
+  if(!mgRobot)return;
+  mgRobot.program=(prog&&prog.length)?JSON.parse(JSON.stringify(prog)):[];
+  if(typeof reUid==="function")reUid(mgRobot.program);
 }
 // open the creator loaded with an already-saved My Challenges entry so it can be
 // changed and re-saved in place (single challenge OR a multi-level pack).
@@ -210,6 +220,7 @@ function mgEditMyChallenge(entry){
   const p=mgState.proj;
   p.name=entry.name; p.diff=entry.diff||1;
   mgState.editingId=entry.id;
+  let sol=[];
   if(entry.pack){
     // load its levels into the strip; the canvas starts empty (tweak levels via ✏️, or ➕ add more)
     mgState.stages=JSON.parse(JSON.stringify(entry.stages||[]));
@@ -222,9 +233,10 @@ function mgEditMyChallenge(entry){
     p.initial=JSON.parse(JSON.stringify(entry.initial||[]));
     p.start=JSON.parse(JSON.stringify(entry.start||{x:0,y:0,dir:1}));
     mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir}; mgSeed(mgState.robot,p);
+    sol=entry.sol||[]; // reload the author's own solution program (edit mode only)
   }
   mgState.solved=false; // must re-prove after any change
-  if(mgRobot)mgRobot.program=[];
+  mgLoadSolution(sol);
   renderPalette();renderProgram();renderPy();updateUndoBtns();mgUpdateCount();
   mgCreatorUI(); mgDraw();
   toast("✏️ Editing “"+esc(entry.name)+"” — change it, prove it ▶, then 💾 Save to update.");
@@ -286,13 +298,14 @@ function mgEditStage(i){
   p.initial=JSON.parse(JSON.stringify(s.initial||[]));
   p.start=JSON.parse(JSON.stringify(s.start||{x:0,y:0,dir:1}));
   p.gw=s.gw;p.gh=s.gh;p.maxBlocks=s.maxBlocks;if(s.diff)p.diff=s.diff;
+  const sol=s.sol||[];       // this level's saved solution
   st.splice(i,1);            // lift it out; mgAddStage re-inserts at editIndex
   mgState.editIndex=i;
   mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir};mgSeed(mgState.robot,p);
   mgState.solved=false;
-  if(mgRobot)mgRobot.program=[];
+  mgLoadSolution(sol);
   renderPalette();renderProgram();renderPy();updateUndoBtns();mgUpdateCount();
-  toast("✏️ Editing Level "+(i+1)+" — tweak it, run ▶ to prove it, then ➕ Update level.");
+  toast("✏️ Editing Level "+(i+1)+" — your solution is loaded; tweak it, run ▶ to prove it, then ➕ Update level.");
   sfx(520,.04);mgCreatorUI();mgDraw();
 }
 function mgDeleteStage(i){
@@ -310,6 +323,7 @@ function snapshotStage(p){
   return JSON.parse(JSON.stringify({
     em:sort?"🔢":"🧩", name:p.name, diff:p.diff||1, maxBlocks:p.maxBlocks, gw:p.gw, gh:p.gh,
     allowed:p.allowed, start:p.start, cells:p.cells, initial:p.initial||[],
+    sol:(mgRobot&&mgRobot.program)?mgRobot.program:[], // author's proving solution — loaded only in edit mode
     desc:(sort?"Sort the numbered blocks into order":"Fill the whole blueprint")}));
 }
 // bank the current design as a level and clear the board for the next one
@@ -361,8 +375,10 @@ async function publishChallenge(){
   if(banked.length)stages=(curHas&&mgState.solved)?banked.concat([snapshotStage(p)]):banked.slice();
   const multi=stages.length>0;
   const base=multi?stages[0]:{cells:p.cells,initial:p.initial||[],start:p.start,maxBlocks:p.maxBlocks,gw:p.gw,gh:p.gh};
+  // author's solution: level 1's for the top-level column (multi levels keep their own sol in `stages`)
+  const solution=multi?(base.sol||[]):((mgRobot&&mgRobot.program)?JSON.parse(JSON.stringify(mgRobot.program)):[]);
   const body={name:p.name,gw:base.gw,gh:base.gh,start_x:base.start.x,start_y:base.start.y,start_dir:base.start.dir,
-    cells:base.cells,initial:base.initial||[],max_blocks:base.maxBlocks,diff,stages:multi?stages:[],
+    cells:base.cells,initial:base.initial||[],max_blocks:base.maxBlocks,diff,stages:multi?stages:[],solution,
     author_name:(sbUser.email||"builder").split("@")[0].slice(0,20)};
   try{
     if(mgState.publishId){ // update the player's already-published challenge
@@ -420,6 +436,7 @@ function saveMyChallenge(){
     id:"my_"+Date.now(), mine:true, em:sort?"🔢":"🧩", name:p.name, diff,
     coins:0, xp:0, maxBlocks:p.maxBlocks, gw:p.gw, gh:p.gh,
     allowed:p.allowed, start:p.start, cells:p.cells, initial:p.initial||[],
+    sol:(mgRobot&&mgRobot.program)?mgRobot.program:[], // author's solution (loaded only when editing)
     desc:(sort?"Sort the numbered blocks into order ":"Fill the blueprint ")+"— your custom challenge!"}));
   commit(copy,"💾 Saved to “My Challenges”!");
 }

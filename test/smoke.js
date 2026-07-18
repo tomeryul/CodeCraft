@@ -518,6 +518,36 @@ async function ev(expr) {
   check("saving an edited published challenge UPDATEs it (PATCH)", COMM.updMethod === 'PATCH' && COMM.updIsPatch === true, comm);
   check("editing a multi-level published challenge loads its levels", COMM.loadedPackStages === 2 && COMM.packPublishId === 'row10', comm);
 
+  console.log("▶ author's solution: saved with the challenge, loaded only in edit mode");
+  const solT = await ev(`(()=>{
+    const out={}, origRest=sbRest, origUser=sbUser;
+    sbUser={uid:'me',email:'k@x.com'};
+    let last=null;
+    sbRest=(path,opts)=>{ const m=(opts&&opts.method)||'GET'; if(m==='POST'||m==='PATCH')last={body:opts.body?JSON.parse(opts.body):null}; return Promise.resolve(null); };
+    mgEnterCreator();
+    const p=mgState.proj; p.gw=4;p.gh=4; p.cells=[[0,0]]; mgSeed(mgState.robot,p);
+    mgRobot.program=[{t:'build',uid:1}];   // the author's solution
+    mgState.solved=true;
+    return publishChallenge().then(()=>{
+      out.pubSolN=(last.body.solution||[]).length;   // 1
+      const row={id:'rowX',author:'me',name:'A',diff:2,gw:4,gh:4,max_blocks:12,start_x:0,start_y:0,start_dir:1,
+        cells:[[0,0]],initial:[],stages:[],solution:[{t:'move',uid:7},{t:'build',uid:8}]};
+      mgEditCommunity(row);                          // EDIT → solution reloads
+      out.editLoadedN=mgRobot.program.length;        // 2
+      out.editFirstT=mgRobot.program[0]&&mgRobot.program[0].t;
+      mgExit(false);
+      mgEnter(ccToProj(row));                        // PLAY to solve → solution NOT loaded
+      out.playLoadedN=mgRobot.program.length;        // 0
+      mgExit(false); document.getElementById('editor').classList.remove('open','max');
+      sbRest=origRest; sbUser=origUser; mgState=null; mgRobot=null;
+      return JSON.stringify(out);
+    });
+  })()`);
+  const SOL = JSON.parse(solT);
+  check("publish saves the author's solution program", SOL.pubSolN === 1, solT);
+  check("editing a published challenge reloads the solution", SOL.editLoadedN === 2 && SOL.editFirstT === 'move', solT);
+  check("solving/playing the challenge does NOT load the solution", SOL.playLoadedN === 0, solT);
+
   console.log("▶ manual build mode: place & remove decor with resources");
   const bld = await ev(`(()=>{
     mgState=null; mgRobot=null;
