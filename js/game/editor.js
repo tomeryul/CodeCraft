@@ -123,7 +123,7 @@ function renderList(list,parent){
       if(b.src)inner+='<button class="pbtn" data-p="rname">📦 '+esc(b.src)+'</button><button class="pbtn" data-p="rmode">🔢</button>';
       else{
         inner+='<button class="pbtn" data-p="dec">−</button><span class="num">'+b.n+'</span><button class="pbtn" data-p="inc">＋</button>';
-        if(unlocks.vars)inner+='<button class="pbtn" data-p="rmode">📦</button>';
+        if(mgState||unlocks.vars)inner+='<button class="pbtn" data-p="rmode">📦</button>'; // challenges: everything unlocked
       }
     }
     if(b.t==="countLoop")inner+='<button class="pbtn" data-p="vname">'+esc(b.name)+'</button><span>1→</span><button class="pbtn" data-p="tdec">−</button><span class="num">'+b.to+'</span><button class="pbtn" data-p="tinc">＋</button>';
@@ -148,7 +148,7 @@ function renderList(list,parent){
         if(p==="dec")b.n=b.t==="changeVar"?Math.max(-99,b.n-1):Math.max(1,b.n-1);
         if(p==="cond"){
           const ci=CONDS.indexOf(b.cond);
-          if(ci===CONDS.length-1&&unlocks.vars)b.cond={var:"x",op:">",val:3};
+          if(ci===CONDS.length-1&&(mgState||unlocks.vars))b.cond={var:"x",op:">",val:3}; // challenges: compare variables freely
           else b.cond=CONDS[(ci+1)%CONDS.length];
         }
         if(p==="cvar")b.cond.var=promptName(b.cond.var);

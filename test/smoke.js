@@ -753,6 +753,24 @@ async function ev(expr) {
   check("solving a level auto-advances to the next", AD.advanced === true, adv);
   check("clearing the last level completes the pack", AD.packDone === true && AD.exited === true, adv);
 
+  console.log("▶ challenges unlock every block feature (ignore world unlocks)");
+  const varsFree = await ev(`(()=>{
+    mgEnter(PROJECTS[0]); unlocks.vars=false;   // low-level player: vars NOT unlocked in the world
+    const r=mgRobot;
+    r.program=[{t:'repeat',n:3,uid:101,body:[]},{t:'if',cond:CONDS[CONDS.length-1],uid:102,body:[],els:[]}];
+    selBlock=null; renderProgram();
+    const hasRmode = $('programEl').innerHTML.indexOf('data-p="rmode"')>=0; // repeat-by-variable toggle shown
+    const condBtn=[...document.querySelectorAll('#programEl .blk[data-uid="102"] .pbtn')].find(x=>x.dataset.p==='cond');
+    let clicked=false; if(condBtn){condBtn.click();clicked=true;} // cycle the if condition once past the last preset
+    const isCmp = typeof (byUid(r.program,102).cond)==='object'; // → variable comparison {var,op,val}
+    const out={hasRmode,clicked,isCmp};
+    mgExit(false);
+    return JSON.stringify(out);
+  })()`);
+  const VF = JSON.parse(varsFree);
+  check("challenge: repeat-by-variable available without the world unlock", VF.hasRmode === true, varsFree);
+  check("challenge: if can compare a variable without the world unlock", VF.clicked && VF.isCmp === true, varsFree);
+
   check("no uncaught exceptions during entire run", exceptions.length === 0, exceptions.join(" | "));
 
   console.log(`\n${passed} passed, ${failed} failed`);
