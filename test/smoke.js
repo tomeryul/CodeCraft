@@ -465,6 +465,44 @@ async function ev(expr) {
   check("community challenge loads its pre-placed bricks", CC.hasInitial===3 && CC.seeded===3, cc);
   check("community sort goal derives ascending order", CC.goal===JSON.stringify([[0,1,1],[1,1,2],[2,1,3]]) && CC.em==='🔢', cc);
 
+  console.log("▶ Paint mode: per-cell target numbers (place the right block on the right tile)");
+  const paintNum = await ev(`(()=>{
+    mgEnterCreator();
+    const p=mgState.proj; mgState.paintMode='paint'; p.cells=[];
+    // mirror the real hud paint handler: smart toggle with the selected number
+    const paint=(x,y,n)=>{ mgState.brickNum=n;
+      const i=p.cells.findIndex(c=>c[0]===x&&c[1]===y);
+      if(i>=0){ const cur=p.cells[i].length>2?p.cells[i][2]:null;
+        if(cur===n)p.cells.splice(i,1); else p.cells[i]=n!=null?[x,y,n]:[x,y]; }
+      else p.cells.push(n!=null?[x,y,n]:[x,y]); };
+    paint(0,0,2); paint(1,0,1); paint(2,0,null);   // two numbered targets + one plain
+    const goal=JSON.stringify(mgSortGoalOrder(p));
+    const isNum=mgHasNumbers(p);
+    paint(0,0,5); const relabeled=p.cells.find(c=>c[0]===0&&c[1]===0)[2]===5;  // re-tap → relabel
+    paint(0,0,2);                                    // set it back to 2
+    paint(2,0,null); const removed=!p.cells.some(c=>c[0]===2&&c[1]===0);       // re-tap same → remove
+    paint(2,0,null);                                 // re-add the plain target
+    // --- win checks ---
+    const rb=mgState.robot;
+    const put=(x,y,n)=>{ rb.bricks.add(x+'_'+y); if(n!=null)rb.brickNo[x+'_'+y]=n; };
+    const reset=()=>{ rb.bricks=new Set(); rb.brickNo={}; mgState.solved=false; };
+    reset(); put(0,0,2); put(1,0,1); put(2,0,7); mgFinish(); const winOk=mgState.solved===true;      // plain tile: any block
+    reset(); put(0,0,9); put(1,0,1); put(2,0,7); mgFinish(); const wrongFails=mgState.solved===false; // wrong number
+    reset(); put(0,0,2); put(1,0,1); mgFinish(); const missFails=mgState.solved===false;              // plain tile empty
+    reset(); put(0,0,2); put(1,0,1); put(2,0,7); put(3,3,4); mgFinish(); const strayFails=mgState.solved===false; // off-plan brick
+    mgExit(false); document.getElementById('editor').classList.remove('open','max');
+    return JSON.stringify({goal,isNum,relabeled,removed,winOk,wrongFails,missFails,strayFails});
+  })()`);
+  const PN = JSON.parse(paintNum);
+  check("Paint numbered targets → explicit per-cell goal", PN.goal===JSON.stringify([[0,0,2],[1,0,1]]), paintNum);
+  check("numbered paint targets count as a numbers challenge", PN.isNum===true, paintNum);
+  check("re-tapping a target with a new number relabels it", PN.relabeled===true, paintNum);
+  check("re-tapping a target with the same setting removes it", PN.removed===true, paintNum);
+  check("correct numbers + filled plain tiles wins", PN.winOk===true, paintNum);
+  check("a wrong number on a numbered tile fails", PN.wrongFails===true, paintNum);
+  check("an empty (unfilled) target tile fails", PN.missFails===true, paintNum);
+  check("a brick landing off the plan fails", PN.strayFails===true, paintNum);
+
   console.log("▶ publish payload includes pre-placed bricks");
   const pub = await ev(`(()=>{
     mgEnterCreator();

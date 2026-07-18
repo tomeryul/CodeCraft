@@ -76,8 +76,16 @@ $("mgCanvas").addEventListener("pointerdown",e=>{
     else p.initial.push(mgState.brickNum!=null?[x,y,mgState.brickNum]:[x,y]);
     mgSeed(mgState.robot,p); // re-seed so the new bricks render immediately
   }else{
+    // paint a target tile. With a number selected it becomes a numbered target
+    // ("→n" — that exact block must land here); with "—" it's a plain target
+    // (any block fits). Tapping the same tile with the same setting removes it;
+    // tapping with a different number re-labels it.
     const i=p.cells.findIndex(c=>c[0]===x&&c[1]===y);
-    if(i>=0)p.cells.splice(i,1);else p.cells.push([x,y]);
+    if(i>=0){
+      const curN=p.cells[i].length>2?p.cells[i][2]:null;
+      if(curN===mgState.brickNum)p.cells.splice(i,1);
+      else p.cells[i]=mgState.brickNum!=null?[x,y,mgState.brickNum]:[x,y];
+    }else p.cells.push(mgState.brickNum!=null?[x,y,mgState.brickNum]:[x,y]);
   }
   mgState.solved=false; // design changed — must re-prove (re-locks Save/Publish)
   sfx(500,.03);mgDraw();mgCreatorUI();

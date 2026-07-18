@@ -123,7 +123,7 @@ function renderAuthBox(){
 }
 const CC_ALLOWED=["move","turnL","turnR","build","repeat","countLoop"];
 function ccToProj(row){
-  const initial=row.initial||[], sort=initial.some(c=>c.length>2&&c[2]!=null);
+  const initial=row.initial||[], sort=initial.some(c=>c.length>2&&c[2]!=null)||(row.cells||[]).some(c=>c.length>2&&c[2]!=null);
   return {id:"cc_"+row.id,community:row.id,em:sort?"🔢":"🌍",name:row.name,diff:row.diff||2,coins:60,xp:30,
     maxBlocks:row.max_blocks,gw:row.gw,gh:row.gh,
     desc:"Community challenge by "+row.author_name+(sort?" — sort the numbered blocks into order":" — paint the whole blueprint")+" within "+row.max_blocks+" blocks!",
@@ -147,7 +147,7 @@ async function loadCommunity(){
       const div=document.createElement("div");div.className="quest proj";
       const solved=!!player.projects["cc_"+row.id];
       const multi=!!(row.stages&&row.stages.length);
-      const sortC=(row.initial||[]).some(c=>c.length>2&&c[2]!=null);
+      const sortC=(row.initial||[]).some(c=>c.length>2&&c[2]!=null)||(row.cells||[]).some(c=>c.length>2&&c[2]!=null);
       const em=multi?"🎬":(sortC?"🔢":"🌍");
       const mine=!!(myUid&&row.author===myUid);
       const stars="⭐".repeat(row.diff||2);
@@ -479,13 +479,18 @@ function mgSeed(rs,proj){
   rs.trees=new Set((proj.trees||[]).map(c=>c[0]+"_"+c[1]));
   rs.items=new Set((proj.items||[]).map(c=>c[0]+"_"+c[1]));
 }
-// does this project use numbered bricks (→ it's a sorting challenge)?
-function mgHasNumbers(proj){return (proj.initial||[]).some(c=>c.length>2&&c[2]!=null);}
-// the win target: an explicit goalOrder, or (for numbered challenges) derived as
-// "the blueprint cells, row-major, must hold the brick numbers in ascending order".
+// does this project use numbered bricks / numbered target cells (→ numbers matter)?
+function mgHasNumbers(proj){return (proj.initial||[]).some(c=>c.length>2&&c[2]!=null)||(proj.cells||[]).some(c=>c.length>2&&c[2]!=null);}
+// the win target: an explicit goalOrder, or the Paint-mode per-cell target numbers,
+// or (for pre-placed numbered bricks) derived as "the blueprint cells, row-major,
+// must hold the brick numbers in ascending order".
 function mgSortGoalOrder(proj){
   if(proj.goalOrder)return proj.goalOrder;
-  if(!mgHasNumbers(proj))return null;
+  // Paint mode: the author tapped cells while a number was selected, so each of
+  // those cells must hold that exact brick number.
+  const explicit=(proj.cells||[]).filter(c=>c.length>2&&c[2]!=null).map(c=>[c[0],c[1],c[2]]);
+  if(explicit.length)return explicit;
+  if(!(proj.initial||[]).some(c=>c.length>2&&c[2]!=null))return null;
   const cells=proj.cells.slice().sort((a,b)=>a[1]-b[1]||a[0]-b[0]);
   const nums=proj.initial.filter(c=>c.length>2&&c[2]!=null).map(c=>c[2]).sort((a,b)=>a-b);
   const n=Math.min(cells.length,nums.length),g=[];
@@ -658,6 +663,20 @@ function mgFinish(){
     toast(gt==="reach"?"🚩 Not on the flag yet — guide the robot onto it, then run again!":
       gt==="chop"?"🌳 Trees still standing — make sure the robot chops every one!":
       "💎 Gems left behind — collect them all!");
+    sfx(220,.12);return;
+  }
+  // Paint mode with per-cell target numbers: numbered cells must hold that exact
+  // number, plain target cells just need a brick, and nothing may land off-plan.
+  const numCells=(st.proj.cells||[]).filter(c=>c.length>2&&c[2]!=null);
+  if(numCells.length){
+    const bp2=new Set(st.proj.cells.map(c=>c[0]+"_"+c[1]));
+    const stray=[...st.robot.bricks].some(k2=>!bp2.has(k2));
+    const numOk=numCells.every(c=>st.robot.brickNo[c[0]+"_"+c[1]]===c[2]);
+    const filled=st.proj.cells.every(c=>st.robot.bricks.has(c[0]+"_"+c[1]));
+    if(!stray&&numOk&&filled){mgSuccess();return;}
+    if(stray)toast("🚧 A brick landed outside the plan — check your path!");
+    else if(!numOk)toast('🔢 Match every "→n" target — each numbered tile needs that exact block!');
+    else toast("🧱 Almost! Fill every target tile, then run again!");
     sfx(220,.12);return;
   }
   // sorting-style goal: each target cell must hold its required number
