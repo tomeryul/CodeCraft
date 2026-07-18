@@ -157,8 +157,35 @@ function mgEnterCreator(){
   mgState.creator=true;mgState.solved=false;mgState.paintMode="paint";mgState.brickNum=1;
   mgState.stages=[];        // banked levels for a multi-level pack (empty = single challenge)
   mgState.editIndex=null;   // when re-editing a banked level, the slot to put it back
+  mgState.editingId=null;   // when editing an already-saved My Challenges entry, its id (→ Save updates in place)
   $("mgCreatorBar").classList.add("on");
   mgCreatorUI();
+}
+// open the creator loaded with an already-saved My Challenges entry so it can be
+// changed and re-saved in place (single challenge OR a multi-level pack).
+function mgEditMyChallenge(entry){
+  mgEnterCreator();
+  const p=mgState.proj;
+  p.name=entry.name; p.diff=entry.diff||1;
+  mgState.editingId=entry.id;
+  if(entry.pack){
+    // load its levels into the strip; the canvas starts empty (tweak levels via ✏️, or ➕ add more)
+    mgState.stages=JSON.parse(JSON.stringify(entry.stages||[]));
+    p.cells=[]; p.initial=[]; p.start={x:0,y:0,dir:1};
+    mgState.robot={x:0,y:0,dir:1}; mgSeed(mgState.robot,p);
+  }else{
+    p.gw=entry.gw||8; p.gh=entry.gh||6; p.maxBlocks=entry.maxBlocks||12;
+    p.allowed=entry.allowed||CREATOR_BLOCKS;
+    p.cells=JSON.parse(JSON.stringify(entry.cells||[]));
+    p.initial=JSON.parse(JSON.stringify(entry.initial||[]));
+    p.start=JSON.parse(JSON.stringify(entry.start||{x:0,y:0,dir:1}));
+    mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir}; mgSeed(mgState.robot,p);
+  }
+  mgState.solved=false; // must re-prove after any change
+  if(mgRobot)mgRobot.program=[];
+  renderPalette();renderProgram();renderPy();updateUndoBtns();mgUpdateCount();
+  mgCreatorUI(); mgDraw();
+  toast("✏️ Editing “"+esc(entry.name)+"” — change it, prove it ▶, then 💾 Save to update.");
 }
 function mgSetBtn(id,on){const b=$(id);if(!b)return;b.style.opacity=on?"":".4";b.classList.toggle("locked",!on);}
 function mgCreatorUI(){
@@ -302,6 +329,17 @@ function saveMyChallenge(){
   if(curHas&&!mgState.solved){toast("▶ First prove it's solvable — write a program and run it, then 💾 Save opens up!");sfx(200,.06);return;}
   if(!curHas&&!banked.length){toast("🖌️ Design a level and solve it first, then Save it!");return;}
   player.myChallenges=player.myChallenges||[];
+  const editId=mgState.editingId||null;
+  // save a fresh entry, or replace the one being edited (keeping its id + position)
+  const commit=(entry,doneMsg)=>{
+    if(editId){
+      entry.id=editId;
+      const i=player.myChallenges.findIndex(x=>x.id===editId);
+      if(i>=0)player.myChallenges[i]=entry; else player.myChallenges.push(entry);
+    }else player.myChallenges.push(entry);
+    saveNow();
+    toast((editId?"✅ Updated ":doneMsg)); sfx(760,.06);
+  };
   // multi-level pack: one or more banked levels (+ the current one if it has content)
   if(banked.length){
     const stages=curHas?banked.concat([snapshotStage(p)]):banked.slice();
@@ -309,8 +347,8 @@ function saveMyChallenge(){
     const pack=JSON.parse(JSON.stringify({
       id:"my_"+Date.now(), mine:true, pack:true, em:"🎬", name:p.name, diff,
       stages, desc:stages.length+" levels · "+["","Easy","Medium","Hard"][diff]+" — your multi-level minigame!"}));
-    player.myChallenges.push(pack); saveNow();
-    toast("🎬 Saved “"+p.name+"” — "+stages.length+" levels!"); sfx(760,.06);sfx(1040,.06,.08);
+    commit(pack,"🎬 Saved “"+p.name+"” — "+stages.length+" levels!");
+    sfx(1040,.06,.08);
     return;
   }
   // single challenge — proven solvable above
@@ -320,10 +358,7 @@ function saveMyChallenge(){
     coins:0, xp:0, maxBlocks:p.maxBlocks, gw:p.gw, gh:p.gh,
     allowed:p.allowed, start:p.start, cells:p.cells, initial:p.initial||[],
     desc:(sort?"Sort the numbered blocks into order ":"Fill the blueprint ")+"— your custom challenge!"}));
-  player.myChallenges.push(copy);
-  saveNow();
-  toast("💾 Saved to “My Challenges”!");
-  sfx(760,.06);
+  commit(copy,"💾 Saved to “My Challenges”!");
 }
 // ---- play a multi-level pack: run its levels in sequence (like the Academy) ----
 function packEnter(pack,i){
@@ -712,9 +747,11 @@ function renderProjects(){
       div.innerHTML='<div class="qt"><span>'+p.em+' <b>'+esc(p.name)+'</b> '+stars+'</span>'+badge+'</div><small class="pdesc">'+esc(p.desc||"")+'</small>';
       const play=document.createElement("button");play.textContent=p.pack?"🎬 Play levels":"🏗️ Play";
       play.addEventListener("click",()=>p.pack?packEnter(p,0):mgEnter(p));
+      const edit=document.createElement("button");edit.className="authbtn";edit.textContent="✏️ Edit";edit.style.marginLeft="6px";
+      edit.addEventListener("click",()=>{$("projects").classList.remove("open");mgEditMyChallenge(p);});
       const del=document.createElement("button");del.className="authbtn";del.textContent="🗑";del.style.marginLeft="6px";
       del.addEventListener("click",()=>{if(!confirm("Delete “"+p.name+"”?"))return;player.myChallenges=player.myChallenges.filter(x=>x!==p);saveNow();renderProjects();});
-      div.appendChild(play);div.appendChild(del);el.appendChild(div);
+      div.appendChild(play);div.appendChild(edit);div.appendChild(del);el.appendChild(div);
     }
   }
   // create-your-own + community section

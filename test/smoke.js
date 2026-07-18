@@ -791,6 +791,37 @@ async function ev(expr) {
   check("Updating re-inserts the level in its slot", G.backTo2 === true, gate);
   check("Delete removes a banked level", G.afterDelete === 1, gate);
 
+  console.log("▶ creator: edit an already-saved My Challenge in place");
+  const editSaved = await ev(`(()=>{
+    const out={}; window.confirm=()=>true;
+    player.myChallenges=[
+      {id:'my_A',mine:true,em:'🧩',name:'Alpha',diff:1,maxBlocks:12,gw:4,gh:4,allowed:CHALLENGE_BLOCKS,start:{x:0,y:0,dir:1},cells:[[0,0]],initial:[],desc:'x'},
+      {id:'my_B',mine:true,pack:true,em:'🎬',name:'Beta',diff:2,stages:[
+        {em:'🧩',name:'Beta',diff:2,maxBlocks:12,gw:4,gh:4,allowed:CHALLENGE_BLOCKS,start:{x:0,y:0,dir:1},cells:[[0,0]],initial:[]},
+        {em:'🧩',name:'Beta',diff:2,maxBlocks:12,gw:4,gh:4,allowed:CHALLENGE_BLOCKS,start:{x:0,y:0,dir:1},cells:[[1,1]],initial:[]}
+      ],desc:'2 levels'}
+    ];
+    mgEditMyChallenge(player.myChallenges[0]);           // edit the single challenge
+    out.editingId=mgState.editingId; out.loadedCells=JSON.stringify(mgState.proj.cells);
+    mgState.proj.cells=[[0,0],[1,0]]; mgState.solved=true; // change + prove
+    saveMyChallenge();
+    out.countAfterSingle=player.myChallenges.length;
+    const a=player.myChallenges.find(x=>x.id==='my_A'); out.singleUpdated=!!(a&&a.cells.length===2);
+    mgEditMyChallenge(player.myChallenges.find(x=>x.id==='my_B')); // edit the pack
+    out.packStages=mgState.stages.length; out.packEditingId=mgState.editingId;
+    mgDeleteStage(1);                                     // remove one level, then save
+    saveMyChallenge();
+    out.countAfterPack=player.myChallenges.length;
+    const bpk=player.myChallenges.find(x=>x.id==='my_B'); out.packUpdated=!!(bpk&&bpk.pack&&bpk.stages.length===1);
+    mgState=null; mgRobot=null;
+    return JSON.stringify(out);
+  })()`);
+  const ES = JSON.parse(editSaved);
+  check("Edit loads a saved single challenge into the creator", ES.editingId === 'my_A' && ES.loadedCells === '[[0,0]]', editSaved);
+  check("saving an edit updates the entry in place (no duplicate)", ES.countAfterSingle === 2 && ES.singleUpdated === true, editSaved);
+  check("Edit loads a saved pack's levels into the strip", ES.packStages === 2 && ES.packEditingId === 'my_B', editSaved);
+  check("editing a pack updates it in place", ES.countAfterPack === 2 && ES.packUpdated === true, editSaved);
+
   console.log("▶ challenges unlock every block feature (ignore world unlocks)");
   const varsFree = await ev(`(()=>{
     mgEnter(PROJECTS[0]); unlocks.vars=false;   // low-level player: vars NOT unlocked in the world
