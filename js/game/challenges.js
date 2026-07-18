@@ -152,27 +152,85 @@ async function loadCommunity(){
 }
 function mgEnterCreator(){
   mgEnter({id:"custom",em:"✏️",name:"My Challenge",diff:1,coins:0,xp:0,maxBlocks:12,gw:8,gh:6,
-    desc:"Design mode: 🖌️ Paint the target tiles, 🤖 set the robot start, 🔢 Bricks to pre-place blocks (pick a number, or “—” for a plain block) — for a sorting game place numbered blocks + paint where they must end up (they'll need to finish in order). Add ➕ levels to build a multi-level minigame. Solve it, then 💾 Save (or 🌍 Publish).",
+    desc:"Design mode: 🖌️ Paint the target tiles, 🤖 set the robot start, 🔢 Bricks to pre-place blocks. Then write a program and press ▶ to PROVE the level is solvable — only then do 💾 Save / ➕ Add level / 🌍 Publish open up. Build several levels for a multi-level minigame.",
     allowed:CREATOR_BLOCKS,start:{x:0,y:0,dir:1},cells:[],initial:[]});
   mgState.creator=true;mgState.solved=false;mgState.paintMode="paint";mgState.brickNum=1;
-  mgState.stages=[]; // banked levels for a multi-level pack (empty = single challenge)
+  mgState.stages=[];        // banked levels for a multi-level pack (empty = single challenge)
+  mgState.editIndex=null;   // when re-editing a banked level, the slot to put it back
   $("mgCreatorBar").classList.add("on");
   mgCreatorUI();
 }
+function mgSetBtn(id,on){const b=$(id);if(!b)return;b.style.opacity=on?"":".4";b.classList.toggle("locked",!on);}
 function mgCreatorUI(){
   if(!mgState||!mgState.creator)return;
   $("mgModePaint").classList.toggle("on",mgState.paintMode==="paint");
   $("mgModeBot").classList.toggle("on",mgState.paintMode==="bot");
   $("mgModeBrick").classList.toggle("on",mgState.paintMode==="brick");
-  $("mgBudget").textContent=mgState.proj.maxBlocks;
-  $("mgW").textContent=mgState.proj.gw;
-  $("mgH").textContent=mgState.proj.gh;
+  const p=mgState.proj;
+  $("mgBudget").textContent=p.maxBlocks;
+  $("mgW").textContent=p.gw;
+  $("mgH").textContent=p.gh;
   $("mgBrickN").textContent=mgState.brickNum==null?"—":mgState.brickNum;
   const dl=["","⭐ Easy","⭐⭐ Medium","⭐⭐⭐ Hard"];
-  if($("mgDiff"))$("mgDiff").textContent=dl[mgState.proj.diff||1];
-  if($("mgStageInfo"))$("mgStageInfo").textContent=((mgState.stages&&mgState.stages.length)||0)+1;
-  const banked=(mgState.stages&&mgState.stages.length)||0;
-  $("mgTitle").textContent="✏️ "+mgState.proj.name+(banked?" · 🎬"+(banked+1):"");
+  if($("mgDiff"))$("mgDiff").textContent=dl[p.diff||1];
+  const banked=(mgState.stages&&mgState.stages.length)||0, editing=mgState.editIndex!=null;
+  if($("mgStageInfo"))$("mgStageInfo").textContent=editing?("✏️"+(mgState.editIndex+1)):(banked+1);
+  if($("mgAddStage"))$("mgAddStage").textContent=editing?"➕ Update level":"➕ Add level";
+  $("mgTitle").textContent="✏️ "+p.name+(banked?" · 🎬"+(banked+(editing?0:1)):"");
+  // ---- gate Save / Add / Publish behind proving the level solvable ----
+  const curHas=p.cells.length||(p.initial&&p.initial.length);
+  const solved=!!mgState.solved;
+  const canSaveCur=curHas&&solved;               // current design proven
+  mgSetBtn("mgAddStage",canSaveCur);             // must prove before banking
+  mgSetBtn("mgSave",canSaveCur||(banked>0&&!curHas)); // proven current, or already-proven banked levels
+  // Publish is for a single (non-pack) proven challenge with painted targets
+  const canPublish=solved&&curHas&&banked===0&&!editing;
+  const pub=$("mgPublish"); if(pub)pub.style.display=canPublish?"":"none";
+  renderMgLevels();
+}
+// the strip of banked levels with ✏️ edit / 🗑 delete
+function renderMgLevels(){
+  const el=$("mgLevels"); if(!el)return;
+  const st=mgState.stages||[];
+  if(!st.length){el.style.display="none";el.innerHTML="";return;}
+  el.style.display="flex";
+  el.innerHTML='<span class="clab">🎬 Levels</span>';
+  st.forEach((s,i)=>{
+    const chip=document.createElement("span");
+    chip.className="lvchip"+(mgState.editIndex===i?" ed":"");
+    chip.innerHTML=(s.em||"🧩")+' <b>'+(i+1)+'</b> '+
+      '<button data-e="'+i+'" title="Edit level">✏️</button><button data-d="'+i+'" title="Delete level">🗑</button>';
+    el.appendChild(chip);
+  });
+  el.querySelectorAll("[data-e]").forEach(b=>b.addEventListener("click",()=>mgEditStage(+b.dataset.e)));
+  el.querySelectorAll("[data-d]").forEach(b=>b.addEventListener("click",()=>mgDeleteStage(+b.dataset.d)));
+}
+// pull a banked level back into the editor to tweak it (remembering its slot)
+function mgEditStage(i){
+  if(!mgState||!mgState.creator)return;
+  const st=mgState.stages||[]; if(i<0||i>=st.length)return;
+  const s=st[i], p=mgState.proj;
+  p.cells=JSON.parse(JSON.stringify(s.cells||[]));
+  p.initial=JSON.parse(JSON.stringify(s.initial||[]));
+  p.start=JSON.parse(JSON.stringify(s.start||{x:0,y:0,dir:1}));
+  p.gw=s.gw;p.gh=s.gh;p.maxBlocks=s.maxBlocks;if(s.diff)p.diff=s.diff;
+  st.splice(i,1);            // lift it out; mgAddStage re-inserts at editIndex
+  mgState.editIndex=i;
+  mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir};mgSeed(mgState.robot,p);
+  mgState.solved=false;
+  if(mgRobot)mgRobot.program=[];
+  renderPalette();renderProgram();renderPy();updateUndoBtns();mgUpdateCount();
+  toast("✏️ Editing Level "+(i+1)+" — tweak it, run ▶ to prove it, then ➕ Update level.");
+  sfx(520,.04);mgCreatorUI();mgDraw();
+}
+function mgDeleteStage(i){
+  if(!mgState||!mgState.creator)return;
+  const st=mgState.stages||[]; if(i<0||i>=st.length)return;
+  if(!confirm("Delete Level "+(i+1)+"?"))return;
+  st.splice(i,1);
+  if(mgState.editIndex!=null){ if(i===mgState.editIndex)mgState.editIndex=null; else if(i<mgState.editIndex)mgState.editIndex--; }
+  sfx(300,.05);toast("🗑 Level removed.");
+  mgCreatorUI();mgDraw();
 }
 // a self-contained snapshot of the current creator design (one level of a pack)
 function snapshotStage(p){
@@ -187,13 +245,23 @@ function mgAddStage(){
   if(!mgState||!mgState.creator)return;
   const p=mgState.proj;
   if(!p.cells.length&&!(p.initial&&p.initial.length)){toast("🖌️ Design this level first — paint tiles or 🔢 place blocks.");sfx(200,.06);return;}
+  if(!mgState.solved){toast("▶ First prove this level is solvable — write a program and run it, then it can be added!");sfx(200,.06);return;}
   mgState.stages=mgState.stages||[];
-  mgState.stages.push(snapshotStage(p));
+  if(mgState.editIndex!=null){ // updating a level we pulled out to edit — put it back in its slot
+    const idx=Math.min(mgState.editIndex,mgState.stages.length);
+    mgState.stages.splice(idx,0,snapshotStage(p));
+    mgState.editIndex=null;
+    toast("✅ Level "+(idx+1)+" updated!");
+  }else{
+    mgState.stages.push(snapshotStage(p));
+    toast("🎬 Level "+mgState.stages.length+" banked — design the next, then 💾 Save the pack!");
+  }
   // reset the canvas for the next level (keep size / budget / difficulty / name)
   p.cells=[]; p.initial=[]; p.start={x:0,y:0,dir:1};
   mgState.robot={x:0,y:0,dir:1}; mgSeed(mgState.robot,p);
   mgState.solved=false;
-  toast("🎬 Level "+mgState.stages.length+" banked — design the next, then 💾 Save the pack!");
+  if(mgRobot)mgRobot.program=[];
+  renderProgram();mgUpdateCount();
   sfx(680,.05);sfx(880,.05,.08);
   mgCreatorUI(); mgDraw();
 }
@@ -228,6 +296,11 @@ function saveMyChallenge(){
   const p=mgState.proj, sort=mgHasNumbers(p), diff=p.diff||1;
   const curHas=p.cells.length||(p.initial&&p.initial.length);
   const banked=mgState.stages||[];
+  // Save unlocks only once a level is proven solvable: the current design must be
+  // solved to be saved/included; a pack of already-proven banked levels can save
+  // even with the current canvas empty.
+  if(curHas&&!mgState.solved){toast("▶ First prove it's solvable — write a program and run it, then 💾 Save opens up!");sfx(200,.06);return;}
+  if(!curHas&&!banked.length){toast("🖌️ Design a level and solve it first, then Save it!");return;}
   player.myChallenges=player.myChallenges||[];
   // multi-level pack: one or more banked levels (+ the current one if it has content)
   if(banked.length){
@@ -240,7 +313,7 @@ function saveMyChallenge(){
     toast("🎬 Saved “"+p.name+"” — "+stages.length+" levels!"); sfx(760,.06);sfx(1040,.06,.08);
     return;
   }
-  // single challenge (draft) — needs a goal to aim at, no need to solve it first
+  // single challenge — proven solvable above
   if(!curHas){toast("🖌️ Paint target tiles or 🔢 place some blocks first!");return;}
   const copy=JSON.parse(JSON.stringify({
     id:"my_"+Date.now(), mine:true, em:sort?"🔢":"🧩", name:p.name, diff,
@@ -489,11 +562,13 @@ function mgSuccess(){
   if(proj.tut){academySolved(proj);return;} // Academy stage: record + advance to the next lesson
   if(mgState.packCtx){packStageSolved();return;} // multi-level pack: advance to the next level
   if(mgState.creator){
-    // creator proved their challenge is solvable
+    // creator proved their level is solvable — this UNLOCKS Save / Add level /
+    // Publish. We never auto-publish; the player chooses what to do next.
     mgState.solved=true;
-    if(sbUser&&sbReady()){publishChallenge();return;}
-    toast(sbReady()?"✅ It works! Log in (account box in Projects) then press 🌍 Publish!":"✅ It works! Publishing opens once online mode is connected.");
     sfx(880,.1);confetti();
+    const banked=(mgState.stages&&mgState.stages.length)||0;
+    bigToast("✅ Solvable! Now 💾 Save"+(mgState.editIndex!=null?" or ➕ Update level":" or ➕ Add level")+(sbReady()&&banked===0?" or 🌍 Publish":"")+".");
+    mgCreatorUI(); // refresh button states (Save / Add / Publish now available)
     return;
   }
   if(proj.mine){ // solving your own saved challenge — celebrate, no farmable reward

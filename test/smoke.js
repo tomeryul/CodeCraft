@@ -438,7 +438,7 @@ async function ev(expr) {
       mgSeed(mgState.robot,p); };
     place(0,3,2); place(1,3,3); place(2,3,1);
     p.cells=[[0,3],[1,3],[2,3]];
-    player.myChallenges=[]; mgState.solved=false; saveMyChallenge(); // draft save, unsolved
+    player.myChallenges=[]; mgState.solved=true; saveMyChallenge(); // proven solvable, then saved
     mgExit(false); document.getElementById('editor').classList.remove('open','max');
     applySave(JSON.parse(JSON.stringify(buildSave()))); // true serialize round-trip (localStorage/cloud)
     const sp=player.myChallenges[0];
@@ -718,7 +718,7 @@ async function ev(expr) {
     const out={};
     mgEnterCreator();
     const setLevel=()=>{ const p=mgState.proj; p.gw=4;p.gh=4; p.cells=[[0,0]]; p.start={x:0,y:0,dir:1};
-      mgState.robot.x=0;mgState.robot.y=0;mgState.robot.dir=1; mgSeed(mgState.robot,p); mgState.solved=false; };
+      mgState.robot.x=0;mgState.robot.y=0;mgState.robot.dir=1; mgSeed(mgState.robot,p); mgState.solved=true; }; // proven solvable
     mgState.proj.diff=2;            // Medium
     setLevel(); mgAddStage();       // bank level 1
     out.banked=mgState.stages.length;
@@ -752,6 +752,44 @@ async function ev(expr) {
   const AD = JSON.parse(adv);
   check("solving a level auto-advances to the next", AD.advanced === true, adv);
   check("clearing the last level completes the pack", AD.packDone === true && AD.exited === true, adv);
+
+  console.log("▶ creator: Save/Publish gated behind proving solvable + edit/delete levels");
+  const gate = await ev(`(()=>{
+    const out={}; window.confirm=()=>true;
+    mgEnterCreator();
+    const p=mgState.proj; p.gw=4;p.gh=4;
+    p.cells=[[0,0]]; p.start={x:0,y:0,dir:1}; mgState.robot.x=0;mgState.robot.y=0;mgState.robot.dir=1; mgSeed(mgState.robot,p);
+    mgState.solved=false; mgState.stages=[]; player.myChallenges=[];
+    saveMyChallenge();                       // blocked — not proven
+    out.blockedSave = player.myChallenges.length===0;
+    mgAddStage();                            // blocked — not proven
+    out.blockedAdd = mgState.stages.length===0;
+    mgCreatorUI();
+    out.saveLocked = document.getElementById('mgSave').classList.contains('locked');
+    out.pubHidden = document.getElementById('mgPublish').style.display==='none';
+    mgState.solved=true; mgCreatorUI();      // prove it
+    out.saveUnlocked = !document.getElementById('mgSave').classList.contains('locked');
+    out.pubShown = document.getElementById('mgPublish').style.display!=='none';
+    mgAddStage();                            // level 1 banked
+    p.cells=[[1,1]]; mgSeed(mgState.robot,p); mgState.solved=true; mgAddStage(); // level 2
+    out.banked2 = mgState.stages.length;
+    mgEditStage(0);                          // pull level 1 back out to edit
+    out.editing = mgState.editIndex===0 && mgState.stages.length===1;
+    out.editCells = JSON.stringify(p.cells);
+    mgState.solved=true; mgAddStage();       // re-insert at its slot
+    out.backTo2 = mgState.stages.length===2 && mgState.editIndex===null;
+    mgDeleteStage(1);                        // delete level 2
+    out.afterDelete = mgState.stages.length;
+    mgExit(false); document.getElementById('editor').classList.remove('open','max');
+    return JSON.stringify(out);
+  })()`);
+  const G = JSON.parse(gate);
+  check("Save/Add blocked until the level is proven solvable", G.blockedSave === true && G.blockedAdd === true, gate);
+  check("Save locked & Publish hidden before solving", G.saveLocked === true && G.pubHidden === true, gate);
+  check("Save unlocks & Publish appears after solving", G.saveUnlocked === true && G.pubShown === true, gate);
+  check("Edit pulls a banked level back into the editor", G.editing === true && G.editCells === '[[0,0]]', gate);
+  check("Updating re-inserts the level in its slot", G.backTo2 === true, gate);
+  check("Delete removes a banked level", G.afterDelete === 1, gate);
 
   console.log("▶ challenges unlock every block feature (ignore world unlocks)");
   const varsFree = await ev(`(()=>{

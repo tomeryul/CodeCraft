@@ -78,8 +78,8 @@ $("mgCanvas").addEventListener("pointerdown",e=>{
     const i=p.cells.findIndex(c=>c[0]===x&&c[1]===y);
     if(i>=0)p.cells.splice(i,1);else p.cells.push([x,y]);
   }
-  mgState.solved=false; // design changed — must re-prove
-  sfx(500,.03);mgDraw();
+  mgState.solved=false; // design changed — must re-prove (re-locks Save/Publish)
+  sfx(500,.03);mgDraw();mgCreatorUI();
 });
 $("codeBtn").addEventListener("click",()=>{
   $("editor").classList.add("open");renderProgram();renderPy();updateUndoBtns();
