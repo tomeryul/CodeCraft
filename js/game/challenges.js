@@ -129,6 +129,11 @@ function ccToProj(row){
     desc:"Community challenge by "+row.author_name+(sort?" — sort the numbered blocks into order":" — paint the whole blueprint")+" within "+row.max_blocks+" blocks!",
     allowed:CHALLENGE_BLOCKS,start:{x:row.start_x,y:row.start_y,dir:row.start_dir},cells:row.cells,initial:initial};
 }
+// a multi-level community challenge → a playable pack (levels stored in row.stages)
+function ccToPack(row){
+  return {id:"cc_"+row.id, community:row.id, em:"🎬", name:row.name, diff:row.diff||2,
+    stages:JSON.parse(JSON.stringify(row.stages||[]))};
+}
 async function loadCommunity(){
   const el=$("ccList");if(!el)return;
   if(!sbReady()){el.innerHTML='<div class="authnote">🔌 Not connected yet.</div>';return;}
@@ -137,16 +142,28 @@ async function loadCommunity(){
     const rows=await sbRest("challenges?select=*&order=created_at.desc&limit=30",{method:"GET"});
     el.innerHTML="";
     if(!rows.length){el.innerHTML='<div class="authnote">No challenges yet — be the first to publish one! ✏️</div>';return;}
+    const myUid=(sbUser&&sbUser.uid)||null;
     for(const row of rows){
       const div=document.createElement("div");div.className="quest proj";
       const solved=!!player.projects["cc_"+row.id];
+      const multi=!!(row.stages&&row.stages.length);
       const sortC=(row.initial||[]).some(c=>c.length>2&&c[2]!=null);
-      div.innerHTML='<div class="qt"><span>'+(sortC?"🔢":"🌍")+' <b>'+esc(row.name)+'</b></span><span class="qr">🧩 '+row.max_blocks+' · ✅ '+row.solves+'</span></div>'+
-        '<small class="pdesc">by '+esc(row.author_name)+(solved?" — you solved this! 🏅":"")+'</small>';
+      const em=multi?"🎬":(sortC?"🔢":"🌍");
+      const mine=!!(myUid&&row.author===myUid);
+      const stars="⭐".repeat(row.diff||2);
+      div.innerHTML='<div class="qt"><span>'+em+' <b>'+esc(row.name)+'</b> '+stars+'</span>'+
+        '<span class="qr">'+(multi?"🎬 "+row.stages.length+" lv":"🧩 "+row.max_blocks)+' · ✅ '+row.solves+'</span></div>'+
+        '<small class="pdesc">by '+esc(row.author_name)+(mine?" (you)":"")+(solved?" — you solved this! 🏅":"")+'</small>';
       const b=document.createElement("button");
-      b.textContent=solved?"🏅 Solve again":"🌍 Try this challenge";
-      b.addEventListener("click",()=>mgEnter(ccToProj(row)));
-      div.appendChild(b);el.appendChild(div);
+      b.textContent=solved?"🏅 Play again":(multi?"🎬 Play levels":"🌍 Try this challenge");
+      b.addEventListener("click",()=> multi?packEnter(ccToPack(row),0):mgEnter(ccToProj(row)));
+      div.appendChild(b);
+      if(mine){ // authors can edit their own published challenge (add levels, tweak it)
+        const ed=document.createElement("button");ed.className="authbtn";ed.textContent="✏️ Edit";ed.style.marginLeft="6px";
+        ed.addEventListener("click",()=>{$("projects").classList.remove("open");mgEditCommunity(row);});
+        div.appendChild(ed);
+      }
+      el.appendChild(div);
     }
   }catch(e){el.innerHTML='<div class="authnote">⚠️ Could not load: '+esc(e.message)+'</div>';}
 }
@@ -158,8 +175,33 @@ function mgEnterCreator(){
   mgState.stages=[];        // banked levels for a multi-level pack (empty = single challenge)
   mgState.editIndex=null;   // when re-editing a banked level, the slot to put it back
   mgState.editingId=null;   // when editing an already-saved My Challenges entry, its id (→ Save updates in place)
+  mgState.publishId=null;   // when editing an already-published community challenge, its id (→ Publish PATCHes it)
   $("mgCreatorBar").classList.add("on");
   mgCreatorUI();
+}
+// open the creator loaded with a community challenge the player published, so they
+// can tweak it or add levels; Publish then UPDATES that row instead of inserting.
+function mgEditCommunity(row){
+  mgEnterCreator();
+  const p=mgState.proj;
+  p.name=row.name; p.diff=row.diff||2;
+  mgState.publishId=row.id;
+  const stages=(row.stages&&row.stages.length)?row.stages:null;
+  if(stages){ // already multi-level: load levels into the strip, canvas empty
+    mgState.stages=JSON.parse(JSON.stringify(stages));
+    p.cells=[]; p.initial=[]; p.start={x:0,y:0,dir:1};
+    mgState.robot={x:0,y:0,dir:1}; mgSeed(mgState.robot,p);
+  }else{ // single-level: load its blueprint onto the canvas (add ➕ levels to grow it)
+    p.gw=row.gw||8; p.gh=row.gh||6; p.maxBlocks=row.max_blocks||12; p.allowed=CREATOR_BLOCKS;
+    p.cells=JSON.parse(JSON.stringify(row.cells||[]));
+    p.initial=JSON.parse(JSON.stringify(row.initial||[]));
+    p.start={x:row.start_x||0,y:row.start_y||0,dir:row.start_dir==null?1:row.start_dir};
+    mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir}; mgSeed(mgState.robot,p);
+  }
+  mgState.solved=false; if(mgRobot)mgRobot.program=[];
+  renderPalette();renderProgram();renderPy();updateUndoBtns();mgUpdateCount();
+  mgCreatorUI(); mgDraw();
+  toast("✏️ Editing your published challenge — add ➕ levels or tweak it, prove ▶, then 🌍 Publish to update it.");
 }
 // open the creator loaded with an already-saved My Challenges entry so it can be
 // changed and re-saved in place (single challenge OR a multi-level pack).
@@ -210,9 +252,12 @@ function mgCreatorUI(){
   const canSaveCur=curHas&&solved;               // current design proven
   mgSetBtn("mgAddStage",canSaveCur);             // must prove before banking
   mgSetBtn("mgSave",canSaveCur||(banked>0&&!curHas)); // proven current, or already-proven banked levels
-  // Publish is for a single (non-pack) proven challenge with painted targets
-  const canPublish=solved&&curHas&&banked===0&&!editing;
-  const pub=$("mgPublish"); if(pub)pub.style.display=canPublish?"":"none";
+  // Publish (or Update) — available once there's proven content: a proven single
+  // level, or one or more banked levels (a multi-level challenge). Hidden only
+  // while a banked level is pulled out for editing.
+  const canPublish=(canSaveCur||banked>0)&&!editing;
+  const pub=$("mgPublish");
+  if(pub){pub.style.display=canPublish?"":"none"; pub.textContent=mgState.publishId?"🌍 Update":"🌍 Publish";}
   renderMgLevels();
 }
 // the strip of banked levels with ✏️ edit / 🗑 delete
@@ -304,14 +349,32 @@ function mgSetSize(dw,dh){
   mgState.solved=false;
   mgCreatorUI();mgDraw();
 }
+// publish (insert) a new community challenge, or UPDATE (PATCH) one the player is
+// editing. Supports multi-level challenges: extra levels ride along in `stages`
+// while the top-level columns mirror the FIRST level (so old clients still play it).
 async function publishChallenge(){
-  const p=mgState.proj;
+  const p=mgState.proj, diff=p.diff||2;
+  const banked=mgState.stages||[];
+  const curHas=p.cells.length||(p.initial&&p.initial.length);
+  // multi-level only when there are banked levels; a lone current design stays single
+  let stages=[];
+  if(banked.length)stages=(curHas&&mgState.solved)?banked.concat([snapshotStage(p)]):banked.slice();
+  const multi=stages.length>0;
+  const base=multi?stages[0]:{cells:p.cells,initial:p.initial||[],start:p.start,maxBlocks:p.maxBlocks,gw:p.gw,gh:p.gh};
+  const body={name:p.name,gw:base.gw,gh:base.gh,start_x:base.start.x,start_y:base.start.y,start_dir:base.start.dir,
+    cells:base.cells,initial:base.initial||[],max_blocks:base.maxBlocks,diff,stages:multi?stages:[],
+    author_name:(sbUser.email||"builder").split("@")[0].slice(0,20)};
   try{
-    await sbRest("challenges",{method:"POST",headers:Object.assign(sbHeaders(true),{Prefer:"return=minimal"}),
-      body:JSON.stringify({name:p.name,gw:p.gw,gh:p.gh,start_x:p.start.x,start_y:p.start.y,
-        start_dir:p.start.dir,cells:p.cells,initial:p.initial||[],max_blocks:p.maxBlocks,
-        author_name:(sbUser.email||"builder").split("@")[0].slice(0,20)})});
-    if(window.CC_EXTRAS)CC_EXTRAS.celebrate("🌍","PUBLISHED!",p.name+" is live!","Players everywhere can now try to solve your challenge!","Awesome! 🎉");
+    if(mgState.publishId){ // update the player's already-published challenge
+      await sbRest("challenges?id=eq."+encodeURIComponent(mgState.publishId),{method:"PATCH",
+        headers:Object.assign(sbHeaders(true),{Prefer:"return=minimal"}),
+        body:JSON.stringify(Object.assign({updated_at:new Date().toISOString()},body))});
+      if(window.CC_EXTRAS)CC_EXTRAS.celebrate("🌍","UPDATED!",p.name+" is updated!","Your changes are live for everyone who plays it!","Nice! 🎉");
+      else bigToast("🌍 Updated “"+p.name+"”!");
+    }else{
+      await sbRest("challenges",{method:"POST",headers:Object.assign(sbHeaders(true),{Prefer:"return=minimal"}),body:JSON.stringify(body)});
+      if(window.CC_EXTRAS)CC_EXTRAS.celebrate("🌍","PUBLISHED!",p.name+" is live!","Players everywhere can now try to solve your challenge!","Awesome! 🎉");
+    }
     mgExit(true);
   }catch(e){toast("⚠️ Publish failed: "+e.message);}
 }
@@ -365,7 +428,7 @@ function packEnter(pack,i){
   const stage=JSON.parse(JSON.stringify(pack.stages[i]));
   stage.id="pack_"+pack.id+"_"+i; // per-level program storage
   mgEnter(stage);
-  mgState.packCtx={packId:pack.id,i,total:pack.stages.length,name:pack.name,em:pack.em,stages:pack.stages};
+  mgState.packCtx={packId:pack.id,i,total:pack.stages.length,name:pack.name,em:pack.em,stages:pack.stages,community:pack.community||null};
   mgState.proj.name=pack.name+" — Level "+(i+1)+"/"+pack.stages.length;
   $("mgTitle").textContent=(pack.em||"🎬")+" "+mgState.proj.name;
 }
@@ -374,8 +437,12 @@ function packStageSolved(){
   confetti();sfx(760,.08);sfx(1040,.09,.09);
   if(next<c.total){
     bigToast("✅ Level "+(c.i+1)+" complete! Next: Level "+(next+1)+"/"+c.total);
-    setTimeout(()=>{ if(mgState)packEnter({id:c.packId,name:c.name,em:c.em,stages:c.stages},next); },700);
+    setTimeout(()=>{ if(mgState)packEnter({id:c.packId,name:c.name,em:c.em,stages:c.stages,community:c.community},next); },700);
   }else{
+    if(c.community&&!player.projects["cc_"+c.community]){ // first clear of a community pack: count the solve
+      player.projects["cc_"+c.community]=1;
+      sbRest("rpc/add_solve",{method:"POST",body:JSON.stringify({cid:c.community})}).catch(()=>{});
+    }
     if(!player.projects["pack_"+c.packId]){player.projects["pack_"+c.packId]=1;saveNow();}
     if(window.CC_EXTRAS)CC_EXTRAS.celebrate(c.em||"🎬","PACK COMPLETE!",c.name,"You cleared all "+c.total+" levels! 🎉","Awesome! 🎉");
     else bigToast("🎬 "+c.name+" complete — all "+c.total+" levels cleared!");

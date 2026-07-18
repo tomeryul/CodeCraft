@@ -482,6 +482,42 @@ async function ev(expr) {
   const PUB = JSON.parse(pub);
   check("publishChallenge sends the pre-placed bricks to the DB", PUB.initialN===3 && PUB.cellsN===3, pub);
 
+  console.log("▶ community: publish multi-level + edit/update a published challenge");
+  const comm = await ev(`(()=>{
+    const out={}, origRest=sbRest, origUser=sbUser;
+    sbUser={uid:'me',email:'k@x.com'};
+    let last=null;
+    sbRest=(path,opts)=>{ const m=(opts&&opts.method)||'GET'; if(m==='POST'||m==='PATCH')last={path,method:m,body:opts.body?JSON.parse(opts.body):null}; return Promise.resolve(null); };
+    mgEnterCreator();
+    const p=mgState.proj; p.gw=4;p.gh=4; p.diff=3;
+    p.cells=[[0,0]]; mgSeed(mgState.robot,p); mgState.solved=true; mgAddStage();  // level 1
+    p.cells=[[1,1]]; mgSeed(mgState.robot,p); mgState.solved=true; mgAddStage();  // level 2
+    return publishChallenge().then(()=>{
+      out.newMethod=last.method; out.newIsInsert=(last.path==='challenges');
+      out.newStages=(last.body.stages||[]).length; out.newDiff=last.body.diff;
+      out.newBaseCells=JSON.stringify(last.body.cells);
+      mgEditCommunity({id:'row9',name:'Alpha',diff:2,gw:4,gh:4,max_blocks:12,start_x:0,start_y:0,start_dir:1,cells:[[2,2]],initial:[],stages:[]});
+      out.publishId=mgState.publishId; out.loadedSingleCells=JSON.stringify(mgState.proj.cells);
+      mgState.solved=true;
+      return publishChallenge();
+    }).then(()=>{
+      out.updMethod=last.method; out.updIsPatch=(last.path.indexOf('challenges?id=eq.row9')===0);
+      mgEditCommunity({id:'row10',name:'Beta',diff:2,gw:4,gh:4,max_blocks:12,cells:[[0,0]],initial:[],stages:[
+        {em:'🧩',name:'Beta',cells:[[0,0]],start:{x:0,y:0,dir:1},gw:4,gh:4,maxBlocks:12,allowed:CHALLENGE_BLOCKS,initial:[]},
+        {em:'🧩',name:'Beta',cells:[[1,1]],start:{x:0,y:0,dir:1},gw:4,gh:4,maxBlocks:12,allowed:CHALLENGE_BLOCKS,initial:[]}
+      ]});
+      out.loadedPackStages=mgState.stages.length; out.packPublishId=mgState.publishId;
+      sbRest=origRest; sbUser=origUser; mgState=null; mgRobot=null;
+      return JSON.stringify(out);
+    });
+  })()`);
+  const COMM = JSON.parse(comm);
+  check("publishing a multi-level challenge sends its levels in stages", COMM.newIsInsert === true && COMM.newMethod === 'POST' && COMM.newStages === 2, comm);
+  check("multi-level publish keeps difficulty + first-level cells on top", COMM.newDiff === 3 && COMM.newBaseCells === '[[0,0]]', comm);
+  check("editing a published challenge loads it and sets publishId", COMM.publishId === 'row9' && COMM.loadedSingleCells === '[[2,2]]', comm);
+  check("saving an edited published challenge UPDATEs it (PATCH)", COMM.updMethod === 'PATCH' && COMM.updIsPatch === true, comm);
+  check("editing a multi-level published challenge loads its levels", COMM.loadedPackStages === 2 && COMM.packPublishId === 'row10', comm);
+
   console.log("▶ manual build mode: place & remove decor with resources");
   const bld = await ev(`(()=>{
     mgState=null; mgRobot=null;

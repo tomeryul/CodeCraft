@@ -51,9 +51,10 @@ $("mgName").addEventListener("click",()=>{
 });
 $("mgPublish").addEventListener("click",()=>{
   if(!mgState||!mgState.creator)return;
-  const p=mgState.proj;
-  if(p.cells.length<1){toast("🖌️ Paint the target tiles first (where blocks must end up)!");return;}
-  if(!mgState.solved){toast("🧪 First prove it's solvable: build a program within the budget and press ▶!");return;}
+  const p=mgState.proj, banked=(mgState.stages||[]).length;
+  const curHas=p.cells.length||(p.initial&&p.initial.length);
+  if(!banked&&!curHas){toast("🖌️ Paint the target tiles first (where blocks must end up)!");return;}
+  if(curHas&&!mgState.solved){toast("🧪 First prove this level is solvable — build a program and press ▶! (or ➕ Add it)");return;}
   if(!sbReady()){toast("🔌 Online mode isn't connected yet.");return;}
   if(!sbUser){toast("🔐 Log in first — account box at the top of Projects.");return;}
   publishChallenge();
