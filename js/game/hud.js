@@ -33,7 +33,7 @@ $("mgModePaint").addEventListener("click",()=>{if(mgState){mgState.paintMode="pa
 $("mgModeBot").addEventListener("click",()=>{if(mgState){mgState.paintMode="bot";mgCreatorUI();}});
 $("mgModeBrick").addEventListener("click",()=>{if(mgState){mgState.paintMode="brick";mgCreatorUI();}});
 $("mgBrickDec").addEventListener("click",()=>{if(mgState){mgState.brickNum=mgState.brickNum==null?null:(mgState.brickNum<=1?null:mgState.brickNum-1);mgCreatorUI();}});
-$("mgBrickInc").addEventListener("click",()=>{if(mgState){mgState.brickNum=mgState.brickNum==null?1:Math.min(20,mgState.brickNum+1);mgCreatorUI();}});
+$("mgBrickInc").addEventListener("click",()=>{if(mgState){mgState.brickNum=mgState.brickNum==null?1:Math.min(99,mgState.brickNum+1);mgCreatorUI();}});
 $("mgSave").addEventListener("click",()=>saveMyChallenge());
 $("mgDiff").addEventListener("click",()=>{if(mgState&&mgState.creator){const d=mgState.proj;d.diff=((d.diff||1)%3)+1;mgCreatorUI();sfx(520,.03);}});
 $("mgAddStage").addEventListener("click",()=>mgAddStage());
