@@ -171,7 +171,7 @@ function mgEnterCreator(){
   mgEnter({id:"custom",em:"✏️",name:"My Challenge",diff:1,coins:0,xp:0,maxBlocks:12,gw:8,gh:6,
     desc:"Design mode — pick a tool: 🖌️ target tiles, 🤖 the robot's start, 🔢 pre-placed blocks, 🧱 walls to route around, 🕳️ pits (the robot must ⤵️ Drop a block into one to cross it), 🧹 to erase. Then write a program and press ▶ to PROVE the level is solvable — only then do 💾 Save / ➕ Add level / 🌍 Publish open up. Build several levels for a multi-level minigame.",
     allowed:CREATOR_BLOCKS,start:{x:0,y:0,dir:1},cells:[],initial:[],tiles:[]});
-  mgState.creator=true;mgState.solved=false;mgState.paintMode="paint";mgState.brickNum=1;
+  mgState.creator=true;mgState.solved=false;mgState.paintMode="paint";mgState.brickNum=1;mgState.tileArg=1;
   mgState.stages=[];        // banked levels for a multi-level pack (empty = single challenge)
   mgState.editIndex=null;   // when re-editing a banked level, the slot to put it back
   mgState.editingId=null;   // when editing an already-saved My Challenges entry, its id (→ Save updates in place)
@@ -250,8 +250,21 @@ function mgToolList(){
   const base=[{id:"paint",em:"🖌️",lbl:"Target",num:true},
               {id:"bot",em:"🤖",lbl:"Start"},
               {id:"brick",em:"🔢",lbl:"Block",num:true}];
-  const tiles=(window.CC_TILES?CC_TILES.TYPES:[]).map(t=>({id:t,em:CC_TILES.DEFS[t].em,lbl:CC_TILES.DEFS[t].lbl}));
+  const tiles=(window.CC_TILES?CC_TILES.TYPES:[]).map(t=>({id:t,em:CC_TILES.DEFS[t].em,lbl:CC_TILES.DEFS[t].lbl,
+    colour:CC_TILES.DEFS[t].arg==="colour"}));
   return base.concat(tiles,[{id:"erase",em:"🧹",lbl:"Erase"}]);
+}
+// the −/+ stepper is shared: it edits the block number for 🖌️/🔢, and the
+// colour (1-4, pairing keys to doors and portals to portals) for coloured tiles
+function mgStepArg(d){
+  if(!mgState)return;
+  const t=mgToolList().find(x=>x.id===mgState.paintMode);
+  if(t&&t.colour){
+    const n=(mgState.tileArg||1)+d;
+    mgState.tileArg=n<1?4:n>4?1:n; // wraps — only four colours
+  }else if(d>0)mgState.brickNum=mgState.brickNum==null?1:Math.min(99,mgState.brickNum+1);
+  else mgState.brickNum=mgState.brickNum==null?null:(mgState.brickNum<=1?null:mgState.brickNum-1);
+  mgCreatorUI();
 }
 function mgToolsUI(){
   const el=$("mgTools");if(!el)return;
@@ -264,9 +277,17 @@ function mgToolsUI(){
     b.addEventListener("click",()=>{mgState.paintMode=t.id;sfx(560,.03);mgCreatorUI();});
     el.appendChild(b);
   }
-  // the number stepper only means something for the tools that carry a number
-  const t=list.find(x=>x.id===cur);
-  const stp=$("mgBrickStp");if(stp)stp.style.display=(t&&t.num)?"":"none";
+  // the stepper only appears for tools that carry a value, and relabels itself
+  const t=list.find(x=>x.id===cur), stp=$("mgBrickStp");
+  if(stp){
+    const on=!!(t&&(t.num||t.colour));
+    stp.style.display=on?"":"none";
+    if(on){
+      const lab=stp.querySelector(".clab");
+      if(lab)lab.textContent=t.colour?"🎨 Colour":"🔢 No.";
+      $("mgBrickN").textContent=t.colour?(mgState.tileArg||1):(mgState.brickNum==null?"—":mgState.brickNum);
+    }
+  }
 }
 function mgCreatorUI(){
   if(!mgState||!mgState.creator)return;
@@ -275,7 +296,7 @@ function mgCreatorUI(){
   $("mgBudget").textContent=p.maxBlocks;
   $("mgW").textContent=p.gw;
   $("mgH").textContent=p.gh;
-  $("mgBrickN").textContent=mgState.brickNum==null?"—":mgState.brickNum;
+  // (#mgBrickN is owned by mgToolsUI — it shows a block number or a colour)
   const dl=["","⭐ Easy","⭐⭐ Medium","⭐⭐⭐ Hard"];
   if($("mgDiff"))$("mgDiff").textContent=dl[p.diff||1];
   const banked=(mgState.stages&&mgState.stages.length)||0, editing=mgState.editIndex!=null;
@@ -402,12 +423,15 @@ function mgPaintTile(x,y){
   }else if(tool){
     // terrain: tapping the same type again removes it, a different type replaces it
     p.tiles=p.tiles||[];
+    const def=CC_TILES.DEFS[tool], arg=def.arg==="colour"?(st.tileArg||1):0;
     const i=p.tiles.findIndex(t=>t[0]===x&&t[1]===y);
-    const had=i>=0?p.tiles[i][2]:null;
+    const had=i>=0?p.tiles[i]:null;
     if(i>=0)p.tiles.splice(i,1);
-    if(had!==tool){
-      if(p.start.x===x&&p.start.y===y){toast("🤖 The robot starts here — move it first!");}
-      else{mgClearTile(p,x,y);p.tiles.push([x,y,tool,0]);}
+    // same tool AND same colour = remove; a different colour re-labels it
+    if(!had||had[2]!==tool||(had[3]||0)!==arg){
+      if(p.start.x===x&&p.start.y===y&&def.solid&&def.solid({keys:new Set(),bricks:new Set()},x+"_"+y,{a:arg}))
+        toast("🤖 The robot starts here — move it first!");
+      else{mgClearTile(p,x,y);p.tiles.push([x,y,tool,arg]);}
     }
     mgSeed(st.robot,p);
   }else{ // 🖌️ paint a target tile
@@ -763,7 +787,7 @@ function mgTick(){
 }
 // Sensors a challenge robot can actually answer. The world robot keeps its own
 // CONDS list (blocks.js) — mixing them would put dead sensors in both palettes.
-const CHALLENGE_CONDS=["blocked","wallAhead","pitAhead","brickHere","onTarget","holding","treeAhead"];
+const CHALLENGE_CONDS=["blocked","wallAhead","pitAhead","doorAhead","keyAhead","brickHere","onTarget","holding","treeAhead"];
 // Only the sensors THIS level can answer, so the tap-to-cycle list stays short and
 // a player never meets a condition that can never be true. Reads proj (stable), not
 // the mutating robot state, so the list doesn't change mid-run.
@@ -773,6 +797,8 @@ function mgCondList(){
   const L=["blocked","brickHere","onTarget","holding"];
   if(has("wall"))L.push("wallAhead");
   if(has("pit"))L.push("pitAhead");
+  if(has("door"))L.push("doorAhead");
+  if(has("key"))L.push("keyAhead");
   if((p.trees||[]).length)L.push("treeAhead");
   return L;
 }
@@ -787,6 +813,10 @@ function mgCond(st,c){
     case "blocked":   return !mgWalkable(st,ax,ay);
     case "wallAhead": {const t=T&&T.at(rb,ka);return !!(t&&t.t==="wall");}
     case "pitAhead":  return !!(T&&T.openPit(rb,ka));
+    // "a door I can't open yet" — so `if doorAhead → go find the key` is a
+    // complete program shape, and the sensor goes quiet once the key is held
+    case "doorAhead": {const t=T&&T.at(rb,ka);return !!(t&&t.t==="door"&&!rb.keys.has(t.a));}
+    case "keyAhead":  {const t=T&&T.at(rb,ka);return !!(t&&t.t==="key");}
     case "treeAhead": return !!(rb.trees&&rb.trees.has(ka));
     case "brickHere": return rb.bricks.has(kh);
     case "onTarget":  return (st.proj.cells||[]).some(c2=>c2[0]===rb.x&&c2[1]===rb.y);

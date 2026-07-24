@@ -65,7 +65,8 @@ const ICONS={
 "🔨":W('<rect x="10.7" y="9" width="2.6" height="11.4" rx="1.3" transform="rotate(-38 12 14)" fill="#c98d4b"/><rect x="4.8" y="4.2" width="11.4" height="5.6" rx="2.2" transform="rotate(18 10.5 7)" fill="#9aa1b0"/>'),
 "🌊":W('<path d="M3 9.4 c2-2.2 4-2.2 6 0 s4 2.2 6 0 4-2.2 6 0 M3 15 c2-2.2 4-2.2 6 0 s4 2.2 6 0 4-2.2 6 0" stroke="#5ab8ff" stroke-width="2.2" stroke-linecap="round" fill="none"/>'),
 "🚧":W('<rect x="3.6" y="8.2" width="16.8" height="6.2" rx="1.6" fill="#ffd66b"/><path d="M7.2 14.4 l3.6-6.2 M12.4 14.4 l3.6-6.2" stroke="#241b45" stroke-width="2.2"/><path d="M6.5 14.4 v4.8 M17.5 14.4 v4.8" stroke="#241b45" stroke-width="2"/>'),
-"🕳️":W('<ellipse cx="12" cy="13" rx="8" ry="4.6" fill="#241b45"/>'),
+// a rim as well as the hole, so a pit stays visible against the dark panels
+"🕳️":W('<ellipse cx="12" cy="13" rx="8.4" ry="5" fill="#6b7a90"/><ellipse cx="12" cy="13.4" rx="6.8" ry="3.8" fill="#161d29"/>'),
 "💰":W('<path d="M9.2 7.4 c-3 2-4.9 4.8-4.9 7.6 a5 5 0 0 0 5 5 h5.4 a5 5 0 0 0 5-5 c0-2.8-1.9-5.6-4.9-7.6 Z" fill="#ffb830"/><path d="M9.2 7.4 L7.6 4.6 h8.8 L14.8 7.4 Z" fill="#e8b23e"/><text x="12" y="17.2" font-size="8.5" font-weight="900" text-anchor="middle" font-family="inherit" fill="#8a5a1a">$</text>'),
 "🏃":W('<circle cx="15" cy="4.8" r="2" fill="'+CC+'"/><path d="M8.6 21 l3.2-5 -2.6-3 3-4.2 3.4 2.6 3.4-1 M6 10.4 l3.6-2.8 2.6.2" '+ST+' stroke-width="2.2"/>'),
 "🏗️":W('<rect x="4.4" y="6" width="15.2" height="12.4" rx="1.8" fill="#ff9d5a"/><path d="M4.4 10.2 h15.2 M4.4 14.2 h15.2 M9.5 6 v4.2 M14.5 10.2 v4 M9.5 14.2 v4.2" stroke="#e07840" stroke-width="1.7"/>'),

@@ -18,6 +18,8 @@
      enter(st,rs,k,tile) stepped onto it — return a "x_y" to teleport to, or nothing
 */
 (function(){
+  // four tile colours, reused for key/door pairs and portal pairs
+  const COL=["#ffd66b","#5ab8ff","#ff5d73","#54d66a"];
   const DEFS={
     wall:{em:"🧱",lbl:"Wall",arg:null,
       solid:()=>true},
@@ -25,9 +27,27 @@
     // into the gap ahead is the fix — the robot builds its own bridge.
     pit:{em:"🕳️",lbl:"Pit",arg:null,
       solid:(rs,k)=>!rs.bricks.has(k)},
+    // Walk over a key to add its colour to the robot's keyring. Keys are never
+    // spent — one key opens every door of its colour, which keeps the rule simple
+    // ("do I have the blue key?") and means a door, once open, stays open.
+    key:{em:"🔑",lbl:"Key",arg:"colour",
+      solid:()=>false,
+      enter:(st,rs,k,t)=>{rs.keys.add(t.a);rs.tiles.delete(k);sfx(880,.05);sfx(1180,.05,.06);}},
+    door:{em:"🚪",lbl:"Door",arg:"colour",
+      solid:(rs,k,t)=>!rs.keys.has(t.a),
+      enter:(st,rs,k)=>{rs.open.add(k);}},
+    // Two portals sharing a colour are a pair — stepping on one puts the robot
+    // on the other. The move that lands here is not re-run at the far end, so a
+    // pair can never bounce the robot back and forth.
+    portal:{em:"🌀",lbl:"Portal",arg:"colour",
+      solid:()=>false,
+      enter:(st,rs,k,t)=>{
+        for(const [k2,t2] of rs.tiles)
+          if(k2!==k&&t2.t==="portal"&&t2.a===t.a){sfx(700,.05);sfx(1000,.06,.05);return k2;}
+      }},
   };
   // creator tool order (also the order tiles are drawn in)
-  const TYPES=["wall","pit"];
+  const TYPES=["wall","pit","key","door","portal"];
 
   const key=(x,y)=>x+"_"+y;
   const at=(rs,k)=>(rs&&rs.tiles)?(rs.tiles.get(k)||null):null;
@@ -111,14 +131,37 @@
     g.strokeStyle="rgba(20,26,34,.7)";g.lineWidth=1.6;rr(g,x,y,s,s,rad);g.stroke();
   }
 
+  // a colour swatch behind an emoji, plus the colour's number in the corner so
+  // the pairing still reads for a colour-blind player
+  function drawBadge(g,px,py,cell,colIdx,em,shape){
+    const c=COL[(colIdx-1+COL.length)%COL.length]||COL[0];
+    const m=Math.max(2,cell*0.08), x=px+m, y=py+m, s=cell-2*m;
+    g.save();
+    if(shape==="disc"){g.beginPath();g.arc(px+cell/2,py+cell/2,s*.46,0,7);}
+    else{rr(g,x,y,s,s,Math.max(4,cell*.18));}
+    g.fillStyle="rgba(0,0,0,.2)";g.fill();
+    g.strokeStyle=c;g.lineWidth=Math.max(2.5,cell*.075);g.stroke();
+    g.fillStyle=c;g.globalAlpha=.22;g.fill();g.globalAlpha=1;
+    g.restore();
+    const sp=sprite(em,cell*.52);
+    g.drawImage(sp,px+cell/2-sp.lw/2,py+cell/2-sp.lw/2,sp.lw,sp.lw);
+    g.font="900 "+Math.floor(cell*0.21)+"px Fredoka,sans-serif";
+    g.textAlign="left";g.textBaseline="top";
+    g.lineWidth=3;g.strokeStyle="rgba(0,0,0,.45)";g.strokeText(colIdx,px+4,py+3);
+    g.fillStyle=c;g.fillText(colIdx,px+4,py+3);
+  }
   // draw every tile of the board. Called from mgDraw AFTER the grass, BEFORE
   // the blueprint outlines, so targets and bricks read on top of the terrain.
   function draw(g,rs,cell){
     if(!rs||!rs.tiles)return;
     for(const [k,t] of rs.tiles){
       const q=k.split("_"), px=(+q[0])*cell, py=(+q[1])*cell;
+      const n=(t.a|0)||1;
       if(t.t==="wall")drawWall(g,px,py,cell);
       else if(t.t==="pit")drawPit(g,px,py,cell,rs.bricks.has(k));
+      else if(t.t==="key")drawBadge(g,px,py,cell,n,"🔑","disc");
+      else if(t.t==="door")drawBadge(g,px,py,cell,n,rs.keys.has(t.a)?"🚪":"🔒","sq");
+      else if(t.t==="portal")drawBadge(g,px,py,cell,n,"🌀","disc");
     }
   }
 

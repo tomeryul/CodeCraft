@@ -507,6 +507,7 @@ async function ev(expr) {
   const pub = await ev(`(()=>{
     mgEnterCreator();
     const p=mgState.proj; p.initial=[[0,1,2],[1,1,3],[2,1,1]]; p.cells=[[0,1],[1,1],[2,1]];
+    p.tiles=[[3,1,'wall',0],[4,1,'door',2]];
     let body=null; const origRest=sbRest, origUser=sbUser;
     sbRest=(path,opts)=>{ if(path==='challenges'&&opts&&opts.method==='POST'&&body==null)body=opts.body; return Promise.resolve([]); };
     sbUser={uid:'u1',email:'k@x.com'};
@@ -514,11 +515,18 @@ async function ev(expr) {
       sbRest=origRest; sbUser=origUser;
       mgExit(false); document.getElementById('editor').classList.remove('open','max');
       const b=JSON.parse(body||'{}');
-      return JSON.stringify({initialN:(b.initial||[]).length, cellsN:(b.cells||[]).length});
+      // and the published row loads back with its terrain intact
+      const back=ccToProj({id:'r1',name:'R',author_name:'k',gw:8,gh:6,start_x:0,start_y:0,start_dir:1,
+        max_blocks:20,solves:0,cells:b.cells,initial:b.initial,tiles:b.tiles});
+      return JSON.stringify({initialN:(b.initial||[]).length, cellsN:(b.cells||[]).length,
+        tilesN:(b.tiles||[]).length, doorArg:(b.tiles||[]).filter(t=>t[2]==='door').map(t=>t[3])[0],
+        roundTrip:(back.tiles||[]).length});
     });
   })()`);
   const PUB = JSON.parse(pub);
   check("publishChallenge sends the pre-placed bricks to the DB", PUB.initialN===3 && PUB.cellsN===3, pub);
+  check("publishChallenge sends the puzzle terrain too", PUB.tilesN===2 && PUB.doorArg===2, pub);
+  check("a published row loads back with its terrain", PUB.roundTrip===2, pub);
 
   console.log("▶ community: publish multi-level + edit/update a published challenge");
   const comm = await ev(`(()=>{
@@ -926,6 +934,8 @@ async function ev(expr) {
   check("Edit loads a saved pack's levels into the strip", ES.packStages === 2 && ES.packEditingId === 'my_B', editSaved);
   check("editing a pack updates it in place", ES.countAfterPack === 2 && ES.packUpdated === true, editSaved);
 
+  const CC_TILE_TYPES = JSON.parse(await ev(`JSON.stringify(CC_TILES.TYPES.length)`));
+
   console.log("▶ puzzle terrain: walls block, pits are bridged with a dropped block");
   const terr = await ev(`(()=>{
     // run a program by hand-ticking, so no timers are involved
@@ -1005,6 +1015,45 @@ async function ev(expr) {
   check("Forever wins as soon as the goal is met", VM.wonEarly === true && VM.steps < 400, vm);
   check("an empty board is never counted as solved", VM.emptyNotWon === false, vm);
 
+  console.log("▶ keys, doors & portals");
+  const kdp = await ev(`(()=>{
+    const run=(proj,prog,ticks)=>{
+      mgEnter(proj); mgRobot.program=prog;
+      mgState.running=true; mgState.frames=[{blocks:prog,i:0,reps:1}]; mgState.wait=0;
+      for(let i=0;i<ticks&&mgState&&mgState.running;i++)mgTick();
+      return mgState;
+    };
+    const base={id:'kd',em:'🔑',name:'K',desc:'',gw:6,gh:3,maxBlocks:30,
+      allowed:CHALLENGE_BLOCKS,coins:0,xp:0,start:{x:0,y:1,dir:1},cells:[[5,1]],initial:[]};
+    // a door with no key is a wall
+    let st=run(Object.assign({},base,{tiles:[[2,1,'door',1]]}),[{t:'move',uid:1}],4);
+    const lockedX=st.robot.x, doorSense=mgCond(st,'doorAhead');
+    mgExit(false);
+    // walk over the matching key, then straight through the door
+    st=run(Object.assign({},base,{tiles:[[1,1,'key',1],[2,1,'door',1]]}),
+      [{t:'move',uid:1},{t:'move',uid:2},{t:'move',uid:3}],6);
+    const got=st.robot.keys.has(1), through=st.robot.x, quiet=mgCond(st,'doorAhead');
+    mgExit(false);
+    // the WRONG colour key doesn't open it
+    st=run(Object.assign({},base,{tiles:[[1,1,'key',2],[2,1,'door',1]]}),
+      [{t:'move',uid:1},{t:'move',uid:2},{t:'move',uid:3}],6);
+    const wrongKey=st.robot.x;
+    mgExit(false);
+    // a portal pair moves the robot across, and does not bounce it back
+    st=run(Object.assign({},base,{tiles:[[1,1,'portal',1],[4,1,'portal',1]]}),
+      [{t:'move',uid:1}],3);
+    const ported=st.robot.x;
+    st.robot.x=4;st.robot.y=1;
+    mgExit(false);
+    return JSON.stringify({lockedX,doorSense,got,through,quiet,wrongKey,ported});
+  })()`);
+  const KD = JSON.parse(kdp);
+  check("a locked door blocks the robot", KD.lockedX === 1 && KD.doorSense === true, kdp);
+  check("the matching key opens the door and the robot walks through", KD.got === true && KD.through === 3, kdp);
+  check("doorAhead goes quiet once the key is held", KD.quiet === false, kdp);
+  check("a wrong-colour key does not open the door", KD.wrongKey === 1, kdp);
+  check("a portal pair teleports the robot (no bounce-back)", KD.ported === 4, kdp);
+
   console.log("▶ creator: every tool re-locks Save, and tiles survive banking");
   const tools = await ev(`(()=>{
     mgEnterCreator();
@@ -1030,7 +1079,7 @@ async function ev(expr) {
   })()`);
   const TL = JSON.parse(tools);
   check("every creator tool re-locks Save/Publish", TL.missed.length === 0, tools);
-  check("the tool strip lists board tools + every terrain type", TL.toolCount === 6, tools);
+  check("the tool strip lists board tools + every terrain type", TL.toolCount === 4 + CC_TILE_TYPES, tools);
   check("painting a wall stores it in proj.tiles", TL.painted === true, tools);
   check("banked levels keep their terrain", TL.banked === true, tools);
   check("shrinking the board clips off-grid tiles", TL.clipped === true, tools);
