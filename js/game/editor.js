@@ -147,14 +147,16 @@ function renderList(list,parent){
         if(p==="inc")b.n=Math.min(99,b.t==="changeVar"?b.n+1:b.n+1);
         if(p==="dec")b.n=b.t==="changeVar"?Math.max(-99,b.n-1):Math.max(1,b.n-1);
         if(p==="cond"){
-          const ci=CONDS.indexOf(b.cond);
-          if(ci===CONDS.length-1&&(mgState||unlocks.vars))b.cond={var:"x",op:">",val:3}; // challenges: compare variables freely
-          else b.cond=CONDS[(ci+1)%CONDS.length];
+          // inside a challenge the sensor list is the board's, not the world's
+          const L=(mgState&&typeof mgCondList==="function")?mgCondList():CONDS;
+          const ci=L.indexOf(b.cond); // -1 for a cond carried in from the other list
+          if(ci===L.length-1&&(mgState||unlocks.vars))b.cond={var:"x",op:">",val:3}; // compare variables freely
+          else b.cond=L[(ci+1)%L.length];
         }
         if(p==="cvar")b.cond.var=promptName(b.cond.var);
         if(p==="cop"){
           b.cond.op=b.cond.op===">"?"<":b.cond.op==="<"?"=":null;
-          if(!b.cond.op)b.cond=CONDS[0];
+          if(!b.cond.op)b.cond=((mgState&&typeof mgCondList==="function")?mgCondList():CONDS)[0];
         }
         if(p==="cvdec")b.cond.val--;
         if(p==="cvinc")b.cond.val++;

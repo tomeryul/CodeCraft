@@ -28,10 +28,7 @@ $("stopBtn").addEventListener("click",()=>{if(mgState)mgStop();else stopRobot(R(
 $("mgResetBtn").addEventListener("click",()=>{mgStop();mgReset();});
 $("mgExitBtn").addEventListener("click",()=>mgExit(true));
 $("projClose").addEventListener("click",()=>$("projects").classList.remove("open"));
-/* --- challenge creator controls --- */
-$("mgModePaint").addEventListener("click",()=>{if(mgState){mgState.paintMode="paint";mgCreatorUI();}});
-$("mgModeBot").addEventListener("click",()=>{if(mgState){mgState.paintMode="bot";mgCreatorUI();}});
-$("mgModeBrick").addEventListener("click",()=>{if(mgState){mgState.paintMode="brick";mgCreatorUI();}});
+/* --- challenge creator controls (the tool strip renders itself in mgToolsUI) --- */
 $("mgBrickDec").addEventListener("click",()=>{if(mgState){mgState.brickNum=mgState.brickNum==null?null:(mgState.brickNum<=1?null:mgState.brickNum-1);mgCreatorUI();}});
 $("mgBrickInc").addEventListener("click",()=>{if(mgState){mgState.brickNum=mgState.brickNum==null?1:Math.min(99,mgState.brickNum+1);mgCreatorUI();}});
 $("mgSave").addEventListener("click",()=>saveMyChallenge());
@@ -59,36 +56,15 @@ $("mgPublish").addEventListener("click",()=>{
   if(!sbUser){toast("🔐 Log in first — account box at the top of Projects.");return;}
   publishChallenge();
 });
+// Thin dispatcher — all the painting rules (and the solved=false invariant) live
+// in mgPaintTile so every tool goes through one place.
 $("mgCanvas").addEventListener("pointerdown",e=>{
   if(!mgState||!mgState.creator||mgState.running)return;
   const cv=$("mgCanvas"),rect=cv.getBoundingClientRect(),p=mgState.proj;
   const x=Math.floor((e.clientX-rect.left)/rect.width*p.gw);
   const y=Math.floor((e.clientY-rect.top)/rect.height*p.gh);
   if(x<0||y<0||x>=p.gw||y>=p.gh)return;
-  if(mgState.paintMode==="bot"){
-    p.start={x,y,dir:1};
-    mgState.robot.x=x;mgState.robot.y=y;mgState.robot.dir=1;
-  }else if(mgState.paintMode==="brick"){
-    // toggle a pre-placed brick at this cell (with the chosen number, or plain)
-    p.initial=p.initial||[];
-    const i=p.initial.findIndex(c=>c[0]===x&&c[1]===y);
-    if(i>=0)p.initial.splice(i,1);
-    else p.initial.push(mgState.brickNum!=null?[x,y,mgState.brickNum]:[x,y]);
-    mgSeed(mgState.robot,p); // re-seed so the new bricks render immediately
-  }else{
-    // paint a target tile. With a number selected it becomes a numbered target
-    // ("→n" — that exact block must land here); with "—" it's a plain target
-    // (any block fits). Tapping the same tile with the same setting removes it;
-    // tapping with a different number re-labels it.
-    const i=p.cells.findIndex(c=>c[0]===x&&c[1]===y);
-    if(i>=0){
-      const curN=p.cells[i].length>2?p.cells[i][2]:null;
-      if(curN===mgState.brickNum)p.cells.splice(i,1);
-      else p.cells[i]=mgState.brickNum!=null?[x,y,mgState.brickNum]:[x,y];
-    }else p.cells.push(mgState.brickNum!=null?[x,y,mgState.brickNum]:[x,y]);
-  }
-  mgState.solved=false; // design changed — must re-prove (re-locks Save/Publish)
-  sfx(500,.03);mgDraw();mgCreatorUI();
+  mgPaintTile(x,y);
 });
 $("codeBtn").addEventListener("click",()=>{
   $("editor").classList.add("open");renderProgram();renderPy();updateUndoBtns();

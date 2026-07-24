@@ -926,11 +926,123 @@ async function ev(expr) {
   check("Edit loads a saved pack's levels into the strip", ES.packStages === 2 && ES.packEditingId === 'my_B', editSaved);
   check("editing a pack updates it in place", ES.countAfterPack === 2 && ES.packUpdated === true, editSaved);
 
+  console.log("▶ puzzle terrain: walls block, pits are bridged with a dropped block");
+  const terr = await ev(`(()=>{
+    // run a program by hand-ticking, so no timers are involved
+    const run=(proj,prog,ticks)=>{
+      mgEnter(proj); mgRobot.program=prog;
+      mgState.running=true; mgState.frames=[{blocks:prog,i:0,reps:1}]; mgState.wait=0;
+      for(let i=0;i<ticks&&mgState&&mgState.running;i++)mgTick();
+      return mgState;
+    };
+    const base={id:'tt',em:'🧱',name:'T',desc:'',gw:5,gh:3,maxBlocks:30,
+      allowed:CHALLENGE_BLOCKS,coins:0,xp:0,start:{x:0,y:1,dir:1},cells:[[4,1]],initial:[]};
+    // --- wall blocks movement, and wallAhead/blocked sense it ---
+    let st=run(Object.assign({},base,{tiles:[[1,1,'wall']]}),[{t:'move',uid:1}],3);
+    const wallX=st.robot.x, wallSense=mgCond(st,'wallAhead'), blockedSense=mgCond(st,'blocked');
+    mgExit(false);
+    // --- pit blocks movement too ---
+    st=run(Object.assign({},base,{tiles:[[1,1,'pit']]}),[{t:'move',uid:1}],3);
+    const pitX=st.robot.x, pitSense=mgCond(st,'pitAhead');
+    mgExit(false);
+    // --- carry a block, drop it into the pit ahead, then walk across ---
+    st=run(Object.assign({},base,{tiles:[[2,1,'pit']],initial:[[0,1]],cells:[[4,1]]}),
+      [{t:'pickUp',uid:1},{t:'move',uid:2},{t:'drop',uid:3},{t:'move',uid:4},{t:'move',uid:5}],9);
+    const bridged=st.robot.bricks.has('2_1'), crossed=st.robot.x, handEmpty=st.robot.held===null;
+    // a block spent bridging a pit must NOT count as a stray brick outside the plan
+    st.robot.bricks.add('4_1');
+    const notStray=mgGoalMet(st);
+    mgExit(false);
+    // --- old projects (no tiles at all) behave exactly as before ---
+    mgEnter(PROJECTS[0]);
+    const legacy=mgState.robot.tiles.size===0&&mgWalkable(mgState,1,1);
+    mgExit(false);
+    return JSON.stringify({wallX,wallSense,blockedSense,pitX,pitSense,bridged,crossed,handEmpty,notStray,legacy});
+  })()`);
+  const TE = JSON.parse(terr);
+  check("a wall stops the robot", TE.wallX === 0, terr);
+  check("wallAhead and blocked both sense a wall", TE.wallSense === true && TE.blockedSense === true, terr);
+  check("a pit stops the robot", TE.pitX === 0 && TE.pitSense === true, terr);
+  check("dropping a block into the pit ahead bridges it", TE.bridged === true && TE.handEmpty === true, terr);
+  check("the robot walks across the bridged pit", TE.crossed === 3, terr); // pit was at x=2
+  check("a block spent bridging a pit isn't a stray brick", TE.notStray === true, terr);
+  check("projects without tiles are unaffected", TE.legacy === true, terr);
+
+  console.log("▶ challenge VM: ⏱️ Wait counts down and ♾️ Forever runs (and can win)");
+  const vm = await ev(`(()=>{
+    const start=(proj,prog)=>{ mgEnter(proj); mgRobot.program=prog;
+      mgState.running=true; mgState.frames=[{blocks:prog,i:0,reps:1}]; mgState.wait=0; };
+    const tick=n=>{for(let i=0;i<n&&mgState&&mgState.running;i++)mgTick();};
+    const base={id:'vm',em:'⏱️',name:'V',desc:'',gw:6,gh:2,maxBlocks:30,
+      allowed:CHALLENGE_BLOCKS,coins:0,xp:0,start:{x:0,y:0,dir:1},cells:[[5,0]],initial:[],tiles:[]};
+    // ⏱️ Wait 3 holds the robot for three ticks, then Move runs on the fourth
+    start(base,[{t:'wait',n:3,uid:1},{t:'move',uid:2}]);
+    tick(3); const heldStill=mgState.robot.x===0;
+    tick(1); const movedAfter=mgState.robot.x===1;
+    mgExit(false);
+    // ♾️ Forever actually executes its body (it used to be skipped entirely)
+    start(base,[{t:'forever',uid:1,body:[{t:'move',uid:2}]}]);
+    tick(4); const foreverRuns=mgState.robot.x===4;
+    mgExit(false);
+    // ♾️ Forever WINS the moment the goal is met, instead of running to the cap
+    const fill={id:'vf',em:'♾️',name:'F',desc:'',gw:4,gh:1,maxBlocks:30,
+      allowed:CHALLENGE_BLOCKS,coins:0,xp:0,start:{x:0,y:0,dir:1},
+      cells:[[0,0],[1,0],[2,0],[3,0]],initial:[],tiles:[],mine:true};
+    start(fill,[{t:'forever',uid:1,body:[{t:'build',uid:2},{t:'move',uid:3}]}]);
+    tick(400);
+    const wonEarly=!mgState||mgState.running===false;
+    const steps=mgState?mgState.steps:0;
+    if(mgState)mgExit(false);
+    // an empty board is never "won" — otherwise ♾️ would instantly clear a blank canvas
+    mgEnterCreator();
+    const emptyNotWon=mgGoalMet(mgState);
+    mgExit(false);
+    return JSON.stringify({heldStill,movedAfter,foreverRuns,wonEarly,steps,emptyNotWon});
+  })()`);
+  const VM = JSON.parse(vm);
+  check("Wait n holds the robot for n ticks", VM.heldStill === true && VM.movedAfter === true, vm);
+  check("Forever runs its body", VM.foreverRuns === true, vm);
+  check("Forever wins as soon as the goal is met", VM.wonEarly === true && VM.steps < 400, vm);
+  check("an empty board is never counted as solved", VM.emptyNotWon === false, vm);
+
+  console.log("▶ creator: every tool re-locks Save, and tiles survive banking");
+  const tools = await ev(`(()=>{
+    mgEnterCreator();
+    // the solved=false invariant must hold for EVERY tool, now and in future
+    const missed=[];
+    mgToolList().forEach((t,i)=>{
+      mgState.paintMode=t.id; mgState.solved=true;
+      mgPaintTile(1+(i%3),1);
+      if(mgState.solved!==false)missed.push(t.id);
+    });
+    const toolCount=mgToolList().length;
+    // a wall painted in the creator lands in proj.tiles and survives snapshotStage
+    mgState.proj.tiles=[]; mgState.proj.cells=[]; mgState.proj.initial=[];
+    mgState.paintMode='wall'; mgPaintTile(3,3);
+    const painted=mgState.proj.tiles.length===1&&mgState.proj.tiles[0][2]==='wall';
+    mgState.proj.cells=[[1,1]]; mgState.solved=true; mgAddStage();
+    const banked=(mgState.stages[0].tiles||[]).length===1;
+    // shrinking the board must clip tiles, or an invisible wall blocks the level
+    mgState.proj.tiles=[[7,3,'wall']]; mgState.proj.gw=8; mgSetSize(-3,0);
+    const clipped=mgState.proj.tiles.length===0;
+    mgExit(false); document.getElementById('editor').classList.remove('open','max');
+    return JSON.stringify({missed,toolCount,painted,banked,clipped});
+  })()`);
+  const TL = JSON.parse(tools);
+  check("every creator tool re-locks Save/Publish", TL.missed.length === 0, tools);
+  check("the tool strip lists board tools + every terrain type", TL.toolCount === 6, tools);
+  check("painting a wall stores it in proj.tiles", TL.painted === true, tools);
+  check("banked levels keep their terrain", TL.banked === true, tools);
+  check("shrinking the board clips off-grid tiles", TL.clipped === true, tools);
+
   console.log("▶ challenges unlock every block feature (ignore world unlocks)");
   const varsFree = await ev(`(()=>{
     mgEnter(PROJECTS[0]); unlocks.vars=false;   // low-level player: vars NOT unlocked in the world
     const r=mgRobot;
-    r.program=[{t:'repeat',n:3,uid:101,body:[]},{t:'if',cond:CONDS[CONDS.length-1],uid:102,body:[],els:[]}];
+    // seed the LAST sensor of the challenge board's own list, so one more click
+    // cycles past the presets into the variable comparison
+    const CL=mgCondList();
+    r.program=[{t:'repeat',n:3,uid:101,body:[]},{t:'if',cond:CL[CL.length-1],uid:102,body:[],els:[]}];
     selBlock=null; renderProgram();
     const hasRmode = $('programEl').innerHTML.indexOf('data-p="rmode"')>=0; // repeat-by-variable toggle shown
     const condBtn=[...document.querySelectorAll('#programEl .blk[data-uid="102"] .pbtn')].find(x=>x.dataset.p==='cond');

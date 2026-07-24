@@ -3,9 +3,9 @@
 // full programming toolbox available inside every challenge (loops, conditions, variables, values)
 // every challenge (built-in, community, custom) gets the full toolbox — incl.
 // ✊ Lift / ⤵️ Drop so bricks can be moved when PLAYING, not just while editing
-const CHALLENGE_BLOCKS=["move","turnL","turnR","build","pickUp","drop","wait","repeat","countLoop","if","setVar","changeVar","say"];
+const CHALLENGE_BLOCKS=["move","turnL","turnR","build","pickUp","drop","wait","repeat","forever","countLoop","if","setVar","changeVar","say"];
 // sorting toolbox: lift/drop, no build — for rearranging numbered bricks
-const SORT_BLOCKS=["move","turnL","turnR","pickUp","drop","wait","repeat","countLoop","if","setVar","changeVar","say"];
+const SORT_BLOCKS=["move","turnL","turnR","pickUp","drop","wait","repeat","forever","countLoop","if","setVar","changeVar","say"];
 const CREATOR_BLOCKS=CHALLENGE_BLOCKS;
 const PROJECTS=[
   {id:"house",em:"🏡",name:"Big House",diff:1,coins:150,xp:60,maxBlocks:8,gw:8,gh:7,
@@ -127,7 +127,7 @@ function ccToProj(row){
   return {id:"cc_"+row.id,community:row.id,em:sort?"🔢":"🌍",name:row.name,diff:row.diff||2,coins:60,xp:30,
     maxBlocks:row.max_blocks,gw:row.gw,gh:row.gh,
     desc:"Community challenge by "+row.author_name+(sort?" — sort the numbered blocks into order":" — paint the whole blueprint")+" within "+row.max_blocks+" blocks!",
-    allowed:CHALLENGE_BLOCKS,start:{x:row.start_x,y:row.start_y,dir:row.start_dir},cells:row.cells,initial:initial};
+    allowed:CHALLENGE_BLOCKS,start:{x:row.start_x,y:row.start_y,dir:row.start_dir},cells:row.cells,initial:initial,tiles:row.tiles||[]};
 }
 // a multi-level community challenge → a playable pack (levels stored in row.stages)
 function ccToPack(row){
@@ -169,8 +169,8 @@ async function loadCommunity(){
 }
 function mgEnterCreator(){
   mgEnter({id:"custom",em:"✏️",name:"My Challenge",diff:1,coins:0,xp:0,maxBlocks:12,gw:8,gh:6,
-    desc:"Design mode: 🖌️ Paint the target tiles, 🤖 set the robot start, 🔢 Bricks to pre-place blocks. Then write a program and press ▶ to PROVE the level is solvable — only then do 💾 Save / ➕ Add level / 🌍 Publish open up. Build several levels for a multi-level minigame.",
-    allowed:CREATOR_BLOCKS,start:{x:0,y:0,dir:1},cells:[],initial:[]});
+    desc:"Design mode — pick a tool: 🖌️ target tiles, 🤖 the robot's start, 🔢 pre-placed blocks, 🧱 walls to route around, 🕳️ pits (the robot must ⤵️ Drop a block into one to cross it), 🧹 to erase. Then write a program and press ▶ to PROVE the level is solvable — only then do 💾 Save / ➕ Add level / 🌍 Publish open up. Build several levels for a multi-level minigame.",
+    allowed:CREATOR_BLOCKS,start:{x:0,y:0,dir:1},cells:[],initial:[],tiles:[]});
   mgState.creator=true;mgState.solved=false;mgState.paintMode="paint";mgState.brickNum=1;
   mgState.stages=[];        // banked levels for a multi-level pack (empty = single challenge)
   mgState.editIndex=null;   // when re-editing a banked level, the slot to put it back
@@ -190,11 +190,12 @@ function mgEditCommunity(row){
   let sol=[]; // author's solution to reload into the editor
   if(stages){ // already multi-level: load levels into the strip, canvas empty
     mgState.stages=JSON.parse(JSON.stringify(stages));
-    p.cells=[]; p.initial=[]; p.start={x:0,y:0,dir:1};
+    p.cells=[]; p.initial=[]; p.tiles=[]; p.start={x:0,y:0,dir:1};
     mgState.robot={x:0,y:0,dir:1}; mgSeed(mgState.robot,p);
   }else{ // single-level: load its blueprint onto the canvas (add ➕ levels to grow it)
     p.gw=row.gw||8; p.gh=row.gh||6; p.maxBlocks=row.max_blocks||12; p.allowed=CREATOR_BLOCKS;
     p.cells=JSON.parse(JSON.stringify(row.cells||[]));
+    p.tiles=JSON.parse(JSON.stringify(row.tiles||[]));
     p.initial=JSON.parse(JSON.stringify(row.initial||[]));
     p.start={x:row.start_x||0,y:row.start_y||0,dir:row.start_dir==null?1:row.start_dir};
     mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir}; mgSeed(mgState.robot,p);
@@ -224,12 +225,13 @@ function mgEditMyChallenge(entry){
   if(entry.pack){
     // load its levels into the strip; the canvas starts empty (tweak levels via ✏️, or ➕ add more)
     mgState.stages=JSON.parse(JSON.stringify(entry.stages||[]));
-    p.cells=[]; p.initial=[]; p.start={x:0,y:0,dir:1};
+    p.cells=[]; p.initial=[]; p.tiles=[]; p.start={x:0,y:0,dir:1};
     mgState.robot={x:0,y:0,dir:1}; mgSeed(mgState.robot,p);
   }else{
     p.gw=entry.gw||8; p.gh=entry.gh||6; p.maxBlocks=entry.maxBlocks||12;
     p.allowed=entry.allowed||CREATOR_BLOCKS;
     p.cells=JSON.parse(JSON.stringify(entry.cells||[]));
+    p.tiles=JSON.parse(JSON.stringify(entry.tiles||[]));
     p.initial=JSON.parse(JSON.stringify(entry.initial||[]));
     p.start=JSON.parse(JSON.stringify(entry.start||{x:0,y:0,dir:1}));
     mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir}; mgSeed(mgState.robot,p);
@@ -242,11 +244,33 @@ function mgEditMyChallenge(entry){
   toast("✏️ Editing “"+esc(entry.name)+"” — change it, prove it ▶, then 💾 Save to update.");
 }
 function mgSetBtn(id,on){const b=$(id);if(!b)return;b.style.opacity=on?"":".4";b.classList.toggle("locked",!on);}
+// The creator's tool strip: the fixed board tools plus one chip per terrain type,
+// so adding a tile type in puzzle-tiles.js adds its tool here automatically.
+function mgToolList(){
+  const base=[{id:"paint",em:"🖌️",lbl:"Target",num:true},
+              {id:"bot",em:"🤖",lbl:"Start"},
+              {id:"brick",em:"🔢",lbl:"Block",num:true}];
+  const tiles=(window.CC_TILES?CC_TILES.TYPES:[]).map(t=>({id:t,em:CC_TILES.DEFS[t].em,lbl:CC_TILES.DEFS[t].lbl}));
+  return base.concat(tiles,[{id:"erase",em:"🧹",lbl:"Erase"}]);
+}
+function mgToolsUI(){
+  const el=$("mgTools");if(!el)return;
+  const cur=mgState.paintMode, list=mgToolList();
+  el.innerHTML="";
+  for(const t of list){
+    const b=document.createElement("button");
+    b.className="tool"+(t.id===cur?" on":"");
+    b.textContent=t.em;b.title=t.lbl;
+    b.addEventListener("click",()=>{mgState.paintMode=t.id;sfx(560,.03);mgCreatorUI();});
+    el.appendChild(b);
+  }
+  // the number stepper only means something for the tools that carry a number
+  const t=list.find(x=>x.id===cur);
+  const stp=$("mgBrickStp");if(stp)stp.style.display=(t&&t.num)?"":"none";
+}
 function mgCreatorUI(){
   if(!mgState||!mgState.creator)return;
-  $("mgModePaint").classList.toggle("on",mgState.paintMode==="paint");
-  $("mgModeBot").classList.toggle("on",mgState.paintMode==="bot");
-  $("mgModeBrick").classList.toggle("on",mgState.paintMode==="brick");
+  mgToolsUI();
   const p=mgState.proj;
   $("mgBudget").textContent=p.maxBlocks;
   $("mgW").textContent=p.gw;
@@ -295,6 +319,7 @@ function mgEditStage(i){
   const st=mgState.stages||[]; if(i<0||i>=st.length)return;
   const s=st[i], p=mgState.proj;
   p.cells=JSON.parse(JSON.stringify(s.cells||[]));
+  p.tiles=JSON.parse(JSON.stringify(s.tiles||[]));
   p.initial=JSON.parse(JSON.stringify(s.initial||[]));
   p.start=JSON.parse(JSON.stringify(s.start||{x:0,y:0,dir:1}));
   p.gw=s.gw;p.gh=s.gh;p.maxBlocks=s.maxBlocks;if(s.diff)p.diff=s.diff;
@@ -322,7 +347,7 @@ function snapshotStage(p){
   const sort=mgHasNumbers(p);
   return JSON.parse(JSON.stringify({
     em:sort?"🔢":"🧩", name:p.name, diff:p.diff||1, maxBlocks:p.maxBlocks, gw:p.gw, gh:p.gh,
-    allowed:p.allowed, start:p.start, cells:p.cells, initial:p.initial||[],
+    allowed:p.allowed, start:p.start, cells:p.cells, initial:p.initial||[], tiles:p.tiles||[],
     sol:(mgRobot&&mgRobot.program)?mgRobot.program:[], // author's proving solution — loaded only in edit mode
     desc:(sort?"Sort the numbered blocks into order":"Fill the whole blueprint")}));
 }
@@ -343,7 +368,7 @@ function mgAddStage(){
     toast("🎬 Level "+mgState.stages.length+" banked — design the next, then 💾 Save the pack!");
   }
   // reset the canvas for the next level (keep size / budget / difficulty / name)
-  p.cells=[]; p.initial=[]; p.start={x:0,y:0,dir:1};
+  p.cells=[]; p.initial=[]; p.tiles=[]; p.start={x:0,y:0,dir:1};
   mgState.robot={x:0,y:0,dir:1}; mgSeed(mgState.robot,p);
   mgState.solved=false;
   if(mgRobot)mgRobot.program=[];
@@ -351,11 +376,68 @@ function mgAddStage(){
   sfx(680,.05);sfx(880,.05,.08);
   mgCreatorUI(); mgDraw();
 }
+/* ---------------- creator: painting the board ----------------
+   Every tool goes through mgPaintTile, which is the SINGLE place that clears
+   mgState.solved — so a newly added tool can never forget to re-lock
+   Save / Add level / Publish after the design changed. */
+function mgPaintTile(x,y){
+  const st=mgState, p=st.proj, k=x+"_"+y, mode=st.paintMode;
+  const tool=(window.CC_TILES&&CC_TILES.DEFS[mode])?mode:null; // a terrain tool?
+  if(mode==="bot"){
+    const t=mgTileAt(p,x,y);
+    if(t){toast("🚧 The robot can't start on "+(CC_TILES.DEFS[t[2]]||{lbl:"terrain"}).lbl.toLowerCase()+" — pick an open tile!");return;}
+    p.start={x,y,dir:1};
+    st.robot.x=x;st.robot.y=y;st.robot.dir=1;
+  }else if(mode==="brick"){
+    p.initial=p.initial||[];
+    const i=p.initial.findIndex(c=>c[0]===x&&c[1]===y);
+    if(i>=0)p.initial.splice(i,1);
+    else{mgClearTile(p,x,y);p.initial.push(st.brickNum!=null?[x,y,st.brickNum]:[x,y]);}
+    mgSeed(st.robot,p); // re-seed so the new bricks render immediately
+  }else if(mode==="erase"){
+    mgClearTile(p,x,y);
+    const i=p.cells.findIndex(c=>c[0]===x&&c[1]===y);
+    if(i>=0)p.cells.splice(i,1);
+    mgSeed(st.robot,p);
+  }else if(tool){
+    // terrain: tapping the same type again removes it, a different type replaces it
+    p.tiles=p.tiles||[];
+    const i=p.tiles.findIndex(t=>t[0]===x&&t[1]===y);
+    const had=i>=0?p.tiles[i][2]:null;
+    if(i>=0)p.tiles.splice(i,1);
+    if(had!==tool){
+      if(p.start.x===x&&p.start.y===y){toast("🤖 The robot starts here — move it first!");}
+      else{mgClearTile(p,x,y);p.tiles.push([x,y,tool,0]);}
+    }
+    mgSeed(st.robot,p);
+  }else{ // 🖌️ paint a target tile
+    if(mgTileAt(p,x,y)){toast("🧱 There's terrain here — 🧹 erase it first.");}
+    else{
+      const i=p.cells.findIndex(c=>c[0]===x&&c[1]===y);
+      if(i>=0){
+        const curN=p.cells[i].length>2?p.cells[i][2]:null;
+        if(curN===st.brickNum)p.cells.splice(i,1);
+        else p.cells[i]=st.brickNum!=null?[x,y,st.brickNum]:[x,y];
+      }else p.cells.push(st.brickNum!=null?[x,y,st.brickNum]:[x,y]);
+    }
+  }
+  st.solved=false; // design changed — must re-prove (re-locks Save/Publish)
+  sfx(500,.03);mgDraw();mgCreatorUI();
+}
+function mgTileAt(p,x,y){return (p.tiles||[]).find(t=>t[0]===x&&t[1]===y)||null;}
+function mgTileMap(p){const m=new Map();for(const t of (p.tiles||[]))m.set(t[0]+"_"+t[1],{t:t[2],a:t[3]||0});return m;}
+// a cell holds ONE thing: placing terrain wipes the target/brick there and vice versa
+function mgClearTile(p,x,y){
+  p.tiles=(p.tiles||[]).filter(t=>!(t[0]===x&&t[1]===y));
+  p.initial=(p.initial||[]).filter(c=>!(c[0]===x&&c[1]===y));
+}
 function mgSetSize(dw,dh){
   if(!mgState||!mgState.creator)return;
   const p=mgState.proj;
   p.gw=clamp(p.gw+dw,4,10); p.gh=clamp(p.gh+dh,4,8); // DB limits: gw 4-10, gh 4-8
   p.cells=p.cells.filter(c=>c[0]<p.gw&&c[1]<p.gh);
+  p.initial=(p.initial||[]).filter(c=>c[0]<p.gw&&c[1]<p.gh);
+  p.tiles=(p.tiles||[]).filter(t=>t[0]<p.gw&&t[1]<p.gh); // a clipped-off wall would block invisibly
   if(p.start.x>=p.gw)p.start.x=p.gw-1;
   if(p.start.y>=p.gh)p.start.y=p.gh-1;
   mgState.robot.x=Math.min(mgState.robot.x,p.gw-1);
@@ -374,11 +456,11 @@ async function publishChallenge(){
   let stages=[];
   if(banked.length)stages=(curHas&&mgState.solved)?banked.concat([snapshotStage(p)]):banked.slice();
   const multi=stages.length>0;
-  const base=multi?stages[0]:{cells:p.cells,initial:p.initial||[],start:p.start,maxBlocks:p.maxBlocks,gw:p.gw,gh:p.gh};
+  const base=multi?stages[0]:{cells:p.cells,initial:p.initial||[],tiles:p.tiles||[],start:p.start,maxBlocks:p.maxBlocks,gw:p.gw,gh:p.gh};
   // author's solution: level 1's for the top-level column (multi levels keep their own sol in `stages`)
   const solution=multi?(base.sol||[]):((mgRobot&&mgRobot.program)?JSON.parse(JSON.stringify(mgRobot.program)):[]);
   const body={name:p.name,gw:base.gw,gh:base.gh,start_x:base.start.x,start_y:base.start.y,start_dir:base.start.dir,
-    cells:base.cells,initial:base.initial||[],max_blocks:base.maxBlocks,diff,stages:multi?stages:[],solution,
+    cells:base.cells,initial:base.initial||[],tiles:base.tiles||[],max_blocks:base.maxBlocks,diff,stages:multi?stages:[],solution,
     author_name:(sbUser.email||"builder").split("@")[0].slice(0,20)};
   try{
     if(mgState.publishId){ // update the player's already-published challenge
@@ -435,7 +517,7 @@ function saveMyChallenge(){
   const copy=JSON.parse(JSON.stringify({
     id:"my_"+Date.now(), mine:true, em:sort?"🔢":"🧩", name:p.name, diff,
     coins:0, xp:0, maxBlocks:p.maxBlocks, gw:p.gw, gh:p.gh,
-    allowed:p.allowed, start:p.start, cells:p.cells, initial:p.initial||[],
+    allowed:p.allowed, start:p.start, cells:p.cells, initial:p.initial||[], tiles:p.tiles||[],
     sol:(mgRobot&&mgRobot.program)?mgRobot.program:[], // author's solution (loaded only when editing)
     desc:(sort?"Sort the numbered blocks into order ":"Fill the blueprint ")+"— your custom challenge!"}));
   commit(copy,"💾 Saved to “My Challenges”!");
@@ -478,6 +560,14 @@ function mgSeed(rs,proj){
   // tutorial props: choppable trees + collectable gems (Academy stages)
   rs.trees=new Set((proj.trees||[]).map(c=>c[0]+"_"+c[1]));
   rs.items=new Set((proj.items||[]).map(c=>c[0]+"_"+c[1]));
+  // puzzle terrain (walls, pits, …). Absent on every pre-existing project → empty board.
+  if(window.CC_TILES)CC_TILES.seed(rs,proj);
+  else{rs.tiles=new Map();rs.keys=new Set();rs.open=new Set();}
+}
+// can the robot stand on this cell? (grid bounds + solid terrain)
+function mgWalkable(st,x,y){
+  if(x<0||y<0||x>=st.proj.gw||y>=st.proj.gh)return false;
+  return !(window.CC_TILES&&CC_TILES.solid(st.robot,x+"_"+y));
 }
 // does this project use numbered bricks / numbered target cells (→ numbers matter)?
 function mgHasNumbers(proj){return (proj.initial||[]).some(c=>c.length>2&&c[2]!=null)||(proj.cells||[]).some(c=>c.length>2&&c[2]!=null);}
@@ -574,12 +664,21 @@ function mgStop(){
 function mgTick(){
   const st=mgState;
   if(!st||!st.running)return;
-  if(++st.steps>500){mgStop();toast("♾️ Your program ran too long — something is looping forever!");return;}
+  if(++st.steps>500){
+    mgStop();
+    // A ♾️ program is SUPPOSED to run out of steps — it wins early when the goal
+    // is met, so reaching the cap just means it isn't there yet. Judge it properly
+    // instead of scolding, so the player gets the specific "what's missing" nudge.
+    if(st.frames&&st.frames.some(f=>f.reps===Infinity)){mgFinish();return;}
+    toast("♾️ Your program ran too long — something is looping forever!");return;
+  }
+  if(st.wait>0){st.wait--;mgDraw();return;} // ⏱️ Wait holds the robot still for n ticks
   let guard=0;
   while(guard++<60){
     const fr=st.frames[st.frames.length-1];
     if(!fr){mgFinish();return;}
     if(fr.i>=fr.blocks.length){
+      if(fr.reps===Infinity){fr.i=0;continue;}
       if(fr.reps>1){
         fr.reps--;fr.i=0;
         if(fr.cv!==undefined){fr.cur++;mgRobot.vars[fr.cv]=fr.cur;}
@@ -596,6 +695,13 @@ function mgTick(){
       if(!b.body.length||times<1){fr.i++;continue;}
       st.frames.push({blocks:b.body,i:0,reps:times});continue;
     }
+    if(b.t==="forever"){
+      // same shape as the world interpreter: an endless frame. The program never
+      // drains its stack, so the goal is checked after every action instead.
+      if(!b.body.length){fr.i++;continue;}
+      mgRobot.curUid=b.uid;
+      st.frames.push({blocks:b.body,i:0,reps:Infinity});continue;
+    }
     if(b.t==="countLoop"){
       if(!b.body.length||(b.to|0)<1){fr.i++;continue;}
       mgRobot.vars[b.name]=1;
@@ -611,7 +717,14 @@ function mgTick(){
     const rb=st.robot;
     if(b.t==="move"){
       const nx=rb.x+DX[rb.dir],ny=rb.y+DY[rb.dir];
-      if(nx>=0&&ny>=0&&nx<st.proj.gw&&ny<st.proj.gh){rb.x=nx;rb.y=ny;}
+      if(mgWalkable(st,nx,ny)){
+        rb.x=nx;rb.y=ny;
+        // the tile may relocate the robot (portals) or hand it something (keys)
+        if(window.CC_TILES){
+          const to=CC_TILES.enter(st,rb,nx+"_"+ny);
+          if(to){const q=to.split("_");rb.x=+q[0];rb.y=+q[1];}
+        }
+      }else sfx(180,.05); // bumped into a wall / the edge
     }
     else if(b.t==="turnL")rb.dir=(rb.dir+3)%4;
     else if(b.t==="turnR")rb.dir=(rb.dir+1)%4;
@@ -619,8 +732,12 @@ function mgTick(){
     else if(b.t==="pickUp"){const kk=rb.x+"_"+rb.y;
       if(rb.held==null&&rb.bricks.has(kk)){rb.held=rb.brickNo[kk]!=null?rb.brickNo[kk]:rb.nextNo++;rb.bricks.delete(kk);delete rb.brickNo[kk];sfx(560,.03);}
       else sfx(200,.05);}
-    else if(b.t==="drop"){const kk=rb.x+"_"+rb.y;
-      if(rb.held!=null&&!rb.bricks.has(kk)){rb.bricks.add(kk);rb.brickNo[kk]=rb.held;rb.held=null;sfx(400,.03);}
+    else if(b.t==="drop"){const kk=rb.x+"_"+rb.y, ka=(rb.x+DX[rb.dir])+"_"+(rb.y+DY[rb.dir]);
+      // a pit straight ahead takes priority: dropping into the gap bridges it,
+      // which is the only way across (the robot can't stand on an open pit).
+      if(rb.held!=null&&window.CC_TILES&&CC_TILES.openPit(rb,ka)){
+        rb.bricks.add(ka);rb.brickNo[ka]=rb.held;rb.held=null;sfx(300,.07);}
+      else if(rb.held!=null&&!rb.bricks.has(kk)){rb.bricks.add(kk);rb.brickNo[kk]=rb.held;rb.held=null;sfx(400,.03);}
       else sfx(200,.05);}
     else if(b.t==="chop"){ // fell a tree on the tile the robot stands on, else the one it faces
       const kk=rb.x+"_"+rb.y, ka=(rb.x+DX[rb.dir])+"_"+(rb.y+DY[rb.dir]);
@@ -633,66 +750,109 @@ function mgTick(){
     else if(b.t==="setVar")mgRobot.vars[b.name]=resolveVal(mgRobot,b.val);
     else if(b.t==="changeVar")mgRobot.vars[b.name]=(Number(mgRobot.vars[b.name])||0)+(b.n|0);
     else if(b.t==="say")mgRobot.say={txt:String(resolveVal(mgRobot,b.val)).slice(0,24),until:1e18};
-    // wait and any world-only action are harmless no-ops on the challenge grid
+    else if(b.t==="wait")st.wait=Math.max(0,(b.n|0)-1); // this tick counts as the first
+    // any remaining world-only action is a harmless no-op on the challenge grid
     fr.i++;
     mgDraw();
+    // A ♾️ Forever program never runs out of blocks, so the goal can't be checked
+    // when the stack empties — check it after every action instead. This is also
+    // what makes "loop until it's done" puzzles work.
+    if(st.frames.some(f=>f.reps===Infinity)&&mgGoalMet(st)){mgSuccess();return;}
     return;
   }
+}
+// Sensors a challenge robot can actually answer. The world robot keeps its own
+// CONDS list (blocks.js) — mixing them would put dead sensors in both palettes.
+const CHALLENGE_CONDS=["blocked","wallAhead","pitAhead","brickHere","onTarget","holding","treeAhead"];
+// Only the sensors THIS level can answer, so the tap-to-cycle list stays short and
+// a player never meets a condition that can never be true. Reads proj (stable), not
+// the mutating robot state, so the list doesn't change mid-run.
+function mgCondList(){
+  if(!mgState)return CONDS;
+  const p=mgState.proj, has=c=>(p.tiles||[]).some(t=>t[2]===c);
+  const L=["blocked","brickHere","onTarget","holding"];
+  if(has("wall"))L.push("wallAhead");
+  if(has("pit"))L.push("pitAhead");
+  if((p.trees||[]).length)L.push("treeAhead");
+  return L;
 }
 function mgCond(st,c){
   if(c&&typeof c==="object"){
     const v=Number(mgRobot.vars[c.var])||0;
     return c.op===">"?v>c.val:c.op==="<"?v<c.val:v===c.val;
   }
-  if(c==="treeAhead"){const rb=st.robot,ka=(rb.x+DX[rb.dir])+"_"+(rb.y+DY[rb.dir]);return !!(rb.trees&&rb.trees.has(ka));}
-  if(c==="blocked"){const rb=st.robot,nx=rb.x+DX[rb.dir],ny=rb.y+DY[rb.dir];return nx<0||ny<0||nx>=st.proj.gw||ny>=st.proj.gh;}
-  if(c==="bagEmpty")return true; // no bag in a challenge
-  return false; // world-sensing conditions don't apply on the blank grid
+  const rb=st.robot, ax=rb.x+DX[rb.dir], ay=rb.y+DY[rb.dir];
+  const ka=ax+"_"+ay, kh=rb.x+"_"+rb.y, T=window.CC_TILES;
+  switch(c){
+    case "blocked":   return !mgWalkable(st,ax,ay);
+    case "wallAhead": {const t=T&&T.at(rb,ka);return !!(t&&t.t==="wall");}
+    case "pitAhead":  return !!(T&&T.openPit(rb,ka));
+    case "treeAhead": return !!(rb.trees&&rb.trees.has(ka));
+    case "brickHere": return rb.bricks.has(kh);
+    case "onTarget":  return (st.proj.cells||[]).some(c2=>c2[0]===rb.x&&c2[1]===rb.y);
+    case "holding":   return rb.held!=null;
+    case "bagEmpty":  return rb.held==null;  // "empty hands" is the challenge-grid reading
+    case "bagFull":   return rb.held!=null;
+  }
+  return false; // world-only sensors don't apply on the challenge grid
 }
-function mgFinish(){
-  const st=mgState;
-  mgStop();
+// a brick that was dropped into a pit has been spent as bridge material, so it
+// isn't a "brick outside the plan" — it's part of the terrain now.
+function mgStray(st,bp){
+  return [...st.robot.bricks].some(k2=>!bp.has(k2)&&!(window.CC_TILES&&CC_TILES.isFilledPit(st.robot,k2)));
+}
+// The single source of truth for "is this level solved?", returning both the
+// verdict and the nudge to show when it isn't. mgGoalMet() is the pure predicate
+// (used by ♾️ Forever programs, which never run out of blocks to check at the end).
+function mgCheck(st){
+  // A board with nothing to achieve is never "won" — otherwise a ♾️ Forever
+  // program would instantly succeed on a blank creator canvas.
+  if(!st.proj.goalType&&!(st.proj.cells||[]).length&&!(st.proj.initial||[]).length)
+    return {ok:false,msg:"🖌️ Nothing to build yet — paint some target tiles first!"};
   // Academy goals: reach the flag / chop every tree / collect every gem
   if(st.proj.goalType){
     const rb=st.robot,gt=st.proj.goalType;
     let ok=false;
-    if(gt==="reach")ok=(st.proj.goal&&rb.x===st.proj.goal[0]&&rb.y===st.proj.goal[1]);
-    else if(gt==="chop")ok=(rb.trees&&rb.trees.size===0);
-    else if(gt==="collect")ok=(rb.items&&rb.items.size===0);
-    if(ok){mgSuccess();return;}
-    toast(gt==="reach"?"🚩 Not on the flag yet — guide the robot onto it, then run again!":
+    if(gt==="reach")ok=!!(st.proj.goal&&rb.x===st.proj.goal[0]&&rb.y===st.proj.goal[1]);
+    else if(gt==="chop")ok=!!(rb.trees&&rb.trees.size===0);
+    else if(gt==="collect")ok=!!(rb.items&&rb.items.size===0);
+    return {ok,msg:gt==="reach"?"🚩 Not on the flag yet — guide the robot onto it, then run again!":
       gt==="chop"?"🌳 Trees still standing — make sure the robot chops every one!":
-      "💎 Gems left behind — collect them all!");
-    sfx(220,.12);return;
+      "💎 Gems left behind — collect them all!"};
   }
   // Paint mode with per-cell target numbers: numbered cells must hold that exact
   // number, plain target cells just need a brick, and nothing may land off-plan.
   const numCells=(st.proj.cells||[]).filter(c=>c.length>2&&c[2]!=null);
   if(numCells.length){
     const bp2=new Set(st.proj.cells.map(c=>c[0]+"_"+c[1]));
-    const stray=[...st.robot.bricks].some(k2=>!bp2.has(k2));
+    const stray=mgStray(st,bp2);
     const numOk=numCells.every(c=>st.robot.brickNo[c[0]+"_"+c[1]]===c[2]);
     const filled=st.proj.cells.every(c=>st.robot.bricks.has(c[0]+"_"+c[1]));
-    if(!stray&&numOk&&filled){mgSuccess();return;}
-    if(stray)toast("🚧 A brick landed outside the plan — check your path!");
-    else if(!numOk)toast('🔢 Match every "→n" target — each numbered tile needs that exact block!');
-    else toast("🧱 Almost! Fill every target tile, then run again!");
-    sfx(220,.12);return;
+    return {ok:!stray&&numOk&&filled,
+      msg:stray?"🚧 A brick landed outside the plan — check your path!":
+        !numOk?'🔢 Match every "→n" target — each numbered tile needs that exact block!':
+        "🧱 Almost! Fill every target tile, then run again!"};
   }
   // sorting-style goal: each target cell must hold its required number
   const goal=mgSortGoalOrder(st.proj);
   if(goal){
-    const ok=goal.every(g=>st.robot.brickNo[g[0]+"_"+g[1]]===g[2]);
-    if(ok){mgSuccess();return;}
-    toast("🔢 Not sorted yet — get every numbered block onto its target cell in order!");
-    sfx(220,.12);return;
+    return {ok:goal.every(g=>st.robot.brickNo[g[0]+"_"+g[1]]===g[2]),
+      msg:"🔢 Not sorted yet — get every numbered block onto its target cell in order!"};
   }
   const bp=new Set(st.proj.cells.map(c=>c[0]+"_"+c[1]));
-  const stray=[...st.robot.bricks].some(k2=>!bp.has(k2));
+  const stray=mgStray(st,bp);
   const missing=[...bp].filter(k2=>!st.robot.bricks.has(k2)).length;
-  if(!stray&&missing===0){mgSuccess();return;}
-  if(stray)toast("🚧 A brick landed outside the plan — check your path!");
-  else toast("🧱 Almost! "+missing+" tiles still missing — tweak your loops and run again!");
+  return {ok:!stray&&missing===0,
+    msg:stray?"🚧 A brick landed outside the plan — check your path!":
+      "🧱 Almost! "+missing+" tiles still missing — tweak your loops and run again!"};
+}
+function mgGoalMet(st){return mgCheck(st||mgState).ok;}
+function mgFinish(){
+  const st=mgState;
+  mgStop();
+  const r=mgCheck(st);
+  if(r.ok){mgSuccess();return;}
+  toast(r.msg);
   sfx(220,.12);
 }
 function mgSuccess(){
@@ -776,6 +936,8 @@ function mgDraw(){
   const vg=g.createRadialGradient(CW/2,CH/2,cell,CW/2,CH/2,Math.max(CW,CH)*.72);
   vg.addColorStop(0,"rgba(0,0,0,0)");vg.addColorStop(1,"rgba(0,0,0,.14)");
   g.fillStyle=vg;g.fillRect(0,0,CW,CH);
+  // ---- puzzle terrain (walls, pits) — under the plan so targets read on top ----
+  if(window.CC_TILES)CC_TILES.draw(g,st.robot,cell);
   // ---- blueprint target outlines (unbuilt cells) ----
   for(const c of (p.cells||[])){
     const k2=c[0]+"_"+c[1]; if(st.robot.bricks.has(k2))continue;
@@ -787,7 +949,9 @@ function mgDraw(){
   // ---- placed bricks (HD toy-bevel, like world builds) ----
   for(const k2 of st.robot.bricks){
     const q=k2.split("_");
-    drawBoardBrick(g,(+q[0])*cell,(+q[1])*cell,cell,bp.has(k2),st.robot.brickNo[k2]);
+    // a block that bridged a pit is correctly placed, so it reads "on plan" (not stray-red)
+    const ok=bp.has(k2)||!!(window.CC_TILES&&CC_TILES.isFilledPit(st.robot,k2));
+    drawBoardBrick(g,(+q[0])*cell,(+q[1])*cell,cell,ok,st.robot.brickNo[k2]);
   }
   // sorting goal hints: show each target's required number in its corner
   const goalHints=mgSortGoalOrder(p);

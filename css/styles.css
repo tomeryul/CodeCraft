@@ -386,7 +386,9 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #mgCreatorBar .stp .clab{font-size:11px;font-weight:800;color:var(--ink2);margin:0 4px 0 8px;white-space:nowrap;}
 #mgCreatorBar .stp button{width:30px;height:30px;padding:0;border-radius:999px;font-size:15px;line-height:1;}
 #mgCreatorBar .num{min-width:24px;text-align:center;font-weight:900;font-size:13.5px;}
-#mgModePaint.on,#mgModeBot.on,#mgModeBrick.on{background:linear-gradient(180deg,#d8912f,#b06f1a);color:#fff;border-bottom-color:#7c4c0e;}
+#mgCreatorBar .cb-row.tools{gap:6px;}
+#mgCreatorBar .tool{width:40px;height:40px;padding:0;border-radius:12px;font-size:19px;line-height:1;}
+#mgCreatorBar .tool.on{background:linear-gradient(180deg,#d8912f,#b06f1a);color:#fff;border-bottom-color:#7c4c0e;}
 #mgSave{background:linear-gradient(180deg,#3f8ecf,#2e73ad);border-bottom-color:#1d4d78;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.3);}
 #mgPublish{background:linear-gradient(180deg,#43b862,#2e9e4a);border-bottom-color:#1c6e32;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.3);}
 #mgAddStage{background:linear-gradient(180deg,#7a4dff,#5f34d6);border-bottom-color:#42248f;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.25);}
