@@ -1054,6 +1054,52 @@ async function ev(expr) {
   check("a wrong-colour key does not open the door", KD.wrongKey === 1, kdp);
   check("a portal pair teleports the robot (no bounce-back)", KD.ported === 4, kdp);
 
+  console.log("▶ plates, gates & one-way arrows");
+  const pga = await ev(`(()=>{
+    const run=(proj,prog,ticks)=>{
+      mgEnter(proj); mgRobot.program=prog;
+      mgState.running=true; mgState.frames=[{blocks:prog,i:0,reps:1}]; mgState.wait=0;
+      for(let i=0;i<ticks&&mgState&&mgState.running;i++)mgTick();
+      return mgState;
+    };
+    const base={id:'pg',em:'🔘',name:'P',desc:'',gw:6,gh:3,maxBlocks:30,
+      allowed:CHALLENGE_BLOCKS,coins:0,xp:0,start:{x:0,y:1,dir:1},cells:[[5,1]],initial:[]};
+    // a gate is shut while nothing presses its plate
+    let st=run(Object.assign({},base,{tiles:[[3,0,'plate',1],[2,1,'gate',1]]}),[{t:'move',uid:1}],4);
+    const shutX=st.robot.x, gateSense=mgCond(st,'gateAhead');
+    // standing on the plate opens it
+    st.robot.x=3;st.robot.y=0;
+    const openWhileOn=CC_TILES.platesPressed(st.robot,1);
+    st.robot.x=0;st.robot.y=1;
+    const shutAgain=!CC_TILES.platesPressed(st.robot,1);
+    // ...and a block left on the plate holds it open with the robot elsewhere
+    st.robot.bricks.add('3_0');
+    const heldByBlock=CC_TILES.platesPressed(st.robot,1);
+    const onPlateSense=(st.robot.x=3,st.robot.y=0,mgCond(st,'onPlate'));
+    // a block doing that job is not a stray brick
+    st.robot.bricks.add('5_1');
+    const notStray=mgGoalMet(st);
+    mgExit(false);
+    // a one-way tile refuses movement against its arrow, allows it along
+    st=run(Object.assign({},base,{tiles:[[1,1,'arrow',1]],start:{x:0,y:1,dir:1}}),
+      [{t:'move',uid:1},{t:'turnL',uid:2},{t:'turnL',uid:3},{t:'move',uid:4}],6);
+    const stuck=st.robot.x===1;      // walked onto it, then couldn't go back west
+    mgExit(false);
+    st=run(Object.assign({},base,{tiles:[[1,1,'arrow',1]],start:{x:0,y:1,dir:1}}),
+      [{t:'move',uid:1},{t:'move',uid:2}],4);
+    const flows=st.robot.x===2;      // continuing east is fine
+    mgExit(false);
+    return JSON.stringify({shutX,gateSense,openWhileOn,shutAgain,heldByBlock,onPlateSense,notStray,stuck,flows});
+  })()`);
+  const PG = JSON.parse(pga);
+  check("a gate blocks while its plate is unpressed", PG.shutX === 1 && PG.gateSense === true, pga);
+  check("standing on the plate opens the gate", PG.openWhileOn === true && PG.shutAgain === true, pga);
+  check("a block left on the plate holds the gate open", PG.heldByBlock === true, pga);
+  check("onPlate senses the plate underfoot", PG.onPlateSense === true, pga);
+  check("a block doing a job on a plate isn't a stray brick", PG.notStray === true, pga);
+  check("a one-way tile refuses movement against the arrow", PG.stuck === true, pga);
+  check("a one-way tile allows movement along the arrow", PG.flows === true, pga);
+
   console.log("▶ creator: every tool re-locks Save, and tiles survive banking");
   const tools = await ev(`(()=>{
     mgEnterCreator();

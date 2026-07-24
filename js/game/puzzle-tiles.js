@@ -45,9 +45,36 @@
         for(const [k2,t2] of rs.tiles)
           if(k2!==k&&t2.t==="portal"&&t2.a===t.a){sfx(700,.05);sfx(1000,.06,.05);return k2;}
       }},
+    // A plate is held down by the robot standing on it OR by a block left on it.
+    // Both matter: standing on it teaches "I can't be in two places at once",
+    // which is exactly what pushes the player to discover the block solution.
+    plate:{em:"🔘",lbl:"Plate",arg:"colour",
+      solid:()=>false},
+    // Open only while every plate of its colour is pressed.
+    gate:{em:"🚧",lbl:"Gate",arg:"colour",
+      solid:(rs,k,t)=>!platesPressed(rs,t.a)},
+    // One-way: you may not step OFF this tile against the arrow. It never moves
+    // the robot itself — "the robot does exactly what your code says" still holds.
+    arrow:{em:"➡️",lbl:"One-way",arg:"dir",
+      solid:()=>false},
   };
   // creator tool order (also the order tiles are drawn in)
-  const TYPES=["wall","pit","key","door","portal"];
+  const TYPES=["wall","pit","key","door","portal","plate","gate","arrow"];
+  // are all plates of this colour currently held down?
+  function platesPressed(rs,colour){
+    let any=false;
+    for(const [k,t] of rs.tiles){
+      if(t.t!=="plate"||t.a!==colour)continue;
+      any=true;
+      if(!(rs.bricks.has(k)||(rs.x+"_"+rs.y)===k))return false;
+    }
+    return any; // a gate with no plates of its colour stays shut
+  }
+  // may the robot leave `from` heading in direction `dir`? (one-way arrows)
+  function canLeave(rs,fx,fy,dir){
+    const t=at(rs,fx+"_"+fy);
+    return !(t&&t.t==="arrow"&&(t.a|0)!==dir);
+  }
 
   const key=(x,y)=>x+"_"+y;
   const at=(rs,k)=>(rs&&rs.tiles)?(rs.tiles.get(k)||null):null;
@@ -150,6 +177,39 @@
     g.lineWidth=3;g.strokeStyle="rgba(0,0,0,.45)";g.strokeText(colIdx,px+4,py+3);
     g.fillStyle=c;g.fillText(colIdx,px+4,py+3);
   }
+  // a gate: solid bars when shut, retracted stubs when its plates are pressed
+  function drawGate(g,px,py,cell,colIdx,open){
+    const c=COL[(colIdx-1+COL.length)%COL.length]||COL[0];
+    const m=Math.max(2,cell*0.06), x=px+m, y=py+m, s=cell-2*m;
+    g.save();rr(g,x,y,s,s,Math.max(4,cell*.16));g.clip();
+    g.fillStyle=open?"rgba(80,200,120,.14)":"rgba(0,0,0,.3)";g.fillRect(x,y,s,s);
+    g.strokeStyle=c;g.lineWidth=Math.max(2.5,cell*.08);g.globalAlpha=open?.35:1;
+    const bars=3, step=s/(bars+1), len=open?s*.22:s;
+    for(let i=1;i<=bars;i++){
+      const bx=x+i*step;
+      g.beginPath();g.moveTo(bx,y);g.lineTo(bx,y+len);
+      if(open){g.moveTo(bx,y+s);g.lineTo(bx,y+s-len);}
+      g.stroke();
+    }
+    g.globalAlpha=1;g.restore();
+    g.strokeStyle=c;g.lineWidth=1.8;rr(g,x,y,s,s,Math.max(4,cell*.16));g.stroke();
+    g.font="900 "+Math.floor(cell*0.21)+"px Fredoka,sans-serif";
+    g.textAlign="left";g.textBaseline="top";
+    g.lineWidth=3;g.strokeStyle="rgba(0,0,0,.45)";g.strokeText(colIdx,px+4,py+3);
+    g.fillStyle=c;g.fillText(colIdx,px+4,py+3);
+  }
+  // a one-way tile: a big chevron pointing the only way out (dir 0=N 1=E 2=S 3=W)
+  function drawArrow(g,px,py,cell,dir){
+    const cx=px+cell/2, cy=py+cell/2, r=cell*.3;
+    g.save();g.translate(cx,cy);g.rotate(dir*Math.PI/2); // art points north at dir 0
+    g.fillStyle="rgba(255,255,255,.13)";
+    g.beginPath();g.arc(0,0,cell*.42,0,7);g.fill();
+    g.strokeStyle="#ffd66b";g.lineWidth=Math.max(3,cell*.1);
+    g.lineCap="round";g.lineJoin="round";
+    g.beginPath();g.moveTo(-r*.7,r*.28);g.lineTo(0,-r*.42);g.lineTo(r*.7,r*.28);g.stroke();
+    g.beginPath();g.moveTo(-r*.7,r*.85);g.lineTo(0,r*.15);g.lineTo(r*.7,r*.85);g.stroke();
+    g.restore();
+  }
   // draw every tile of the board. Called from mgDraw AFTER the grass, BEFORE
   // the blueprint outlines, so targets and bricks read on top of the terrain.
   function draw(g,rs,cell){
@@ -162,8 +222,12 @@
       else if(t.t==="key")drawBadge(g,px,py,cell,n,"🔑","disc");
       else if(t.t==="door")drawBadge(g,px,py,cell,n,rs.keys.has(t.a)?"🚪":"🔒","sq");
       else if(t.t==="portal")drawBadge(g,px,py,cell,n,"🌀","disc");
+      else if(t.t==="plate")drawBadge(g,px,py,cell,n,
+        (rs.bricks.has(k)||(rs.x+"_"+rs.y)===k)?"🟢":"🔘","disc");
+      else if(t.t==="gate")drawGate(g,px,py,cell,n,platesPressed(rs,t.a));
+      else if(t.t==="arrow")drawArrow(g,px,py,cell,t.a|0);
     }
   }
 
-  window.CC_TILES={DEFS,TYPES,seed,at,solid,enter,isFilledPit,openPit,draw};
+  window.CC_TILES={DEFS,TYPES,COL,seed,at,solid,enter,isFilledPit,openPit,draw,platesPressed,canLeave};
 })();

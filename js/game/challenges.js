@@ -169,7 +169,7 @@ async function loadCommunity(){
 }
 function mgEnterCreator(){
   mgEnter({id:"custom",em:"✏️",name:"My Challenge",diff:1,coins:0,xp:0,maxBlocks:12,gw:8,gh:6,
-    desc:"Design mode — pick a tool: 🖌️ target tiles, 🤖 the robot's start, 🔢 pre-placed blocks, 🧱 walls to route around, 🕳️ pits (the robot must ⤵️ Drop a block into one to cross it), 🧹 to erase. Then write a program and press ▶ to PROVE the level is solvable — only then do 💾 Save / ➕ Add level / 🌍 Publish open up. Build several levels for a multi-level minigame.",
+    desc:"Design mode — pick a tool: 🖌️ target tiles · 🤖 the robot's start · 🔢 pre-placed blocks · 🧱 walls to route around · 🕳️ pits (⤵️ Drop a block in to bridge one) · 🔑 keys and 🚪 doors of the same colour · 🌀 a pair of portals · 🔘 plates that open 🚧 gates (the robot — or a block left behind — holds one down) · ➡️ one-way tiles · 🧹 erase. Then write a program and press ▶ to PROVE the level is solvable — only then do 💾 Save / ➕ Add level / 🌍 Publish open up. Build several levels for a multi-level minigame.",
     allowed:CREATOR_BLOCKS,start:{x:0,y:0,dir:1},cells:[],initial:[],tiles:[]});
   mgState.creator=true;mgState.solved=false;mgState.paintMode="paint";mgState.brickNum=1;mgState.tileArg=1;
   mgState.stages=[];        // banked levels for a multi-level pack (empty = single challenge)
@@ -251,15 +251,18 @@ function mgToolList(){
               {id:"bot",em:"🤖",lbl:"Start"},
               {id:"brick",em:"🔢",lbl:"Block",num:true}];
   const tiles=(window.CC_TILES?CC_TILES.TYPES:[]).map(t=>({id:t,em:CC_TILES.DEFS[t].em,lbl:CC_TILES.DEFS[t].lbl,
-    colour:CC_TILES.DEFS[t].arg==="colour"}));
+    colour:CC_TILES.DEFS[t].arg==="colour",dir:CC_TILES.DEFS[t].arg==="dir"}));
   return base.concat(tiles,[{id:"erase",em:"🧹",lbl:"Erase"}]);
 }
-// the −/+ stepper is shared: it edits the block number for 🖌️/🔢, and the
-// colour (1-4, pairing keys to doors and portals to portals) for coloured tiles
+const DIR_EM=["⬆️","➡️","⬇️","⬅️"]; // matches DX/DY: 0=N 1=E 2=S 3=W
+// One shared −/+ stepper: it edits the block number for 🖌️/🔢, the colour (1-4,
+// pairing keys to doors, portals to portals, plates to gates) for coloured tiles,
+// and the direction for ➡️ one-way tiles.
 function mgStepArg(d){
   if(!mgState)return;
   const t=mgToolList().find(x=>x.id===mgState.paintMode);
-  if(t&&t.colour){
+  if(t&&t.dir)mgState.tileArg=(((mgState.tileArg|0)+d)%4+4)%4;
+  else if(t&&t.colour){
     const n=(mgState.tileArg||1)+d;
     mgState.tileArg=n<1?4:n>4?1:n; // wraps — only four colours
   }else if(d>0)mgState.brickNum=mgState.brickNum==null?1:Math.min(99,mgState.brickNum+1);
@@ -280,12 +283,14 @@ function mgToolsUI(){
   // the stepper only appears for tools that carry a value, and relabels itself
   const t=list.find(x=>x.id===cur), stp=$("mgBrickStp");
   if(stp){
-    const on=!!(t&&(t.num||t.colour));
+    const on=!!(t&&(t.num||t.colour||t.dir));
     stp.style.display=on?"":"none";
     if(on){
       const lab=stp.querySelector(".clab");
-      if(lab)lab.textContent=t.colour?"🎨 Colour":"🔢 No.";
-      $("mgBrickN").textContent=t.colour?(mgState.tileArg||1):(mgState.brickNum==null?"—":mgState.brickNum);
+      if(lab)lab.textContent=t.dir?"🧭 Way":t.colour?"🎨 Colour":"🔢 No.";
+      $("mgBrickN").textContent=t.dir?DIR_EM[(mgState.tileArg|0)%4]
+        :t.colour?(mgState.tileArg||1)
+        :(mgState.brickNum==null?"—":mgState.brickNum);
     }
   }
 }
@@ -423,7 +428,8 @@ function mgPaintTile(x,y){
   }else if(tool){
     // terrain: tapping the same type again removes it, a different type replaces it
     p.tiles=p.tiles||[];
-    const def=CC_TILES.DEFS[tool], arg=def.arg==="colour"?(st.tileArg||1):0;
+    const def=CC_TILES.DEFS[tool];
+    const arg=def.arg==="colour"?(st.tileArg||1):def.arg==="dir"?(st.tileArg|0)%4:0;
     const i=p.tiles.findIndex(t=>t[0]===x&&t[1]===y);
     const had=i>=0?p.tiles[i]:null;
     if(i>=0)p.tiles.splice(i,1);
@@ -741,7 +747,9 @@ function mgTick(){
     const rb=st.robot;
     if(b.t==="move"){
       const nx=rb.x+DX[rb.dir],ny=rb.y+DY[rb.dir];
-      if(mgWalkable(st,nx,ny)){
+      const oneWay=window.CC_TILES&&!CC_TILES.canLeave(rb,rb.x,rb.y,rb.dir);
+      if(oneWay)sfx(180,.05); // standing on a ➡️ one-way tile, facing the wrong way
+      else if(mgWalkable(st,nx,ny)){
         rb.x=nx;rb.y=ny;
         // the tile may relocate the robot (portals) or hand it something (keys)
         if(window.CC_TILES){
@@ -787,7 +795,7 @@ function mgTick(){
 }
 // Sensors a challenge robot can actually answer. The world robot keeps its own
 // CONDS list (blocks.js) — mixing them would put dead sensors in both palettes.
-const CHALLENGE_CONDS=["blocked","wallAhead","pitAhead","doorAhead","keyAhead","brickHere","onTarget","holding","treeAhead"];
+const CHALLENGE_CONDS=["blocked","wallAhead","pitAhead","doorAhead","keyAhead","gateAhead","onPlate","brickHere","onTarget","holding","treeAhead"];
 // Only the sensors THIS level can answer, so the tap-to-cycle list stays short and
 // a player never meets a condition that can never be true. Reads proj (stable), not
 // the mutating robot state, so the list doesn't change mid-run.
@@ -799,6 +807,8 @@ function mgCondList(){
   if(has("pit"))L.push("pitAhead");
   if(has("door"))L.push("doorAhead");
   if(has("key"))L.push("keyAhead");
+  if(has("gate"))L.push("gateAhead");
+  if(has("plate"))L.push("onPlate");
   if((p.trees||[]).length)L.push("treeAhead");
   return L;
 }
@@ -817,6 +827,8 @@ function mgCond(st,c){
     // complete program shape, and the sensor goes quiet once the key is held
     case "doorAhead": {const t=T&&T.at(rb,ka);return !!(t&&t.t==="door"&&!rb.keys.has(t.a));}
     case "keyAhead":  {const t=T&&T.at(rb,ka);return !!(t&&t.t==="key");}
+    case "gateAhead": {const t=T&&T.at(rb,ka);return !!(t&&t.t==="gate"&&!T.platesPressed(rb,t.a));}
+    case "onPlate":   {const t=T&&T.at(rb,kh);return !!(t&&t.t==="plate");}
     case "treeAhead": return !!(rb.trees&&rb.trees.has(ka));
     case "brickHere": return rb.bricks.has(kh);
     case "onTarget":  return (st.proj.cells||[]).some(c2=>c2[0]===rb.x&&c2[1]===rb.y);
@@ -826,10 +838,17 @@ function mgCond(st,c){
   }
   return false; // world-only sensors don't apply on the challenge grid
 }
-// a brick that was dropped into a pit has been spent as bridge material, so it
-// isn't a "brick outside the plan" — it's part of the terrain now.
+// A block that was dropped into a pit has been spent as bridge material, and one
+// left on a pressure plate is doing a job — neither is a "brick outside the plan".
 function mgStray(st,bp){
-  return [...st.robot.bricks].some(k2=>!bp.has(k2)&&!(window.CC_TILES&&CC_TILES.isFilledPit(st.robot,k2)));
+  const T=window.CC_TILES, rs=st.robot;
+  const doingAJob=k2=>{
+    if(!T)return false;
+    if(T.isFilledPit(rs,k2))return true;
+    const t=T.at(rs,k2);
+    return !!(t&&t.t==="plate");
+  };
+  return [...rs.bricks].some(k2=>!bp.has(k2)&&!doingAJob(k2));
 }
 // The single source of truth for "is this level solved?", returning both the
 // verdict and the nudge to show when it isn't. mgGoalMet() is the pure predicate
