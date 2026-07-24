@@ -557,7 +557,8 @@ function packEnter(pack,i){
   const stage=JSON.parse(JSON.stringify(pack.stages[i]));
   stage.id="pack_"+pack.id+"_"+i; // per-level program storage
   mgEnter(stage);
-  mgState.packCtx={packId:pack.id,i,total:pack.stages.length,name:pack.name,em:pack.em,stages:pack.stages,community:pack.community||null};
+  mgState.packCtx={packId:pack.id,i,total:pack.stages.length,name:pack.name,em:pack.em,stages:pack.stages,
+    community:pack.community||null,coins:pack.coins||0,xp:pack.xp||0};
   mgState.proj.name=pack.name+" — Level "+(i+1)+"/"+pack.stages.length;
   $("mgTitle").textContent=(pack.em||"🎬")+" "+mgState.proj.name;
 }
@@ -566,14 +567,22 @@ function packStageSolved(){
   confetti();sfx(760,.08);sfx(1040,.09,.09);
   if(next<c.total){
     bigToast("✅ Level "+(c.i+1)+" complete! Next: Level "+(next+1)+"/"+c.total);
-    setTimeout(()=>{ if(mgState)packEnter({id:c.packId,name:c.name,em:c.em,stages:c.stages,community:c.community},next); },700);
+    setTimeout(()=>{ if(mgState)packEnter({id:c.packId,name:c.name,em:c.em,stages:c.stages,community:c.community,coins:c.coins,xp:c.xp},next); },700);
   }else{
     if(c.community&&!player.projects["cc_"+c.community]){ // first clear of a community pack: count the solve
       player.projects["cc_"+c.community]=1;
       sbRest("rpc/add_solve",{method:"POST",body:JSON.stringify({cid:c.community})}).catch(()=>{});
     }
-    if(!player.projects["pack_"+c.packId]){player.projects["pack_"+c.packId]=1;saveNow();}
-    if(window.CC_EXTRAS)CC_EXTRAS.celebrate(c.em||"🎬","PACK COMPLETE!",c.name,"You cleared all "+c.total+" levels! 🎉","Awesome! 🎉");
+    // first clear pays out the chapter's reward (packs used to award nothing at all)
+    let earned=0;
+    if(!player.projects["pack_"+c.packId]){
+      player.projects["pack_"+c.packId]=1;
+      if(c.coins){coins+=c.coins;earned=c.coins;coinFlash();}
+      if(c.xp)addXP(c.xp);
+      qProg("proj");updateHud();saveNow();
+    }
+    if(window.CC_EXTRAS)CC_EXTRAS.celebrate(c.em||"🎬","CHAPTER COMPLETE!",c.name,
+      (earned?"+"+earned+" 🪙 +"+c.xp+" ⭐ — ":"")+"You cleared all "+c.total+" levels! 🎉","Awesome! 🎉");
     else bigToast("🎬 "+c.name+" complete — all "+c.total+" levels cleared!");
     mgExit(true);
   }
@@ -937,7 +946,9 @@ function mgSuccess(){
   }
   player.projects[proj.id]=1;
   player.projPrograms[proj.id]=mgRobot.program;
-  coins+=proj.coins;addXP(proj.xp);qProg("proj");
+  // a level opened outside its pack has no reward of its own — never let that
+  // turn the player's coin total into NaN
+  coins+=(proj.coins|0);addXP(proj.xp|0);qProg("proj");
   // the finished build appears in the real world near home
   let placed=false;
   for(let rad=2;rad<=7&&!placed;rad++)for(let dy=-rad;dy<=rad&&!placed;dy++)for(let dx=-rad;dx<=rad&&!placed;dx++){
@@ -998,8 +1009,10 @@ function mgDraw(){
   // ---- placed bricks (HD toy-bevel, like world builds) ----
   for(const k2 of st.robot.bricks){
     const q=k2.split("_");
-    // a block that bridged a pit is correctly placed, so it reads "on plan" (not stray-red)
-    const ok=bp.has(k2)||!!(window.CC_TILES&&CC_TILES.isFilledPit(st.robot,k2));
+    // Stray-red means "this is a mistake". A block is only a mistake when there IS
+    // a blueprint to violate — on a puzzle level with no target tiles, blocks are
+    // tools. A block that bridged a pit is never a mistake either.
+    const ok=bp.size===0||bp.has(k2)||!!(window.CC_TILES&&CC_TILES.isFilledPit(st.robot,k2));
     drawBoardBrick(g,(+q[0])*cell,(+q[1])*cell,cell,ok,st.robot.brickNo[k2]);
   }
   // sorting goal hints: show each target's required number in its corner
@@ -1037,6 +1050,7 @@ function renderProjects(){
   renderAuthBox();
   const el=$("projList");el.innerHTML="";
   if(typeof renderAcademySection==="function")renderAcademySection(el); // 🎓 starter tutorials first
+  if(typeof renderPuzzleSection==="function")renderPuzzleSection(el);   // 🧩 then the puzzle campaign
   const bh=document.createElement("h4");bh.className="qsec";bh.textContent="🏗️ Build Projects";el.appendChild(bh);
   for(const p of PROJECTS){
     const done=!!player.projects[p.id];

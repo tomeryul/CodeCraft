@@ -1130,6 +1130,63 @@ async function ev(expr) {
   check("banked levels keep their terrain", TL.banked === true, tools);
   check("shrinking the board clips off-grid tiles", TL.clipped === true, tools);
 
+  console.log("▶ puzzle campaign: every chapter level is solvable by its stored solution");
+  const camp = await ev(`(()=>{
+    const bad=[], budget=[];
+    // capture the win instead of letting mgSuccess celebrate and tear the session
+    // down (it exits the board, so we could never inspect the solved state)
+    const origSuccess=mgSuccess; let fired=false;
+    mgSuccess=()=>{fired=true;mgStop();};
+    for(const pack of PUZZLE_PACKS){
+      pack.stages.forEach((s,i)=>{
+        const proj=JSON.parse(JSON.stringify(s));
+        proj.id='camptest_'+pack.id+'_'+i;
+        mgEnter(proj);
+        const prog=JSON.parse(JSON.stringify(s.sol||[])); reUid(prog);
+        mgRobot.program=prog;
+        // the stored solution must also fit the level's own block budget
+        const n=countBlocks(prog);
+        if(n>s.maxBlocks)budget.push(pack.id+'/'+i+' '+n+'>'+s.maxBlocks);
+        mgState.running=true; mgState.frames=[{blocks:prog,i:0,reps:1}]; mgState.wait=0;
+        fired=false;
+        for(let t=0;t<600&&mgState&&mgState.running;t++)mgTick();
+        if(!fired)bad.push(pack.id+'/'+i+' '+s.name);
+        if(mgState)mgExit(false);
+      });
+    }
+    mgSuccess=origSuccess;
+    document.getElementById('editor').classList.remove('open','max');
+    const gated=PUZZLE_PACKS.filter(p=>p.needs).length;
+    const levels=PUZZLE_PACKS.reduce((a,p)=>a+p.stages.length,0);
+    return JSON.stringify({bad,budget,packs:PUZZLE_PACKS.length,levels,gated});
+  })()`);
+  const CAMP = JSON.parse(camp);
+  check("every campaign level is solvable", CAMP.bad.length === 0, camp);
+  check("every stored solution fits the level's block budget", CAMP.budget.length === 0, camp);
+  check("the campaign has 4 chapters of levels, gated in order", CAMP.packs === 4 && CAMP.levels === 16 && CAMP.gated === 3, camp);
+
+  console.log("▶ finishing a chapter pays out its reward");
+  const rew = await ev(`(()=>{
+    const pack=PUZZLE_PACKS[0];
+    delete player.projects['pack_'+pack.id];
+    const c0=coins, x0=player.xp+player.level*1000;
+    packEnter(pack,0);
+    mgState.packCtx.i=mgState.packCtx.total-1;   // pretend we're on the last level
+    packStageSolved();
+    const paid=coins-c0, marked=!!player.projects['pack_'+pack.id];
+    const grew=(player.xp+player.level*1000)>x0;
+    // a second clear must NOT pay again
+    const c1=coins;
+    packEnter(pack,0); mgState.packCtx.i=mgState.packCtx.total-1; packStageSolved();
+    const paidTwice=coins-c1;
+    document.getElementById('editor').classList.remove('open','max');
+    document.getElementById('projects').classList.remove('open');
+    return JSON.stringify({paid,marked,grew,paidTwice});
+  })()`);
+  const RW = JSON.parse(rew);
+  check("clearing a chapter pays coins + XP", RW.paid === 150 && RW.grew === true && RW.marked === true, rew);
+  check("replaying a cleared chapter doesn't pay again", RW.paidTwice === 0, rew);
+
   console.log("▶ challenges unlock every block feature (ignore world unlocks)");
   const varsFree = await ev(`(()=>{
     mgEnter(PROJECTS[0]); unlocks.vars=false;   // low-level player: vars NOT unlocked in the world
