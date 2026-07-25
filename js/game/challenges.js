@@ -171,6 +171,12 @@ function mgEnterCreator(){
   mgEnter({id:"custom",em:"✏️",name:"My Challenge",diff:1,coins:0,xp:0,maxBlocks:12,gw:8,gh:6,
     desc:"Design mode — pick a tool: 🖌️ target tiles · 🤖 the robot's start · 🔢 pre-placed blocks · 🧱 walls to route around · 🕳️ pits (⤵️ Drop a block in to bridge one) · 🔑 keys and 🚪 doors of the same colour · 🌀 a pair of portals · 🔘 plates that open 🚧 gates (the robot — or a block left behind — holds one down) · ➡️ one-way tiles · 🧹 erase. Then write a program and press ▶ to PROVE the level is solvable — only then do 💾 Save / ➕ Add level / 🌍 Publish open up. Build several levels for a multi-level minigame.",
     allowed:CREATOR_BLOCKS,start:{x:0,y:0,dir:1},cells:[],initial:[],tiles:[]});
+  // Every creator session shares player.projPrograms["custom"], so a new challenge
+  // used to open with the PREVIOUS one's program — which could then be run with ▶ and
+  // "prove" a level the author never solved. Start blank; the edit flows
+  // (mgEditStage / mgEditMyChallenge / mgEditCommunity) load their saved solution after this.
+  if(mgRobot){mgRobot.program=[];robotRoutines(mgRobot);mgRobot.routines={A:[],B:[]};mgRobot.hist=[];mgRobot.redoS=[];}
+  edTarget="main";
   mgState.creator=true;mgState.solved=false;mgState.paintMode="paint";mgState.brickNum=1;mgState.tileArg=1;
   mgState.stages=[];        // banked levels for a multi-level pack (empty = single challenge)
   mgState.editIndex=null;   // when re-editing a banked level, the slot to put it back
@@ -349,7 +355,8 @@ function mgEditStage(i){
   p.start=JSON.parse(JSON.stringify(s.start||{x:0,y:0,dir:1}));
   p.gw=s.gw;p.gh=s.gh;p.maxBlocks=s.maxBlocks;if(s.diff)p.diff=s.diff;
   const sol=s.sol||[];       // this level's saved solution
-  st.splice(i,1);            // lift it out; mgAddStage re-inserts at editIndex
+  // Leave it in `stages`. It used to be spliced out and only put back by
+  // "➕ Update level", so exiting or editing a different level lost it silently.
   mgState.editIndex=i;
   mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir};mgSeed(mgState.robot,p);
   mgState.solved=false;
@@ -383,9 +390,9 @@ function mgAddStage(){
   if(!p.cells.length&&!(p.initial&&p.initial.length)){toast("🖌️ Design this level first — paint tiles or 🔢 place blocks.");sfx(200,.06);return;}
   if(!mgState.solved){toast("▶ First prove this level is solvable — write a program and run it, then it can be added!");sfx(200,.06);return;}
   mgState.stages=mgState.stages||[];
-  if(mgState.editIndex!=null){ // updating a level we pulled out to edit — put it back in its slot
-    const idx=Math.min(mgState.editIndex,mgState.stages.length);
-    mgState.stages.splice(idx,0,snapshotStage(p));
+  if(mgState.editIndex!=null&&mgState.editIndex<mgState.stages.length){ // replace the level in place
+    const idx=mgState.editIndex;
+    mgState.stages[idx]=snapshotStage(p);
     mgState.editIndex=null;
     toast("✅ Level "+(idx+1)+" updated!");
   }else{
@@ -409,8 +416,11 @@ function mgPaintTile(x,y){
   const st=mgState, p=st.proj, k=x+"_"+y, mode=st.paintMode;
   const tool=(window.CC_TILES&&CC_TILES.DEFS[mode])?mode:null; // a terrain tool?
   if(mode==="bot"){
+    // only SOLID terrain is a problem — a key, portal, plate or arrow is walkable,
+    // so the robot is allowed to start on one
     const t=mgTileAt(p,x,y);
-    if(t){toast("🚧 The robot can't start on "+(CC_TILES.DEFS[t[2]]||{lbl:"terrain"}).lbl.toLowerCase()+" — pick an open tile!");return;}
+    if(t&&mgProbeSolid(t[2],t[3]||0,x,y)){
+      toast("🚧 The robot can't start on "+(CC_TILES.DEFS[t[2]]||{lbl:"terrain"}).lbl.toLowerCase()+" — pick an open tile!");return;}
     p.start={x,y,dir:1};
     st.robot.x=x;st.robot.y=y;st.robot.dir=1;
   }else if(mode==="brick"){
@@ -434,7 +444,7 @@ function mgPaintTile(x,y){
     if(i>=0)p.tiles.splice(i,1);
     // same tool AND same colour = remove; a different colour re-labels it
     if(!had||had[2]!==tool||(had[3]||0)!==arg){
-      if(p.start.x===x&&p.start.y===y&&def.solid&&def.solid({keys:new Set(),bricks:new Set()},x+"_"+y,{a:arg}))
+      if(p.start.x===x&&p.start.y===y&&mgProbeSolid(tool,arg,x,y))
         toast("🤖 The robot starts here — move it first!");
       else{mgClearTile(p,x,y);p.tiles.push([x,y,tool,arg]);}
     }
@@ -450,8 +460,19 @@ function mgPaintTile(x,y){
       }else p.cells.push(st.brickNum!=null?[x,y,st.brickNum]:[x,y]);
     }
   }
-  st.solved=false; // design changed — must re-prove (re-locks Save/Publish)
+  st.solved=false;      // design changed — must re-prove (re-locks Save/Publish)
+  st.caseBase=null;     // ...and any board snapshot taken by a previous run is now void
   sfx(500,.03);mgDraw();mgCreatorUI();
+}
+// Would a tile of this type block the robot on an empty board? Answered with a
+// COMPLETE probe state — a gate's solid() calls platesPressed, which iterates
+// rs.tiles, so a partial stub threw "rs.tiles is not iterable".
+function mgProbeSolid(type,arg,x,y){
+  const def=window.CC_TILES&&CC_TILES.DEFS[type];
+  if(!def||!def.solid)return false;
+  const probe={keys:new Set(),bricks:new Set(),open:new Set(),tiles:new Map(),x:-1,y:-1};
+  probe.tiles.set(x+"_"+y,{t:type,a:arg});
+  return !!def.solid(probe,x+"_"+y,{t:type,a:arg});
 }
 function mgTileAt(p,x,y){return (p.tiles||[]).find(t=>t[0]===x&&t[1]===y)||null;}
 function mgTileMap(p){const m=new Map();for(const t of (p.tiles||[]))m.set(t[0]+"_"+t[1],{t:t[2],a:t[3]||0});return m;}
@@ -467,6 +488,7 @@ function mgSetSize(dw,dh){
   p.cells=p.cells.filter(c=>c[0]<p.gw&&c[1]<p.gh);
   p.initial=(p.initial||[]).filter(c=>c[0]<p.gw&&c[1]<p.gh);
   p.tiles=(p.tiles||[]).filter(t=>t[0]<p.gw&&t[1]<p.gh); // a clipped-off wall would block invisibly
+  mgState.caseBase=null; // the board changed shape — drop any snapshot of the old one
   if(p.start.x>=p.gw)p.start.x=p.gw-1;
   if(p.start.y>=p.gh)p.start.y=p.gh-1;
   mgState.robot.x=Math.min(mgState.robot.x,p.gw-1);
@@ -702,14 +724,20 @@ function mgCases(proj){const c=proj&&proj.cases;return (c&&c.length)?c:[null];} 
 // swap the board over to a case. Never touches the caller's data — mgEnter cloned it.
 function mgApplyCase(c){
   const st=mgState,p=st.proj;
-  if(!st.caseBase)st.caseBase={initial:p.initial,start:p.start,cells:p.cells,tiles:p.tiles,
-    gw:p.gw,gh:p.gh,goal:p.goal};
-  const b=st.caseBase, pick=k=>(c&&c[k])?JSON.parse(JSON.stringify(c[k])):b[k];
+  st.caseExpect=(c&&c.expect!=null)?c.expect:p.expect; // the answer this input should produce
+  // A single-input level (mgCases returned [null]) has nothing to swap: the board IS
+  // the level. Touching it here used to overwrite live edits — in the creator, painting
+  // a block then pressing ▶ restored a stale snapshot and the block vanished.
+  if(!c){mgReset();return;}
+  // Snapshot by VALUE. The creator replaces these arrays rather than mutating them
+  // (mgClearTile/mgSetSize/mgEditStage all reassign), so holding references went stale.
+  if(!st.caseBase)st.caseBase=JSON.parse(JSON.stringify(
+    {initial:p.initial,start:p.start,cells:p.cells,tiles:p.tiles,gw:p.gw,gh:p.gh,goal:p.goal||null}));
+  const b=st.caseBase, pick=k=>JSON.parse(JSON.stringify((c&&c[k])?c[k]:b[k]));
   p.initial=pick("initial");p.start=pick("start");p.cells=pick("cells");p.tiles=pick("tiles");
   // a case may also resize the board and move the goal — that's how "escape ANY maze"
   // can hand the same program four mazes of different shapes
-  p.gw=pick("gw");p.gh=pick("gh");p.goal=pick("goal");
-  st.caseExpect=(c&&c.expect!=null)?c.expect:p.expect; // the answer this input should produce
+  p.gw=pick("gw");p.gh=pick("gh");if(b.goal||(c&&c.goal))p.goal=pick("goal");
   mgReset();
 }
 // a compact label for an input, so a failure can name the case that broke
@@ -765,9 +793,12 @@ function mgSpeedCycle(){
 function mgVarsUI(){
   const el=$("mgVars");if(!el)return;
   const v=(mgRobot&&mgRobot.vars)||{},ks=Object.keys(v);
-  if(!ks.length){el.innerHTML="";return;}
+  const rb=mgState&&mgState.robot; // `held` lives on the BOARD state, not on mgRobot
+  // bail only when there is genuinely nothing to show — a carried block counts even
+  // when the program hasn't set any variables yet
+  if(!ks.length&&!(rb&&rb.held!=null)){el.innerHTML="";return;}
   el.innerHTML=ks.slice(0,8).map(k=>'<span class="vchip">📦 '+esc(k)+" = "+esc(String(v[k]))+"</span>").join("")+
-    (mgRobot.held!=null?'<span class="vchip">✊ holding '+mgRobot.held+"</span>":"");
+    (rb&&rb.held!=null?'<span class="vchip">✊ holding '+rb.held+"</span>":"");
 }
 // how many steps each input cost — the same program, bigger rows
 function mgCostUI(){

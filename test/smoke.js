@@ -888,11 +888,14 @@ async function ev(expr) {
     mgAddStage();                            // level 1 banked
     p.cells=[[1,1]]; mgSeed(mgState.robot,p); mgState.solved=true; mgAddStage(); // level 2
     out.banked2 = mgState.stages.length;
-    mgEditStage(0);                          // pull level 1 back out to edit
-    out.editing = mgState.editIndex===0 && mgState.stages.length===1;
+    mgEditStage(0);                          // load level 1 back into the editor
+    // it must STAY in the bank while being edited — it used to be spliced out, so
+    // exiting or editing another level silently destroyed it
+    out.editing = mgState.editIndex===0 && mgState.stages.length===2;
     out.editCells = JSON.stringify(p.cells);
-    mgState.solved=true; mgAddStage();       // re-insert at its slot
+    mgState.solved=true; mgAddStage();       // update it in its slot
     out.backTo2 = mgState.stages.length===2 && mgState.editIndex===null;
+    out.updatedInPlace = JSON.stringify(mgState.stages[0].cells)==='[[0,0]]';
     mgDeleteStage(1);                        // delete level 2
     out.afterDelete = mgState.stages.length;
     mgExit(false); document.getElementById('editor').classList.remove('open','max');
@@ -902,7 +905,8 @@ async function ev(expr) {
   check("Save/Add blocked until the level is proven solvable", G.blockedSave === true && G.blockedAdd === true, gate);
   check("Save locked & Publish hidden before solving", G.saveLocked === true && G.pubHidden === true, gate);
   check("Save unlocks & Publish appears after solving", G.saveUnlocked === true && G.pubShown === true, gate);
-  check("Edit pulls a banked level back into the editor", G.editing === true && G.editCells === '[[0,0]]', gate);
+  check("Edit loads a banked level and leaves it in the bank", G.editing === true && G.editCells === '[[0,0]]', gate);
+  check("Update writes the edited level back into its own slot", G.updatedInPlace === true, gate);
   check("Updating re-inserts the level in its slot", G.backTo2 === true, gate);
   check("Delete removes a banked level", G.afterDelete === 1, gate);
 
@@ -1272,6 +1276,80 @@ async function ev(expr) {
   check("its cost varies with the input (raw material for complexity bars)",
     AL.costs[2] > AL.costs[1], algo);
   check("the algorithm renders as real Python", AL.pyRead && AL.pyWhile && AL.pyCmp, algo);
+
+  console.log("▶ creator bug sweep: edits survive, guards don't crash");
+  const cbug = await ev(`(()=>{
+    const origSI=window.setInterval; window.setInterval=()=>0;
+    const out={};
+    // (1) THE REPORTED BUG: place a block, run, place another, run again — both must live.
+    // caseBase used to hold the board BY REFERENCE while the creator replaced those
+    // arrays, so the second run restored a stale snapshot and the new block vanished.
+    mgEnterCreator();
+    mgState.paintMode='paint'; mgPaintTile(0,0); mgPaintTile(1,0);
+    mgState.paintMode='brick'; mgState.brickNum=1; mgPaintTile(0,2);
+    mgRobot.program=[{t:'move',uid:1}]; mgRun();
+    for(let t=0;t<20&&mgState&&mgState.running;t++)mgTick();
+    mgState.paintMode='brick'; mgState.brickNum=2; mgPaintTile(1,2);
+    const painted=mgState.proj.initial.length;
+    mgRun(); for(let t=0;t<20&&mgState&&mgState.running;t++)mgTick();
+    out.blocksSurvive = painted===2 && mgState.proj.initial.length===2;
+    // ...and the same for the grid size after a resize
+    mgState.proj.gw=8; mgSetSize(-2,0);
+    mgRun(); for(let t=0;t<5&&mgState&&mgState.running;t++)mgTick();
+    out.sizeSurvives = mgState.proj.gw===6;
+    mgExit(false);
+    // (2) a fresh creator session must not inherit the last one's program — a stale
+    // program could be run with ▶ and "prove" a level the author never solved
+    mgEnterCreator(); mgRobot.program=[{t:'move',uid:9},{t:'move',uid:8}];
+    mgRobot.routines={A:[{t:'move',uid:7}],B:[]};
+    mgExit(false);
+    mgEnterCreator();
+    out.freshStart = mgRobot.program.length===0 && mgRobot.routines.A.length===0;
+    mgExit(false);
+    // (3) editing a banked level must not remove it from the bank
+    mgEnterCreator();
+    const p=mgState.proj;
+    p.cells=[[0,0]]; mgState.solved=true; mgAddStage();
+    p.cells=[[1,1]]; mgState.solved=true; mgAddStage();
+    mgEditStage(0);
+    out.editKeepsLevel = mgState.stages.length===2;
+    mgExit(false);   // walk away mid-edit — the level must still be there
+    // (4) a 🚧 Gate on the robot's start must not throw (its solid() iterates rs.tiles)
+    mgEnterCreator();
+    let threw=false;
+    try{ mgState.paintMode='gate'; mgState.tileArg=1;
+      mgPaintTile(mgState.proj.start.x,mgState.proj.start.y); }catch(e){ threw=true; }
+    out.gateGuardOk = threw===false;
+    // (5) the 🤖 Start tool accepts a WALKABLE tile and refuses a solid one
+    mgState.paintMode='key'; mgState.tileArg=1; mgPaintTile(3,3);
+    mgState.paintMode='bot'; mgPaintTile(3,3);
+    out.startsOnKey = mgState.proj.start.x===3 && mgState.proj.start.y===3;
+    mgState.paintMode='wall'; mgPaintTile(4,4);
+    mgState.paintMode='bot'; mgPaintTile(4,4);
+    out.refusesWall = !(mgState.proj.start.x===4 && mgState.proj.start.y===4);
+    mgExit(false);
+    // (6) the ✊ holding chip shows even before any variable is set
+    mgEnterCreator();
+    mgState.robot.bricks.add('0_0'); mgState.robot.brickNo['0_0']=7;
+    mgState.robot.x=0; mgState.robot.y=0;
+    mgRobot.program=[{t:'pickUp',uid:1}];
+    mgState.running=true; mgState.frames=[{blocks:mgRobot.program,i:0,reps:1}]; mgState.wait=0;
+    mgTick();
+    out.holdingChip = $('mgVars').textContent.indexOf('7')>=0;
+    mgExit(false);
+    document.getElementById('editor').classList.remove('open','max');
+    document.getElementById('projects').classList.remove('open');
+    window.setInterval=origSI;
+    return JSON.stringify(out);
+  })()`);
+  const CB = JSON.parse(cbug);
+  check("a placed block survives running the level again", CB.blocksSurvive === true, cbug);
+  check("the grid size survives running after a resize", CB.sizeSurvives === true, cbug);
+  check("a new creator session starts with a blank program", CB.freshStart === true, cbug);
+  check("editing a banked level leaves it in the bank", CB.editKeepsLevel === true, cbug);
+  check("placing a gate on the robot's start doesn't crash", CB.gateGuardOk === true, cbug);
+  check("the robot may start on a walkable tile but not a wall", CB.startsOnKey === true && CB.refusesWall === true, cbug);
+  check("the holding chip shows with no variables set", CB.holdingChip === true, cbug);
 
   console.log("▶ 🔧 Routines: decomposition, recursion, budget, persistence");
   const rout = await ev(`(()=>{
