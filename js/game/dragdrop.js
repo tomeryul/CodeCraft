@@ -65,7 +65,7 @@ function computeDrop(x,y){
     if(rows.length){const fr=rows[0].getBoundingClientRect();if(y<fr.top)return {mode:"before",uid:+rows[0].dataset.uid,el:rows[0]};}
     return {mode:"root-end"};
   }
-  const blk=byUid(R().program,+hit.el.dataset.uid), isC=!!blk.body, rel=(y-hit.r.top)/hit.r.height;
+  const blk=byUid(curList(),+hit.el.dataset.uid), isC=!!blk.body, rel=(y-hit.r.top)/hit.r.height;
   if(isC){ if(rel<0.28)return {mode:"before",uid:blk.uid,el:hit.el}; if(rel>0.72)return {mode:"after",uid:blk.uid,el:hit.el}; return {mode:"into",uid:blk.uid,el:hit.el}; }
   return {mode:rel<0.5?"before":"after",uid:blk.uid,el:hit.el};
 }
@@ -135,8 +135,8 @@ $("pasteBlk").addEventListener("click",()=>{
   // paste where a new block would go: inside the selected container, else after it
   if(elseSel){elseSel.els.push(copy);}
   else if(selBlock&&selBlock.body){selBlock.body.push(copy);}
-  else if(selBlock){const f=findList(r.program,selBlock);if(f)f.list.splice(f.i+1,0,copy);else r.program.push(copy);}
-  else r.program.push(copy);
+  else if(selBlock){const f=findList(curList(),selBlock);if(f)f.list.splice(f.i+1,0,copy);else curList().push(copy);}
+  else curList().push(copy);
   selBlock=copy;elseSel=null;
   programChanged();
   sfx(820,.05);
@@ -145,13 +145,13 @@ updatePasteBtn();
 $("delBlk").addEventListener("click",()=>{
   if(!selBlock)return;
   pushUndo();
-  const f=findList(R().program,selBlock);
+  const f=findList(curList(),selBlock);
   if(f)f.list.splice(f.i,1);
   selBlock=null;programChanged();
 });
 $("dupBlk").addEventListener("click",()=>{
   if(!selBlock)return;
-  const f=findList(R().program,selBlock);
+  const f=findList(curList(),selBlock);
   if(!f)return;
   pushUndo();
   const copy=JSON.parse(JSON.stringify(selBlock));
@@ -161,7 +161,7 @@ $("dupBlk").addEventListener("click",()=>{
 });
 function moveSel(dir){
   if(!selBlock)return;
-  const f=findList(R().program,selBlock);
+  const f=findList(curList(),selBlock);
   if(!f)return;
   const j=f.i+dir;
   if(j<0||j>=f.list.length)return;
@@ -211,7 +211,7 @@ function updateChips(){
   if(mgState){
     const c=document.createElement("button");
     c.className="rchip sel";
-    const nb=countBlocks(mgRobot.program), over=nb>mgState.proj.maxBlocks;
+    const nb=progSize(mgRobot), over=nb>mgState.proj.maxBlocks;
     c.innerHTML="🏗️ "+esc(mgState.proj.name)+' <span class="rbudget" style="color:'+(over?"#ff5d73":"#ffd66b")+'">🧩'+nb+"/"+mgState.proj.maxBlocks+"</span>"+(mgState.running?' <span class="live">●RUN</span>':'');
     wrap.appendChild(c);
     return;

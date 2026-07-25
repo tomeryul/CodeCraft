@@ -7,7 +7,7 @@ let saveOwner=null;
 // serialize the whole game into a plain object (used for both localStorage and the cloud)
 function buildSave(){
   return {v:2,owner:(typeof sbUser!=="undefined"&&sbUser)?sbUser.uid:saveOwner,savedAt:Date.now(),seed,coins,stash,totals,unlocks,muted,selRobot,tutDone:tut.done,player,skills,
-    robots:robots.map(r=>({x:r.x,y:r.y,dir:r.dir,name:r.name,color:r.color,inv:r.inv,cap:r.cap,speed:r.speed,energy:r.energy,program:r.program,vars:r.vars,hat:r.hat})),
+    robots:robots.map(r=>({x:r.x,y:r.y,dir:r.dir,name:r.name,color:r.color,inv:r.inv,cap:r.cap,speed:r.speed,energy:r.energy,program:packProg(r),vars:r.vars,hat:r.hat})),
     objects:[...objects.entries()].map(([k2,o])=>{
       const c={...o};
       if(c.growAt!==undefined){c.growIn=Math.max(0,c.growAt-now);delete c.growAt;} // timers as ms-remaining
@@ -44,10 +44,10 @@ function applySave(d){
     if(d.skills)for(const k in skills)if(d.skills[k])skills[k]=d.skills[k];
     robots=d.robots.map(rd=>{
       const r=makeRobot(rd.x,rd.y,rd.name);
-      Object.assign(r,{dir:rd.dir,color:rd.color,cap:rd.cap,speed:rd.speed,program:rd.program||[],vars:rd.vars||{},hat:rd.hat||null,
+      Object.assign(r,{dir:rd.dir,color:rd.color,cap:rd.cap,speed:rd.speed,vars:rd.vars||{},hat:rd.hat||null,
         inv:Object.assign({wood:0,stone:0,iron:0,crystal:0,water:0},rd.inv),
         energy:rd.energy==null?100:rd.energy});
-      reUid(r.program);
+      applyProg(r,rd.program); // an array (old saves) or {main,routines} — both load
       return r;
     });
     selRobot=clamp(d.selRobot||0,0,robots.length-1);

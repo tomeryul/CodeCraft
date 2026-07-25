@@ -33,6 +33,7 @@ function toPy(list,ind){
         break;
       case "say":P.push(ind+"robot.say("+pyVal(b.val)+")");break;
       case "read":P.push(ind+b.name+" = "+pyRead(b.src));break;
+      case "call":P.push(ind+"routine_"+String(b.fn).toLowerCase()+"()");break;
       case "forever":
         P.push(ind+"while True:");
         P.push(b.body.length?toPy(b.body,ind+"    "):ind+"    pass");break;
@@ -84,6 +85,16 @@ function pyCond(c){
 }
 function renderPy(){
   const r=R();
-  const src = "# "+r.name+" — program\n" + (r.program.length?toPy(r.program,""):"# (no blocks yet — build something in the Blocks tab!)");
+  // routines come out as real function definitions, above the main program
+  let defs="";
+  if(typeof ROUTINE_IDS!=="undefined"&&r.routines){
+    for(const id of ROUTINE_IDS){
+      const body=r.routines[id]||[];
+      if(!body.length)continue;
+      defs+="def routine_"+id.toLowerCase()+"():\n"+toPy(body,"    ")+"\n\n";
+    }
+  }
+  const src = "# "+r.name+" — program\n" + defs +
+    (r.program.length?toPy(r.program,""):"# (no blocks yet — build something in the Blocks tab!)");
   if(window.CC_EXTRAS)$("pyCode").innerHTML=CC_EXTRAS.hl(src);else $("pyCode").textContent=src;
 }

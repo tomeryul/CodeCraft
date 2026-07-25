@@ -40,6 +40,9 @@ const DEFS={
   // sorting/searching/counting algorithm was expressible at all.
   read:{cat:"vars",ic:"📖",lbl:"Read"},
   say:{cat:"vars",ic:"💬",lbl:"Say"},
+  // 🔧 Call a named routine. Decomposition: name a repeated idea once and reuse
+  // it — including from inside itself, which is recursion.
+  call:{cat:"funcs",ic:"🔧",lbl:"Call"},
 };
 // what 📖 Read can look at
 const READ_SRC=["here","ahead","held","x","y"];
@@ -51,6 +54,7 @@ const CATS=[
   {id:"logic",name:"Logic",types:["if"],lock:"logic",need:"Sell something at the market 🏪 to unlock ❓ logic!"},
   {id:"smart",name:"Smart",types:["faceNearest","goHome","sellAll","bankAll"],lock:"smart",need:"Earn 150 🪙 total (or own 2 robots) to unlock 🧭 smart blocks!"},
   {id:"vars",name:"Memory",types:["setVar","changeVar","countLoop","read","say"],lock:"vars",need:"Earn 250 🪙 total to unlock 🧠 memory & variables!"},
+  {id:"funcs",name:"Routines",types:["call"],lock:"vars",need:"Earn 250 🪙 total to unlock 🔧 routines!"},
 ];
 function newBlock(t){
   const b={t,uid:uid()};
@@ -59,6 +63,7 @@ function newBlock(t){
   if(t==="if"){b.cond="treeAhead";b.body=[];b.els=[];}
   if(t==="whileLoop"){b.cond=(typeof mgState!=="undefined"&&mgState)?"brickHere":"treeAhead";b.body=[];}
   if(t==="read"){b.name="x";b.src="here";}
+  if(t==="call")b.fn="A";
   if(t==="wait")b.n=1;
   if(t==="rest")b.n=2;
   if(t==="build")b.opt="sapling";

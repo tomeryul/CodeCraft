@@ -5,7 +5,8 @@ function makeRobot(x,y,name){
     color:ROBOT_COLORS[robots.length%ROBOT_COLORS.length],
     inv:{wood:0,stone:0,iron:0,crystal:0,water:0},cap:8,speed:1,energy:100,
     vars:{},hat:null,say:null,pop:0,tired:false,
-    program:[],frames:null,running:false,wait:0,path:null,blocked:false,curUid:null,nextAct:0};
+    program:[],routines:{A:[],B:[]}, // 🔧 named routines the program can Call
+    frames:null,running:false,wait:0,path:null,blocked:false,curUid:null,nextAct:0};
 }
 const bagCount=r=>r.inv.wood+r.inv.stone+r.inv.iron+r.inv.crystal+(r.inv.water||0);
 const MAX_ENERGY=100;

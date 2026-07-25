@@ -22,9 +22,52 @@ function isDescendant(parent,node){
   const scan=l=>l&&l.some(b=>b===node||scan(b.body)||scan(b.els));
   return scan(parent.body)||scan(parent.els);
 }
+/* ---------------- routines ----------------
+   A robot has a main program plus named routines the program can 🔧 Call. The
+   editor shows ONE list at a time; `edTarget` says which, and curList() is what
+   every edit operation works on. Execution, persistence and the block budget
+   still deal with the whole set. */
+const ROUTINE_IDS=["A","B"];
+let edTarget="main";
+function robotRoutines(r){
+  if(!r.routines)r.routines={};
+  for(const id of ROUTINE_IDS)if(!r.routines[id])r.routines[id]=[];
+  return r.routines;
+}
+function curList(){
+  const r=R();
+  return edTarget==="main"?r.program:robotRoutines(r)[edTarget];
+}
+// total blocks the player has written: a routine body counts ONCE however many
+// times it's called, so factoring repeated work into a routine is rewarded by
+// the budget instead of punished by it.
+function progSize(r){
+  let n=countBlocks(r.program);
+  const R2=robotRoutines(r);
+  for(const id of ROUTINE_IDS)n+=countBlocks(R2[id]);
+  return n;
+}
+// stored form: a plain array while no routines are used (so every existing save
+// and every stored solution keeps loading), an object once they are.
+function packProg(r){
+  const R2=robotRoutines(r);
+  const used=ROUTINE_IDS.some(id=>R2[id].length);
+  return used?{main:r.program,routines:JSON.parse(JSON.stringify(R2))}:r.program;
+}
+function unpackProg(stored){
+  if(Array.isArray(stored)||!stored)return {program:stored?JSON.parse(JSON.stringify(stored)):[],routines:null};
+  return {program:JSON.parse(JSON.stringify(stored.main||[])),
+          routines:JSON.parse(JSON.stringify(stored.routines||{}))};
+}
+function applyProg(r,stored){
+  const u=unpackProg(stored);
+  r.program=u.program; reUid(r.program);
+  const R2=robotRoutines(r);
+  for(const id of ROUTINE_IDS){R2[id]=(u.routines&&u.routines[id])||[];reUid(R2[id]);}
+}
 /* move a block to a new spot in the program tree (drag & drop core; also unit-tested) */
 function moveBlock(dragUid,mode,anchorUid,which){
-  const prog=R().program;
+  const prog=curList();
   const dragBlk=byUid(prog,dragUid);
   if(!dragBlk)return false;
   let anchor=null;
@@ -47,16 +90,22 @@ function moveBlock(dragUid,mode,anchorUid,which){
   programChanged();
   return true;
 }
+// snapshot the WHOLE set — main plus every routine — or an undo taken after a
+// routine edit would silently throw that edit away
+function progSnapshot(r){return JSON.stringify({main:r.program,routines:robotRoutines(r)});}
 function pushUndo(){
   const r=R();
   if(!r.hist)r.hist=[];
-  r.hist.push(JSON.stringify(r.program));
+  r.hist.push(progSnapshot(r));
   if(r.hist.length>50)r.hist.shift();
   r.redoS=[];
 }
 function restoreProgram(r,json,toStack){
-  toStack.push(JSON.stringify(r.program));
-  r.program=JSON.parse(json);reUid(r.program);
+  toStack.push(progSnapshot(r));
+  const s=JSON.parse(json);
+  r.program=s.main||[];reUid(r.program);
+  const R2=robotRoutines(r);
+  for(const id of ROUTINE_IDS){R2[id]=(s.routines&&s.routines[id])||[];reUid(R2[id]);}
   selBlock=null;elseSel=null;programChanged();
 }
 function doUndo(){const r=R();if(r.hist&&r.hist.length)restoreProgram(r,r.hist.pop(),(r.redoS=r.redoS||[]));}
@@ -87,17 +136,36 @@ function addBlock(t){
   lastAdded=b.uid;
   if(elseSel){elseSel.els.push(b);}
   else if(selBlock&&selBlock.body){selBlock.body.push(b);}
-  else if(selBlock){const f=findList(r.program,selBlock);if(f)f.list.splice(f.i+1,0,b);else r.program.push(b);}
-  else r.program.push(b);
+  else if(selBlock){const f=findList(curList(),selBlock);if(f)f.list.splice(f.i+1,0,b);else curList().push(b);}
+  else curList().push(b);
   sfx(440,.04);
   programChanged();
 }
+// tabs for the main program and each routine, with a dot on whichever is running
+function renderRoutineTabs(){
+  const el=$("routineTabs"); if(!el)return;
+  const r=R(), R2=robotRoutines(r);
+  const inCur=uid=>uid!=null&&!!byUid(curList(),uid);
+  const tab=(id,label,list)=>{
+    const running=r.running&&r.curUid!=null&&byUid(list,r.curUid);
+    return '<button class="rtab'+(edTarget===id?" on":"")+'" data-rt="'+id+'">'+
+      label+' <span class="rn">'+countBlocks(list)+'</span>'+(running?' ●':'')+'</button>';
+  };
+  el.innerHTML=tab("main","🧩 Main",r.program)+ROUTINE_IDS.map(id=>tab(id,"🔧 "+id,R2[id])).join("");
+  el.querySelectorAll(".rtab").forEach(b=>b.addEventListener("click",()=>{
+    edTarget=b.dataset.rt; selBlock=null; elseSel=null;
+    sfx(520,.03); renderProgram(); renderPy(); updateSelUI();
+  }));
+}
 function renderProgram(){
   const r=R(), root=$("programEl");
+  renderRoutineTabs();
   root.innerHTML="";
-  if(!r.program.length){
-    root.innerHTML='<div class="empty">🧩 Tap blocks below to program <b>'+r.name+'</b>!<br>Try: <b>Repeat 3</b> → put <b>Move</b> inside → then <b>Collect</b>.</div>';
-  }else renderList(r.program,root);
+  if(!curList().length){
+    root.innerHTML=edTarget==="main"
+      ? '<div class="empty">🧩 Tap blocks below to program <b>'+r.name+'</b>!<br>Try: <b>Repeat 3</b> → put <b>Move</b> inside → then <b>Collect</b>.</div>'
+      : '<div class="empty">🔧 Routine <b>'+edTarget+'</b> is empty.<br>Put the steps you repeat in here, then 🔧 Call it from your main program.</div>';
+  }else renderList(curList(),root);
   updateSelUI();
 }
 function renderList(list,parent){
@@ -133,6 +201,7 @@ function renderList(list,parent){
     if(b.t==="countLoop")inner+='<button class="pbtn" data-p="vname">'+esc(b.name)+'</button><span>1→</span><button class="pbtn" data-p="tdec">−</button><span class="num">'+b.to+'</span><button class="pbtn" data-p="tinc">＋</button>';
     if(b.t==="setVar")inner+='<button class="pbtn" data-p="vname">'+esc(b.name)+'</button><span>=</span>'+valCtl(b.val);
     if(b.t==="say")inner+=valCtl(b.val);
+    if(b.t==="call")inner+='<button class="pbtn" data-p="fn">🔧 '+esc(b.fn)+'</button>';
     if(b.t==="read")inner+='<button class="pbtn" data-p="vname">'+esc(b.name)+'</button><span>=</span><button class="pbtn" data-p="rsrc">'+(READ_LBL[b.src]||b.src)+'</button>';
     if(b.t==="if"||b.t==="whileLoop"){
       if(typeof b.cond==="object"){
@@ -181,6 +250,7 @@ function renderList(list,parent){
         }
         if(p==="crname")b.cond.val={k:"var",name:promptName(b.cond.val&&b.cond.val.name)};
         if(p==="rsrc")b.src=READ_SRC[(READ_SRC.indexOf(b.src)+1)%READ_SRC.length];
+        if(p==="fn")b.fn=ROUTINE_IDS[(ROUTINE_IDS.indexOf(b.fn)+1)%ROUTINE_IDS.length];
         if(p==="build")b.opt=BUILDS[(BUILDS.indexOf(b.opt)+1)%BUILDS.length];
         if(p==="tgt")b.opt=TARGETS[(TARGETS.indexOf(b.opt)+1)%TARGETS.length];
         if(p==="vname")b.name=promptName(b.name);
@@ -199,7 +269,7 @@ function renderList(list,parent){
       if($("editor").classList.contains("max")&&lastTapDel.uid===b.uid&&performance.now()-lastTapDel.t<380){
         lastTapDel={uid:0,t:0};
         pushUndo();
-        const f=findList(R().program,b);
+        const f=findList(curList(),b);
         if(f)f.list.splice(f.i,1);
         if(selBlock===b)selBlock=null;
         sfx(300,.05);

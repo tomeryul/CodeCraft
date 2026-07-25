@@ -1266,6 +1266,137 @@ async function ev(expr) {
     AL.costs[2] > AL.costs[1], algo);
   check("the algorithm renders as real Python", AL.pyRead && AL.pyWhile && AL.pyCmp, algo);
 
+  console.log("▶ 🔧 Routines: decomposition, recursion, budget, persistence");
+  const rout = await ev(`(()=>{
+    const origSI=window.setInterval; window.setInterval=()=>0;
+    const origSuccess=mgSuccess; let won=false; mgSuccess=()=>{won=true;mgStop();};
+    const lvl=()=>({id:'rt_'+Math.random(),em:'🔧',name:'R',desc:'',gw:8,gh:2,maxBlocks:30,
+      allowed:CHALLENGE_BLOCKS.concat(['call']),coins:0,xp:0,start:{x:0,y:1,dir:1},
+      cells:[],initial:[],tiles:[],goal:[6,1],goalType:'reach'});
+    const run=(setup,ticks)=>{
+      mgEnter(lvl()); setup();
+      won=false; mgRun();
+      for(let t=0;t<(ticks||400)&&mgState&&mgState.running;t++)mgTick();
+      const o={x:mgState?mgState.robot.x:-1,won,steps:mgState?mgState.steps:0};
+      if(mgState)mgExit(false); return o;
+    };
+    // a 🔧 Call runs the routine's blocks
+    const called=run(()=>{
+      mgRobot.routines={A:[{t:'move',uid:11},{t:'move',uid:12}],B:[]};
+      mgRobot.program=[{t:'call',fn:'A',uid:1}];
+    });
+    // calling the SAME routine twice runs it twice — 4 moves from 2 blocks of body
+    const twice=run(()=>{
+      mgRobot.routines={A:[{t:'move',uid:11},{t:'move',uid:12}],B:[]};
+      mgRobot.program=[{t:'call',fn:'A',uid:1},{t:'call',fn:'A',uid:2}];
+    });
+    // ...and the budget charges the body ONCE (2 body + 2 calls = 4), so
+    // factoring repeated work out is rewarded rather than punished
+    mgEnter(lvl());
+    mgRobot.routines={A:[{t:'move',uid:11},{t:'move',uid:12}],B:[]};
+    mgRobot.program=[{t:'call',fn:'A',uid:1},{t:'call',fn:'A',uid:2},{t:'call',fn:'A',uid:3}];
+    const size=progSize(mgRobot);           // 2 body + 3 calls = 5, NOT 2*3+3
+    // an empty routine is a no-op, not a crash
+    mgRobot.routines={A:[],B:[]}; mgRobot.program=[{t:'call',fn:'A',uid:1},{t:'move',uid:2}];
+    mgState.running=true; mgState.frames=[{blocks:mgRobot.program,i:0,reps:1}]; mgState.wait=0;
+    for(let t=0;t<10&&mgState&&mgState.running;t++)mgTick();
+    const emptyOk=true;
+    mgExit(false);
+    // recursion with no base case stops with a message instead of hanging
+    const recur=run(()=>{
+      mgRobot.routines={A:[{t:'move',uid:11},{t:'call',fn:'A',uid:12}],B:[]};
+      mgRobot.program=[{t:'call',fn:'A',uid:1}];
+    },2000);
+    // undo restores a routine edit (it used to snapshot only the main program)
+    mgEnter(lvl());
+    mgRobot.routines={A:[],B:[]}; mgRobot.program=[];
+    edTarget='A'; addBlock('move'); addBlock('move');
+    const beforeUndo=mgRobot.routines.A.length;
+    doUndo();
+    const afterUndo=mgRobot.routines.A.length;
+    edTarget='main';
+    // a program WITH routines survives store → load, and an OLD array still loads
+    const stored=packProg(mgRobot);
+    const isObj=!Array.isArray(stored);
+    const r2=makeRobot(0,0,'x'); applyProg(r2,stored);
+    const roundTrip=r2.routines.A.length===afterUndo;
+    const r3=makeRobot(0,0,'y'); applyProg(r3,[{t:'move',uid:9},{t:'move',uid:8}]);
+    const legacyLoads=r3.program.length===2&&r3.routines.A.length===0;
+    // and it reads as real Python
+    mgRobot.routines={A:[{t:'move',uid:11}],B:[]}; mgRobot.program=[{t:'call',fn:'A',uid:1}];
+    renderPy();
+    const py=$('pyCode').textContent||'';
+    mgExit(false); document.getElementById('editor').classList.remove('open','max');
+    window.setInterval=origSI; mgSuccess=origSuccess;
+    return JSON.stringify({called,twice,size,emptyOk,recur,beforeUndo,afterUndo,
+      isObj,roundTrip,legacyLoads,pyDef:py.indexOf('def routine_a():')>=0,pyCall:py.indexOf('routine_a()')>=0});
+  })()`);
+  const ROU = JSON.parse(rout);
+  check("🔧 Call runs the routine's blocks", ROU.called.x === 2, rout);
+  check("calling one routine twice runs it twice", ROU.twice.x === 4, rout);
+  check("the budget charges a routine body once, not per call", ROU.size === 5, rout);
+  check("an empty routine is a harmless no-op", ROU.emptyOk === true, rout);
+  check("runaway recursion stops instead of hanging", ROU.recur.won === false && ROU.recur.steps < 2000, rout);
+  check("undo restores a routine edit", ROU.beforeUndo === 2 && ROU.afterUndo === 1, rout);
+  check("routines survive store → load", ROU.isObj === true && ROU.roundTrip === true, rout);
+  check("an old array-shaped stored program still loads", ROU.legacyLoads === true, rout);
+  check("routines render as real Python functions", ROU.pyDef === true && ROU.pyCall === true, rout);
+
+  console.log("▶ the instruments: ⏭ Step, speed, live variables, cost bars");
+  const instr = await ev(`(()=>{
+    const origSI=window.setInterval; let made=0;
+    window.setInterval=(fn,ms)=>{made++;window.__lastMs=ms;return 0;};
+    const origSuccess=mgSuccess; mgSuccess=()=>{mgStop();};
+    const lvl=cases=>({id:'in_'+Math.random(),em:'⏭',name:'I',desc:'',gw:8,gh:2,maxBlocks:30,
+      allowed:CHALLENGE_BLOCKS,coins:0,xp:0,start:{x:0,y:1,dir:1},
+      cells:[],initial:[],tiles:[],goal:[7,1],goalType:'reach',cases});
+    // ⏭ Step advances exactly one action per tap and creates NO timer
+    mgEnter(lvl(null));
+    mgRobot.program=[{t:'move',uid:1},{t:'move',uid:2},{t:'move',uid:3}];
+    made=0; mgStep();
+    const afterOne=mgState.robot.x, noTimer=(made===0&&mgState.timer===null);
+    mgStep(); const afterTwo=mgState.robot.x;
+    mgExit(false);
+    // the speed chip changes the interval the run is scheduled at
+    player.mgSpeed=1; mgEnter(lvl(null));
+    mgRobot.program=[{t:'move',uid:1}];
+    mgRun(); const ms1=window.__lastMs;
+    mgStop(); mgExit(false);
+    mgSpeedCycle(); // → 2x
+    mgEnter(lvl(null)); mgRobot.program=[{t:'move',uid:1}];
+    mgRun(); const ms2=window.__lastMs;
+    mgStop(); mgExit(false);
+    player.mgSpeed=1;
+    // live variables show up under the board
+    mgEnter(lvl(null));
+    mgRobot.program=[{t:'setVar',name:'q',val:{k:'num',n:42}}];
+    mgState.running=true; mgState.frames=[{blocks:mgRobot.program,i:0,reps:1}]; mgState.wait=0;
+    mgTick();
+    const varsShown=$('mgVars').textContent.indexOf('42')>=0;
+    mgExit(false);
+    // one cost entry per input, and the bars render
+    mgEnter(lvl([{start:{x:0,y:1,dir:1}},{start:{x:3,y:1,dir:1}},{start:{x:5,y:1,dir:1}}]));
+    mgRobot.program=[{t:'forever',uid:1,body:[{t:'move',uid:2}]}];
+    mgRun();
+    for(let g=0;g<40&&mgState&&mgState.running;g++){for(let t=0;t<900&&mgState&&mgState.running;t++)mgTick();}
+    const costs=(mgState&&mgState.costs)||[], costHtml=$('mgCost').innerHTML;
+    const cheaperFromNearer=costs[0]>costs[2]; // starting closer costs fewer steps
+    if(mgState)mgExit(false);
+    document.getElementById('editor').classList.remove('open','max');
+    document.getElementById('projects').classList.remove('open');
+    window.setInterval=origSI; mgSuccess=origSuccess;
+    return JSON.stringify({afterOne,afterTwo,noTimer,ms1,ms2,varsShown,
+      costN:costs.length,cheaperFromNearer,hasBars:costHtml.indexOf('cbar')>=0});
+  })()`);
+  const IN = JSON.parse(instr);
+  check("⏭ Step advances exactly one action", IN.afterOne === 1 && IN.afterTwo === 2, instr);
+  check("⏭ Step runs without starting a timer", IN.noTimer === true, instr);
+  check("the speed chip halves the tick interval", IN.ms2 === Math.round(IN.ms1 / 2), instr);
+  check("live variables appear under the board", IN.varsShown === true, instr);
+  check("one cost is recorded per input", IN.costN === 3, instr);
+  check("cost reflects the work done per input", IN.cheaperFromNearer === true, instr);
+  check("the cost bars render", IN.hasBars === true, instr);
+
   console.log("▶ answer goals + ➕ Change by a value");
   const ansg = await ev(`(()=>{
     const origSI=window.setInterval; window.setInterval=()=>0;

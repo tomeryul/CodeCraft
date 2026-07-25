@@ -25,10 +25,13 @@ $("fabRun").addEventListener("click",()=>{
 });
 $("runBtn").addEventListener("click",()=>{if(mgState)mgRun();else startRobot(R());});
 $("stopBtn").addEventListener("click",()=>{if(mgState)mgStop();else stopRobot(R());});
+$("mgStepBtn").addEventListener("click",()=>mgStep());
+$("mgSpeedBtn").addEventListener("click",()=>mgSpeedCycle());
 $("mgResetBtn").addEventListener("click",()=>{
   mgStop();
   // back to the FIRST input, not whichever test case the last run ended on
-  if(mgState&&mgState.cases){mgState.ci=0;mgState.results=[];mgState.failAt=-1;mgApplyCase(mgState.cases[0]);mgCaseStrip();}
+  if(mgState&&mgState.cases){mgState.ci=0;mgState.results=[];mgState.failAt=-1;mgState.stepping=false;
+    mgApplyCase(mgState.cases[0]);mgCaseStrip();mgVarsUI();$("mgCost").innerHTML="";}
   else mgReset();
 });
 $("mgExitBtn").addEventListener("click",()=>mgExit(true));

@@ -16,7 +16,7 @@ const CH_CARRY=["move","turnL","turnR","pickUp","drop","repeat","forever","if"];
 const CH_BUILD=["move","turnL","turnR","pickUp","drop","build","repeat","forever","if"];
 // the algorithm toolbox: everything needed to inspect data and act on it
 const CH_ALGO=["move","turnL","turnR","pickUp","drop","repeat","forever","whileLoop",
-               "countLoop","if","setVar","changeVar","read","say"];
+               "countLoop","if","setVar","changeVar","read","say","call"];
 // terse level builders so the data below stays readable
 const mv={t:"move"},tL={t:"turnL"},tR={t:"turnR"},pk={t:"pickUp"},dr={t:"drop"},bd={t:"build"};
 const rep=(n,body)=>({t:"repeat",n,body});

@@ -83,6 +83,12 @@ function tickRobot(r){
     if(b.t==="whileLoop"){
       if(!b.body.length||!evalCond(r,b.cond)){fr.i++;continue;}
       r.curUid=b.uid;r.frames.push({blocks:b.body,i:0,reps:Infinity,wc:b.cond});continue;}
+    if(b.t==="call"){
+      const body=(r.routines&&r.routines[b.fn])||[];
+      if(!body.length){fr.i++;continue;}
+      if(r.frames.length>30){ // recursion with no base case
+        stopRobot(r);toast("🔁 "+r.name+": routine "+b.fn+" called itself too many times!");return;}
+      r.curUid=b.uid;r.frames.push({blocks:body,i:0,reps:1});continue;}
     if(b.t==="if"){
       const br=evalCond(r,b.cond)?b.body:(b.els||[]);
       if(br.length){r.curUid=b.uid;r.frames.push({blocks:br,i:0,reps:1});}

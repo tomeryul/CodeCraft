@@ -3,9 +3,9 @@
 // full programming toolbox available inside every challenge (loops, conditions, variables, values)
 // every challenge (built-in, community, custom) gets the full toolbox — incl.
 // ✊ Lift / ⤵️ Drop so bricks can be moved when PLAYING, not just while editing
-const CHALLENGE_BLOCKS=["move","turnL","turnR","build","pickUp","drop","wait","repeat","forever","whileLoop","countLoop","if","setVar","changeVar","read","say"];
+const CHALLENGE_BLOCKS=["move","turnL","turnR","build","pickUp","drop","wait","repeat","forever","whileLoop","countLoop","if","setVar","changeVar","read","say","call"];
 // sorting toolbox: lift/drop, no build — for rearranging numbered bricks
-const SORT_BLOCKS=["move","turnL","turnR","pickUp","drop","wait","repeat","forever","whileLoop","countLoop","if","setVar","changeVar","read","say"];
+const SORT_BLOCKS=["move","turnL","turnR","pickUp","drop","wait","repeat","forever","whileLoop","countLoop","if","setVar","changeVar","read","say","call"];
 const CREATOR_BLOCKS=CHALLENGE_BLOCKS;
 const PROJECTS=[
   {id:"house",em:"🏡",name:"Big House",diff:1,coins:150,xp:60,maxBlocks:8,gw:8,gh:7,
@@ -211,8 +211,7 @@ function mgEditCommunity(row){
 // only in edit mode — solving a challenge never loads it.
 function mgLoadSolution(prog){
   if(!mgRobot)return;
-  mgRobot.program=(prog&&prog.length)?JSON.parse(JSON.stringify(prog)):[];
-  if(typeof reUid==="function")reUid(mgRobot.program);
+  applyProg(mgRobot,prog);
 }
 // open the creator loaded with an already-saved My Challenges entry so it can be
 // changed and re-saved in place (single challenge OR a multi-level pack).
@@ -374,7 +373,7 @@ function snapshotStage(p){
   return JSON.parse(JSON.stringify({
     em:sort?"🔢":"🧩", name:p.name, diff:p.diff||1, maxBlocks:p.maxBlocks, gw:p.gw, gh:p.gh,
     allowed:p.allowed, start:p.start, cells:p.cells, initial:p.initial||[], tiles:p.tiles||[],
-    sol:(mgRobot&&mgRobot.program)?mgRobot.program:[], // author's proving solution — loaded only in edit mode
+    sol:(mgRobot?packProg(mgRobot):[]), // author's proving solution — loaded only in edit mode
     desc:(sort?"Sort the numbered blocks into order":"Fill the whole blueprint")}));
 }
 // bank the current design as a level and clear the board for the next one
@@ -548,7 +547,7 @@ function saveMyChallenge(){
     id:"my_"+Date.now(), mine:true, em:sort?"🔢":"🧩", name:p.name, diff,
     coins:0, xp:0, maxBlocks:p.maxBlocks, gw:p.gw, gh:p.gh,
     allowed:p.allowed, start:p.start, cells:p.cells, initial:p.initial||[], tiles:p.tiles||[],
-    sol:(mgRobot&&mgRobot.program)?mgRobot.program:[], // author's solution (loaded only when editing)
+    sol:(mgRobot?packProg(mgRobot):[]), // author's solution (loaded only when editing)
     desc:(sort?"Sort the numbered blocks into order ":"Fill the blueprint ")+"— your custom challenge!"}));
   commit(copy,"💾 Saved to “My Challenges”!");
 }
@@ -633,8 +632,7 @@ function mgEnter(proj0){
   // or worse, mutate persisted save data.
   const proj=JSON.parse(JSON.stringify(proj0));
   mgRobot=makeRobot(0,0,proj.name);
-  mgRobot.program=(player.projPrograms[proj.id]||[]).map(b=>JSON.parse(JSON.stringify(b)));
-  reUid(mgRobot.program);
+  applyProg(mgRobot,player.projPrograms[proj.id]);
   const rs={x:proj.start.x,y:proj.start.y,dir:proj.start.dir};mgSeed(rs,proj);
   mgState={proj,robot:rs,
     steps:0,running:false,frames:null,timer:null,prevMax:$("editor").classList.contains("max")};
@@ -651,13 +649,15 @@ function mgEnter(proj0){
   // it's obvious from the start that one program has to handle all of them
   mgState.cases=mgCases(proj);mgState.ci=0;mgState.results=[];mgState.failAt=-1;mgState.costs=[];
   if(mgState.cases.length>1)mgApplyCase(mgState.cases[0]);
-  mgCaseStrip();
+  mgCaseStrip();mgVarsUI();
+  $("mgCost").innerHTML="";
+  $("mgSpeedBtn").textContent="⏱ "+(player.mgSpeed||1)+"×";
   setTab("board"); // show the goal & blueprint first, code is one tap away
 }
 function mgExit(reopen){
   if(!mgState)return;
   mgStop();
-  player.projPrograms[mgState.proj.id]=mgRobot.program;
+  player.projPrograms[mgState.proj.id]=packProg(mgRobot);
   const wasMax=mgState.prevMax;
   mgState=null;mgRobot=null;
   $("boardTabBtn").style.display="none";
@@ -681,7 +681,7 @@ function mgReset(){
 }
 function mgUpdateCount(){
   if(!mgState)return;
-  const n=countBlocks(mgRobot.program);
+  const n=progSize(mgRobot);
   const over=n>mgState.proj.maxBlocks;
   const el=$("mgCount");
   el.textContent="🧩 "+n+"/"+mgState.proj.maxBlocks;
@@ -722,9 +722,61 @@ function mgStartCase(fast){
   st.steps=0;st.wait=0;
   mgRobot.vars={};mgRobot.say=null;mgRobot.curUid=null;
   st.running=true;mgRobot.running=true;
-  clearInterval(st.timer);
-  st.timer=setInterval(mgTick,fast?60:170); // watch the first case, verify the rest quickly
-  mgCaseStrip();
+  clearInterval(st.timer);st.timer=null;
+  // ⏭ Step mode drives mgTick by hand, so no timer at all
+  if(!st.stepping){
+    const base=fast?60:170;
+    st.timer=setInterval(mgTick,Math.max(25,Math.round(base/(player.mgSpeed||1))));
+  }
+  mgCaseStrip();mgVarsUI();
+}
+/* ---------------- the instruments ----------------
+   You cannot design an algorithm you cannot watch. A sort is 60+ steps and all
+   of its meaning is in the variables, so: step one action at a time, change the
+   speed, see the variables, and see how the cost grows with the input. */
+function mgStep(){
+  if(!mgState)return;
+  const st=mgState;
+  if(!st.running){                       // first tap: set the run up, then advance once
+    const prog=mgRobot.program;
+    if(!progSize(mgRobot)){toast("🧩 Add some blocks first!");return;}
+    setTab("board");
+    st.cases=mgCases(st.proj);st.ci=0;st.results=[];st.failMsg=null;st.failAt=-1;st.costs=[];
+    st.stepping=true;
+    mgApplyCase(st.cases[0]);
+    mgStartCase(false);
+  }else{clearInterval(st.timer);st.timer=null;st.stepping=true;} // pause a live run
+  mgTick();
+  if(mgState){mgVarsUI();updateChips();updateFab();}
+}
+function mgSpeedCycle(){
+  const steps=[1,2,4];
+  player.mgSpeed=steps[(steps.indexOf(player.mgSpeed||1)+1)%steps.length];
+  $("mgSpeedBtn").textContent="⏱ "+player.mgSpeed+"×";
+  if(mgState&&mgState.running&&mgState.timer)mgStartCase(mgState.ci>0);
+  saveSoon();
+}
+// the robot's variables, live, right under the board
+function mgVarsUI(){
+  const el=$("mgVars");if(!el)return;
+  const v=(mgRobot&&mgRobot.vars)||{},ks=Object.keys(v);
+  if(!ks.length){el.innerHTML="";return;}
+  el.innerHTML=ks.slice(0,8).map(k=>'<span class="vchip">📦 '+esc(k)+" = "+esc(String(v[k]))+"</span>").join("")+
+    (mgRobot.held!=null?'<span class="vchip">✊ holding '+mgRobot.held+"</span>":"");
+}
+// how many steps each input cost — the same program, bigger rows
+function mgCostUI(){
+  const el=$("mgCost");if(!el)return;
+  const st=mgState,cs=(st&&st.cases)||[],costs=(st&&st.costs)||[];
+  if(!st||cs.length<2||!costs.length){el.innerHTML="";return;}
+  const max=Math.max.apply(null,costs.concat([1]));
+  const size=c=>((c&&c.initial)||(st.caseBase&&st.caseBase.initial)||[]).length;
+  el.innerHTML='<div class="ctitle">⏱ How much work each row took:</div>'+
+    cs.map((c,i)=>{
+      const n=size(c),st2=costs[i]||0;
+      return '<div class="crow"><span class="clbl">'+(n?n+" blocks":"input "+(i+1))+
+        '</span><span class="cbar" style="width:'+Math.round(st2/max*58)+'%"></span><span>'+st2+" steps</span></div>";
+    }).join("");
 }
 // the per-case ✓/✗ strip above the board (only when there's more than one case)
 function mgCaseStrip(){
@@ -745,11 +797,13 @@ function mgRun(){
   if(mgState.running){mgStop();return;}
   const prog=mgRobot.program;
   if(!prog.length){toast("🧩 Add some blocks first!");return;}
-  const n=countBlocks(prog);
+  const n=progSize(mgRobot);
   if(n>mgState.proj.maxBlocks){toast("🚫 Too many blocks ("+n+"/"+mgState.proj.maxBlocks+") — squeeze more into loops! 🔁");return;}
   setTab("board"); // watch the robot build
   mgState.cases=mgCases(mgState.proj);
   mgState.ci=0;mgState.results=[];mgState.failMsg=null;mgState.failAt=-1;mgState.costs=[];
+  mgState.stepping=false;               // ▶ takes over from ⏭ Step
+  $("mgCost").innerHTML="";
   mgApplyCase(mgState.cases[0]);
   mgStartCase(false);
   sfx(520,.06);updateChips();updateFab();
@@ -799,6 +853,15 @@ function mgTick(){
       const times=b.src?Math.floor(Number(mgRobot.vars[b.src])||0):Math.max(1,b.n|0);
       if(!b.body.length||times<1){fr.i++;continue;}
       st.frames.push({blocks:b.body,i:0,reps:times});continue;
+    }
+    if(b.t==="call"){
+      const body=(mgRobot.routines&&mgRobot.routines[b.fn])||[];
+      if(!body.length){fr.i++;continue;}
+      if(st.frames.length>30){ // recursion without a base case — say so, don't hang
+        mgStop();toast("🔁 Routine "+b.fn+" called itself too many times — it never stops!");return;
+      }
+      mgRobot.curUid=b.uid;
+      st.frames.push({blocks:body,i:0,reps:1});continue;
     }
     if(b.t==="whileLoop"){
       // re-tests its condition every pass: an endless frame tagged with the cond,
@@ -868,7 +931,7 @@ function mgTick(){
     else if(b.t==="wait")st.wait=Math.max(0,(b.n|0)-1); // this tick counts as the first
     // any remaining world-only action is a harmless no-op on the challenge grid
     fr.i++;
-    mgDraw();
+    mgDraw();mgVarsUI();
     // A ♾️ Forever program never runs out of blocks, so the goal can't be checked
     // when the stack empties — check it after every action instead. This is also
     // what makes "loop until it's done" puzzles work.
@@ -1021,6 +1084,7 @@ function mgFinish(){
     mgStartCase(true);
     return;
   }
+  mgCostUI(); // every input has run — show what each one cost
   const total=st.cases.length, passed=st.results.filter(Boolean).length;
   if(passed===total){mgSuccess();return;}
   if(total>1){
@@ -1063,7 +1127,7 @@ function mgSuccess(){
     return;
   }
   player.projects[proj.id]=1;
-  player.projPrograms[proj.id]=mgRobot.program;
+  player.projPrograms[proj.id]=packProg(mgRobot);
   // a level opened outside its pack has no reward of its own — never let that
   // turn the player's coin total into NaN
   coins+=(proj.coins|0);addXP(proj.xp|0);qProg("proj");

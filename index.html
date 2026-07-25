@@ -69,6 +69,8 @@
   <div class="tabbody" id="boardTab" style="display:none">
     <div id="mgPanel">
       <div class="mg-top"><b id="mgTitle"></b><span id="mgCount"></span><span class="spacer"></span>
+        <button id="mgStepBtn" title="Run one action at a time">⏭ Step</button>
+        <button id="mgSpeedBtn" title="Playback speed">⏱ 1×</button>
         <button id="mgResetBtn">↺ Reset</button><button id="mgExitBtn">✕ Exit</button></div>
       <div class="mg-top" id="mgCreatorBar">
         <div class="cb-row tools" id="mgTools"></div>
@@ -94,10 +96,13 @@
       <div id="mgGoal"></div>
       <div class="cb-row" id="mgCases" style="display:none"></div>
       <canvas id="mgCanvas"></canvas>
+      <div id="mgVars"></div>
+      <div id="mgCost"></div>
       <div id="mgBoardHint">✏️ Tap <b>🧩 Blocks</b> to write your program, then press ▶ to run it here.</div>
     </div>
   </div>
   <div class="tabbody" id="blocksTab">
+    <div id="routineTabs"></div>
     <div id="varWatch"></div>
     <div id="programWrap"><div id="programEl"></div></div>
     <div id="selActions">
