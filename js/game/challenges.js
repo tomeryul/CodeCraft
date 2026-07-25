@@ -633,6 +633,11 @@ function mgEnter(proj0){
   const proj=JSON.parse(JSON.stringify(proj0));
   mgRobot=makeRobot(0,0,proj.name);
   applyProg(mgRobot,player.projPrograms[proj.id]);
+  // a level may HAND the player a starter routine (e.g. a ready-made 🔧 Swap) so the
+  // exercise is writing the algorithm, not re-deriving its primitive. Only applied
+  // when they have nothing of their own saved for this level yet.
+  if(proj.preset&&!mgRobot.program.length&&!ROUTINE_IDS.some(id=>mgRobot.routines[id].length))
+    applyProg(mgRobot,proj.preset);
   const rs={x:proj.start.x,y:proj.start.y,dir:proj.start.dir};mgSeed(rs,proj);
   mgState={proj,robot:rs,
     steps:0,running:false,frames:null,timer:null,prevMax:$("editor").classList.contains("max")};

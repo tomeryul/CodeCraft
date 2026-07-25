@@ -32,6 +32,21 @@ const cmpV=(v,op,other)=>({var:v,op,val:{k:"var",name:other}});
 const cmpN=(v,op,n)=>({var:v,op,val:n});
 // a row of numbers laid along y=1 starting at x=0 (row y=0 stays free as scratch)
 const row=ns=>ns.map((n,i)=>[i,1,n]);
+// the same numbers as NUMBERED target cells in sorted order — "this row, in order"
+const sortedRow=ns=>ns.slice().sort((a,b)=>a-b).map((n,i)=>[i,1,n]);
+// n UNNUMBERED blocks along y=1, and n plain targets on the row above. Numbers are
+// deliberately absent: a numbered `initial` with plain `cells` makes the engine derive
+// a SORTING goal (mgSortGoalOrder), and this level only asks for them to be carried.
+const plainRow=n=>Array.from({length:n},(_,i)=>[i,1]);
+const aboveN=n=>Array.from({length:n},(_,i)=>[i,0]);
+/* Swap the block under the robot with the one in front of it, using the free row
+   above as a parking space, and come back facing the same way one step along.
+   Traced by hand and verified by the suite: park A above, fetch B, place B, fetch
+   A from above, place A. 21 blocks — which is exactly why it wants to be a
+   routine rather than something you retype for every comparison. */
+const SWAP=[pk,tL,mv,dr,tR,mv,tR,mv,pk,tR,mv,dr,tR,mv,pk,tR,mv,tR,mv,dr,tL];
+// carry the block under the robot up to the row above, then step along
+const LIFT_UP=[pk,tL,mv,dr,tR,mv,tR,mv,tL];
 
 const PUZZLE_PACKS=[
   /* ---------- 1. walls: there is now something to walk around ---------- */
@@ -198,6 +213,36 @@ const PUZZLE_PACKS=[
       {gw:7,gh:5,start:{x:0,y:0,dir:1},goal:[0,4],hidden:true,
        tiles:[[2,2,"wall",0],[3,2,"wall",0],[4,2,"wall",0],[2,3,"wall",0],[4,3,"wall",0]]}],
      sol:[{t:"forever",body:[iff("blocked",[tR],[mv])]}]},
+
+    {em:"🔧",name:"One Job, Many Times",diff:3,maxBlocks:14,gw:6,gh:2,allowed:CH_ALGO,
+     start:{x:0,y:1,dir:1},cells:[],initial:[],tiles:[],
+     desc:"Carry EVERY block up to the row above. Moving one block is nine steps — so don't write them over and over. Put them in 🔧 routine A (lift · turn left · move · drop · turn right · move · turn right · move · turn left) and your main program becomes: 🔄 While a block is under me → 🔧 Call A.",
+     cases:[{initial:plainRow(3),cells:aboveN(3)},
+            {initial:plainRow(2),cells:aboveN(2)},
+            {initial:plainRow(4),cells:aboveN(4)},
+            {initial:plainRow(5),cells:aboveN(5),hidden:true}],
+     preset:{main:[],routines:{A:[],B:[]}},
+     sol:{main:[whil("brickHere",[{t:"call",fn:"A"}])],routines:{A:LIFT_UP,B:[]}}},
+
+    {em:"🏆",name:"Sort Any Row",diff:3,maxBlocks:40,gw:6,gh:2,allowed:CH_ALGO,
+     start:{x:0,y:1,dir:1},cells:[],initial:[],tiles:[],
+     desc:"The real thing: put ANY row in order, smallest first. 🔧 Routine A already holds a Swap — it trades the block under you with the one in front. Your job is the algorithm: walk the row comparing each block with the next, swap when they're the wrong way round, walk back to the start, and do that enough times.",
+     cases:[{initial:row([3,1,2]),cells:sortedRow([3,1,2])},
+            {initial:row([2,3,1]),cells:sortedRow([2,3,1])},
+            {initial:row([4,3,2,1]),cells:sortedRow([4,3,2,1])},
+            {initial:row([5,2,8,4]),cells:sortedRow([5,2,8,4]),hidden:true}],
+     preset:{main:[],routines:{A:SWAP,B:[]}}, // the Swap is a gift; the algorithm isn't
+     sol:{main:[rep(4,[
+            rd("b","ahead"),
+            whil(cmpN("b",">",0),[
+              rd("a","here"),
+              iff(cmpV("a",">","b"),[{t:"call",fn:"A"}],[mv]),
+              rd("b","ahead")]),
+            tL,tL,                                  // turn around and walk home
+            rd("cx","x"),
+            whil(cmpN("cx",">",0),[mv,rd("cx","x")]),
+            tL,tL])],
+          routines:{A:SWAP,B:[]}}},
    ]},
 ];
 function puzzlePack(id){return PUZZLE_PACKS.find(p=>p.id===id)||null;}

@@ -1147,10 +1147,9 @@ async function ev(expr) {
         const proj=JSON.parse(JSON.stringify(s));
         proj.id='camptest_'+pack.id+'_'+i;
         mgEnter(proj);
-        const prog=JSON.parse(JSON.stringify(s.sol||[])); reUid(prog);
-        mgRobot.program=prog;
+        applyProg(mgRobot, s.sol||[]);   // sol may be an array, or main+routines
         // the stored solution must also fit the level's own block budget
-        const n=countBlocks(prog);
+        const n=progSize(mgRobot);
         if(n>s.maxBlocks)budget.push(pack.id+'/'+i+' '+n+'>'+s.maxBlocks);
         // go through mgRun so a multi-input level is judged on EVERY one of its inputs
         fired=false; mgRun();
@@ -1167,18 +1166,26 @@ async function ev(expr) {
     }
     mgSuccess=origSuccess; window.setInterval=origSI;
     document.getElementById('editor').classList.remove('open','max');
+    // a level that HANDS the player a routine must actually deliver it
+    delete player.projPrograms['presetchk'];
+    const sortLvl=PUZZLE_PACKS.find(p=>p.id==='algo').stages.find(x=>x.name==='Sort Any Row');
+    const pl=JSON.parse(JSON.stringify(sortLvl)); pl.id='presetchk';
+    mgEnter(pl);
+    const presetGiven=mgRobot.routines.A.length===21&&mgRobot.program.length===0;
+    mgExit(false);
     const gated=PUZZLE_PACKS.filter(p=>p.needs).length;
     const levels=PUZZLE_PACKS.reduce((a,p)=>a+p.stages.length,0);
     const multi=PUZZLE_PACKS.reduce((a,p)=>a+p.stages.filter(s=>(s.cases||[]).length>1).length,0);
     const hidden=PUZZLE_PACKS.reduce((a,p)=>a+p.stages.filter(s=>(s.cases||[]).some(c=>c.hidden)).length,0);
-    return JSON.stringify({bad,budget,partial,packs:PUZZLE_PACKS.length,levels,gated,multi,hidden});
+    return JSON.stringify({bad,budget,partial,presetGiven,packs:PUZZLE_PACKS.length,levels,gated,multi,hidden});
   })()`);
   const CAMP = JSON.parse(camp);
   check("every campaign level is solvable", CAMP.bad.length === 0, camp);
   check("every stored solution fits the level's block budget", CAMP.budget.length === 0, camp);
   check("multi-input levels are judged on every one of their inputs", CAMP.partial.length === 0, camp);
-  check("the campaign has 5 chapters of levels, gated in order", CAMP.packs === 5 && CAMP.levels === 21 && CAMP.gated === 4, camp);
-  check("the Algorithms levels are multi-input, each with a hidden case", CAMP.multi === 5 && CAMP.hidden === 5, camp);
+  check("a level can hand the player a starter routine", CAMP.presetGiven === true, camp);
+  check("the campaign has 5 chapters of levels, gated in order", CAMP.packs === 5 && CAMP.levels === 23 && CAMP.gated === 4, camp);
+  check("the Algorithms levels are multi-input, each with a hidden case", CAMP.multi === 7 && CAMP.hidden === 7, camp);
 
   console.log("▶ finishing a chapter pays out its reward");
   const rew = await ev(`(()=>{
