@@ -340,7 +340,10 @@ async function ev(expr) {
 
   console.log("▶ energy & rest");
   const tired = await ev(`(()=>{
-    const r=R(); r.energy=3; r.dir=1;
+    // below the cost of one Mine, so spend() must refuse and flag it tired. (With
+    // energy 3 a 2-cost mine succeeds and CLEARS tired, which made this test racy —
+    // it only passed when something else drained energy inside the sleep window.)
+    const r=R(); r.energy=1; r.dir=1;
     objects.set(key(r.x+1,r.y),{type:'rock',hp:9});
     r.program=[newBlock('mine')]; startRobot(r);
     return 'ok';
@@ -1135,8 +1138,10 @@ async function ev(expr) {
     const bad=[], budget=[];
     // capture the win instead of letting mgSuccess celebrate and tear the session
     // down (it exits the board, so we could never inspect the solved state)
+    const origSI=window.setInterval; window.setInterval=()=>0; // drive every case by hand
     const origSuccess=mgSuccess; let fired=false;
     mgSuccess=()=>{fired=true;mgStop();};
+    const partial=[];
     for(const pack of PUZZLE_PACKS){
       pack.stages.forEach((s,i)=>{
         const proj=JSON.parse(JSON.stringify(s));
@@ -1147,23 +1152,33 @@ async function ev(expr) {
         // the stored solution must also fit the level's own block budget
         const n=countBlocks(prog);
         if(n>s.maxBlocks)budget.push(pack.id+'/'+i+' '+n+'>'+s.maxBlocks);
-        mgState.running=true; mgState.frames=[{blocks:prog,i:0,reps:1}]; mgState.wait=0;
-        fired=false;
-        for(let t=0;t<600&&mgState&&mgState.running;t++)mgTick();
-        if(!fired)bad.push(pack.id+'/'+i+' '+s.name);
+        // go through mgRun so a multi-input level is judged on EVERY one of its inputs
+        fired=false; mgRun();
+        for(let g=0;g<40&&mgState&&mgState.running;g++){
+          for(let t=0;t<900&&mgState&&mgState.running;t++)mgTick();
+        }
+        const res=(mgState&&mgState.results)||[];
+        if(!fired)bad.push(pack.id+'/'+i+' '+s.name+' ['+res.map(x=>x?1:0).join('')+']');
+        // a level that ships N inputs must actually have been judged on all N
+        if((s.cases||[]).length&&res.length!==s.cases.length)
+          partial.push(pack.id+'/'+i+' ran '+res.length+'/'+s.cases.length);
         if(mgState)mgExit(false);
       });
     }
-    mgSuccess=origSuccess;
+    mgSuccess=origSuccess; window.setInterval=origSI;
     document.getElementById('editor').classList.remove('open','max');
     const gated=PUZZLE_PACKS.filter(p=>p.needs).length;
     const levels=PUZZLE_PACKS.reduce((a,p)=>a+p.stages.length,0);
-    return JSON.stringify({bad,budget,packs:PUZZLE_PACKS.length,levels,gated});
+    const multi=PUZZLE_PACKS.reduce((a,p)=>a+p.stages.filter(s=>(s.cases||[]).length>1).length,0);
+    const hidden=PUZZLE_PACKS.reduce((a,p)=>a+p.stages.filter(s=>(s.cases||[]).some(c=>c.hidden)).length,0);
+    return JSON.stringify({bad,budget,partial,packs:PUZZLE_PACKS.length,levels,gated,multi,hidden});
   })()`);
   const CAMP = JSON.parse(camp);
   check("every campaign level is solvable", CAMP.bad.length === 0, camp);
   check("every stored solution fits the level's block budget", CAMP.budget.length === 0, camp);
-  check("the campaign has 4 chapters of levels, gated in order", CAMP.packs === 4 && CAMP.levels === 16 && CAMP.gated === 3, camp);
+  check("multi-input levels are judged on every one of their inputs", CAMP.partial.length === 0, camp);
+  check("the campaign has 5 chapters of levels, gated in order", CAMP.packs === 5 && CAMP.levels === 21 && CAMP.gated === 4, camp);
+  check("the Algorithms levels are multi-input, each with a hidden case", CAMP.multi === 5 && CAMP.hidden === 5, camp);
 
   console.log("▶ finishing a chapter pays out its reward");
   const rew = await ev(`(()=>{
@@ -1250,6 +1265,49 @@ async function ev(expr) {
   check("its cost varies with the input (raw material for complexity bars)",
     AL.costs[2] > AL.costs[1], algo);
   check("the algorithm renders as real Python", AL.pyRead && AL.pyWhile && AL.pyCmp, algo);
+
+  console.log("▶ answer goals + ➕ Change by a value");
+  const ansg = await ev(`(()=>{
+    const origSI=window.setInterval; window.setInterval=()=>0;
+    const origSuccess=mgSuccess; let won=false; mgSuccess=()=>{won=true;mgStop();};
+    const lvl=(expect,cases)=>({id:'ag_'+Math.random(),em:'🧠',name:'A',desc:'',gw:6,gh:2,
+      maxBlocks:20,allowed:CHALLENGE_BLOCKS,coins:0,xp:0,start:{x:0,y:1,dir:1},
+      cells:[],initial:[],tiles:[],goalType:'answer',question:'Sum?',expect,cases});
+    const play=(proj,prog)=>{
+      mgEnter(proj);
+      const p=JSON.parse(JSON.stringify(prog)); reUid(p); mgRobot.program=p;
+      won=false; mgRun();
+      for(let g=0;g<40&&mgState&&mgState.running;g++){for(let t=0;t<900&&mgState&&mgState.running;t++)mgTick();}
+      const o={won,said:(mgRobot&&mgRobot.say)?mgRobot.say.txt:null,results:(mgState&&mgState.results)||[]};
+      if(mgState)mgExit(false); return o;
+    };
+    // ➕ Change BY A VARIABLE — the whole point: s = s + v. Sum of [1,2,3] is 6.
+    const sum=[{t:'setVar',name:'s',val:{k:'num',n:0}},
+      {t:'whileLoop',cond:'brickHere',body:[{t:'read',name:'v',src:'here'},
+        {t:'changeVar',name:'s',n:{k:'var',name:'v'}},{t:'move'}]},
+      {t:'say',val:{k:'var',name:'s'}}];
+    const right=play(lvl(6,[{initial:[[0,1,1],[1,1,2],[2,1,3]],expect:6}]),sum);
+    // the same program on a different row must give a DIFFERENT right answer
+    const three=play(lvl(null,[{initial:[[0,1,1],[1,1,2],[2,1,3]],expect:6},
+      {initial:[[0,1,5],[1,1,5]],expect:10},{initial:[[0,1,7]],expect:7}]),sum);
+    // a wrong answer must fail, even though the program runs fine
+    const wrong=play(lvl(99,[{initial:[[0,1,1],[1,1,2]],expect:99}]),sum);
+    // saying nothing at all must fail too
+    const silent=play(lvl(3,[{initial:[[0,1,3]],expect:3}]),[{t:'move'}]);
+    // and an OLD literal ➕ Change still adds a constant
+    const lit=play(lvl(2,[{initial:[[0,1,9]],expect:2}]),
+      [{t:'setVar',name:'s',val:{k:'num',n:0}},{t:'changeVar',name:'s',n:2},{t:'say',val:{k:'var',name:'s'}}]);
+    mgSuccess=origSuccess; window.setInterval=origSI;
+    document.getElementById('editor').classList.remove('open','max');
+    document.getElementById('projects').classList.remove('open');
+    return JSON.stringify({right,three,wrong,silent,lit});
+  })()`);
+  const AG = JSON.parse(ansg);
+  check("➕ Change by a variable accumulates (s = s + v)", AG.right.won === true && AG.right.said === "6", ansg);
+  check("the same sum program is right on every row", AG.three.won === true && AG.three.results.length === 3, ansg);
+  check("a wrong answer fails the level", AG.wrong.won === false, ansg);
+  check("saying nothing fails the level", AG.silent.won === false, ansg);
+  check("an old literal ➕ Change still adds a constant", AG.lit.won === true && AG.lit.said === "2", ansg);
 
   console.log("▶ one program, many inputs: an algorithm passes, a hardcoded path doesn't");
   const cases = await ev(`(()=>{

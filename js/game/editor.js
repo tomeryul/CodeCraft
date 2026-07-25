@@ -117,7 +117,11 @@ function renderList(list,parent){
     };
     if(b.t==="wait"||b.t==="changeVar"){
       if(b.t==="changeVar")inner+='<button class="pbtn" data-p="vname">'+esc(b.name)+'</button><span>by</span>';
-      inner+='<button class="pbtn" data-p="dec">−</button><span class="num">'+b.n+'</span><button class="pbtn" data-p="inc">＋</button>';
+      // ➕ Change by a VALUE, so `s = s + v` works — not just `s = s + 1`
+      const byVar=b.t==="changeVar"&&b.n&&typeof b.n==="object"&&b.n.k==="var";
+      if(byVar)inner+='<button class="pbtn" data-p="nname">📦 '+esc(b.n.name)+'</button>';
+      else inner+='<button class="pbtn" data-p="dec">−</button><span class="num">'+numOf(b.n)+'</span><button class="pbtn" data-p="inc">＋</button>';
+      if(b.t==="changeVar")inner+='<button class="pbtn" data-p="nkind">'+(byVar?"🔢":"📦")+'</button>';
     }
     if(b.t==="repeat"){
       if(b.src)inner+='<button class="pbtn" data-p="rname">📦 '+esc(b.src)+'</button><button class="pbtn" data-p="rmode">🔢</button>';
@@ -151,8 +155,11 @@ function renderList(list,parent){
       const p=e.target.dataset&&e.target.dataset.p;
       if(p){
         pushUndo();
-        if(p==="inc")b.n=Math.min(99,b.t==="changeVar"?b.n+1:b.n+1);
-        if(p==="dec")b.n=b.t==="changeVar"?Math.max(-99,b.n-1):Math.max(1,b.n-1);
+        if(p==="inc")b.n=Math.min(99,numOf(b.n)+1);
+        if(p==="dec")b.n=b.t==="changeVar"?Math.max(-99,numOf(b.n)-1):Math.max(1,numOf(b.n)-1);
+        // toggle "change by a number" ↔ "change by another variable"
+        if(p==="nkind")b.n=(b.n&&typeof b.n==="object")?1:{k:"var",name:"v"};
+        if(p==="nname")b.n={k:"var",name:promptName(b.n&&b.n.name)};
         if(p==="cond"){
           // inside a challenge the sensor list is the board's, not the world's
           const L=(mgState&&typeof mgCondList==="function")?mgCondList():CONDS;

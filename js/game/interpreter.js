@@ -202,7 +202,7 @@ function doAction(r,b){
       else r.blocked=true;
       break;}
     case "setVar": r.vars[b.name]=resolveVal(r,b.val); break;
-    case "changeVar": r.vars[b.name]=(Number(r.vars[b.name])||0)+(b.n|0); break;
+    case "changeVar": r.vars[b.name]=(Number(r.vars[b.name])||0)+changeBy(r,b); break;
     // 📖 Read in the open world: no numbered blocks out here, so "here"/"ahead"
     // report how full the bag is and the robot's own position is exact.
     case "read":

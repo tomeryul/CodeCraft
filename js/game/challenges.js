@@ -643,7 +643,7 @@ function mgEnter(proj0){
   $("editor").classList.add("open","max");
   $("boardTabBtn").style.display="";
   $("mgTitle").textContent=proj.em+" "+proj.name;
-  $("mgGoal").textContent=proj.desc;
+  $("mgGoal").textContent=proj.desc+(proj.question?"  ❓ "+proj.question:"");
   selBlock=null;elseSel=null;
   renderPalette();updateChips();renderProgram();renderPy();updateUndoBtns();
   mgUpdateCount();
@@ -697,10 +697,14 @@ function mgCases(proj){const c=proj&&proj.cases;return (c&&c.length)?c:[null];} 
 // swap the board over to a case. Never touches the caller's data — mgEnter cloned it.
 function mgApplyCase(c){
   const st=mgState,p=st.proj;
-  if(!st.caseBase)st.caseBase={initial:p.initial,start:p.start,cells:p.cells,tiles:p.tiles};
+  if(!st.caseBase)st.caseBase={initial:p.initial,start:p.start,cells:p.cells,tiles:p.tiles,
+    gw:p.gw,gh:p.gh,goal:p.goal};
   const b=st.caseBase, pick=k=>(c&&c[k])?JSON.parse(JSON.stringify(c[k])):b[k];
   p.initial=pick("initial");p.start=pick("start");p.cells=pick("cells");p.tiles=pick("tiles");
-  st.caseExpect=c?c.expect:undefined;
+  // a case may also resize the board and move the goal — that's how "escape ANY maze"
+  // can hand the same program four mazes of different shapes
+  p.gw=pick("gw");p.gh=pick("gh");p.goal=pick("goal");
+  st.caseExpect=(c&&c.expect!=null)?c.expect:p.expect; // the answer this input should produce
   mgReset();
 }
 // a compact label for an input, so a failure can name the case that broke
@@ -859,7 +863,7 @@ function mgTick(){
       if(hit){rb.items.delete(hit);sfx(660,.05);}else sfx(200,.04);}
     else if(b.t==="read")mgRobot.vars[b.name]=mgReadSrc(st,b.src);
     else if(b.t==="setVar")mgRobot.vars[b.name]=resolveVal(mgRobot,b.val);
-    else if(b.t==="changeVar")mgRobot.vars[b.name]=(Number(mgRobot.vars[b.name])||0)+(b.n|0);
+    else if(b.t==="changeVar")mgRobot.vars[b.name]=(Number(mgRobot.vars[b.name])||0)+changeBy(mgRobot,b);
     else if(b.t==="say")mgRobot.say={txt:String(resolveVal(mgRobot,b.val)).slice(0,24),until:1e18};
     else if(b.t==="wait")st.wait=Math.max(0,(b.n|0)-1); // this tick counts as the first
     // any remaining world-only action is a harmless no-op on the challenge grid
@@ -949,6 +953,16 @@ function mgCheck(st){
   // program would instantly succeed on a blank creator canvas.
   if(!st.proj.goalType&&!(st.proj.cells||[]).length&&!(st.proj.initial||[]).length)
     return {ok:false,msg:"🖌️ Nothing to build yet — paint some target tiles first!"};
+  // "answer" goals: the level asks a QUESTION and the robot must 💬 Say the right
+  // value. The goal is a computed result rather than an arrangement of blocks, which
+  // is what makes sum / count / max / search levels possible at all.
+  if(st.proj.goalType==="answer"){
+    const want=st.caseExpect,said=mgRobot&&mgRobot.say?String(mgRobot.say.txt):null;
+    if(want==null)return {ok:false,msg:"⚠️ This level is missing its expected answer."};
+    return {ok:said!==null&&said===String(want),
+      msg:said===null?"💬 Say your answer at the end — the robot has to tell us the number!"
+        :"❌ You answered "+said+", but that's not right for this row. Check your algorithm!"};
+  }
   // Academy goals: reach the flag / chop every tree / collect every gem
   if(st.proj.goalType){
     const rb=st.robot,gt=st.proj.goalType;

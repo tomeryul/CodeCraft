@@ -71,8 +71,12 @@ function newBlock(t){
 }
 // A comparison's right-hand side may be a bare number (old saves) or a value
 // object. These two keep the editor's −/+ working either way.
+// a block field that may hold either a bare number (old saves) or a value object
+function numOf(v){return (v&&typeof v==="object")?(Number(v.n)||0):(Number(v)||0);}
 function condNum(c){const v=c.val;return (v&&typeof v==="object")?(Number(v.n)||0):(Number(v)||0);}
 function condSetNum(c,n){if(c.val&&typeof c.val==="object")c.val={k:"num",n};else c.val=n;}
+// how much ➕ Change adds: a literal, or the current value of another variable
+function changeBy(r,b){return (b.n&&typeof b.n==="object")?(Number(resolveVal(r,b.n))||0):(b.n|0);}
 function resolveVal(r,v){
   if(!v)return 0;
   if(v.k==="num")return v.n;

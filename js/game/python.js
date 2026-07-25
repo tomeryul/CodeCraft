@@ -27,7 +27,10 @@ function toPy(list,ind){
         P.push(ind+"for "+b.name+" in range(1, "+((b.to|0)+1)+"):");
         P.push(b.body.length?toPy(b.body,ind+"    "):ind+"    pass");break;
       case "setVar":P.push(ind+b.name+" = "+pyVal(b.val));break;
-      case "changeVar":P.push(ind+b.name+" = "+b.name+(b.n<0?" - "+(-b.n):" + "+b.n));break;
+      case "changeVar":
+        if(b.n&&typeof b.n==="object")P.push(ind+b.name+" = "+b.name+" + "+pyVal(b.n));
+        else P.push(ind+b.name+" = "+b.name+(b.n<0?" - "+(-b.n):" + "+b.n));
+        break;
       case "say":P.push(ind+"robot.say("+pyVal(b.val)+")");break;
       case "read":P.push(ind+b.name+" = "+pyRead(b.src));break;
       case "forever":

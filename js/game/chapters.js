@@ -14,9 +14,24 @@
 const CH_MOVE=["move","turnL","turnR","repeat","forever","if"];
 const CH_CARRY=["move","turnL","turnR","pickUp","drop","repeat","forever","if"];
 const CH_BUILD=["move","turnL","turnR","pickUp","drop","build","repeat","forever","if"];
+// the algorithm toolbox: everything needed to inspect data and act on it
+const CH_ALGO=["move","turnL","turnR","pickUp","drop","repeat","forever","whileLoop",
+               "countLoop","if","setVar","changeVar","read","say"];
 // terse level builders so the data below stays readable
 const mv={t:"move"},tL={t:"turnL"},tR={t:"turnR"},pk={t:"pickUp"},dr={t:"drop"},bd={t:"build"};
 const rep=(n,body)=>({t:"repeat",n,body});
+const rd=(name,src)=>({t:"read",name,src:src||"here"});
+const setN=(name,n)=>({t:"setVar",name,val:{k:"num",n}});
+const setV=(name,from)=>({t:"setVar",name,val:{k:"var",name:from}});
+const addN=(name,n)=>({t:"changeVar",name,n});
+const addV=(name,from)=>({t:"changeVar",name,n:{k:"var",name:from}});
+const sayV=name=>({t:"say",val:{k:"var",name}});
+const whil=(cond,body)=>({t:"whileLoop",cond,body});
+const iff=(cond,body,els)=>({t:"if",cond,body,els:els||[]});
+const cmpV=(v,op,other)=>({var:v,op,val:{k:"var",name:other}});
+const cmpN=(v,op,n)=>({var:v,op,val:n});
+// a row of numbers laid along y=1 starting at x=0 (row y=0 stays free as scratch)
+const row=ns=>ns.map((n,i)=>[i,1,n]);
 
 const PUZZLE_PACKS=[
   /* ---------- 1. walls: there is now something to walk around ---------- */
@@ -126,6 +141,63 @@ const PUZZLE_PACKS=[
      cells:[],initial:[[0,1]],goal:[6,1],goalType:"reach",
      desc:"Everything at once: bridge the hole, squeeze through the gap, grab the key, open the door. You've learned all of it.",
      sol:[pk,dr,rep(6,[mv])]},
+   ]},
+
+  /* ---------- 5. algorithms: one program, every input ----------
+     These are the levels the whole language work was for. Each ships several
+     inputs, so a hardcoded answer cannot pass — the program has to READ the row,
+     decide, and be right every time. */
+  {id:"algo",em:"🧠",name:"Algorithms",diff:3,coins:500,xp:260,needs:"machine",
+   desc:"Now the real thing: write ONE program that is right for every row we give it — including one you never see.",
+   stages:[
+    {em:"🔍",name:"Find the Biggest",diff:2,maxBlocks:10,gw:6,gh:2,allowed:CH_ALGO,
+     start:{x:0,y:1,dir:1},cells:[],initial:[],tiles:[],
+     goalType:"answer",question:"What is the biggest number in the row?",
+     desc:"Walk the row, remember the biggest number you've seen, and 💬 Say it at the end. The rows are different every time — so no guessing.",
+     cases:[{initial:row([3,7,2]),expect:7},{initial:row([9,1,4]),expect:9},
+            {initial:row([2,5,8,6]),expect:8},{initial:row([4,4,1]),expect:4,hidden:true}],
+     sol:[rd("best"),whil("brickHere",[rd("v"),iff(cmpV("v",">","best"),[setV("best","v")]),mv]),sayV("best")]},
+
+    {em:"➕",name:"Add Up the Row",diff:2,maxBlocks:9,gw:6,gh:2,allowed:CH_ALGO,
+     start:{x:0,y:1,dir:1},cells:[],initial:[],tiles:[],
+     goalType:"answer",question:"What do all the numbers add up to?",
+     desc:"Keep a running total: start at 0, and for every block you stand on, ➕ Change the total BY the number you just read.",
+     cases:[{initial:row([1,2,3]),expect:6},{initial:row([5,5]),expect:10},
+            {initial:row([2,4,6,8]),expect:20},{initial:row([7,3,1,9]),expect:20,hidden:true}],
+     sol:[setN("s",0),whil("brickHere",[rd("v"),addV("s","v"),mv]),sayV("s")]},
+
+    {em:"🔢",name:"Count the Big Ones",diff:2,maxBlocks:10,gw:6,gh:2,allowed:CH_ALGO,
+     start:{x:0,y:1,dir:1},cells:[],initial:[],tiles:[],
+     goalType:"answer",question:"How many numbers are bigger than 4?",
+     desc:"Same walk, but this time only count the blocks that pass a test. Counting IF something is true is one of the most useful things a program does.",
+     cases:[{initial:row([3,7,2,9]),expect:2},{initial:row([1,2,3]),expect:0},
+            {initial:row([5,6,7,8]),expect:4},{initial:row([4,5,4,6]),expect:2,hidden:true}],
+     sol:[setN("c",0),whil("brickHere",[rd("v"),iff(cmpN("v",">",4),[addN("c",1)]),mv]),sayV("c")]},
+
+    {em:"🎯",name:"Where Is It?",diff:3,maxBlocks:10,gw:6,gh:2,allowed:CH_ALGO,
+     start:{x:0,y:1,dir:1},cells:[],initial:[],tiles:[],
+     goalType:"answer",question:"Which position holds the 7? (the first block is position 0)",
+     desc:"Search the row for the 7 and 💬 Say WHERE it was, not what it was. 📖 Read can tell the robot its own column.",
+     cases:[{initial:row([3,7,2]),expect:1},{initial:row([7,1,4]),expect:0},
+            {initial:row([2,5,8,7]),expect:3},{initial:row([1,2,7,4]),expect:2,hidden:true}],
+     sol:[setN("p",0),whil("brickHere",[rd("v"),iff(cmpN("v","=",7),[rd("p","x")]),mv]),sayV("p")]},
+
+    {em:"🧭",name:"Escape Any Maze",diff:3,maxBlocks:6,gw:5,gh:5,allowed:CH_ALGO,
+     start:{x:0,y:0,dir:1},cells:[],initial:[],goal:[0,4],goalType:"reach",
+     tiles:[[1,1,"wall",0],[2,1,"wall",0],[3,1,"wall",0],[1,2,"wall",0],[2,2,"wall",0],
+            [3,2,"wall",0],[1,3,"wall",0],[2,3,"wall",0],[3,3,"wall",0]],
+     desc:"Four different mazes, one program, only 6 blocks. Don't count steps — teach the robot to feel the wall and follow it round.",
+     cases:[
+      {gw:5,gh:5,start:{x:0,y:0,dir:1},goal:[0,4],
+       tiles:[[1,1,"wall",0],[2,1,"wall",0],[3,1,"wall",0],[1,2,"wall",0],[2,2,"wall",0],
+              [3,2,"wall",0],[1,3,"wall",0],[2,3,"wall",0],[3,3,"wall",0]]},
+      {gw:6,gh:4,start:{x:0,y:0,dir:1},goal:[0,3],
+       tiles:[[2,1,"wall",0],[3,1,"wall",0],[2,2,"wall",0],[3,2,"wall",0]]},
+      {gw:4,gh:5,start:{x:0,y:0,dir:1},goal:[0,4],
+       tiles:[[1,2,"wall",0],[2,2,"wall",0],[1,3,"wall",0]]},
+      {gw:7,gh:5,start:{x:0,y:0,dir:1},goal:[0,4],hidden:true,
+       tiles:[[2,2,"wall",0],[3,2,"wall",0],[4,2,"wall",0],[2,3,"wall",0],[4,3,"wall",0]]}],
+     sol:[{t:"forever",body:[iff("blocked",[tR],[mv])]}]},
    ]},
 ];
 function puzzlePack(id){return PUZZLE_PACKS.find(p=>p.id===id)||null;}
