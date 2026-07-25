@@ -9,12 +9,15 @@ function canWalk(x,y){
   return !solidObj(o);
 }
 function ahead(r){return {x:r.x+DX[r.dir],y:r.y+DY[r.dir]};}
+// The right-hand side of a comparison is a VALUE, so `if x > y` is expressible and
+// not just `if x > 3`. Old saves store a bare number there — still honoured.
+function condRhs(r,c){return (c.val&&typeof c.val==="object")?Number(resolveVal(r,c.val))||0:(Number(c.val)||0);}
 function evalCond(r,c){
   if(c&&typeof c==="object"){
-    const v=Number(r.vars[c.var])||0;
-    if(c.op===">")return v>c.val;
-    if(c.op==="<")return v<c.val;
-    return v===c.val;
+    const v=Number(r.vars[c.var])||0, w=condRhs(r,c);
+    if(c.op===">")return v>w;
+    if(c.op==="<")return v<w;
+    return v===w;
   }
   const a=ahead(r), o=inB(a.x,a.y)?objects.get(key(a.x,a.y)):null;
   switch(c){
@@ -54,6 +57,8 @@ function tickRobot(r){
     const fr=r.frames&&r.frames[r.frames.length-1];
     if(!fr){stopRobot(r);return;}
     if(fr.i>=fr.blocks.length){
+      // a 🔄 While frame re-checks its condition here and falls out when it's false
+      if(fr.wc!==undefined&&!evalCond(r,fr.wc)){r.frames.pop();const pw=r.frames[r.frames.length-1];if(pw){pw.i++;continue;}stopRobot(r);return;}
       if(fr.reps===Infinity){fr.i=0;if(!fr.blocks.length)return;continue;}
       if(fr.reps>1){
         fr.reps--;fr.i=0;
@@ -75,6 +80,9 @@ function tickRobot(r){
       r.vars[b.name]=1;
       r.frames.push({blocks:b.body,i:0,reps:Math.max(1,b.to|0),cv:b.name,cur:1});continue;}
     if(b.t==="forever"){ r.curUid=b.uid; if(!b.body.length)return; r.frames.push({blocks:b.body,i:0,reps:Infinity});continue;}
+    if(b.t==="whileLoop"){
+      if(!b.body.length||!evalCond(r,b.cond)){fr.i++;continue;}
+      r.curUid=b.uid;r.frames.push({blocks:b.body,i:0,reps:Infinity,wc:b.cond});continue;}
     if(b.t==="if"){
       const br=evalCond(r,b.cond)?b.body:(b.els||[]);
       if(br.length){r.curUid=b.uid;r.frames.push({blocks:br,i:0,reps:1});}
@@ -195,6 +203,11 @@ function doAction(r,b){
       break;}
     case "setVar": r.vars[b.name]=resolveVal(r,b.val); break;
     case "changeVar": r.vars[b.name]=(Number(r.vars[b.name])||0)+(b.n|0); break;
+    // 📖 Read in the open world: no numbered blocks out here, so "here"/"ahead"
+    // report how full the bag is and the robot's own position is exact.
+    case "read":
+      r.vars[b.name]=b.src==="x"?r.x:b.src==="y"?r.y:b.src==="held"?bagCount(r):bagCount(r);
+      break;
     case "say":
       r.say={txt:String(resolveVal(r,b.val)).slice(0,24),until:now+2600};
       qProg("say");

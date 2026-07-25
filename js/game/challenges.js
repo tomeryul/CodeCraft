@@ -3,9 +3,9 @@
 // full programming toolbox available inside every challenge (loops, conditions, variables, values)
 // every challenge (built-in, community, custom) gets the full toolbox — incl.
 // ✊ Lift / ⤵️ Drop so bricks can be moved when PLAYING, not just while editing
-const CHALLENGE_BLOCKS=["move","turnL","turnR","build","pickUp","drop","wait","repeat","forever","countLoop","if","setVar","changeVar","say"];
+const CHALLENGE_BLOCKS=["move","turnL","turnR","build","pickUp","drop","wait","repeat","forever","whileLoop","countLoop","if","setVar","changeVar","read","say"];
 // sorting toolbox: lift/drop, no build — for rearranging numbered bricks
-const SORT_BLOCKS=["move","turnL","turnR","pickUp","drop","wait","repeat","forever","countLoop","if","setVar","changeVar","say"];
+const SORT_BLOCKS=["move","turnL","turnR","pickUp","drop","wait","repeat","forever","whileLoop","countLoop","if","setVar","changeVar","read","say"];
 const CREATOR_BLOCKS=CHALLENGE_BLOCKS;
 const PROJECTS=[
   {id:"house",em:"🏡",name:"Big House",diff:1,coins:150,xp:60,maxBlocks:8,gw:8,gh:7,
@@ -717,6 +717,8 @@ function mgTick(){
     const fr=st.frames[st.frames.length-1];
     if(!fr){mgFinish();return;}
     if(fr.i>=fr.blocks.length){
+      // a 🔄 While frame re-checks its condition here and falls out when it's false
+      if(fr.wc!==undefined&&!mgCond(st,fr.wc)){st.frames.pop();const pw=st.frames[st.frames.length-1];if(pw){pw.i++;continue;}mgFinish();return;}
       if(fr.reps===Infinity){fr.i=0;continue;}
       if(fr.reps>1){
         fr.reps--;fr.i=0;
@@ -733,6 +735,13 @@ function mgTick(){
       const times=b.src?Math.floor(Number(mgRobot.vars[b.src])||0):Math.max(1,b.n|0);
       if(!b.body.length||times<1){fr.i++;continue;}
       st.frames.push({blocks:b.body,i:0,reps:times});continue;
+    }
+    if(b.t==="whileLoop"){
+      // re-tests its condition every pass: an endless frame tagged with the cond,
+      // popped by the frame-exhausted branch above the moment it goes false
+      if(!b.body.length||!mgCond(st,b.cond)){fr.i++;continue;}
+      mgRobot.curUid=b.uid;
+      st.frames.push({blocks:b.body,i:0,reps:Infinity,wc:b.cond});continue;
     }
     if(b.t==="forever"){
       // same shape as the world interpreter: an endless frame. The program never
@@ -788,6 +797,7 @@ function mgTick(){
       const kk=rb.x+"_"+rb.y, ka=(rb.x+DX[rb.dir])+"_"+(rb.y+DY[rb.dir]);
       const hit=rb.items&&(rb.items.has(kk)?kk:rb.items.has(ka)?ka:null);
       if(hit){rb.items.delete(hit);sfx(660,.05);}else sfx(200,.04);}
+    else if(b.t==="read")mgRobot.vars[b.name]=mgReadSrc(st,b.src);
     else if(b.t==="setVar")mgRobot.vars[b.name]=resolveVal(mgRobot,b.val);
     else if(b.t==="changeVar")mgRobot.vars[b.name]=(Number(mgRobot.vars[b.name])||0)+(b.n|0);
     else if(b.t==="say")mgRobot.say={txt:String(resolveVal(mgRobot,b.val)).slice(0,24),until:1e18};
@@ -821,10 +831,21 @@ function mgCondList(){
   if((p.trees||[]).length)L.push("treeAhead");
   return L;
 }
+// 📖 Read — the only path from the board INTO a variable. This is what makes the
+// grid a data structure a program can inspect (and so what makes sorting,
+// searching and counting expressible at all). Missing values read as 0.
+function mgReadSrc(st,src){
+  const rb=st.robot, kh=rb.x+"_"+rb.y, ka=(rb.x+DX[rb.dir])+"_"+(rb.y+DY[rb.dir]);
+  if(src==="held")return rb.held!=null?rb.held:0;
+  if(src==="x")return rb.x;
+  if(src==="y")return rb.y;
+  const k=src==="ahead"?ka:kh;
+  return rb.brickNo[k]!=null?rb.brickNo[k]:0;
+}
 function mgCond(st,c){
   if(c&&typeof c==="object"){
-    const v=Number(mgRobot.vars[c.var])||0;
-    return c.op===">"?v>c.val:c.op==="<"?v<c.val:v===c.val;
+    const v=Number(mgRobot.vars[c.var])||0, w=condRhs(mgRobot,c);
+    return c.op===">"?v>w:c.op==="<"?v<w:v===w;
   }
   const rb=st.robot, ax=rb.x+DX[rb.dir], ay=rb.y+DY[rb.dir];
   const ka=ax+"_"+ay, kh=rb.x+"_"+rb.y, T=window.CC_TILES;

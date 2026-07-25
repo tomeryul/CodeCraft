@@ -24,6 +24,9 @@ const DEFS={
   wait:{cat:"basic",ic:"⏱️",lbl:"Wait"},
   repeat:{cat:"loops",ic:"🔁",lbl:"Repeat",container:true},
   forever:{cat:"loops",ic:"♾️",lbl:"Forever",container:true},
+  // "keep going UNTIL" — the loop every algorithm needs. repeat/count run a KNOWN
+  // number of times, so neither can express "while it isn't sorted yet".
+  whileLoop:{cat:"loops",ic:"🔄",lbl:"While",container:true},
   "if":{cat:"logic",ic:"❓",lbl:"If",container:true},
   faceNearest:{cat:"smart",ic:"🧭",lbl:"Face Nearest"},
   goHome:{cat:"smart",ic:"🏠",lbl:"Go Home"},
@@ -32,20 +35,30 @@ const DEFS={
   setVar:{cat:"vars",ic:"📦",lbl:"Set"},
   changeVar:{cat:"vars",ic:"➕",lbl:"Change"},
   countLoop:{cat:"vars",ic:"🔢",lbl:"Count",container:true},
+  // reads a value FROM the world INTO a variable. Without this the board is opaque:
+  // the robot could carry a numbered block but never look at its number, so no
+  // sorting/searching/counting algorithm was expressible at all.
+  read:{cat:"vars",ic:"📖",lbl:"Read"},
   say:{cat:"vars",ic:"💬",lbl:"Say"},
 };
+// what 📖 Read can look at
+const READ_SRC=["here","ahead","held","x","y"];
+const READ_LBL={here:"number under me 🟧",ahead:"number ahead ⬆️",held:"number I'm holding ✊",
+  x:"my column ↔️",y:"my row ↕️"};
 const CATS=[
   {id:"basic",name:"Basics",types:["move","turnL","turnR","collect","chop","mine","scoop","drop","build","rest","wait"],lock:null},
-  {id:"loops",name:"Loops",types:["repeat","forever"],lock:"loops",need:"Collect 5 resources to unlock 🔁 loops!"},
+  {id:"loops",name:"Loops",types:["repeat","forever","whileLoop"],lock:"loops",need:"Collect 5 resources to unlock 🔁 loops!"},
   {id:"logic",name:"Logic",types:["if"],lock:"logic",need:"Sell something at the market 🏪 to unlock ❓ logic!"},
   {id:"smart",name:"Smart",types:["faceNearest","goHome","sellAll","bankAll"],lock:"smart",need:"Earn 150 🪙 total (or own 2 robots) to unlock 🧭 smart blocks!"},
-  {id:"vars",name:"Memory",types:["setVar","changeVar","countLoop","say"],lock:"vars",need:"Earn 250 🪙 total to unlock 🧠 memory & variables!"},
+  {id:"vars",name:"Memory",types:["setVar","changeVar","countLoop","read","say"],lock:"vars",need:"Earn 250 🪙 total to unlock 🧠 memory & variables!"},
 ];
 function newBlock(t){
   const b={t,uid:uid()};
   if(t==="repeat"){b.n=3;b.body=[];}
   if(t==="forever"){b.body=[];}
   if(t==="if"){b.cond="treeAhead";b.body=[];b.els=[];}
+  if(t==="whileLoop"){b.cond=(typeof mgState!=="undefined"&&mgState)?"brickHere":"treeAhead";b.body=[];}
+  if(t==="read"){b.name="x";b.src="here";}
   if(t==="wait")b.n=1;
   if(t==="rest")b.n=2;
   if(t==="build")b.opt="sapling";
@@ -56,6 +69,10 @@ function newBlock(t){
   if(t==="say")b.val={k:"str",s:"Hello!"};
   return b;
 }
+// A comparison's right-hand side may be a bare number (old saves) or a value
+// object. These two keep the editor's −/+ working either way.
+function condNum(c){const v=c.val;return (v&&typeof v==="object")?(Number(v.n)||0):(Number(v)||0);}
+function condSetNum(c,n){if(c.val&&typeof c.val==="object")c.val={k:"num",n};else c.val=n;}
 function resolveVal(r,v){
   if(!v)return 0;
   if(v.k==="num")return v.n;

@@ -129,9 +129,16 @@ function renderList(list,parent){
     if(b.t==="countLoop")inner+='<button class="pbtn" data-p="vname">'+esc(b.name)+'</button><span>1→</span><button class="pbtn" data-p="tdec">−</button><span class="num">'+b.to+'</span><button class="pbtn" data-p="tinc">＋</button>';
     if(b.t==="setVar")inner+='<button class="pbtn" data-p="vname">'+esc(b.name)+'</button><span>=</span>'+valCtl(b.val);
     if(b.t==="say")inner+=valCtl(b.val);
-    if(b.t==="if"){
-      if(typeof b.cond==="object")
-        inner+='<button class="pbtn" data-p="cvar">📦 '+esc(b.cond.var)+'</button><button class="pbtn" data-p="cop">'+b.cond.op+'</button><button class="pbtn" data-p="cvdec">−</button><span class="num">'+b.cond.val+'</span><button class="pbtn" data-p="cvinc">＋</button>';
+    if(b.t==="read")inner+='<button class="pbtn" data-p="vname">'+esc(b.name)+'</button><span>=</span><button class="pbtn" data-p="rsrc">'+(READ_LBL[b.src]||b.src)+'</button>';
+    if(b.t==="if"||b.t==="whileLoop"){
+      if(typeof b.cond==="object"){
+        // the right side is a VALUE: a number (−/+) or another variable, so `x > y` works
+        const rv=b.cond.val, isVar=!!(rv&&typeof rv==="object"&&rv.k==="var");
+        inner+='<button class="pbtn" data-p="cvar">📦 '+esc(b.cond.var)+'</button><button class="pbtn" data-p="cop">'+b.cond.op+'</button>';
+        if(isVar)inner+='<button class="pbtn" data-p="crname">📦 '+esc(rv.name)+'</button>';
+        else inner+='<button class="pbtn" data-p="cvdec">−</button><span class="num">'+condNum(b.cond)+'</span><button class="pbtn" data-p="cvinc">＋</button>';
+        inner+='<button class="pbtn" data-p="cvkind">'+(isVar?"🔢":"📦")+'</button>';
+      }
       else inner+='<button class="pbtn" data-p="cond">'+COND_LBL[b.cond]+'</button>';
     }
     if(b.t==="build")inner+='<button class="pbtn" data-p="build">'+BUILD_LBL[b.opt]+'</button>';
@@ -158,8 +165,15 @@ function renderList(list,parent){
           b.cond.op=b.cond.op===">"?"<":b.cond.op==="<"?"=":null;
           if(!b.cond.op)b.cond=((mgState&&typeof mgCondList==="function")?mgCondList():CONDS)[0];
         }
-        if(p==="cvdec")b.cond.val--;
-        if(p==="cvinc")b.cond.val++;
+        if(p==="cvdec")condSetNum(b.cond,condNum(b.cond)-1);
+        if(p==="cvinc")condSetNum(b.cond,condNum(b.cond)+1);
+        // toggle the comparison's right side between a number and another variable
+        if(p==="cvkind"){
+          const rv=b.cond.val;
+          b.cond.val=(rv&&typeof rv==="object"&&rv.k==="var")?{k:"num",n:3}:{k:"var",name:"y"};
+        }
+        if(p==="crname")b.cond.val={k:"var",name:promptName(b.cond.val&&b.cond.val.name)};
+        if(p==="rsrc")b.src=READ_SRC[(READ_SRC.indexOf(b.src)+1)%READ_SRC.length];
         if(p==="build")b.opt=BUILDS[(BUILDS.indexOf(b.opt)+1)%BUILDS.length];
         if(p==="tgt")b.opt=TARGETS[(TARGETS.indexOf(b.opt)+1)%TARGETS.length];
         if(p==="vname")b.name=promptName(b.name);

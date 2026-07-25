@@ -1187,6 +1187,70 @@ async function ev(expr) {
   check("clearing a chapter pays coins + XP", RW.paid === 150 && RW.grew === true && RW.marked === true, rew);
   check("replaying a cleared chapter doesn't pay again", RW.paidTwice === 0, rew);
 
+  console.log("▶ the language can express an algorithm: 📖 Read + x>y + 🔄 While");
+  const algo = await ev(`(()=>{
+    const mk=(initial,gw)=>({id:'al_'+Math.random(),em:'🔢',name:'A',desc:'',gw:gw||6,gh:2,
+      maxBlocks:30,allowed:CHALLENGE_BLOCKS,coins:0,xp:0,start:{x:0,y:1,dir:1},
+      cells:[],initial,tiles:[]});
+    const run=(proj,prog,ticks)=>{
+      mgEnter(proj);
+      const p=JSON.parse(JSON.stringify(prog)); reUid(p);
+      mgRobot.program=p; mgRobot.vars={}; mgRobot.say=null;
+      mgState.running=true; mgState.frames=[{blocks:p,i:0,reps:1}]; mgState.wait=0;
+      for(let t=0;t<(ticks||300)&&mgState&&mgState.running;t++)mgTick();
+      return mgState;
+    };
+    // 📖 Read pulls the board into a variable
+    let st=run(mk([[0,1,5],[1,1,8]]),[{t:'read',name:'a',src:'here'},{t:'read',name:'b',src:'ahead'},
+      {t:'read',name:'cx',src:'x'},{t:'pickUp'},{t:'read',name:'h',src:'held'}],10);
+    const v=mgRobot.vars, readHere=v.a===5, readAhead=v.b===8, readX=v.cx===0, readHeld=v.h===5;
+    mgExit(false);
+    // if x > y — comparing two VARIABLES (was impossible: RHS was always a constant)
+    st=run(mk([[0,1,1]]),[{t:'setVar',name:'x',val:{k:'num',n:9}},{t:'setVar',name:'y',val:{k:'num',n:4}},
+      {t:'if',cond:{var:'x',op:'>',val:{k:'var',name:'y'}},body:[{t:'say',val:{k:'str',s:'bigger'}}],els:[{t:'say',val:{k:'str',s:'no'}}]}],12);
+    const varCmp=mgRobot.say&&mgRobot.say.txt==='bigger';
+    mgExit(false);
+    // an OLD saved condition stores a bare number there — must still evaluate
+    st=run(mk([[0,1,1]]),[{t:'setVar',name:'x',val:{k:'num',n:9}},
+      {t:'if',cond:{var:'x',op:'>',val:3},body:[{t:'say',val:{k:'str',s:'ok'}}],els:[]}],12);
+    const legacyCmp=mgRobot.say&&mgRobot.say.txt==='ok';
+    mgExit(false);
+    // 🔄 While runs while its condition holds, and terminates when it stops
+    st=run(mk([[0,1,1],[1,1,1],[2,1,1]]),[{t:'whileLoop',cond:'brickHere',body:[{t:'move'}]}],60);
+    const whileWalked=st&&st.robot.x===3, whileEnded=st&&!st.running;
+    mgExit(false);
+    // THE POINT: one program, three different inputs, correct every time
+    const maxProg=[{t:'read',name:'best',src:'here'},
+      {t:'whileLoop',cond:'brickHere',body:[
+        {t:'read',name:'v',src:'here'},
+        {t:'if',cond:{var:'v',op:'>',val:{k:'var',name:'best'}},body:[{t:'setVar',name:'best',val:{k:'var',name:'v'}}],els:[]},
+        {t:'move'}]},
+      {t:'say',val:{k:'var',name:'best'}}];
+    const answers=[], costs=[];
+    [[[0,1,3],[1,1,7],[2,1,2]],[[0,1,9],[1,1,1],[2,1,4]],[[0,1,2],[1,1,5],[2,1,8],[3,1,6]]]
+      .forEach(inp=>{const s=run(mk(inp),maxProg);answers.push(mgRobot.say?mgRobot.say.txt:null);costs.push(s?s.steps:0);mgExit(false);});
+    // and it reads as real Python
+    mgEnter(mk([[0,1,1]]));
+    mgRobot.program=JSON.parse(JSON.stringify(maxProg)); reUid(mgRobot.program);
+    const py=toPy(mgRobot.program,'');
+    mgExit(false); document.getElementById('editor').classList.remove('open','max');
+    return JSON.stringify({readHere,readAhead,readX,readHeld,varCmp,legacyCmp,
+      whileWalked,whileEnded,answers,costs,
+      pyRead:py.indexOf('best = robot.read()')>=0, pyWhile:py.indexOf('while robot.on_block():')>=0,
+      pyCmp:py.indexOf('if v > best:')>=0});
+  })()`);
+  const AL = JSON.parse(algo);
+  check("📖 Read pulls a block's number into a variable", AL.readHere === true && AL.readAhead === true, algo);
+  check("📖 Read can report the carried block and the robot's own position", AL.readHeld === true && AL.readX === true, algo);
+  check("a condition can compare two variables (x > y)", AL.varCmp === true, algo);
+  check("an old numeric comparison still evaluates", AL.legacyCmp === true, algo);
+  check("🔄 While loops while true and then terminates", AL.whileWalked === true && AL.whileEnded === true, algo);
+  check("ONE program finds the max on three different inputs",
+    JSON.stringify(AL.answers) === JSON.stringify(["7","9","8"]), algo);
+  check("its cost varies with the input (raw material for complexity bars)",
+    AL.costs[2] > AL.costs[1], algo);
+  check("the algorithm renders as real Python", AL.pyRead && AL.pyWhile && AL.pyCmp, algo);
+
   console.log("▶ challenges unlock every block feature (ignore world unlocks)");
   const varsFree = await ev(`(()=>{
     mgEnter(PROJECTS[0]); unlocks.vars=false;   // low-level player: vars NOT unlocked in the world
