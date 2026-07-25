@@ -1251,6 +1251,74 @@ async function ev(expr) {
     AL.costs[2] > AL.costs[1], algo);
   check("the algorithm renders as real Python", AL.pyRead && AL.pyWhile && AL.pyCmp, algo);
 
+  console.log("▶ one program, many inputs: an algorithm passes, a hardcoded path doesn't");
+  const cases = await ev(`(()=>{
+    // neutralise the run timer so we can drive every case deterministically
+    const origSI=window.setInterval; window.setInterval=()=>0;
+    const origSuccess=mgSuccess; let won=false;
+    mgSuccess=()=>{won=true;mgStop();};
+    // 3 inputs: the robot starts at a DIFFERENT column each time, flag always at x=5
+    const lvl=(cases)=>({id:'tc_'+Math.random(),em:'🧪',name:'T',desc:'',gw:6,gh:3,maxBlocks:30,
+      allowed:CHALLENGE_BLOCKS,coins:0,xp:0,start:{x:0,y:1,dir:1},cells:[],initial:[],tiles:[],
+      goal:[5,1],goalType:'reach',cases});
+    // starts 0 and 1 are too far for a fixed 3 moves; only start 2 lands on the flag.
+    // (start 3 is deliberately avoided — the grid edge would clamp it onto the flag
+    // and let the hardcoded program pass by accident.)
+    const THREE=[{start:{x:0,y:1,dir:1}},{start:{x:2,y:1,dir:1}},{start:{x:1,y:1,dir:1}}];
+    const play=(proj,prog)=>{
+      mgEnter(proj);
+      const p=JSON.parse(JSON.stringify(prog)); reUid(p);
+      mgRobot.program=p; won=false; mgRun();
+      // drive every case to completion by hand
+      for(let guard=0;guard<40&&mgState&&mgState.running;guard++){
+        for(let t=0;t<700&&mgState&&mgState.running;t++)mgTick();
+      }
+      const out={results:(mgState&&mgState.results)||[],won,
+        failAt:mgState?mgState.failAt:-1,total:mgState?mgState.cases.length:0};
+      if(mgState)mgExit(false);
+      return out;
+    };
+    // (a) HARDCODED: three moves. Only correct for the start that happens to be 3 away.
+    const hard=play(lvl(THREE),[{t:'repeat',n:3,body:[{t:'move'}]}]);
+    // (b) ALGORITHM: keep going until you're there — correct from ANY start.
+    const algo=play(lvl(THREE),[{t:'forever',body:[{t:'move'}]}]);
+    // (c) a level with NO cases behaves exactly as before: one implicit input
+    const single=play(lvl(null),[{t:'forever',body:[{t:'move'}]}]);
+    // (d) a runaway on ONE input fails just that input; the others still run
+    const withWall=[{start:{x:4,y:1,dir:1}},{start:{x:0,y:1,dir:1},tiles:[[2,1,'wall',0]]},{start:{x:4,y:1,dir:1}}];
+    const runaway=play(lvl(withWall),[{t:'forever',body:[{t:'move'}]}]);
+    // (e) ↺ Reset goes back to the FIRST input
+    mgEnter(lvl(THREE)); mgState.ci=2; mgApplyCase(mgState.cases[2]);
+    const atThird=mgState.robot.x===1; // case 3 starts at column 1
+    document.getElementById('mgResetBtn').click();
+    const backToFirst=mgState.robot.x===0&&mgState.ci===0;
+    mgExit(false);
+    // (f) the clone fix: playing must not mutate the shared level data
+    const before=JSON.stringify(PROJECTS[3]);
+    mgEnter(PROJECTS[3]); mgState.proj.initial=[]; mgState.proj.cells=[[9,9]]; mgExit(false);
+    const projSafe=JSON.stringify(PROJECTS[3])===before;
+    player.myChallenges=[{id:'mc1',mine:true,em:'🧩',name:'Mine',desc:'',gw:4,gh:3,maxBlocks:9,
+      allowed:CHALLENGE_BLOCKS,coins:0,xp:0,start:{x:0,y:0,dir:1},cells:[[1,1]],initial:[],tiles:[]}];
+    const mcBefore=JSON.stringify(player.myChallenges[0]);
+    mgEnter(player.myChallenges[0]); mgState.proj.cells=[[3,3]]; mgState.proj.initial=[[0,0,5]]; mgExit(false);
+    const saveSafe=JSON.stringify(player.myChallenges[0])===mcBefore;
+    window.setInterval=origSI; mgSuccess=origSuccess;
+    document.getElementById('editor').classList.remove('open','max');
+    document.getElementById('projects').classList.remove('open');
+    return JSON.stringify({hard,algo,single,runaway,atThird,backToFirst,projSafe,saveSafe});
+  })()`);
+  const TC = JSON.parse(cases);
+  check("a multi-input level runs the program once per input", TC.algo.results.length === 3 && TC.algo.total === 3, cases);
+  check("an ALGORITHM passes every input", TC.algo.won === true && TC.algo.results.every(Boolean) === true, cases);
+  check("a HARDCODED path fails the inputs it wasn't written for",
+    TC.hard.won === false && TC.hard.results.filter(Boolean).length === 1, cases);
+  check("the failure points at the first input that broke", TC.hard.failAt === 0, cases);
+  check("a level with no cases still has exactly one input", TC.single.total === 1 && TC.single.won === true, cases);
+  check("a runaway on one input fails only that input", JSON.stringify(TC.runaway.results) === "[true,false,true]", cases);
+  check("Reset returns to the first input", TC.atThird === true && TC.backToFirst === true, cases);
+  check("playing never mutates the shared built-in level", TC.projSafe === true, cases);
+  check("playing never mutates a saved My Challenge", TC.saveSafe === true, cases);
+
   console.log("▶ challenges unlock every block feature (ignore world unlocks)");
   const varsFree = await ev(`(()=>{
     mgEnter(PROJECTS[0]); unlocks.vars=false;   // low-level player: vars NOT unlocked in the world

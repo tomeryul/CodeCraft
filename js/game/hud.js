@@ -25,7 +25,12 @@ $("fabRun").addEventListener("click",()=>{
 });
 $("runBtn").addEventListener("click",()=>{if(mgState)mgRun();else startRobot(R());});
 $("stopBtn").addEventListener("click",()=>{if(mgState)mgStop();else stopRobot(R());});
-$("mgResetBtn").addEventListener("click",()=>{mgStop();mgReset();});
+$("mgResetBtn").addEventListener("click",()=>{
+  mgStop();
+  // back to the FIRST input, not whichever test case the last run ended on
+  if(mgState&&mgState.cases){mgState.ci=0;mgState.results=[];mgState.failAt=-1;mgApplyCase(mgState.cases[0]);mgCaseStrip();}
+  else mgReset();
+});
 $("mgExitBtn").addEventListener("click",()=>mgExit(true));
 $("projClose").addEventListener("click",()=>$("projects").classList.remove("open"));
 /* --- challenge creator controls (the tool strip renders itself in mgToolsUI) --- */

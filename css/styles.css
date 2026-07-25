@@ -397,6 +397,12 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #mgLevels .lvchip.ed{background:rgba(122,77,255,.32);box-shadow:0 0 0 1.5px rgba(122,77,255,.7);}
 #mgLevels .lvchip button{width:26px;height:26px;padding:0;border-radius:999px;font-size:13px;background:rgba(0,0,0,.2);}
 #mgGoal{color:var(--ink2);font-size:12.5px;line-height:1.45;margin:7px 0;}
+/* per-test-case verdict strip: one chip per input the program must solve */
+#mgCases{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 7px;}
+#mgCases .casechip{font-size:11.5px;padding:3px 9px;background:rgba(0,0,0,.24);}
+#mgCases .casechip.now{background:rgba(255,214,107,.28);box-shadow:0 0 0 1.5px rgba(255,214,107,.7);}
+#mgCases .casechip.ok{background:rgba(84,214,106,.26);box-shadow:0 0 0 1.5px rgba(84,214,106,.6);}
+#mgCases .casechip.bad{background:rgba(255,93,115,.26);box-shadow:0 0 0 1.5px rgba(255,93,115,.6);}
 #mgCanvas{width:100%;border-radius:10px;display:block;touch-action:none;}
 #boardTab{overflow-y:auto;}
 #boardTab #mgPanel{background:none;padding:0;margin:0;}

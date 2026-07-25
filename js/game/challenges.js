@@ -626,7 +626,12 @@ function mgSortGoalOrder(proj){
   for(let i=0;i<n;i++)g.push([cells[i][0],cells[i][1],nums[i]]);
   return g.length?g:null;
 }
-function mgEnter(proj){
+function mgEnter(proj0){
+  // Own a private copy. Two callers hand us LIVE objects — the PROJECTS entry and a
+  // saved player.myChallenges entry — so anything that writes to mgState.proj during
+  // play (the test-case loop does) would corrupt the built-in level for the session,
+  // or worse, mutate persisted save data.
+  const proj=JSON.parse(JSON.stringify(proj0));
   mgRobot=makeRobot(0,0,proj.name);
   mgRobot.program=(player.projPrograms[proj.id]||[]).map(b=>JSON.parse(JSON.stringify(b)));
   reUid(mgRobot.program);
@@ -642,6 +647,11 @@ function mgEnter(proj){
   selBlock=null;elseSel=null;
   renderPalette();updateChips();renderProgram();renderPy();updateUndoBtns();
   mgUpdateCount();
+  // a multi-input level shows its FIRST input, and the verdict strip up front, so
+  // it's obvious from the start that one program has to handle all of them
+  mgState.cases=mgCases(proj);mgState.ci=0;mgState.results=[];mgState.failAt=-1;mgState.costs=[];
+  if(mgState.cases.length>1)mgApplyCase(mgState.cases[0]);
+  mgCaseStrip();
   setTab("board"); // show the goal & blueprint first, code is one tap away
 }
 function mgExit(reopen){
@@ -678,6 +688,54 @@ function mgUpdateCount(){
   el.style.color=over?"#ff5d73":"";
   updateChips(); // keep the block budget visible on the challenge chip while coding
 }
+/* ---------------- test cases: one program, many inputs ----------------
+   A level may ship several starting boards. The SAME program runs against every
+   one of them and only passes if it solves them all — which is the difference
+   between an algorithm and a lucky hardcoded path. A level with no `cases` has a
+   single implicit case, so it behaves exactly as it always did. */
+function mgCases(proj){const c=proj&&proj.cases;return (c&&c.length)?c:[null];} // null = the level's own board
+// swap the board over to a case. Never touches the caller's data — mgEnter cloned it.
+function mgApplyCase(c){
+  const st=mgState,p=st.proj;
+  if(!st.caseBase)st.caseBase={initial:p.initial,start:p.start,cells:p.cells,tiles:p.tiles};
+  const b=st.caseBase, pick=k=>(c&&c[k])?JSON.parse(JSON.stringify(c[k])):b[k];
+  p.initial=pick("initial");p.start=pick("start");p.cells=pick("cells");p.tiles=pick("tiles");
+  st.caseExpect=c?c.expect:undefined;
+  mgReset();
+}
+// a compact label for an input, so a failure can name the case that broke
+function mgCaseLabel(c,i){
+  const init=(c&&c.initial)||(mgState&&mgState.caseBase&&mgState.caseBase.initial)||[];
+  const nums=init.filter(x=>x.length>2&&x[2]!=null).map(x=>x[2]);
+  if(nums.length)return nums.join(" ");                       // "3 1 2" — the data itself
+  if(c&&c.start)return "start "+c.start.x+","+c.start.y;       // cases that move the robot
+  return "#"+(i+1);
+}
+// start (or restart) the frame stack for the current case
+function mgStartCase(fast){
+  const st=mgState;
+  st.frames=[{blocks:mgRobot.program,i:0,reps:1}];
+  st.steps=0;st.wait=0;
+  mgRobot.vars={};mgRobot.say=null;mgRobot.curUid=null;
+  st.running=true;mgRobot.running=true;
+  clearInterval(st.timer);
+  st.timer=setInterval(mgTick,fast?60:170); // watch the first case, verify the rest quickly
+  mgCaseStrip();
+}
+// the per-case ✓/✗ strip above the board (only when there's more than one case)
+function mgCaseStrip(){
+  const el=$("mgCases");if(!el)return;
+  const st=mgState, cs=(st&&st.cases)||[];
+  if(!st||cs.length<2){el.style.display="none";el.innerHTML="";return;}
+  el.style.display="";
+  el.innerHTML=cs.map((c,i)=>{
+    const r=st.results?st.results[i]:undefined;
+    const cls=r===true?"ok":r===false?"bad":(i===st.ci&&st.running)?"now":"";
+    const mark=r===true?"✓":r===false?"✗":(i===st.ci&&st.running)?"▶":"○";
+    const lab=(c&&c.hidden)?"?":esc(mgCaseLabel(c,i));
+    return '<span class="lvchip casechip '+cls+'">'+mark+" "+lab+'</span>';
+  }).join("");
+}
 function mgRun(){
   if(!mgState)return;
   if(mgState.running){mgStop();return;}
@@ -686,11 +744,10 @@ function mgRun(){
   const n=countBlocks(prog);
   if(n>mgState.proj.maxBlocks){toast("🚫 Too many blocks ("+n+"/"+mgState.proj.maxBlocks+") — squeeze more into loops! 🔁");return;}
   setTab("board"); // watch the robot build
-  mgReset();
-  mgRobot.vars={};mgRobot.say=null;
-  mgState.running=true;mgRobot.running=true;
-  mgState.frames=[{blocks:prog,i:0,reps:1}];
-  mgState.timer=setInterval(mgTick,170);
+  mgState.cases=mgCases(mgState.proj);
+  mgState.ci=0;mgState.results=[];mgState.failMsg=null;mgState.failAt=-1;mgState.costs=[];
+  mgApplyCase(mgState.cases[0]);
+  mgStartCase(false);
   sfx(520,.06);updateChips();updateFab();
 }
 function mgStop(){
@@ -709,6 +766,9 @@ function mgTick(){
     // is met, so reaching the cap just means it isn't there yet. Judge it properly
     // instead of scolding, so the player gets the specific "what's missing" nudge.
     if(st.frames&&st.frames.some(f=>f.reps===Infinity)){mgFinish();return;}
+    // A runaway on one input means THAT input failed — not that the whole run is
+    // void. Go through mgFinish so the remaining cases still get their turn.
+    if(st.cases&&st.cases.length>1){mgFinish();return;}
     toast("♾️ Your program ran too long — something is looping forever!");return;
   }
   if(st.wait>0){st.wait--;mgDraw();return;} // ⏱️ Wait holds the robot still for n ticks
@@ -808,7 +868,8 @@ function mgTick(){
     // A ♾️ Forever program never runs out of blocks, so the goal can't be checked
     // when the stack empties — check it after every action instead. This is also
     // what makes "loop until it's done" puzzles work.
-    if(st.frames.some(f=>f.reps===Infinity)&&mgGoalMet(st)){mgSuccess();return;}
+    // via mgFinish, not mgSuccess — the run may still have other inputs to try
+    if(st.frames.some(f=>f.reps===Infinity)&&mgGoalMet(st)){mgFinish();return;}
     return;
   }
 }
@@ -926,12 +987,34 @@ function mgCheck(st){
       "🧱 Almost! "+missing+" tiles still missing — tweak your loops and run again!"};
 }
 function mgGoalMet(st){return mgCheck(st||mgState).ok;}
+// End of a case: record the verdict, then either move on to the next input or
+// deliver the overall result. This is no longer terminal — with several cases the
+// program is re-run on each one before anything is celebrated.
 function mgFinish(){
   const st=mgState;
   mgStop();
+  // tolerate being called without mgRun having set the case state up (the smoke
+  // suite drives mgTick/mgFinish by hand in a dozen places)
+  if(!st.cases){st.cases=mgCases(st.proj);st.ci=0;st.results=[];st.costs=[];st.failAt=-1;}
   const r=mgCheck(st);
-  if(r.ok){mgSuccess();return;}
-  toast(r.msg);
+  st.results[st.ci]=r.ok;
+  st.costs[st.ci]=st.steps;
+  if(!r.ok&&st.failAt<0){st.failAt=st.ci;st.failMsg=r.msg;}
+  mgCaseStrip();
+  if(st.ci+1<st.cases.length){        // more inputs to try — same program, next board
+    st.ci++;
+    mgApplyCase(st.cases[st.ci]);
+    mgStartCase(true);
+    return;
+  }
+  const total=st.cases.length, passed=st.results.filter(Boolean).length;
+  if(passed===total){mgSuccess();return;}
+  if(total>1){
+    const c=st.cases[st.failAt];
+    const on=(c&&c.hidden)?"the secret test":mgCaseLabel(c,st.failAt);
+    bigToast("🧪 Passed "+passed+"/"+total+" — failed on "+on+". One program has to solve them all!");
+    toast(st.failMsg);
+  }else toast(st.failMsg);
   sfx(220,.12);
 }
 function mgSuccess(){
