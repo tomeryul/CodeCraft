@@ -247,27 +247,26 @@ const PUZZLE_PACKS=[
 ];
 function puzzlePack(id){return PUZZLE_PACKS.find(p=>p.id===id)||null;}
 function puzzleDone(p){return !!(player.projects&&player.projects["pack_"+p.id]);}
-// a chapter card per pack, reusing the Academy's dot-track look
+// a chapter card per pack — the same compact ccCard as the rest of the sheet,
+// with the level track tucked inside the card body.
 function renderPuzzleSection(el){
   const h=document.createElement("h4");h.className="qsec";
   h.textContent="🧩 Puzzle Chapters — learn every trick";
   el.appendChild(h);
+  let hot=true; // glow marks only the next chapter to play
   for(const pack of PUZZLE_PACKS){
     const done=puzzleDone(pack);
     const need=pack.needs?puzzlePack(pack.needs):null;
     const locked=!!(need&&!puzzleDone(need));
-    const card=document.createElement("div");card.className="quest proj acad-card";
-    let dots="";
-    pack.stages.forEach(s=>{dots+='<span class="acad-dot '+(done?"done":"soon")+'" title="'+esc(s.name)+'">'+s.em+'</span>';});
-    card.innerHTML='<div class="qt"><span>'+(done?"🏆":pack.em)+' <b>'+esc(pack.name)+'</b> '+"⭐".repeat(pack.diff)+'</span>'+
-      '<span class="qr">🎬 '+pack.stages.length+' lv · '+pack.coins+' 🪙</span></div>'+
-      '<div class="acad-track">'+dots+'</div>'+
-      '<small class="pdesc">'+(locked?"🔒 Finish "+esc(need.name)+" to unlock this chapter.":esc(pack.desc))+'</small>';
-    const b=document.createElement("button");
-    b.textContent=locked?"🔒 Locked":(done?"🔁 Play again":"▶ Start chapter");
-    b.disabled=locked;
-    if(!locked)b.addEventListener("click",()=>{$("projects").classList.remove("open");packEnter(pack,0);});
-    card.appendChild(b);
-    el.appendChild(card);
+    const isHot=!done&&!locked&&hot; if(isHot)hot=false;
+    const card=ccCard(el,{em:done?"🏆":pack.em,name:esc(pack.name),locked,done,hot:isHot,
+      stars:"⭐".repeat(pack.diff),
+      meta:'<i>🎬 '+pack.stages.length+' lv</i> · '+pack.coins+' 🪙',
+      desc:locked?"🔒 Finish "+esc(need.name)+" to unlock this chapter.":esc(pack.desc),
+      badge:done?"🔁":locked?"🔒":"▶",
+      onTap:()=>{$("projects").classList.remove("open");packEnter(pack,0);}});
+    const tr=document.createElement("div");tr.className="acad-track";
+    pack.stages.forEach(s=>{tr.innerHTML+='<span class="acad-dot '+(done?"done":"soon")+'" title="'+esc(s.name)+'">'+s.em+'</span>';});
+    card.querySelector(".pmain").appendChild(tr);
   }
 }

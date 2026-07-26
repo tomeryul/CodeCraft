@@ -68,27 +68,26 @@ function academyExitToWorld(){
   $("editor").classList.remove("open","max");
   setTab("blocks");
 }
-// a cohesive "🎓 Academy" section for the Projects sheet — reuses the .quest/.proj
-// card styling so it sits naturally above Build Projects & Community.
+// a cohesive "🎓 Academy" section for the Projects sheet — uses the same compact
+// ccCard as Build Projects / My Challenges, plus a lesson track inside the card.
 function renderAcademySection(el){
   const done=academyDoneCount(), total=TUTS.length, all=done>=total;
   const nextI=TUTS.findIndex(t=>!player.academy||!player.academy[t.id]);
   const h=document.createElement("h4");h.className="qsec";
   h.textContent="🎓 Academy — learn the basics";
   el.appendChild(h);
-  const card=document.createElement("div");card.className="quest proj acad-card";
-  let dots="";
-  TUTS.forEach((t,i)=>{const st=player.academy&&player.academy[t.id]?"done":(i===nextI?"now":"soon");
-    dots+='<span class="acad-dot '+st+'" title="'+esc(t.name)+'">'+t.em+'</span>';});
-  card.innerHTML='<div class="qt"><span>'+(all?"🏆":"🎓")+' <b>Starter Academy</b></span>'+
-    '<span class="qr">'+done+'/'+total+' done</span></div>'+
-    '<div class="acad-track">'+dots+'</div>'+
-    '<small class="pdesc">'+(all
+  // no `hot` here — .acad-card's purple glow is the Academy's own marker, and
+  // .pcard.hot would out-specify it and repaint the border amber
+  const card=ccCard(el,{em:all?"🏆":"🎓",name:"Starter Academy",cls:"acad-card",done:all,
+    meta:'<i>'+done+'/'+total+' done</i>'+(all?"":" · next: "+TUTS[nextI].em+" "+esc(TUTS[nextI].name)),
+    desc:all
       ? "You've graduated! Replay any lesson any time to sharpen your skills."
-      : "Six quick lessons take you from your first Move all the way to loops &amp; conditions.")+'</small>';
-  const b=document.createElement("button");
-  b.textContent=all?"🔁 Replay the Academy":(done>0?"▶ Continue ("+TUTS[nextI].em+" "+esc(TUTS[nextI].name)+")":"▶ Start the Academy");
-  b.addEventListener("click",()=>{$("projects").classList.remove("open");academyStart();});
-  card.appendChild(b);
-  el.appendChild(card);
+      : "Six quick lessons take you from your first Move all the way to loops &amp; conditions.",
+    badge:all?"🔁":"▶",
+    onTap:()=>{$("projects").classList.remove("open");academyStart();}});
+  // the lesson track lives under the text, inside the card body
+  const tr=document.createElement("div");tr.className="acad-track";
+  TUTS.forEach((t,i)=>{const st=player.academy&&player.academy[t.id]?"done":(i===nextI?"now":"soon");
+    tr.innerHTML+='<span class="acad-dot '+st+'" title="'+esc(t.name)+'">'+t.em+'</span>';});
+  card.querySelector(".pmain").appendChild(tr);
 }

@@ -827,7 +827,20 @@ async function ev(expr) {
     out.noTree=mgCond(mgState,'treeAhead');
     mgState=null; mgRobot=null;
     out.incomplete=(academyComplete()===false); // t_turn & t_if not solved
-    out.hasCard=(()=>{renderProjects();return !!document.querySelector('#projList .acad-card');})();
+    renderProjects();
+    // the whole sheet is one card language now: Academy and Puzzle Chapters use
+    // the same compact .pcard as Build Projects, each keeping its dot track inside
+    const ac=document.querySelector('#projList .pcard.acad-card');
+    out.hasCard=!!ac;
+    out.acadMeta=ac?ac.querySelector('.pmeta').textContent.replace(/\s+/g,' ').trim():null;
+    out.acadTrack=ac?ac.querySelectorAll('.pmain .acad-track .acad-dot').length:0;
+    out.oldMarkup=document.querySelectorAll('#projList .quest.proj').length; // must be zero
+    const packCards=[...document.querySelectorAll('#projList .pcard:not(.acad-card)')]
+      .filter(c=>c.querySelector('.acad-track'));
+    out.packCards=packCards.length;                 // one per chapter
+    out.packDots=packCards.every((c,i)=>
+      c.querySelectorAll('.pmain .acad-track .acad-dot').length===PUZZLE_PACKS[i].stages.length);
+    out.packLocked=packCards.filter(c=>c.classList.contains('locked')).length;
     return JSON.stringify(out);
   })()`);
   const AC = JSON.parse(acad);
@@ -840,6 +853,12 @@ async function ev(expr) {
   check("treeAhead sensing works on the tutorial board", AC.treeAhead === true && AC.noTree === false, acad);
   check("Academy tracks partial progress", AC.incomplete === true, acad);
   check("Projects sheet shows the cohesive Academy section", AC.hasCard === true, acad);
+  check("Academy card is a compact .pcard with progress meta + lesson track",
+    AC.acadTrack === AC.count && /4\/6 done/.test(AC.acadMeta || ""), AC.acadMeta + " dots=" + AC.acadTrack);
+  check("Puzzle chapters use the same card, one dot per level",
+    AC.packCards === 5 && AC.packDots === true, "packs=" + AC.packCards + " dots=" + AC.packDots);
+  check("locked chapters render as locked cards (no dead buttons)",
+    AC.packLocked === 4 && AC.oldMarkup === 0, "locked=" + AC.packLocked + " old=" + AC.oldMarkup);
 
   console.log("▶ creator: multi-level packs + difficulty");
   const packSetup = await ev(`(()=>{
