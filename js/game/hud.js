@@ -46,8 +46,24 @@ $("mgBrickInc").addEventListener("click",()=>mgStepArg(1));
 $("mgSave").addEventListener("click",()=>saveMyChallenge());
 $("mgDiff").addEventListener("click",()=>{if(mgState&&mgState.creator){const d=mgState.proj;d.diff=((d.diff||1)%3)+1;mgCreatorUI();sfx(520,.03);}});
 $("mgAddStage").addEventListener("click",()=>mgAddStage());
-$("mgBudDec").addEventListener("click",()=>{if(mgState){mgState.proj.maxBlocks=Math.max(3,mgState.proj.maxBlocks-1);mgState.solved=false;mgCreatorUI();mgUpdateCount();}});
-$("mgBudInc").addEventListener("click",()=>{if(mgState){mgState.proj.maxBlocks=Math.min(30,mgState.proj.maxBlocks+1);mgCreatorUI();mgUpdateCount();}});
+/* 🧩 block budget, 3…999. One tap per block would be 987 taps to reach the top, so
+   the step grows with the number — and tapping the number itself types an exact one. */
+const BUDGET_MAX=999;
+function budStep(v){return v<20?1:v<100?10:50;}
+function setBudget(v){
+  if(!mgState)return;
+  const n=Math.max(3,Math.min(BUDGET_MAX,Math.round(v)||3));
+  if(n<mgState.proj.maxBlocks)mgState.solved=false; // a tighter budget must be re-proven
+  mgState.proj.maxBlocks=n;
+  mgCreatorUI();mgUpdateCount();
+}
+$("mgBudDec").addEventListener("click",()=>{if(mgState){const v=mgState.proj.maxBlocks;setBudget(v-budStep(v-1));}});
+$("mgBudInc").addEventListener("click",()=>{if(mgState){const v=mgState.proj.maxBlocks;setBudget(v+budStep(v));}});
+$("mgBudget").addEventListener("click",()=>{
+  if(!mgState)return;
+  const n=prompt("How many blocks may the player use? (3-"+BUDGET_MAX+")",mgState.proj.maxBlocks);
+  if(n!=null&&n.trim()!=="")setBudget(parseInt(n,10));
+});
 $("mgWDec").addEventListener("click",()=>mgSetSize(-1,0));
 $("mgWInc").addEventListener("click",()=>mgSetSize(1,0));
 $("mgHDec").addEventListener("click",()=>mgSetSize(0,-1));

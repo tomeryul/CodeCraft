@@ -779,6 +779,75 @@ async function ev(expr) {
   check("custom challenge solved via count-loop + if in the challenge VM", await ev("mgState && mgState.solved === true") === true, await ev("mgState && JSON.stringify([...mgState.robot.bricks])"));
   await ev(`mgExit(false); document.getElementById('editor').classList.remove('open','max'); 'ok'`);
 
+  // 🧩 budget: 3…999, reachable in a sane number of taps, and a 999-block program
+  // must actually be able to RUN — a flat 500-step cap would have killed it.
+  const bud = await ev(`(()=>{
+    mgEnterCreator();
+    const out={},inc=document.getElementById('mgBudInc'),dec=document.getElementById('mgBudDec');
+    const p=mgState.proj;
+    setBudget(12);
+    let taps=0; while(p.maxBlocks<999&&taps<200){inc.click();taps++;}
+    out.top=p.maxBlocks; out.taps=taps;                 // reaches 999, and not by brute force
+    inc.click(); out.capped=p.maxBlocks;                // and stops there
+    let down=0; while(p.maxBlocks>3&&down<200){dec.click();down++;}
+    out.floor=p.maxBlocks;                              // never below 3
+    dec.click(); out.floorHeld=p.maxBlocks;
+    setBudget(9999); out.clampHigh=p.maxBlocks;
+    setBudget(0);    out.clampLow=p.maxBlocks;
+    setBudget(250);  out.exact=p.maxBlocks;             // typing an exact value works
+    // the runaway guard has to scale with the budget, or a long program can never finish
+    const capAt=n=>{p.maxBlocks=n;return Math.max(500,(p.maxBlocks|0)*20);};
+    out.cap12=capAt(12); out.cap30=capAt(30); out.cap999=capAt(999);
+    return JSON.stringify(out);
+  })()`);
+  const BU = JSON.parse(bud);
+  check("the block budget reaches 999", BU.top === 999 && BU.capped === 999, bud);
+  check("...without hundreds of taps (the step grows with the number)", BU.taps > 0 && BU.taps <= 40, bud);
+  check("...and still floors at 3", BU.floor === 3 && BU.floorHeld === 3, bud);
+  check("typing a budget clamps into 3…999", BU.clampHigh === 999 && BU.clampLow === 3 && BU.exact === 250, bud);
+  check("the runaway cap scales with the budget, unchanged for small levels",
+    BU.cap12 === 500 && BU.cap30 === 600 && BU.cap999 === 19980, bud);
+
+  // a 700-block straight-line program: proves the raised budget is really usable
+  const bigProg = await ev(`(()=>{
+    mgExit(false); mgEnterCreator();
+    const p=mgState.proj;
+    p.gw=10;p.gh=8;p.start={x:0,y:0,dir:1};p.tiles=[];
+    p.cells=[];for(let y=0;y<8;y++)for(let x=0;x<10;x++)p.cells.push([x,y]); // all 80 tiles
+    mgState.robot={x:0,y:0,dir:1};mgSeed(mgState.robot,p);
+    setBudget(700);
+    // Snake over every tile building as it goes, written out flat with no loops —
+    // the shape a big budget exists for. One pass over the 10x8 board is only 173
+    // blocks (80 tiles is the publishable ceiling), so repeat the pass four times to
+    // get a genuinely long program: rebuilding an existing brick is a no-op and the
+    // robot only ever builds where it stands, so extra passes can't create strays.
+    let u=0;const B=t=>({t:t,uid:'bp'+(++u)}),prog=[];
+    for(let pass=0;pass<4;pass++)for(let y=0;y<8;y++){
+      for(let x=0;x<10;x++){prog.push(B('build'));if(x<9)prog.push(B('move'));}
+      if(y<7){ // turn down a row and reverse direction
+        prog.push(B(y%2===0?'turnR':'turnL'));prog.push(B('move'));
+        prog.push(B(y%2===0?'turnR':'turnL'));
+      }
+    }
+    mgRobot.program=prog;
+    const n=progSize(mgRobot);
+    const origSI=window.setInterval;window.setInterval=()=>0;
+    mgRun();
+    const started=!!(mgState&&mgState.running);
+    let ticks=0;while(mgState&&mgState.running&&ticks<30000){mgTick();ticks++;}
+    window.setInterval=origSI;
+    const out={n,started,ticks,solved:!!(mgState&&mgState.solved),
+      filled:mgState?mgState.robot.bricks.size:0};
+    if(mgState)mgExit(false);
+    document.getElementById('editor').classList.remove('open','max');
+    return JSON.stringify(out);
+  })()`);
+  const BP = JSON.parse(bigProg);
+  check("a program of hundreds of blocks is accepted by the budget", BP.n > 500 && BP.started === true, bigProg);
+  check("...and runs to completion instead of hitting the runaway cap",
+    BP.solved === true && BP.filled === 80, bigProg);
+  check("...taking more than the old flat 500-step cap allowed", BP.ticks > 500, bigProg);
+
   console.log("▶ onboarding coach never covers a challenge");
   const tg = await ev(`(()=>{
     tut.done=false;

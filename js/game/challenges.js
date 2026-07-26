@@ -874,7 +874,11 @@ function mgStop(){
 function mgTick(){
   const st=mgState;
   if(!st||!st.running)return;
-  if(++st.steps>500){
+  // Runaway guard. It has to scale with the level's own block budget: a
+  // straight-line program executes every block at least once, so a 999-block level
+  // could never finish under a flat 500. ×20 leaves generous room for loops, and
+  // every level built before budgets grew past 25 keeps exactly the old cap.
+  if(++st.steps>Math.max(500,(st.proj.maxBlocks|0)*20)){
     mgStop();
     // A ♾️ program is SUPPOSED to run out of steps — it wins early when the goal
     // is met, so reaching the cap just means it isn't there yet. Judge it properly

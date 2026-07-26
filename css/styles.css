@@ -410,6 +410,9 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #mgCreatorBar .stp .clab{font-size:11px;font-weight:800;color:var(--ink2);margin:0 4px 0 8px;white-space:nowrap;}
 #mgCreatorBar .stp button{width:30px;height:30px;padding:0;border-radius:999px;font-size:15px;line-height:1;}
 #mgCreatorBar .num{min-width:24px;text-align:center;font-weight:900;font-size:13.5px;}
+/* the budget goes to 999, and tapping the number types an exact one */
+#mgBudget{min-width:32px;cursor:pointer;text-decoration:underline dotted rgba(255,255,255,.35);
+  text-underline-offset:3px;}
 #mgCreatorBar .cb-row.tools{gap:6px;}
 #mgCreatorBar .tool{width:40px;height:40px;padding:0;border-radius:12px;font-size:19px;line-height:1;}
 #mgCreatorBar .tool.on{background:linear-gradient(180deg,#d8912f,#b06f1a);color:#fff;border-bottom-color:#7c4c0e;}
