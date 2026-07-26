@@ -69,29 +69,31 @@
   <div class="tabbody" id="boardTab" style="display:none">
     <div id="mgPanel">
       <div class="mg-top"><b id="mgTitle"></b><span id="mgCount"></span><span class="spacer"></span>
-        <button id="mgStepBtn" title="Run one action at a time">⏭ Step</button>
-        <button id="mgSpeedBtn" title="Playback speed">⏱ 1×</button>
-        <button id="mgResetBtn">↺ Reset</button><button id="mgExitBtn">✕ Exit</button></div>
-      <div class="mg-top" id="mgCreatorBar">
+        <button id="mgStepBtn" class="ibtn" title="Run one action at a time">⏭</button>
+        <button id="mgSpeedBtn" class="ibtn wide" title="Playback speed">1×</button>
+        <button id="mgResetBtn" class="ibtn" title="Reset the board">↺</button>
+        <button id="mgExitBtn" class="ibtn" title="Leave challenge">✕</button></div>
+      <div id="mgCreatorBar">
         <div class="cb-row tools" id="mgTools"></div>
-        <div class="cb-row">
-          <button id="mgName">✏️ Name</button>
+        <div class="cb-row cb-act">
+          <span class="stp" id="mgBrickStp"><span class="clab">🔢</span><button id="mgBrickDec">−</button><span id="mgBrickN" class="num"></span><button id="mgBrickInc">＋</button></span>
           <span class="spacer"></span>
-          <button id="mgSave">💾 Save</button>
+          <button id="mgSetup" class="ibtn" title="Level setup">⚙️</button>
+          <button id="mgSave" class="ibtn" title="Save to My Challenges">💾</button>
+          <button id="mgAddStage" title="Prove the level, then bank it and start the next">➕ Add level</button>
           <button id="mgPublish">🌍 Publish</button>
         </div>
-        <div class="cb-row">
-          <span class="stp"><span class="clab">🧩 Blocks</span><button id="mgBudDec">−</button><span id="mgBudget" class="num"></span><button id="mgBudInc">＋</button></span>
-          <span class="stp"><span class="clab">↔️ W</span><button id="mgWDec">−</button><span id="mgW" class="num"></span><button id="mgWInc">＋</button></span>
-          <span class="stp"><span class="clab">↕️ H</span><button id="mgHDec">−</button><span id="mgH" class="num"></span><button id="mgHInc">＋</button></span>
-          <span class="stp" id="mgBrickStp"><span class="clab">🔢 No.</span><button id="mgBrickDec">−</button><span id="mgBrickN" class="num"></span><button id="mgBrickInc">＋</button></span>
-        </div>
-        <div class="cb-row">
-          <button id="mgDiff" title="Difficulty">⭐ Easy</button>
-          <button id="mgAddStage" title="Prove the level, then bank it and start the next">➕ Add level</button>
-          <span class="stp"><span class="clab">🎬 Level</span><span id="mgStageInfo" class="num">1</span></span>
+        <div class="cb-panel">
+          <button id="mgName" class="rowbtn">✏️ <span>Rename challenge</span></button>
+          <button id="mgDiff" class="rowbtn" title="Difficulty">⭐ Easy</button>
+          <div class="stprow">
+            <span class="stp"><span class="clab">🧩</span><button id="mgBudDec">−</button><span id="mgBudget" class="num"></span><button id="mgBudInc">＋</button></span>
+            <span class="stp"><span class="clab">↔️</span><button id="mgWDec">−</button><span id="mgW" class="num"></span><button id="mgWInc">＋</button></span>
+            <span class="stp"><span class="clab">↕️</span><button id="mgHDec">−</button><span id="mgH" class="num"></span><button id="mgHInc">＋</button></span>
+          </div>
         </div>
         <div class="cb-row" id="mgLevels" style="display:none"></div>
+        <span id="mgStageInfo" hidden></span>
       </div>
       <div id="mgGoal"></div>
       <div class="cb-row" id="mgCases" style="display:none"></div>

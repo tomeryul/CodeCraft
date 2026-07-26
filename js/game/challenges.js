@@ -89,20 +89,28 @@ async function cloudSave(data){
 }
 function renderAuthBox(){
   const box=$("authBox");
+  box.className="";
   if(!sbReady()){box.innerHTML='<div class="authnote">🔌 Online accounts & shared challenges are coming online soon — everything else works offline!</div>';return;}
   if(sbUser){
     box.innerHTML='<div class="authrow">🟢 <b>'+esc(sbUser.email)+'</b><span class="spacer"></span></div>';
-    const out=document.createElement("button");out.className="authbtn";out.textContent="Log out";
+    const out=document.createElement("button");out.className="authbtn out";out.textContent="Log out";
     out.addEventListener("click",sbLogout);
     box.firstChild.appendChild(out);
     return;
   }
+  // signed out: a single quiet line — the form unfolds only when it is tapped,
+  // so the sheet opens on challenges instead of on a login prompt
+  const tog=document.createElement("button");
+  tog.className="authtoggle";
+  tog.innerHTML='🌍 <b>Sign in</b><span>publish challenges &amp; sync progress</span>';
+  tog.addEventListener("click",()=>box.classList.toggle("open"));
   box.innerHTML='<div class="authform">'+
     '<input id="authEmail" type="email" placeholder="Email" autocomplete="email">'+
     '<input id="authPass" type="password" placeholder="Password (6+)" autocomplete="current-password">'+
     '<div class="authbtns"><button class="authbtn go" id="authLogin">Log in</button>'+
     '<button class="authbtn" id="authSignup">Sign up</button></div>'+
     '<div id="authMsg"></div></div>';
+  box.insertBefore(tog,box.firstChild);
   const msg=t=>{$("authMsg").textContent=t;};
   const creds=()=>[($("authEmail").value||"").trim(),$("authPass").value||""];
   $("authLogin").addEventListener("click",async()=>{
@@ -134,6 +142,27 @@ function ccToPack(row){
   return {id:"cc_"+row.id, community:row.id, em:"🎬", name:row.name, diff:row.diff||2,
     stages:JSON.parse(JSON.stringify(row.stages||[]))};
 }
+/* One compact challenge row: icon tile · name + meta + clamped blurb · state badge.
+   The whole row is the tap target, so no per-card action button is needed; small
+   round side-buttons (✏️ / 🗑) hang off the right for rows the player owns. */
+function ccCard(parent,o){
+  const d=document.createElement("div");
+  d.className="pcard"+(o.locked?" locked":"")+(o.done?" done":"")+(o.hot?" hot":"")+(o.cls?" "+o.cls:"");
+  d.innerHTML='<div class="pico">'+o.em+'</div>'+
+    '<div class="pmain"><div class="pname">'+o.name+(o.stars?' <s>'+o.stars+'</s>':'')+'</div>'+
+    (o.meta?'<div class="pmeta">'+o.meta+'</div>':'')+
+    (o.desc?'<div class="pdesc">'+o.desc+'</div>':'')+'</div>'+
+    '<div class="pgo"><span class="pbadge">'+(o.badge||"▶")+'</span></div>';
+  if(!o.locked&&o.onTap)d.addEventListener("click",o.onTap);
+  parent.appendChild(d);
+  return d;
+}
+function ccSideBtn(card,em,title,fn){
+  const b=document.createElement("button");b.className="pside";b.title=title;b.textContent=em;
+  b.addEventListener("click",e=>{e.stopPropagation();fn();});
+  card.querySelector(".pgo").appendChild(b);
+  return b;
+}
 async function loadCommunity(){
   const el=$("ccList");if(!el)return;
   if(!sbReady()){el.innerHTML='<div class="authnote">🔌 Not connected yet.</div>';return;}
@@ -144,26 +173,17 @@ async function loadCommunity(){
     if(!rows.length){el.innerHTML='<div class="authnote">No challenges yet — be the first to publish one! ✏️</div>';return;}
     const myUid=(sbUser&&sbUser.uid)||null;
     for(const row of rows){
-      const div=document.createElement("div");div.className="quest proj";
       const solved=!!player.projects["cc_"+row.id];
       const multi=!!(row.stages&&row.stages.length);
       const sortC=(row.initial||[]).some(c=>c.length>2&&c[2]!=null)||(row.cells||[]).some(c=>c.length>2&&c[2]!=null);
-      const em=multi?"🎬":(sortC?"🔢":"🌍");
       const mine=!!(myUid&&row.author===myUid);
-      const stars="⭐".repeat(row.diff||2);
-      div.innerHTML='<div class="qt"><span>'+em+' <b>'+esc(row.name)+'</b> '+stars+'</span>'+
-        '<span class="qr">'+(multi?"🎬 "+row.stages.length+" lv":"🧩 "+row.max_blocks)+' · ✅ '+row.solves+'</span></div>'+
-        '<small class="pdesc">by '+esc(row.author_name)+(mine?" (you)":"")+(solved?" — you solved this! 🏅":"")+'</small>';
-      const b=document.createElement("button");
-      b.textContent=solved?"🏅 Play again":(multi?"🎬 Play levels":"🌍 Try this challenge");
-      b.addEventListener("click",()=> multi?packEnter(ccToPack(row),0):mgEnter(ccToProj(row)));
-      div.appendChild(b);
-      if(mine){ // authors can edit their own published challenge (add levels, tweak it)
-        const ed=document.createElement("button");ed.className="authbtn";ed.textContent="✏️ Edit";ed.style.marginLeft="6px";
-        ed.addEventListener("click",()=>{$("projects").classList.remove("open");mgEditCommunity(row);});
-        div.appendChild(ed);
-      }
-      el.appendChild(div);
+      const card=ccCard(el,{em:multi?"🎬":(sortC?"🔢":"🌍"),name:esc(row.name),done:solved,
+        stars:"⭐".repeat(row.diff||2),
+        meta:'<i>'+(multi?"🎬 "+row.stages.length+" lv":"🧩 "+row.max_blocks)+' · ✅ '+row.solves+'</i> by '+esc(row.author_name)+(mine?" (you)":""),
+        badge:solved?"🏅":"▶",
+        onTap:()=> multi?packEnter(ccToPack(row),0):mgEnter(ccToProj(row))});
+      // authors can edit their own published challenge (add levels, tweak it)
+      if(mine)ccSideBtn(card,"✏️","Edit this challenge",()=>{$("projects").classList.remove("open");mgEditCommunity(row);});
     }
   }catch(e){el.innerHTML='<div class="authnote">⚠️ Could not load: '+esc(e.message)+'</div>';}
 }
@@ -678,7 +698,7 @@ function mgEnter(proj0){
   if(mgState.cases.length>1)mgApplyCase(mgState.cases[0]);
   mgCaseStrip();mgVarsUI();
   $("mgCost").innerHTML="";
-  $("mgSpeedBtn").textContent="⏱ "+(player.mgSpeed||1)+"×";
+  $("mgSpeedBtn").textContent=(player.mgSpeed||1)+"×";
   setTab("board"); // show the goal & blueprint first, code is one tap away
 }
 function mgExit(reopen){
@@ -785,7 +805,7 @@ function mgStep(){
 function mgSpeedCycle(){
   const steps=[1,2,4];
   player.mgSpeed=steps[(steps.indexOf(player.mgSpeed||1)+1)%steps.length];
-  $("mgSpeedBtn").textContent="⏱ "+player.mgSpeed+"×";
+  $("mgSpeedBtn").textContent=player.mgSpeed+"×";
   if(mgState&&mgState.running&&mgState.timer)mgStartCase(mgState.ci>0);
   saveSoon();
 }
@@ -1270,45 +1290,35 @@ function renderProjects(){
   if(typeof renderAcademySection==="function")renderAcademySection(el); // 🎓 starter tutorials first
   if(typeof renderPuzzleSection==="function")renderPuzzleSection(el);   // 🧩 then the puzzle campaign
   const bh=document.createElement("h4");bh.className="qsec";bh.textContent="🏗️ Build Projects";el.appendChild(bh);
+  let hot=true; // glow marks only the single next build, not every unlocked card
   for(const p of PROJECTS){
     const done=!!player.projects[p.id];
-    const locked=p.needs&&!player.projects[p.needs];
-    const div=document.createElement("div");div.className="quest proj"+(locked?" locked":"");
-    div.innerHTML='<div class="qt"><span>'+p.em+' <b>'+p.name+'</b> '+"⭐".repeat(p.diff)+'</span>'+
-      '<span class="qr">+'+p.coins+'🪙 +'+p.xp+'⭐</span></div>'+
-      '<small class="pdesc">'+p.desc+'</small>';
-    const b=document.createElement("button");
-    if(done){b.textContent="✅ Built! Enter again";}
-    else if(locked){b.textContent="🔒 Finish "+PROJECTS.find(x=>x.id===p.needs).name+" first";b.disabled=true;}
-    else b.textContent="🏗️ Enter workshop";
-    if(!locked)b.addEventListener("click",()=>mgEnter(p));
-    div.appendChild(b);
-    el.appendChild(div);
+    const locked=!!(p.needs&&!player.projects[p.needs]);
+    const isHot=!done&&!locked&&hot; if(isHot)hot=false;
+    ccCard(el,{em:p.em,name:p.name,locked,done,hot:isHot,stars:"⭐".repeat(p.diff),
+      meta:'<i>+'+p.coins+'🪙 +'+p.xp+'⭐</i>',
+      desc:locked?"🔒 Finish "+PROJECTS.find(x=>x.id===p.needs).name+" first.":p.desc,
+      badge:done?"✅":locked?"🔒":"▶",
+      onTap:()=>mgEnter(p)});
   }
   // player's own saved challenges (incl. sorting games) — persisted + cloud-synced
-  if(player.myChallenges&&player.myChallenges.length){
-    const mh=document.createElement("h4");mh.className="qsec";mh.textContent="🛠️ My Challenges";el.appendChild(mh);
-    for(const p of player.myChallenges){
-      const div=document.createElement("div");div.className="quest proj";
-      const stars="⭐".repeat(p.diff||1);
-      const badge=p.pack?'<span class="qr">🎬 '+p.stages.length+' levels</span>':'';
-      div.innerHTML='<div class="qt"><span>'+p.em+' <b>'+esc(p.name)+'</b> '+stars+'</span>'+badge+'</div><small class="pdesc">'+esc(p.desc||"")+'</small>';
-      const play=document.createElement("button");play.textContent=p.pack?"🎬 Play levels":"🏗️ Play";
-      play.addEventListener("click",()=>p.pack?packEnter(p,0):mgEnter(p));
-      const edit=document.createElement("button");edit.className="authbtn";edit.textContent="✏️ Edit";edit.style.marginLeft="6px";
-      edit.addEventListener("click",()=>{$("projects").classList.remove("open");mgEditMyChallenge(p);});
-      const del=document.createElement("button");del.className="authbtn";del.textContent="🗑";del.style.marginLeft="6px";
-      del.addEventListener("click",()=>{if(!confirm("Delete “"+p.name+"”?"))return;player.myChallenges=player.myChallenges.filter(x=>x!==p);saveNow();renderProjects();});
-      div.appendChild(play);div.appendChild(edit);div.appendChild(del);el.appendChild(div);
-    }
+  const mh=document.createElement("h4");mh.className="qsec";mh.textContent="🛠️ My Challenges";el.appendChild(mh);
+  const nc=ccCard(el,{em:"✏️",name:"Create your own",cls:"pnew",
+    desc:"Design a blueprint, prove it solvable, then share it with other players.",
+    onTap:()=>{$("projects").classList.remove("open");mgEnterCreator();}});
+  nc.querySelector(".pbadge").textContent="＋";
+  for(const p of (player.myChallenges||[])){
+    const card=ccCard(el,{em:p.em,name:esc(p.name),stars:"⭐".repeat(p.diff||1),
+      meta:p.pack?'<i>🎬 '+p.stages.length+(p.stages.length===1?' level':' levels')+'</i>':'',
+      desc:esc(p.desc||""),
+      onTap:()=>p.pack?packEnter(p,0):mgEnter(p)});
+    ccSideBtn(card,"✏️","Edit",()=>{$("projects").classList.remove("open");mgEditMyChallenge(p);});
+    ccSideBtn(card,"🗑","Delete",()=>{
+      if(!confirm("Delete “"+p.name+"”?"))return;
+      player.myChallenges=player.myChallenges.filter(x=>x!==p);saveNow();renderProjects();});
   }
-  // create-your-own + community section
-  const cb=document.createElement("button");cb.id="ccCreate";
-  cb.innerHTML="✏️ <b>Create your own challenge</b> — design a blueprint for other players!";
-  cb.addEventListener("click",()=>{$("projects").classList.remove("open");mgEnterCreator();});
-  el.appendChild(cb);
   const hh=document.createElement("h4");hh.className="qsec";
-  hh.innerHTML='🌍 Community Challenges <button id="ccRefresh" class="authbtn" style="float:right">↻</button>';
+  hh.innerHTML='🌍 Community <button id="ccRefresh" class="secbtn" title="Refresh">↻</button>';
   el.appendChild(hh);
   const cc=document.createElement("div");cc.id="ccList";el.appendChild(cc);
   hh.querySelector("#ccRefresh").addEventListener("click",loadCommunity);

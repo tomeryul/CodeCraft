@@ -267,7 +267,20 @@ async function ev(expr) {
   check("house project completed", await ev("player.projects.house") === 1, await ev("JSON.stringify(player.projects)"));
   check("monument placed in the world", await ev(`[...objects.values()].some(o=>o.type==='proj'&&o.em==='🏡')`) === true);
   check("mini-game exited cleanly", await ev("mgState === null && mgRobot === null") === true);
-  check("car project now unlocked in list", await ev(`(()=>{renderProjects();return !document.querySelector('#projList .proj.locked button[disabled]')||PROJECTS[1].needs==='house';})()`) === true);
+  const lockState = await ev(`(()=>{
+    const cardFor=name=>[...document.querySelectorAll('#projList .pcard')]
+      .find(c=>c.querySelector('.pname')&&c.querySelector('.pname').textContent.indexOf(name)>=0);
+    const built=player.projects['house'];
+    delete player.projects['house']; renderProjects();
+    const lockedBefore=!!(cardFor('Race Car')||{classList:{contains:()=>false}}).classList.contains('locked');
+    player.projects['house']=1; renderProjects();
+    const openAfter=!cardFor('Race Car').classList.contains('locked');
+    if(!built)delete player.projects['house']; renderProjects();
+    return JSON.stringify({lockedBefore,openAfter});
+  })()`);
+  const LS = JSON.parse(lockState);
+  check("a project is locked until its prerequisite is built", LS.lockedBefore === true, lockState);
+  check("...and unlocked once it is", LS.openAfter === true, lockState);
   await ev(`const cc=document.getElementById('ccCele'); if(cc)cc.remove(); document.getElementById('projects').classList.remove('open'); 'ok'`);
 
   console.log("▶ double-tap delete (maximized editor only)");
@@ -847,7 +860,12 @@ async function ev(expr) {
     packEnter(pk,0);
     out.startCtx=mgState.packCtx.i;
     window.__runProg([{t:'build',uid:1}]);   // solve level 1 (fills the single target cell)
-    out.hasCard=(()=>{renderProjects();return !!document.querySelector('#projList .proj .qr');})();
+    // assert the SAVED PACK's own card, not just any card in the list: after the card
+    // redesign the old selector only matched the Academy/chapter cards, so it passed blind
+    out.hasCard=(()=>{renderProjects();
+      return [...document.querySelectorAll('#projList .pcard')].some(c=>{
+        const n=c.querySelector('.pname'), m=c.querySelector('.pmeta');
+        return n&&n.textContent.indexOf(pk.name)>=0&&m&&m.textContent.indexOf('2 levels')>=0;});})();
     return JSON.stringify(out);
   })()`);
   const PS = JSON.parse(packSetup);
