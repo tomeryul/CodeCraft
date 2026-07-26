@@ -84,6 +84,7 @@
           <button id="mgPublish">🌍 Publish</button>
         </div>
         <div class="cb-panel">
+          <button id="mgGuide" class="rowbtn">📘 <span>Design guide &amp; starter boards</span></button>
           <button id="mgName" class="rowbtn">✏️ <span>Rename challenge</span></button>
           <button id="mgDiff" class="rowbtn" title="Difficulty">⭐ Easy</button>
           <div class="stprow">
@@ -159,6 +160,17 @@
   <div id="projList"></div>
 </div>
 
+<!-- ============ DESIGN GUIDE ============ -->
+<div class="sheet" id="guide">
+  <div class="grab"></div>
+  <div class="m-head">
+    <div class="face">📘</div>
+    <div><h3>Design a great challenge</h3><p>Six rules, then five boards to start from.</p></div>
+    <button class="iconbtn x" id="guideClose">✕</button>
+  </div>
+  <div id="guideBody"></div>
+</div>
+
 <!-- ============ SHOP ============ -->
 <div id="shopWrap">
   <div id="shop">
@@ -214,6 +226,7 @@
 <script src="./js/game/engagement.js"></script>
 <script src="./js/game/puzzle-tiles.js"></script>
 <script src="./js/game/challenges.js"></script>
+<script src="./js/game/creator-guide.js"></script>
 <script src="./js/game/academy.js"></script>
 <script src="./js/game/chapters.js"></script>
 <script src="./js/game/shop.js"></script>

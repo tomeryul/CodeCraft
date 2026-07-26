@@ -271,16 +271,27 @@ async function ev(expr) {
     const cardFor=name=>[...document.querySelectorAll('#projList .pcard')]
       .find(c=>c.querySelector('.pname')&&c.querySelector('.pname').textContent.indexOf(name)>=0);
     const built=player.projects['house'];
+    // NOTHING is gated: Race Car needs:'house', but with house unbuilt it must
+    // still be a live, tappable card — only a hint says which order is easier.
     delete player.projects['house']; renderProjects();
-    const lockedBefore=!!(cardFor('Race Car')||{classList:{contains:()=>false}}).classList.contains('locked');
+    const car=cardFor('Race Car');
+    const openBefore=!!car&&!car.classList.contains('locked');
+    const hintBefore=/easier after/.test(car.querySelector('.pmeta').textContent);
+    const badgeBefore=car.querySelector('.pbadge').textContent;
+    // and it can actually be entered straight from the sheet
+    car.click();
+    const entered=!!(mgState&&mgState.proj.id==='car');
+    if(mgState)mgExit(false);
     player.projects['house']=1; renderProjects();
-    const openAfter=!cardFor('Race Car').classList.contains('locked');
+    const hintAfter=/easier after/.test(cardFor('Race Car').querySelector('.pmeta').textContent);
     if(!built)delete player.projects['house']; renderProjects();
-    return JSON.stringify({lockedBefore,openAfter});
+    return JSON.stringify({openBefore,hintBefore,badgeBefore,entered,hintAfter});
   })()`);
   const LS = JSON.parse(lockState);
-  check("a project is locked until its prerequisite is built", LS.lockedBefore === true, lockState);
-  check("...and unlocked once it is", LS.openAfter === true, lockState);
+  check("every project is playable, prerequisite built or not", LS.openBefore === true && LS.entered === true, lockState);
+  check("...the prerequisite is only a suggestion, and it goes away once met",
+    LS.hintBefore === true && LS.hintAfter === false, lockState);
+  check("...so no card is left showing a padlock", LS.badgeBefore === "▶", lockState);
   await ev(`const cc=document.getElementById('ccCele'); if(cc)cc.remove(); document.getElementById('projects').classList.remove('open'); 'ok'`);
 
   console.log("▶ double-tap delete (maximized editor only)");
@@ -840,7 +851,21 @@ async function ev(expr) {
     out.packCards=packCards.length;                 // one per chapter
     out.packDots=packCards.every((c,i)=>
       c.querySelectorAll('.pmain .acad-track .acad-dot').length===PUZZLE_PACKS[i].stages.length);
-    out.packLocked=packCards.filter(c=>c.classList.contains('locked')).length;
+    out.packLocked=packCards.filter(c=>c.classList.contains('locked')).length; // must be zero
+    // every dot is a door: tap the LAST level of the LAST (hardest) chapter, which
+    // no prerequisite has been met for, and it must open that exact level
+    const lastPack=PUZZLE_PACKS[PUZZLE_PACKS.length-1];
+    const dots=packCards[packCards.length-1].querySelectorAll('.acad-track .acad-dot');
+    dots[dots.length-1].click();
+    out.deepJump=!!(mgState&&mgState.packCtx&&mgState.packCtx.packId===lastPack.id
+      &&mgState.packCtx.i===lastPack.stages.length-1);
+    if(mgState)mgExit(false);
+    // same for a lesson the player has not reached
+    renderProjects();
+    document.querySelectorAll('#projList .pcard.acad-card .acad-dot')[5].click();
+    out.lessonJump=!!(mgState&&mgState.proj.id===TUTS[5].id);
+    if(mgState)mgExit(false);
+    mgState=null;mgRobot=null;
     return JSON.stringify(out);
   })()`);
   const AC = JSON.parse(acad);
@@ -857,8 +882,10 @@ async function ev(expr) {
     AC.acadTrack === AC.count && /4\/6 done/.test(AC.acadMeta || ""), AC.acadMeta + " dots=" + AC.acadTrack);
   check("Puzzle chapters use the same card, one dot per level",
     AC.packCards === 5 && AC.packDots === true, "packs=" + AC.packCards + " dots=" + AC.packDots);
-  check("locked chapters render as locked cards (no dead buttons)",
-    AC.packLocked === 4 && AC.oldMarkup === 0, "locked=" + AC.packLocked + " old=" + AC.oldMarkup);
+  check("no chapter is locked — every one is open from the start",
+    AC.packLocked === 0 && AC.oldMarkup === 0, "locked=" + AC.packLocked + " old=" + AC.oldMarkup);
+  check("tapping a level dot jumps straight into that level",
+    AC.deepJump === true && AC.lessonJump === true, "chapter=" + AC.deepJump + " lesson=" + AC.lessonJump);
 
   console.log("▶ creator: multi-level packs + difficulty");
   const packSetup = await ev(`(()=>{
@@ -1225,8 +1252,76 @@ async function ev(expr) {
   check("every stored solution fits the level's block budget", CAMP.budget.length === 0, camp);
   check("multi-input levels are judged on every one of their inputs", CAMP.partial.length === 0, camp);
   check("a level can hand the player a starter routine", CAMP.presetGiven === true, camp);
-  check("the campaign has 5 chapters of levels, gated in order", CAMP.packs === 5 && CAMP.levels === 23 && CAMP.gated === 4, camp);
+  check("the campaign has 5 chapters of levels, with a suggested order", CAMP.packs === 5 && CAMP.levels === 23 && CAMP.gated === 4, camp);
   check("the Algorithms levels are multi-input, each with a hidden case", CAMP.multi === 7 && CAMP.hidden === 7, camp);
+
+  console.log("▶ 📘 design guide: every starter board is solvable within its budget");
+  const gd = await ev(`(()=>{
+    const out={};
+    openGuide();
+    out.open=document.getElementById('guide').classList.contains('open');
+    out.rules=document.querySelectorAll('#guideBody .grule').length;
+    out.note=!!document.querySelector('#guideBody .gnote');
+    out.recipeCards=document.querySelectorAll('#guideBody .pcard').length;
+    closeGuide();
+    out.closed=!document.getElementById('guide').classList.contains('open');
+    // reference solutions — one per recipe. A starter board nobody can solve is
+    // worse than no starter board, so the suite proves each one, budget included.
+    let u=0;
+    const B=t=>({t:t,uid:'gd'+(++u)});
+    const mv=()=>B('move'), tL=()=>B('turnL'), tR=()=>B('turnR');
+    const bd=()=>B('build'), up=()=>B('pickUp'), dp=()=>B('drop');
+    const back=()=>[tR(),tR()];                       // about-turn
+    const SOL={
+      detour:[mv(),mv(),tL(),mv(),tR(),mv(),mv(),tR(),mv(),tL(),mv(),bd()],
+      row:[{t:'repeat',uid:'r1',n:8,body:[bd(),mv()]}],
+      gaps:[{t:'repeat',uid:'r2',n:8,body:[{t:'if',uid:'i1',cond:'onTarget',body:[bd()],els:[]},mv()]}],
+      bridge:[bd(),up(),mv(),dp(),mv(),mv(),bd(),up(),dp(),mv(),mv(),bd()],
+      // park 3 off to the right, shuffle 1 and 2 left, bring 3 back
+      sort:[up(),mv(),mv(),mv(),dp()].concat(
+        back(),[mv(),mv(),up(),mv(),dp()],
+        back(),[mv(),mv(),up()],
+        back(),[mv(),dp()],
+        back(),[mv(),mv(),up()],
+        back(),[mv(),dp()])
+    };
+    const origSI=window.setInterval, origConf=window.confirm;
+    window.setInterval=()=>0;            // hand-tick every run
+    window.confirm=()=>true;             // "replace the board?" — yes
+    const bad=[],over=[],notReset=[];
+    for(const r of GUIDE_RECIPES){
+      guideApply(r);
+      const p=mgState.proj;
+      // the recipe really landed, and it landed UNPROVEN with a blank program
+      if(!(p.gw===r.gw&&p.gh===r.gh&&p.maxBlocks===r.max&&p.cells.length===r.cells.length
+           &&mgState.solved===false&&progSize(mgRobot)===0&&mgState.creator))notReset.push(r.id);
+      mgRobot.program=SOL[r.id];
+      const n=progSize(mgRobot);
+      if(n>r.max)over.push(r.id+' '+n+'>'+r.max);
+      mgRun();
+      for(let t=0;t<4000&&mgState&&mgState.running;t++)mgTick();
+      if(!(mgState&&mgState.solved))bad.push(r.id+' ('+n+'/'+r.max+' blocks)');
+    }
+    out.bad=bad; out.over=over; out.notReset=notReset;
+    out.count=GUIDE_RECIPES.length;
+    if(mgState)mgExit(false);
+    window.setInterval=origSI; window.confirm=origConf;
+    document.getElementById('editor').classList.remove('open','max');
+    // the guide is reachable from the Projects sheet, not only from inside the creator
+    renderProjects();
+    out.fromSheet=[...document.querySelectorAll('#projList .pcard .pname')]
+      .some(n=>n.textContent.indexOf('design a great challenge')>=0);
+    return JSON.stringify(out);
+  })()`);
+  const GD = JSON.parse(gd);
+  check("the guide opens and closes", GD.open === true && GD.closed === true, gd);
+  check("the guide teaches six rules plus the algorithm test",
+    GD.rules === 6 && GD.note === true, gd);
+  check("every starter board is offered as a card", GD.recipeCards === GD.count && GD.count === 5, gd);
+  check("tapping a starter board lands it unproven with a blank program", GD.notReset.length === 0, gd);
+  check("every starter board is solvable", GD.bad.length === 0, gd);
+  check("...and its solution fits the budget the recipe ships with", GD.over.length === 0, gd);
+  check("the guide is reachable from the Projects sheet", GD.fromSheet === true, gd);
 
   console.log("▶ finishing a chapter pays out its reward");
   const rew = await ev(`(()=>{

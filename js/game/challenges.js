@@ -1290,15 +1290,18 @@ function renderProjects(){
   if(typeof renderAcademySection==="function")renderAcademySection(el); // 🎓 starter tutorials first
   if(typeof renderPuzzleSection==="function")renderPuzzleSection(el);   // 🧩 then the puzzle campaign
   const bh=document.createElement("h4");bh.className="qsec";bh.textContent="🏗️ Build Projects";el.appendChild(bh);
-  let hot=true; // glow marks only the single next build, not every unlocked card
+  // Nothing here is locked. `needs` used to bar the door; it now only orders the
+  // list and prints a "play X first" suggestion, so a player who wants the hard
+  // one can just take it. Rewards still only pay out on a genuine first solve.
+  let hot=true; // glow marks only the single suggested next build
   for(const p of PROJECTS){
     const done=!!player.projects[p.id];
-    const locked=!!(p.needs&&!player.projects[p.needs]);
-    const isHot=!done&&!locked&&hot; if(isHot)hot=false;
-    ccCard(el,{em:p.em,name:p.name,locked,done,hot:isHot,stars:"⭐".repeat(p.diff),
-      meta:'<i>+'+p.coins+'🪙 +'+p.xp+'⭐</i>',
-      desc:locked?"🔒 Finish "+PROJECTS.find(x=>x.id===p.needs).name+" first.":p.desc,
-      badge:done?"✅":locked?"🔒":"▶",
+    const after=(p.needs&&!player.projects[p.needs])?PROJECTS.find(x=>x.id===p.needs):null;
+    const isHot=!done&&!after&&hot; if(isHot)hot=false;
+    ccCard(el,{em:p.em,name:p.name,done,hot:isHot,stars:"⭐".repeat(p.diff),
+      meta:'<i>+'+p.coins+'🪙 +'+p.xp+'⭐</i>'+(after?' · 💡 easier after '+after.name:''),
+      desc:p.desc,
+      badge:done?"✅":"▶",
       onTap:()=>mgEnter(p)});
   }
   // player's own saved challenges (incl. sorting games) — persisted + cloud-synced
@@ -1307,6 +1310,12 @@ function renderProjects(){
     desc:"Design a blueprint, prove it solvable, then share it with other players.",
     onTap:()=>{$("projects").classList.remove("open");mgEnterCreator();}});
   nc.querySelector(".pbadge").textContent="＋";
+  // "what do I even build?" is where most people stop — so the answer sits right
+  // next to the button that asks the question
+  if(typeof openGuide==="function")
+    ccCard(el,{em:"📘",name:"How to design a great challenge",badge:"📖",
+      desc:"Six rules that make a level worth solving, what turns a puzzle into a real algorithm question, and five ready boards you can build on.",
+      onTap:()=>openGuide()});
   for(const p of (player.myChallenges||[])){
     const card=ccCard(el,{em:p.em,name:esc(p.name),stars:"⭐".repeat(p.diff||1),
       meta:p.pack?'<i>🎬 '+p.stages.length+(p.stages.length===1?' level':' levels')+'</i>':'',

@@ -85,9 +85,15 @@ function renderAcademySection(el){
       : "Six quick lessons take you from your first Move all the way to loops &amp; conditions.",
     badge:all?"🔁":"▶",
     onTap:()=>{$("projects").classList.remove("open");academyStart();}});
-  // the lesson track lives under the text, inside the card body
+  // The lesson track lives under the text — and every dot is a door: tap one to
+  // jump straight to that lesson instead of being marched through in order.
   const tr=document.createElement("div");tr.className="acad-track";
-  TUTS.forEach((t,i)=>{const st=player.academy&&player.academy[t.id]?"done":(i===nextI?"now":"soon");
-    tr.innerHTML+='<span class="acad-dot '+st+'" title="'+esc(t.name)+'">'+t.em+'</span>';});
+  TUTS.forEach((t,i)=>{
+    const st=player.academy&&player.academy[t.id]?"done":(i===nextI?"now":"soon");
+    const d=document.createElement("span");
+    d.className="acad-dot tapp "+st;d.title=t.name+" — Lesson "+(i+1);d.textContent=t.em;
+    d.addEventListener("click",e=>{e.stopPropagation();$("projects").classList.remove("open");academyEnter(i);});
+    tr.appendChild(d);
+  });
   card.querySelector(".pmain").appendChild(tr);
 }

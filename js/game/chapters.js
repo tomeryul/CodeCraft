@@ -253,20 +253,28 @@ function renderPuzzleSection(el){
   const h=document.createElement("h4");h.className="qsec";
   h.textContent="🧩 Puzzle Chapters — learn every trick";
   el.appendChild(h);
-  let hot=true; // glow marks only the next chapter to play
+  let hot=true; // glow marks only the suggested next chapter
   for(const pack of PUZZLE_PACKS){
     const done=puzzleDone(pack);
+    // No chapter is locked any more — `needs` is a suggested order, not a gate.
     const need=pack.needs?puzzlePack(pack.needs):null;
-    const locked=!!(need&&!puzzleDone(need));
-    const isHot=!done&&!locked&&hot; if(isHot)hot=false;
-    const card=ccCard(el,{em:done?"🏆":pack.em,name:esc(pack.name),locked,done,hot:isHot,
+    const after=(need&&!puzzleDone(need))?need:null;
+    const isHot=!done&&!after&&hot; if(isHot)hot=false;
+    const card=ccCard(el,{em:done?"🏆":pack.em,name:esc(pack.name),done,hot:isHot,
       stars:"⭐".repeat(pack.diff),
-      meta:'<i>🎬 '+pack.stages.length+' lv</i> · '+pack.coins+' 🪙',
-      desc:locked?"🔒 Finish "+esc(need.name)+" to unlock this chapter.":esc(pack.desc),
-      badge:done?"🔁":locked?"🔒":"▶",
+      meta:'<i>🎬 '+pack.stages.length+' lv</i> · '+pack.coins+' 🪙'+(after?' · 💡 easier after '+esc(after.name):''),
+      desc:esc(pack.desc),
+      badge:done?"🔁":"▶",
       onTap:()=>{$("projects").classList.remove("open");packEnter(pack,0);}});
+    // every level is its own door: tap a dot to jump straight into that level
     const tr=document.createElement("div");tr.className="acad-track";
-    pack.stages.forEach(s=>{tr.innerHTML+='<span class="acad-dot '+(done?"done":"soon")+'" title="'+esc(s.name)+'">'+s.em+'</span>';});
+    pack.stages.forEach((s,i)=>{
+      const d=document.createElement("span");
+      d.className="acad-dot tapp "+(done?"done":"soon");
+      d.title=s.name+" — Level "+(i+1);d.textContent=s.em;
+      d.addEventListener("click",e=>{e.stopPropagation();$("projects").classList.remove("open");packEnter(pack,i);});
+      tr.appendChild(d);
+    });
     card.querySelector(".pmain").appendChild(tr);
   }
 }
