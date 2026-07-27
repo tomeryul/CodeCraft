@@ -86,6 +86,11 @@
         <div class="cb-panel">
           <button id="mgGuide" class="rowbtn">📘 <span>Design guide &amp; starter boards</span></button>
           <button id="mgName" class="rowbtn">✏️ <span>Rename challenge</span></button>
+          <!-- the label span carries a class: ui-icons.js swaps each emoji for a
+               <span class="ui-emoji">, so a bare querySelector("span") finds THAT -->
+          <button id="mgAddCase" class="rowbtn" title="One program, several inputs">🔢 <span class="lb">Add this board as an input</span></button>
+          <button id="mgPreset" class="rowbtn" title="Hand players a ready-made routine">🎁 <span class="lb">Starter routines: off</span></button>
+          <div class="cb-row" id="mgCaseEdit" style="display:none"></div>
           <button id="mgDiff" class="rowbtn" title="Difficulty">⭐ Easy</button>
           <div class="stprow">
             <span class="stp"><span class="clab">🧩</span><button id="mgBudDec">−</button><span id="mgBudget" class="num"></span><button id="mgBudInc">＋</button></span>

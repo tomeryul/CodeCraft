@@ -135,7 +135,8 @@ function ccToProj(row){
   return {id:"cc_"+row.id,community:row.id,em:sort?"🔢":"🌍",name:row.name,diff:row.diff||2,coins:60,xp:30,
     maxBlocks:row.max_blocks,gw:row.gw,gh:row.gh,
     desc:"Community challenge by "+row.author_name+(sort?" — sort the numbered blocks into order":" — paint the whole blueprint")+" within "+row.max_blocks+" blocks!",
-    allowed:CHALLENGE_BLOCKS,start:{x:row.start_x,y:row.start_y,dir:row.start_dir},cells:row.cells,initial:initial,tiles:row.tiles||[]};
+    allowed:CHALLENGE_BLOCKS,start:{x:row.start_x,y:row.start_y,dir:row.start_dir},cells:row.cells,initial:initial,tiles:row.tiles||[],
+    cases:row.cases||[],preset:row.preset||null};
 }
 // a multi-level community challenge → a playable pack (levels stored in row.stages)
 function ccToPack(row){
@@ -190,7 +191,7 @@ async function loadCommunity(){
 function mgEnterCreator(){
   mgEnter({id:"custom",em:"✏️",name:"My Challenge",diff:1,coins:0,xp:0,maxBlocks:12,gw:8,gh:6,
     desc:"Design mode — pick a tool: 🖌️ target tiles · 🤖 the robot's start · 🔢 pre-placed blocks · 🧱 walls to route around · 🕳️ pits (⤵️ Drop a block in to bridge one) · 🔑 keys and 🚪 doors of the same colour · 🌀 a pair of portals · 🔘 plates that open 🚧 gates (the robot — or a block left behind — holds one down) · ➡️ one-way tiles · 🧹 erase. Then write a program and press ▶ to PROVE the level is solvable — only then do 💾 Save / ➕ Add level / 🌍 Publish open up. Build several levels for a multi-level minigame.",
-    allowed:CREATOR_BLOCKS,start:{x:0,y:0,dir:1},cells:[],initial:[],tiles:[]});
+    allowed:CREATOR_BLOCKS,start:{x:0,y:0,dir:1},cells:[],initial:[],tiles:[],cases:[],preset:null});
   // Every creator session shares player.projPrograms["custom"], so a new challenge
   // used to open with the PREVIOUS one's program — which could then be run with ▶ and
   // "prove" a level the author never solved. Start blank; the edit flows
@@ -200,6 +201,8 @@ function mgEnterCreator(){
   mgState.creator=true;mgState.solved=false;mgState.paintMode="paint";mgState.brickNum=1;mgState.tileArg=1;
   mgState.stages=[];        // banked levels for a multi-level pack (empty = single challenge)
   mgState.editIndex=null;   // when re-editing a banked level, the slot to put it back
+  mgState.caseEdit=null;    // when re-editing a banked input, the slot to put it back
+  mgState.draftInitial=null;// the board the author was editing when they pressed ▶
   mgState.editingId=null;   // when editing an already-saved My Challenges entry, its id (→ Save updates in place)
   mgState.publishId=null;   // when editing an already-published community challenge, its id (→ Publish PATCHes it)
   $("mgCreatorBar").classList.add("on");
@@ -224,6 +227,8 @@ function mgEditCommunity(row){
     p.tiles=JSON.parse(JSON.stringify(row.tiles||[]));
     p.initial=JSON.parse(JSON.stringify(row.initial||[]));
     p.start={x:row.start_x||0,y:row.start_y||0,dir:row.start_dir==null?1:row.start_dir};
+    p.cases=JSON.parse(JSON.stringify(row.cases||[]));
+    p.preset=row.preset&&(row.preset.routines||row.preset.length)?JSON.parse(JSON.stringify(row.preset)):null;
     mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir}; mgSeed(mgState.robot,p);
     sol=row.solution||[]; // reload the author's own solution program (edit mode only)
   }
@@ -259,6 +264,8 @@ function mgEditMyChallenge(entry){
     p.tiles=JSON.parse(JSON.stringify(entry.tiles||[]));
     p.initial=JSON.parse(JSON.stringify(entry.initial||[]));
     p.start=JSON.parse(JSON.stringify(entry.start||{x:0,y:0,dir:1}));
+    p.cases=JSON.parse(JSON.stringify(entry.cases||[]));
+    p.preset=entry.preset?JSON.parse(JSON.stringify(entry.preset)):null;
     mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir}; mgSeed(mgState.robot,p);
     sol=entry.sol||[]; // reload the author's own solution program (edit mode only)
   }
@@ -345,7 +352,15 @@ function mgCreatorUI(){
   const canPublish=(canSaveCur||banked>0)&&!editing;
   const pub=$("mgPublish");
   if(pub){pub.style.display=canPublish?"":"none"; pub.textContent=mgState.publishId?"🌍 Update":"🌍 Publish";}
-  renderMgLevels();
+  // 🔢 inputs and 🎁 starter routines
+  const nc=(p.cases||[]).length, ce=mgState.caseEdit;
+  const ac=$("mgAddCase")&&$("mgAddCase").querySelector(".lb");
+  if(ac)ac.textContent=(ce!=null)?"Update input "+(ce+1)
+    :nc?"Add another input ("+nc+" so far)":"Add this board as an input";
+  const pr=$("mgPreset")&&$("mgPreset").querySelector(".lb");
+  if(pr)pr.textContent=p.preset
+    ?"Starter routines: ON ("+presetSize(p.preset)+" blocks)":"Starter routines: off";
+  renderMgLevels();renderMgCaseEdit();
 }
 // the strip of banked levels with ✏️ edit / 🗑 delete
 function renderMgLevels(){
@@ -374,6 +389,8 @@ function mgEditStage(i){
   p.initial=JSON.parse(JSON.stringify(s.initial||[]));
   p.start=JSON.parse(JSON.stringify(s.start||{x:0,y:0,dir:1}));
   p.gw=s.gw;p.gh=s.gh;p.maxBlocks=s.maxBlocks;if(s.diff)p.diff=s.diff;
+  p.cases=JSON.parse(JSON.stringify(s.cases||[]));
+  p.preset=s.preset?JSON.parse(JSON.stringify(s.preset)):null;
   const sol=s.sol||[];       // this level's saved solution
   // Leave it in `stages`. It used to be spliced out and only put back by
   // "➕ Update level", so exiting or editing a different level lost it silently.
@@ -394,12 +411,113 @@ function mgDeleteStage(i){
   sfx(300,.05);toast("🗑 Level removed.");
   mgCreatorUI();mgDraw();
 }
+/* ---------------- authored inputs: one program, several boards ----------------
+   The Algorithms chapter proves a program by running it against every input the
+   level ships with; this is the same thing in the creator's hands. Only `initial`
+   — the pre-placed 🔢 blocks — varies between inputs. The geometry, the targets
+   and the terrain stay shared, because for an algorithm question the thing that
+   has to change is the DATA, and one varying axis keeps the strip readable and the
+   authoring loop obvious: lay out the numbers, bank it, move them, bank again. */
+function mgAddCase(){
+  if(!mgState||!mgState.creator)return;
+  const p=mgState.proj;
+  if(!(p.initial||[]).length){
+    toast("🔢 Place some numbered blocks first — those blocks ARE the input!");sfx(200,.06);return;}
+  p.cases=p.cases||[];
+  const snap={initial:JSON.parse(JSON.stringify(p.initial))};
+  const i=mgState.caseEdit;
+  if(i!=null&&p.cases[i]){
+    snap.hidden=p.cases[i].hidden;p.cases[i]=snap;mgState.caseEdit=null;
+    toast("✅ Input "+(i+1)+" updated — prove it again with ▶.");
+  }else{
+    if(p.cases.length>=8){toast("🔢 Eight inputs is the maximum.");sfx(200,.06);return;}
+    p.cases.push(snap);
+    toast(p.cases.length===1
+      ? "➕ Input 1 saved. Now move the blocks and add another — ONE program will have to solve them all."
+      : "➕ Input "+p.cases.length+" saved. "+p.cases.length+" inputs, one program.");
+  }
+  mgState.solved=false;mgState.caseBase=null; // more inputs = a new thing to prove
+  sfx(660,.05);mgCreatorUI();mgDraw();
+}
+// pull an input back onto the board so it can be tweaked (➕ then UPDATES it)
+function mgLoadCase(i){
+  if(!mgState||!mgState.creator)return;
+  const p=mgState.proj,cs=p.cases||[];
+  if(i<0||i>=cs.length)return;
+  p.initial=JSON.parse(JSON.stringify(cs[i].initial||[]));
+  mgState.caseEdit=i;mgState.caseBase=null;
+  mgReset();mgCreatorUI();
+  toast("✏️ Input "+(i+1)+" is on the board — change the numbers, then ➕ to update it.");
+  sfx(520,.04);
+}
+function mgDeleteCase(i){
+  if(!mgState||!mgState.creator)return;
+  const cs=mgState.proj.cases||[];
+  if(i<0||i>=cs.length)return;
+  cs.splice(i,1);
+  if(mgState.caseEdit!=null){ if(i===mgState.caseEdit)mgState.caseEdit=null; else if(i<mgState.caseEdit)mgState.caseEdit--; }
+  mgState.solved=false;mgState.caseBase=null;
+  sfx(300,.05);toast("🗑 Input removed.");mgCreatorUI();
+}
+// 🙈 a hidden input is never shown to the player — they cannot study it while
+// writing, which is the only way to be sure they generalised instead of guessed
+function mgToggleCaseHidden(i){
+  if(!mgState||!mgState.creator)return;
+  const cs=mgState.proj.cases||[];
+  if(i<0||i>=cs.length)return;
+  cs[i].hidden=!cs[i].hidden;
+  sfx(560,.04);toast(cs[i].hidden?"🙈 Input "+(i+1)+" is now a secret test.":"👁 Input "+(i+1)+" is visible again.");
+  mgCreatorUI();
+}
+function renderMgCaseEdit(){
+  const el=$("mgCaseEdit");if(!el)return;
+  const p=mgState&&mgState.proj, cs=(p&&p.cases)||[];
+  if(!mgState||!mgState.creator||!cs.length){el.style.display="none";el.innerHTML="";return;}
+  el.style.display="flex";
+  el.innerHTML='<span class="clab">🔢 Inputs</span>';
+  cs.forEach((c,i)=>{
+    const chip=document.createElement("span");
+    chip.className="lvchip"+(mgState.caseEdit===i?" ed":"");
+    chip.innerHTML='<b>'+(i+1)+'</b> '+esc(c.hidden?"?":mgCaseLabel(c,i))+
+      '<button data-h="'+i+'" title="Hide this input from the player">'+(c.hidden?"🙈":"👁")+'</button>'+
+      '<button data-e="'+i+'" title="Put this input on the board">✏️</button>'+
+      '<button data-d="'+i+'" title="Delete this input">🗑</button>';
+    el.appendChild(chip);
+  });
+  el.querySelectorAll("[data-h]").forEach(b=>b.addEventListener("click",()=>mgToggleCaseHidden(+b.dataset.h)));
+  el.querySelectorAll("[data-e]").forEach(b=>b.addEventListener("click",()=>mgLoadCase(+b.dataset.e)));
+  el.querySelectorAll("[data-d]").forEach(b=>b.addEventListener("click",()=>mgDeleteCase(+b.dataset.d)));
+}
+/* ---------------- 🎁 starter routines ----------------
+   Hand the player a ready-made 🔧 routine so the exercise is writing the
+   ALGORITHM rather than re-deriving its building block — the same trick the
+   built-in "Sort Any Row" uses to ship a ready 🔧 Swap. Only the routines travel:
+   sending the main program too would just be giving away the answer. */
+function presetSize(preset){
+  const r=preset&&preset.routines;
+  return r?ROUTINE_IDS.reduce((a,id)=>a+countBlocks(r[id]||[]),0):0;
+}
+function mgTogglePreset(){
+  if(!mgState||!mgState.creator)return;
+  const p=mgState.proj;
+  if(p.preset){p.preset=null;toast("🎁 Starter routines off — players begin from a blank program.");}
+  else{
+    const R2=robotRoutines(mgRobot);
+    const n=ROUTINE_IDS.reduce((a,id)=>a+countBlocks(R2[id]),0);
+    if(!n){toast("🔧 Write something in routine A or B first — that is what players will be given.");sfx(200,.06);return;}
+    p.preset={main:[],routines:JSON.parse(JSON.stringify(R2))};
+    toast("🎁 Players will open this challenge with your routines ("+n+" blocks) already written.");
+  }
+  sfx(600,.05);mgCreatorUI();
+}
 // a self-contained snapshot of the current creator design (one level of a pack)
 function snapshotStage(p){
   const sort=mgHasNumbers(p);
   return JSON.parse(JSON.stringify({
     em:sort?"🔢":"🧩", name:p.name, diff:p.diff||1, maxBlocks:p.maxBlocks, gw:p.gw, gh:p.gh,
     allowed:p.allowed, start:p.start, cells:p.cells, initial:p.initial||[], tiles:p.tiles||[],
+    cases:p.cases||[],        // the inputs one program has to handle
+    preset:p.preset||null,    // starter routines handed to the player
     sol:(mgRobot?packProg(mgRobot):[]), // author's proving solution — loaded only in edit mode
     desc:(sort?"Sort the numbered blocks into order":"Fill the whole blueprint")}));
 }
@@ -528,10 +646,15 @@ async function publishChallenge(){
   if(banked.length)stages=(curHas&&mgState.solved)?banked.concat([snapshotStage(p)]):banked.slice();
   const multi=stages.length>0;
   const base=multi?stages[0]:{cells:p.cells,initial:p.initial||[],tiles:p.tiles||[],start:p.start,maxBlocks:p.maxBlocks,gw:p.gw,gh:p.gh};
-  // author's solution: level 1's for the top-level column (multi levels keep their own sol in `stages`)
-  const solution=multi?(base.sol||[]):((mgRobot&&mgRobot.program)?JSON.parse(JSON.stringify(mgRobot.program)):[]);
+  // Author's solution: level 1's for the top-level column (multi levels keep their
+  // own sol in `stages`). packProg, NOT mgRobot.program — publishing used to send
+  // the bare main list, so a challenge solved with 🔧 Routines lost A and B and
+  // came back from ✏️ Edit with only half the solution.
+  const solution=multi?(base.sol||[]):(mgRobot?packProg(mgRobot):[]);
   const body={name:p.name,gw:base.gw,gh:base.gh,start_x:base.start.x,start_y:base.start.y,start_dir:base.start.dir,
     cells:base.cells,initial:base.initial||[],tiles:base.tiles||[],max_blocks:base.maxBlocks,diff,stages:multi?stages:[],solution,
+    cases:multi?(base.cases||[]):(p.cases||[]),
+    preset:multi?(base.preset||[]):(p.preset||[]),
     author_name:(sbUser.email||"builder").split("@")[0].slice(0,20)};
   try{
     if(mgState.publishId){ // update the player's already-published challenge
@@ -589,6 +712,7 @@ function saveMyChallenge(){
     id:"my_"+Date.now(), mine:true, em:sort?"🔢":"🧩", name:p.name, diff,
     coins:0, xp:0, maxBlocks:p.maxBlocks, gw:p.gw, gh:p.gh,
     allowed:p.allowed, start:p.start, cells:p.cells, initial:p.initial||[], tiles:p.tiles||[],
+    cases:p.cases||[], preset:p.preset||null,
     sol:(mgRobot?packProg(mgRobot):[]), // author's solution (loaded only when editing)
     desc:(sort?"Sort the numbered blocks into order ":"Fill the blueprint ")+"— your custom challenge!"}));
   commit(copy,"💾 Saved to “My Challenges”!");
@@ -859,6 +983,10 @@ function mgRun(){
   mgState.cases=mgCases(mgState.proj);
   mgState.ci=0;mgState.results=[];mgState.failMsg=null;mgState.failAt=-1;mgState.costs=[];
   mgState.stepping=false;               // ▶ takes over from ⏭ Step
+  // A creator run overlays each input onto the board, which would silently eat the
+  // blocks the author was in the middle of laying out. Keep them and put them back.
+  mgState.draftInitial=(mgState.creator&&mgState.cases.length>1)
+    ? JSON.parse(JSON.stringify(mgState.proj.initial||[])) : null;
   $("mgCost").innerHTML="";
   mgApplyCase(mgState.cases[0]);
   mgStartCase(false);
@@ -1145,6 +1273,8 @@ function mgFinish(){
     return;
   }
   mgCostUI(); // every input has run — show what each one cost
+  // give the author their working board back (see mgRun)
+  if(st.draftInitial){st.proj.initial=st.draftInitial;st.draftInitial=null;st.caseBase=null;mgReset();}
   const total=st.cases.length, passed=st.results.filter(Boolean).length;
   if(passed===total){mgSuccess();return;}
   if(total>1){

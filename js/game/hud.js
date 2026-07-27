@@ -46,6 +46,8 @@ $("mgBrickInc").addEventListener("click",()=>mgStepArg(1));
 $("mgSave").addEventListener("click",()=>saveMyChallenge());
 $("mgDiff").addEventListener("click",()=>{if(mgState&&mgState.creator){const d=mgState.proj;d.diff=((d.diff||1)%3)+1;mgCreatorUI();sfx(520,.03);}});
 $("mgAddStage").addEventListener("click",()=>mgAddStage());
+$("mgAddCase").addEventListener("click",()=>mgAddCase());
+$("mgPreset").addEventListener("click",()=>mgTogglePreset());
 /* 🧩 block budget, 3…999. One tap per block would be 987 taps to reach the top, so
    the step grows with the number — and tapping the number itself types an exact one. */
 const BUDGET_MAX=999;

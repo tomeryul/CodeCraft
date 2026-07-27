@@ -555,6 +555,110 @@ async function ev(expr) {
   check("publishChallenge sends the puzzle terrain too", PUB.tilesN===2 && PUB.doorArg===2, pub);
   check("a published row loads back with its terrain", PUB.roundTrip===2, pub);
 
+  console.log("▶ authored challenges carry routines, inputs and starter routines");
+  const auth3 = await ev(`(()=>{
+    const out={};
+    const origSI=window.setInterval;
+    window.setInterval=()=>0;          // hand-tick; RESTORED before returning
+    let u=0;const B=t=>({t:t,uid:'q'+(++u)});
+    // --- a challenge the author solved WITH a routine ---
+    mgEnterCreator();
+    let p=mgState.proj;
+    p.gw=6;p.gh=3;p.start={x:0,y:1,dir:1};p.cells=[[1,1],[2,1],[3,1]];p.initial=[];p.tiles=[];
+    mgState.robot={x:0,y:1,dir:1};mgSeed(mgState.robot,p);
+    setBudget(12);
+    mgRobot.routines.A=[B('move'),B('build')];
+    mgRobot.program=[{t:'call',uid:'k1',fn:'A'},{t:'call',uid:'k2',fn:'A'},{t:'call',uid:'k3',fn:'A'}];
+    mgRun();for(let i=0;i<400&&mgState&&mgState.running;i++)mgTick();
+    out.proved=!!(mgState&&mgState.solved);
+    // 🎁 hand those routines to the player
+    mgTogglePreset();
+    out.presetOn=!!mgState.proj.preset; out.presetSize=presetSize(mgState.proj.preset);
+    // publish it and read what actually went to the DB
+    let body=null;const origRest=sbRest,origUser=sbUser;
+    sbRest=(path,opts)=>{if(opts&&opts.method==='POST'&&body==null)body=opts.body;return Promise.resolve([]);};
+    sbUser={uid:'u9',email:'a@b.com'};
+    return publishChallenge().then(()=>{
+      sbRest=origRest;sbUser=origUser;
+      const b=JSON.parse(body||'{}');
+      // THE REGRESSION: publish used to send mgRobot.program, dropping A and B
+      out.pubSolShape=Array.isArray(b.solution)?'array':'object';
+      out.pubRoutineLen=((b.solution||{}).routines||{}).A ? b.solution.routines.A.length : 0;
+      out.pubMainLen=(b.solution&&b.solution.main||[]).length;
+      out.pubPresetLen=presetSize(b.preset);
+      // ...and comes back whole through ✏️ Edit
+      const row={id:'rr',name:'R',author_name:'a',gw:6,gh:3,start_x:0,start_y:1,start_dir:1,diff:1,
+        max_blocks:12,solves:0,cells:b.cells,initial:b.initial,tiles:b.tiles,
+        solution:b.solution,cases:b.cases,preset:b.preset,stages:[]};
+      mgEditCommunity(row);
+      out.editRoutineLen=mgRobot.routines.A.length;
+      out.editMainLen=mgRobot.program.length;
+      out.editPresetOn=!!mgState.proj.preset;
+      mgExit(false);
+      // a player opening the published challenge is HANDED the routine, not the answer
+      delete player.projPrograms['cc_rr'];
+      mgEnter(ccToProj(row));
+      out.playerGotRoutine=mgRobot.routines.A.length;
+      out.playerGotNoAnswer=mgRobot.program.length;
+      mgExit(false);
+
+      // --- several inputs, one program, the last one secret ---
+      mgEnterCreator();
+      p=mgState.proj;
+      p.gw=4;p.gh=2;p.start={x:0,y:1,dir:1};p.cells=[[0,1],[1,1]];p.tiles=[];
+      p.initial=[[0,1,2],[1,1,1]];                 // out of order
+      mgState.robot={x:0,y:1,dir:1};mgSeed(mgState.robot,p);
+      setBudget(30);
+      mgAddCase();                                  // input 1
+      p.initial=[[0,1,1],[1,1,2]];                  // already in order
+      mgAddCase();                                  // input 2
+      mgToggleCaseHidden(1);
+      out.nCases=p.cases.length; out.hidden1=!!p.cases[1].hidden;
+      out.addBlanks=mgState.solved===false;
+      // a HARDCODED swap is right for input 1 and wrong for input 2
+      const swap=[B('pickUp'),B('turnL'),B('move'),B('drop'),B('turnR'),B('turnR'),
+                  B('move'),B('turnR'),B('move'),B('pickUp'),B('turnR'),B('turnR'),
+                  B('move'),B('drop'),B('turnR'),B('move'),B('turnL'),B('pickUp'),
+                  B('turnR'),B('turnR'),B('move'),B('drop')];
+      mgRobot.program=swap;mgRobot.routines={A:[],B:[]};
+      const draftBefore=JSON.stringify(p.initial);
+      mgRun();
+      for(let g=0;g<10&&mgState&&mgState.running;g++)for(let t=0;t<900&&mgState&&mgState.running;t++)mgTick();
+      out.ranEvery=(mgState.results||[]).length;    // both inputs judged
+      out.notProved=mgState.solved===false;         // a hardcoded answer must NOT prove it
+      out.draftKept=JSON.stringify(mgState.proj.initial)===draftBefore; // board handed back
+      out.saveBlocked=(()=>{const n=(player.myChallenges||[]).length;saveMyChallenge();
+        return (player.myChallenges||[]).length===n;})();
+      // inputs survive Save -> Edit
+      p.cases=[{initial:[[0,1,2],[1,1,1]]}];
+      mgState.solved=true;
+      saveMyChallenge();
+      const entry=player.myChallenges[player.myChallenges.length-1];
+      out.savedCases=(entry.cases||[]).length;
+      mgExit(false);
+      mgEditMyChallenge(entry);
+      out.editCases=(mgState.proj.cases||[]).length;
+      mgExit(false);
+      window.setInterval=origSI;
+      document.getElementById('editor').classList.remove('open','max');
+      return JSON.stringify(out);
+    });
+  })()`);
+  const A3 = JSON.parse(auth3);
+  check("publishing keeps the routines the author solved with (was: main only)",
+    A3.pubSolShape === "object" && A3.pubRoutineLen === 2 && A3.pubMainLen === 3, auth3);
+  check("...and ✏️ Edit loads main AND routines back", A3.editRoutineLen === 2 && A3.editMainLen === 3, auth3);
+  check("🎁 starter routines publish with the challenge", A3.presetOn === true && A3.presetSize === 2 && A3.pubPresetLen === 2, auth3);
+  check("...and a player is handed the routine but never the answer",
+    A3.playerGotRoutine === 2 && A3.playerGotNoAnswer === 0 && A3.editPresetOn === true, auth3);
+  check("🔢 the creator banks several inputs, and one can be secret",
+    A3.nCases === 2 && A3.hidden1 === true && A3.addBlanks === true, auth3);
+  check("...▶ judges the program on every one of them", A3.ranEvery === 2, auth3);
+  check("...a hardcoded answer passes one input and so cannot prove the level",
+    A3.notProved === true && A3.saveBlocked === true, auth3);
+  check("...and the author's working board is handed back after the run", A3.draftKept === true, auth3);
+  check("inputs survive Save → ✏️ Edit", A3.savedCases === 1 && A3.editCases === 1, auth3);
+
   console.log("▶ community: publish multi-level + edit/update a published challenge");
   const comm = await ev(`(()=>{
     const out={}, origRest=sbRest, origUser=sbUser;

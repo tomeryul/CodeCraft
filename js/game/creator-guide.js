@@ -106,6 +106,15 @@ function renderGuide(){
     '<br>❌ <b>Breaks?</b> Your player will just memorise the answer. Give the robot a way to look at the board instead of a route to follow: 📖 Read, ❓ If, 🔄 While.'+
     '<br><br>The built-in 🧠 <b>Algorithms</b> chapter is made entirely of questions that pass this test — play it when you want ideas.';
   el.appendChild(n);
+  sec("🔢 Make the game run the shuffle test for you");
+  const m=document.createElement("div");m.className="gnote alt";
+  m.innerHTML='You do not have to shuffle by hand. Open ⚙️ and use <b>🔢 Add this board as an input</b>:'+
+    '<br><br><b>1.</b> Lay out your numbered blocks and add them as input 1.'+
+    '<br><b>2.</b> Move the blocks, add them again as input 2. Up to eight.'+
+    '<br><b>3.</b> Write <b>one</b> program and press ▶. It runs against <b>every</b> input, and you only prove the level — and only unlock 💾 Save — if all of them pass.'+
+    '<br><br>Then tap 👁 on your last input to make it <b>🙈 secret</b>. A hidden input is never shown to the player, so they cannot study it while writing. Guessing stops working; only a real algorithm gets through.'+
+    '<br><br>And if your question needs a building block that is not the point of the puzzle — a swap, a step, a turn-around — write it in routine 🔧 A and switch on <b>🎁 Starter routines</b>. Players open the challenge with your routine already written, so they spend their thinking on the algorithm instead of rebuilding your tools.';
+  el.appendChild(m);
   sec("🍳 Start from a board");
   const p=document.createElement("div");p.className="gsub";
   p.textContent="Tap one and it lands on your canvas. Solve it, then change it until it is yours.";
