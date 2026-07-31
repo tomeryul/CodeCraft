@@ -9,6 +9,7 @@ function newGame(){
   player={xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{},myChallenges:[],academy:{}};
   skills=freshSkills();
   robots=[makeRobot(homePos.x-1,homePos.y+1,"Robo-1")];
+  market=freshMarket();
   selRobot=0;
 }
 // local baseline so a world exists behind the splash and the draw loop has state

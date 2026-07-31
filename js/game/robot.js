@@ -18,7 +18,10 @@ function drawMat(r,res,n){
 }
 function bankTotal(){return Object.keys(RES).reduce((s,k2)=>s+(stash[k2]||0),0);}
 function useEnergy(r,cost){
-  const c=Math.max(1,Math.round(cost*(1-skills.agility.lvl*0.03))); // agility eases fatigue
+  // 🌙 Nightfall makes every action hungrier, so a program that never checks
+  // 😴 tired grinds to a halt until dawn
+  const night=(typeof energyMul==="function")?energyMul():1;
+  const c=Math.max(1,Math.round(cost*night*(1-skills.agility.lvl*0.03))); // agility eases fatigue
   if((r.energy||0)<c){r.blocked=true;r.tired=true;mentorFlag("tired");return false;}
   r.energy-=c;r.tired=false;return true;
 }

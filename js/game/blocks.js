@@ -54,9 +54,9 @@ const DEFS={
   goTo:{cat:"team",ic:"📻",lbl:"Go To Call"},      // walk to what the team pinned
 };
 // what 📖 Read can look at
-const READ_SRC=["here","ahead","held","x","y"];
+const READ_SRC=["here","ahead","held","x","y","price"];
 const READ_LBL={here:"number under me 🟧",ahead:"number ahead ⬆️",held:"number I'm holding ✊",
-  x:"my column ↔️",y:"my row ↕️"};
+  x:"my column ↔️",y:"my row ↕️",price:"💰 market price of"};
 const CATS=[
   {id:"basic",name:"Basics",types:["move","turnL","turnR","collect","chop","mine","scoop","drop","build","rest","wait"],lock:null},
   {id:"loops",name:"Loops",types:["repeat","forever","whileLoop"],lock:"loops",need:"Collect 5 resources to unlock 🔁 loops!"},
@@ -74,7 +74,7 @@ function newBlock(t){
   if(t==="forever"){b.body=[];}
   if(t==="if"){b.cond="treeAhead";b.body=[];b.els=[];}
   if(t==="whileLoop"){b.cond=(typeof mgState!=="undefined"&&mgState)?"brickHere":"treeAhead";b.body=[];}
-  if(t==="read"){b.name="x";b.src="here";}
+  if(t==="read"){b.name="x";b.src="here";b.opt="wood";}
   if(t==="call")b.fn="A";
   if(t==="wait")b.n=1;
   if(t==="rest")b.n=2;

@@ -804,6 +804,95 @@ async function ev(expr) {
   check("paths, floors and doorways stay walkable", SO.pathWalkable === true && SO.doorWalkable === true, solid);
   check("the solid flag lives beside cost, not inside it", SO.costClean === true && SO.solidIds === 20, solid);
 
+  console.log("▶ 📈 the living market: prices move, and the program can read them");
+  const mkt = await ev(`(()=>{ try{
+    const out={};
+    market=freshMarket();
+    const r=R(); r.x=marketPos.x; r.y=marketPos.y+1; r.rx=r.x; r.ry=r.y; r.energy=100;
+    // --- the most-wanted resource pays a premium, and 📖 Read sees the SAME number
+    //     the market pays; if those two ever disagreed the decision logic would lie
+    market.want='iron';
+    out.premium=priceOf('iron')>RES.iron.price;
+    out.plain=priceOf('wood');
+    r.vars={};
+    doAction(r,{t:'read',name:'p',src:'price',opt:'iron'});
+    doAction(r,{t:'read',name:'q',src:'price',opt:'wood'});
+    out.readsLive=(r.vars.p===priceOf('iron')&&r.vars.q===priceOf('wood'));
+    out.decidable=(r.vars.p>r.vars.q);           // "if p > q" is now a real branch
+    // --- selling uses the live price, not the static base ---
+    for(const k in r.inv)r.inv[k]=0;
+    r.inv.iron=3; const before=coins;
+    sellInv(r);
+    out.soldLive=(coins-before)>=3*RES.iron.price;   // premium actually paid out
+    // --- prices actually drift over time, within sane bounds ---
+    const p0=JSON.stringify(market.prices);
+    for(let i=0;i<12;i++){market.driftAt=now-1;marketTick();now+=1000;}
+    out.drifted=JSON.stringify(market.prices)!==p0;
+    out.inBounds=MKT_RES.every(k=>market.prices[k]>=RES[k].price*0.44&&market.prices[k]<=RES[k].price*1.91);
+    // --- 📋 an order counts what you sell and pays out when filled ---
+    market.order={need:{wood:4},got:{},until:now+60000,reward:250};
+    const c0=coins;
+    for(const k in r.inv)r.inv[k]=0; r.inv.wood=4; sellInv(r);
+    out.orderFilled=(market.order===null)&&(coins-c0)>250;
+    // ...and one whose clock ran out is dropped rather than paid
+    market.order={need:{wood:99},got:{},until:now-1,reward:999};
+    market.orderNext=0; orderTick();
+    out.expired=(market.order===null);
+    // --- 📣 a Rush spikes one price for a while, then lets it go ---
+    market.event=null; startRush();
+    const rushRes=market.event.res, spiked=priceOf(rushRes);
+    market.event.until=now-1; eventTick();
+    out.rushSpikes=spiked>priceOf(rushRes);
+    out.rushEnds=(market.event===null);
+    // --- 🌙 Nightfall taxes energy, so a program must watch 😴 tired ---
+    out.dayMul=energyMul();
+    market.event={kind:'night',until:now+50000};
+    out.nightMul=energyMul();
+    out.nightCrystal=priceOf('crystal')>priceOf('crystal')*0; // sanity: still a number
+    const e0=(r.energy=60); useEnergy(r,10);
+    const nightSpend=e0-r.energy;
+    market.event=null;
+    r.energy=60; useEnergy(r,10);
+    out.nightCostsMore=nightSpend>(60-r.energy);
+    // --- 💎 a rich seam appears AND announces itself on the 📻 noticeboard ---
+    objects=new Map(); radio={};
+    startLode();
+    out.lodeSpawned=(market.event&&market.event.kind==='lode'&&market.event.spots.length>0);
+    out.lodeOnRadio=Object.keys(radio).length>0;
+    const lodeKeys=market.event.spots.map(s=>key(s.x,s.y));
+    out.lodeReal=lodeKeys.every(k=>objects.has(k));
+    market.event.until=now-1; eventTick();
+    out.lodeSinks=lodeKeys.every(k=>!objects.has(k));   // untouched seam goes away
+    // --- the ticker renders, and 🪙/min tracks recent earnings ---
+    noteEarning(120);
+    out.cpm=coinsPerMin()>=120;
+    $("editor").classList.remove("open");$("projects").classList.remove("open");
+    renderMarket();
+    const tk=$("ticker");
+    out.ticker=tk.querySelectorAll('.tk').length>=MKT_RES.length;
+    out.py=toPy([{t:'read',uid:'m1',name:'p',src:'price',opt:'crystal'}],'');
+    objects=new Map(); radio={}; market=freshMarket();
+    return JSON.stringify(out);
+  }catch(e){return JSON.stringify({ERR:e.message+' @ '+(e.stack||'').split('\\n')[1]});} })()`);
+  const MK = JSON.parse(mkt);
+  if(MK.ERR) throw new Error("market block threw: "+MK.ERR);
+  check("the most-wanted resource pays a premium", MK.premium === true, mkt);
+  check("📖 Read 💰 price reports exactly what the market pays",
+    MK.readsLive === true && MK.decidable === true, mkt);
+  check("...so selling uses the live price, not the static base", MK.soldLive === true, mkt);
+  check("prices drift over time and stay in sane bounds", MK.drifted === true && MK.inBounds === true, mkt);
+  check("📋 an order counts what you sell and pays out when filled", MK.orderFilled === true, mkt);
+  check("...and an order past its clock is dropped, not paid", MK.expired === true, mkt);
+  check("📣 a Rush spikes a price, then releases it", MK.rushSpikes === true && MK.rushEnds === true, mkt);
+  check("🌙 Nightfall makes every action cost more energy",
+    MK.dayMul === 1 && MK.nightMul > 1 && MK.nightCostsMore === true, mkt);
+  check("💎 a rich seam really appears and posts itself on the 📻 channel",
+    MK.lodeSpawned === true && MK.lodeOnRadio === true && MK.lodeReal === true, mkt);
+  check("...and what is left of it sinks away when it expires", MK.lodeSinks === true, mkt);
+  check("the ticker renders prices and 🪙/min tracks earnings",
+    MK.ticker === true && MK.cpm === true, mkt);
+  check("a price read generates Python", /market\.price\("crystal"\)/.test(MK.py), mkt);
+
   console.log("▶ 🚶 Walk To: real pathfinding to a target, not just facing it");
   const walkTo = await ev(`(()=>{ try{
     const out={};

@@ -13,7 +13,14 @@ function buildSave(){
       if(c.growAt!==undefined){c.growIn=Math.max(0,c.growAt-now);delete c.growAt;} // timers as ms-remaining
       return [k2,c];
     }),
-    respawns:respawnQ.map(e=>({rin:Math.max(0,e.at-now),x:e.x,y:e.y,type:e.type}))};
+    respawns:respawnQ.map(e=>({rin:Math.max(0,e.at-now),x:e.x,y:e.y,type:e.type})),
+    // the living market: prices and the order survive; timers go as ms-remaining
+    // so they resume correctly on a clock that restarts at 0. Events are transient
+    // by design and simply do not come back.
+    market:market?{prices:market.prices,want:market.want,
+      wantIn:Math.max(0,market.wantAt-now),
+      order:market.order?{need:market.order.need,got:market.order.got,
+        untilIn:Math.max(0,market.order.until-now),reward:market.order.reward}:null}:null};
 }
 let saveT=null, cloudT=null;
 function saveSoon(){clearTimeout(saveT);saveT=setTimeout(saveNow,1500);}
@@ -40,6 +47,15 @@ function applySave(d){
     tut.done=d.v===1?true:!!d.tutDone;
     player=Object.assign({xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{},myChallenges:[],academy:{}},d.player||{});
     if(!player.academy)player.academy={};
+    market=freshMarket();
+    if(d.market){
+      market.prices=Object.assign(market.prices,d.market.prices||{});
+      if(d.market.want)market.want=d.market.want;
+      market.wantAt=(d.market.wantIn||MKT_WANT_MS);
+      const o=d.market.order;
+      // an order whose clock ran out while you were away is simply gone
+      if(o&&o.untilIn>0)market.order={need:o.need,got:o.got||{},until:o.untilIn,reward:o.reward};
+    }
     skills=freshSkills();
     if(d.skills)for(const k in skills)if(d.skills[k])skills[k]=d.skills[k];
     robots=d.robots.map(rd=>{

@@ -216,6 +216,7 @@ function renderList(list,parent){
     }
     if(b.t==="build")inner+='<button class="pbtn" data-p="build">'+BUILD_LBL[b.opt]+'</button>';
     if(b.t==="faceNearest"||b.t==="goNear")inner+='<button class="pbtn" data-p="tgt">'+TGT_EM[b.opt]+' '+b.opt+'</button>';
+    if(b.t==="read"&&b.src==="price")inner+='<button class="pbtn" data-p="pres">'+RES[b.opt||"wood"].em+'</button>';
     if(b.t==="broadcast"||b.t==="goTo")inner+='<button class="pbtn" data-p="ch">'+(RADIO_EM[b.opt]||"📻")+' '+b.opt+'</button>';
     row.innerHTML=inner;
     row.title="Hold & drag to move";
@@ -250,11 +251,18 @@ function renderList(list,parent){
           b.cond.val=(rv&&typeof rv==="object"&&rv.k==="var")?{k:"num",n:3}:{k:"var",name:"y"};
         }
         if(p==="crname")b.cond.val={k:"var",name:promptName(b.cond.val&&b.cond.val.name)};
-        if(p==="rsrc")b.src=READ_SRC[(READ_SRC.indexOf(b.src)+1)%READ_SRC.length];
+        if(p==="rsrc"){
+          // 💰 market price is a WORLD reading — there is no market on a challenge
+          // board, so don't offer a source that could only ever answer 0 there
+          const SRCS=mgState?READ_SRC.filter(x=>x!=="price"):READ_SRC;
+          const i=SRCS.indexOf(b.src);
+          b.src=SRCS[(i<0?0:i+1)%SRCS.length];
+        }
         if(p==="fn")b.fn=ROUTINE_IDS[(ROUTINE_IDS.indexOf(b.fn)+1)%ROUTINE_IDS.length];
         if(p==="build")b.opt=BUILDS[(BUILDS.indexOf(b.opt)+1)%BUILDS.length];
         if(p==="tgt")b.opt=TARGETS[(TARGETS.indexOf(b.opt)+1)%TARGETS.length];
         if(p==="ch")b.opt=RADIO_CH[(RADIO_CH.indexOf(b.opt)+1)%RADIO_CH.length];
+        if(p==="pres")b.opt=MKT_RES[(MKT_RES.indexOf(b.opt)+1)%MKT_RES.length];
         if(p==="vname")b.name=promptName(b.name);
         if(p==="vkind")b.val=b.val.k==="num"?{k:"str",s:"Hello!"}:b.val.k==="str"?{k:"var",name:"x"}:{k:"num",n:5};
         if(p==="vdec")b.val.n--;

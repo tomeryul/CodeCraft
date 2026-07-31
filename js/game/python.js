@@ -36,7 +36,7 @@ function toPy(list,ind){
         else P.push(ind+b.name+" = "+b.name+(b.n<0?" - "+(-b.n):" + "+b.n));
         break;
       case "say":P.push(ind+"robot.say("+pyVal(b.val)+")");break;
-      case "read":P.push(ind+b.name+" = "+pyRead(b.src));break;
+      case "read":P.push(ind+b.name+" = "+pyRead(b.src,b.opt));break;
       case "call":P.push(ind+"routine_"+String(b.fn).toLowerCase()+"()");break;
       case "forever":
         P.push(ind+"while True:");
@@ -59,7 +59,8 @@ function pyVal(v){
   if(v.k==="str")return JSON.stringify(v.s);
   return v.name;
 }
-function pyRead(src){
+function pyRead(src,opt){
+  if(src==="price")return 'market.price("'+(opt||"wood")+'")';
   return src==="held"?"robot.holding()":src==="x"?"robot.x":src==="y"?"robot.y":
     src==="ahead"?"robot.read_ahead()":"robot.read()";
 }

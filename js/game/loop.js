@@ -34,6 +34,7 @@ function loop(t){
         }
       }
     }
+    if(typeof marketTick==="function"){marketTick();renderMarket();}
     updateHud();updateExecHighlight();
   }
   // animals hop

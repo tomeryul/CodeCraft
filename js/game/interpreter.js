@@ -294,7 +294,11 @@ function doAction(r,b){
     // 📖 Read in the open world: no numbered blocks out here, so "here"/"ahead"
     // report how full the bag is and the robot's own position is exact.
     case "read":
-      r.vars[b.name]=b.src==="x"?r.x:b.src==="y"?r.y:b.src==="held"?bagCount(r):bagCount(r);
+      // 💰 price is the whole point of the living market: "what is worth
+      // gathering right now" becomes a decision the PROGRAM makes, and it
+      // changes on its own, so a program written once stops being optimal.
+      r.vars[b.name]=b.src==="price"?(typeof priceOf==="function"?priceOf(b.opt||"wood"):RES[(b.opt||"wood")].price)
+        :b.src==="x"?r.x:b.src==="y"?r.y:bagCount(r);
       break;
     case "say":
       r.say={txt:String(resolveVal(r,b.val)).slice(0,24),until:now+2600};
@@ -304,11 +308,19 @@ function doAction(r,b){
 }
 function sellInv(r){
   let sum=0;
-  for(const res in r.inv){sum+=r.inv[res]*RES[res].price;r.inv[res]=0;}
+  // live market price, not the static base — and what you sell counts toward the
+  // 📋 order on the board
+  for(const res in r.inv){
+    const n=r.inv[res];if(!n)continue;
+    sum+=n*(typeof priceOf==="function"?priceOf(res):RES[res].price);
+    r.inv[res]=0;
+    if(typeof orderCredit==="function")orderCredit(res,n);
+  }
   sum=Math.round(sum*(1+skills.trade.lvl*.02)); // trading skill perk
   if(sum>0){
     skillXP("trade",Math.ceil(sum/4));
     coins+=sum;totals.earned+=sum;addPop(r.x,r.y,"+"+sum+" 🪙");burst(r.x,r.y,"coin");r.pop=1;
+    if(typeof noteEarning==="function")noteEarning(sum);
     queueSaleToast(sum);coinFlash();addXP(Math.ceil(sum/2));qProg("earn",null,sum);
     sfx(880,.09);sfx(1100,.09,.1);checkUnlocks();updateHud();
   }
