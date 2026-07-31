@@ -20,6 +20,9 @@ function toPy(list,ind){
       case "goHome":P.push(ind+"robot.go_home()");break;
       case "sellAll":P.push(ind+"robot.sell_all()");break;
       case "bankAll":P.push(ind+"robot.bank_all()");break;
+      case "claim":P.push(ind+"robot.call_it()");break;
+      case "broadcast":P.push(ind+'team.tell("'+b.opt+'")');break;
+      case "goTo":P.push(ind+'robot.go_to(team.get("'+b.opt+'"))');break;
       case "repeat":
         P.push(ind+"for i in range("+(b.src?b.src:b.n)+"):");
         P.push(b.body.length?toPy(b.body,ind+"    "):ind+"    pass");break;
@@ -72,6 +75,7 @@ function pyCond(c){
     case "bagFull":return "robot.bag_full()";
     case "bagEmpty":return "robot.bag_empty()";
     case "tired":return "robot.is_tired()";
+    case "taken":return "team.already_called()";
     case "wallAhead":return 'robot.sees("wall")';
     case "pitAhead":return 'robot.sees("pit")';
     case "doorAhead":return 'robot.sees("door")';

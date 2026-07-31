@@ -17,6 +17,8 @@
   --c-logic:#9c53c4; --c-logic-d:#6b3689;
   --c-smart:#28b394; --c-smart-d:#156852;
   --c-vars:#2492bd;  --c-vars-d:#175f7c;
+  --c-funcs:#c4478f; --c-funcs-d:#8a2661;
+  --c-team:#4f8a3d;  --c-team-d:#31601f;
   --bevel-hi:inset 0 1.5px 0 rgba(255,255,255,.22);
   --radius:16px; --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
 }
@@ -161,6 +163,10 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .blk.c-logic{background:var(--c-logic);border-bottom-color:var(--c-logic-d);} .blk.c-logic.sel{background:#ad63d6;}
 .blk.c-smart{background:var(--c-smart);border-bottom-color:var(--c-smart-d);} .blk.c-smart.sel{background:#2fc7a5;}
 .blk.c-vars{background:var(--c-vars);border-bottom-color:var(--c-vars-d);} .blk.c-vars.sel{background:#2ba5d4;}
+/* 🔧 Routines and 🤝 Teamwork had no colour token, so their blocks rendered as
+   unstyled white chips with unreadable labels */
+.blk.c-funcs{background:var(--c-funcs);border-bottom-color:var(--c-funcs-d);} .blk.c-funcs.sel{background:#d95ba3;}
+.blk.c-team{background:var(--c-team);border-bottom-color:var(--c-team-d);} .blk.c-team.sel{background:#63a44d;}
 .nest{margin-left:18px;border-left:3.5px solid rgba(255,255,255,.25);padding-left:8px;}
 .nest .hint{color:var(--ink2);font-size:12px;padding:4px 6px;}
 .blk.elserow{min-height:30px;padding:5px 11px;opacity:.92;font-size:12.5px;border-bottom-width:2px;}
@@ -190,6 +196,8 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .pblk.c-logic{background:var(--c-logic);border-bottom-color:var(--c-logic-d);}
 .pblk.c-smart{background:var(--c-smart);border-bottom-color:var(--c-smart-d);}
 .pblk.c-vars{background:var(--c-vars);border-bottom-color:var(--c-vars-d);}
+.pblk.c-funcs{background:var(--c-funcs);border-bottom-color:var(--c-funcs-d);}
+.pblk.c-team{background:var(--c-team);border-bottom-color:var(--c-team-d);}
 .pcat.locked .pblk{opacity:.35;filter:grayscale(.6);}
 .pcat .lockmsg{font-size:11px;color:var(--accent);font-weight:600;margin-top:3px;}
 

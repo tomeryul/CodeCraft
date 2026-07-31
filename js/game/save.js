@@ -35,7 +35,7 @@ function applySave(d){
     seed=d.seed;buildTerrain();
     objects=new Map(d.objects);
     coins=d.coins;stash=Object.assign({wood:0,stone:0,iron:0,crystal:0,water:0},d.stash);totals=d.totals;
-    unlocks=Object.assign({loops:false,logic:false,smart:false,vars:false},d.unlocks);
+    unlocks=Object.assign({loops:false,logic:false,smart:false,vars:false,team:false},d.unlocks);
     muted=!!d.muted;
     tut.done=d.v===1?true:!!d.tutDone;
     player=Object.assign({xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{},myChallenges:[],academy:{}},d.player||{});

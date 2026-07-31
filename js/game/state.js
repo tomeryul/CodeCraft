@@ -3,7 +3,15 @@
 let terrain, objects, robots=[], animals=[], respawnQ=[];
 let seed=0, coins=0, stash={wood:0,stone:0,iron:0,crystal:0,water:0};
 let totals={collected:0,earned:0};
-let unlocks={loops:false,logic:false,smart:false};
+let unlocks={loops:false,logic:false,smart:false,team:false};
+/* --- 🤝 the team layer: how robots stop tripping over each other ---
+   `claims` reserves a tile for one robot for a few seconds, and 🧭 Face Nearest
+   skips tiles somebody else has claimed — so a fleet running ONE pasted program
+   piles onto a single tree, while a fleet that claims fans out. `radio` is a tiny
+   noticeboard: 📡 Broadcast pins a spot to a channel, 📻 Go To walks there. Both
+   are deliberately transient (they expire) so nothing has to be saved or synced. */
+let claims=new Map();   // tileKey -> {by: robotIndex, until: ms}
+let radio={};           // channel -> {x, y, by, n, at}
 let homePos={x:0,y:0}, marketPos={x:0,y:0};
 let selRobot=0, muted=false, isNew=true;
 let tut={step:0,done:false}, pendingAway=null;

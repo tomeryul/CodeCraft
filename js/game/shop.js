@@ -5,6 +5,8 @@ function checkUnlocks(){
   if(!unlocks.logic&&totals.earned>=1){unlocks.logic=true;bigToast("❓ LOGIC UNLOCKED! Your robots can now make decisions with If!");confetti();sfx(660,.1);sfx(880,.1,.12);sfx(1100,.12,.24);renderPalette();}
   if(!unlocks.smart&&(totals.earned>=150||robots.length>=2)){unlocks.smart=true;bigToast("🧭 SMART BLOCKS UNLOCKED! Face Nearest, Go Home & Sell All!");confetti();sfx(660,.1);sfx(880,.1,.12);sfx(1320,.14,.24);renderPalette();}
   if(!unlocks.vars&&totals.earned>=250){unlocks.vars=true;bigToast("🧠 MEMORY UNLOCKED! Variables, counting loops & Say!");confetti();sfx(660,.1);sfx(880,.1,.12);sfx(1320,.14,.24);renderPalette();}
+  // the moment there IS a team, the problem of them fighting over one tree exists
+  if(!unlocks.team&&robots.length>=2){unlocks.team=true;bigToast("🤝 TEAMWORK UNLOCKED! Stop your robots queueing at the same tree — 🤝 Call It, 📡 Tell Team, 📻 Go To Call.");confetti();sfx(660,.1);sfx(880,.1,.12);sfx(1320,.14,.24);renderPalette();}
 }
 
 /* ---------------- shop ---------------- */

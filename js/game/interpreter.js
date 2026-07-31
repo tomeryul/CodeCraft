@@ -1,7 +1,15 @@
 "use strict";
 /* ---------------- world helpers ---------------- */
 const inB=(x,y)=>x>=0&&y>=0&&x<W&&y<H;
-function solidObj(o){return o&&(o.type==="rock"||o.type==="iron"||o.type==="crystal"||o.type==="home"||o.type==="market"||o.type==="chest"||o.type==="gift"||o.type==="proj"||(o.type==="tree"&&o.stage>=1));}
+function solidObj(o){
+  if(!o)return false;
+  // What you BUILD is really there. Decor used to be uniformly walk-through so it
+  // could never break pathing, which meant a wall you spent stone on was scenery
+  // and robots strolled through your house. Structure and bulky props block now;
+  // ground you stand on (path/floor/rug), doorways and flat trinkets do not.
+  if(o.type==="decor")return !!(DECOR_BY[o.deco]&&DECOR_BY[o.deco].solid);
+  return o.type==="rock"||o.type==="iron"||o.type==="crystal"||o.type==="home"||o.type==="market"||o.type==="chest"||o.type==="gift"||o.type==="proj"||(o.type==="tree"&&o.stage>=1);
+}
 function canWalk(x,y){
   if(!inB(x,y))return false;
   const o=objects.get(key(x,y));
@@ -9,6 +17,27 @@ function canWalk(x,y){
   return !solidObj(o);
 }
 function ahead(r){return {x:r.x+DX[r.dir],y:r.y+DY[r.dir]};}
+/* ---------------- 🤝 teamwork ----------------
+   A claim is a short reservation on one tile. Its whole purpose is that
+   findNearest SKIPS tiles another robot has called, so the same fleet gets faster
+   the moment the program says "call it before you walk". Claims expire on their
+   own, so a robot that dies, idles or is reprogrammed never wedges a tile. */
+function robotIndex(r){return robots.indexOf(r);}
+function claimAt(k){
+  const c=claims.get(k);
+  if(!c)return null;
+  if(now>=c.until){claims.delete(k);return null;}
+  return c;
+}
+function claimedByOther(r,k){const c=claimAt(k);return !!(c&&c.by!==robotIndex(r));}
+function setClaim(r,k){claims.set(k,{by:robotIndex(r),until:now+CLAIM_MS});}
+function radioPost(ch,x,y,by,n){radio[ch]={x,y,by,n:n|0,at:now};}
+function radioGet(ch){
+  const m=radio[ch];
+  if(!m)return null;
+  if(now-m.at>RADIO_MS){delete radio[ch];return null;}
+  return m;
+}
 // The right-hand side of a comparison is a VALUE, so `if x > y` is expressible and
 // not just `if x > 3`. Old saves store a bare number there — still honoured.
 function condRhs(r,c){return (c.val&&typeof c.val==="object")?Number(resolveVal(r,c.val))||0:(Number(c.val)||0);}
@@ -21,6 +50,7 @@ function evalCond(r,c){
   }
   const a=ahead(r), o=inB(a.x,a.y)?objects.get(key(a.x,a.y)):null;
   switch(c){
+    case "taken":return inB(a.x,a.y)&&claimedByOther(r,key(a.x,a.y));
     case "treeAhead":return !!(o&&o.type==="tree"&&o.stage===2);
     case "rockAhead":return !!(o&&o.type==="rock");
     case "ironAhead":return !!(o&&o.type==="iron");
@@ -193,6 +223,30 @@ function doAction(r,b){
       const t=findNearest(r,b.opt);
       if(t)faceTo(r,t.x,t.y);else r.blocked=true;
       break;}
+    /* --- 🤝 teamwork --- */
+    case "claim":{
+      // call the tile ahead so the rest of the fleet's Face Nearest skips it
+      if(k<0){r.blocked=true;break;}
+      if(claimedByOther(r,k)){r.blocked=true;sfxIf(r,180,.05);break;}
+      setClaim(r,k);r.pop=1;sfxIf(r,700,.04);
+      break;}
+    case "broadcast":{
+      // pin the spot ahead to a channel, together with how full my bag is, so a
+      // scout can tell the haulers where the good stuff is
+      if(k<0){r.blocked=true;break;}
+      radioPost(b.opt||"tree",a.x,a.y,robotIndex(r),bagCount(r));
+      r.pop=1;addPop(r.x,r.y,"📡 "+(RADIO_EM[b.opt]||"")); sfxIf(r,880,.05);
+      break;}
+    case "goTo":{
+      // walk to whatever the team last pinned on this channel. Nothing pinned (or
+      // it went stale) reads as `blocked 🚧`, so a program can fall back to its
+      // own search instead of standing there.
+      const m=radioGet(b.opt||"tree");
+      if(!m){r.blocked=true;break;}
+      if(Math.abs(r.x-m.x)+Math.abs(r.y-m.y)<=1){faceTo(r,m.x,m.y);break;}
+      const p=pathTo(r,m.x,m.y);
+      if(p)r.path=p;else r.blocked=true;
+      break;}
     case "goHome":{
       const p=pathTo(r,homePos.x,homePos.y);
       if(p)r.path=p;else r.blocked=true;
@@ -271,20 +325,29 @@ function confetti(){
       t:0,life:1.3+Math.random()*.5});
   if(fx.length>240)fx.splice(0,fx.length-240);
 }
+// Nearest FREE one. Skipping tiles another robot has called is what turns 🤝 from
+// decoration into the thing that makes a fleet fan out — without it, every robot
+// running the same program walks to the same tree and takes turns waiting.
+// The fallback matters: if everything in range is called, take the nearest anyway
+// rather than standing still, so a naive program never deadlocks on a busy map.
 function findNearest(r,what){
-  let best=null,bd=1e9;
+  let best=null,bd=1e9,anyBest=null,anyBd=1e9;
   const R2=14;
   for(let dy=-R2;dy<=R2;dy++)for(let dx=-R2;dx<=R2;dx++){
     const x=r.x+dx,y=r.y+dy;if(!inB(x,y))continue;
-    const o=objects.get(key(x,y));if(!o)continue;
+    const k=key(x,y);
+    const o=objects.get(k);if(!o)continue;
     let ok=false;
     if(what==="tree")ok=o.type==="tree"&&o.stage===2;
     else ok=o.type===what;
     if(!ok)continue;
     const d=Math.abs(dx)+Math.abs(dy);
-    if(d<bd&&d>0){bd=d;best={x,y};}
+    if(d<=0)continue;
+    if(d<anyBd){anyBd=d;anyBest={x,y};}
+    if(claimedByOther(r,k))continue;
+    if(d<bd){bd=d;best={x,y};}
   }
-  return best;
+  return best||anyBest;
 }
 function pathTo(r,tx,ty){
   // BFS to any tile adjacent to (tx,ty)

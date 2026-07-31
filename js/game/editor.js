@@ -216,6 +216,7 @@ function renderList(list,parent){
     }
     if(b.t==="build")inner+='<button class="pbtn" data-p="build">'+BUILD_LBL[b.opt]+'</button>';
     if(b.t==="faceNearest")inner+='<button class="pbtn" data-p="tgt">'+TGT_EM[b.opt]+' '+b.opt+'</button>';
+    if(b.t==="broadcast"||b.t==="goTo")inner+='<button class="pbtn" data-p="ch">'+(RADIO_EM[b.opt]||"📻")+' '+b.opt+'</button>';
     row.innerHTML=inner;
     row.title="Hold & drag to move";
     attachDrag(row,b);
@@ -253,6 +254,7 @@ function renderList(list,parent){
         if(p==="fn")b.fn=ROUTINE_IDS[(ROUTINE_IDS.indexOf(b.fn)+1)%ROUTINE_IDS.length];
         if(p==="build")b.opt=BUILDS[(BUILDS.indexOf(b.opt)+1)%BUILDS.length];
         if(p==="tgt")b.opt=TARGETS[(TARGETS.indexOf(b.opt)+1)%TARGETS.length];
+        if(p==="ch")b.opt=RADIO_CH[(RADIO_CH.indexOf(b.opt)+1)%RADIO_CH.length];
         if(p==="vname")b.name=promptName(b.name);
         if(p==="vkind")b.val=b.val.k==="num"?{k:"str",s:"Hello!"}:b.val.k==="str"?{k:"var",name:"x"}:{k:"num",n:5};
         if(p==="vdec")b.val.n--;

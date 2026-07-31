@@ -163,6 +163,7 @@ function draw(t){
     const o=objects.get(key(x,y));
     if(o&&o.type==="decor"&&CC_DECOR.layer(o.deco)==="roof")CC_DECOR.draw(ctx,o.deco,x,y,t);
   }
+  drawTeamLayer(t,x0,y0,x1,y1);
   // animals
   for(const a of animals){
     a.rx=lerp(a.rx,a.x,.08);a.ry=lerp(a.ry,a.y,.08);
@@ -546,6 +547,52 @@ function rr(c,x,y,w2,h2,r2){
 /* ---- shared board visuals: the same toy-bevel robot & bricks as the open
    world, so the mini-game / Academy board matches the main game exactly.
    Drawn at the reference size RS=TILE*0.72 and scaled to fit any cell. ---- */
+/* 🤝 the team layer: a claimed tile wears a rotating ring in its owner's colour,
+   and a 📡 broadcast pings out from the spot it pinned. Without this the whole
+   mechanic is invisible — you could never SEE that four robots were fighting over
+   one tree, or that claiming made them fan out, which is the entire lesson. */
+function drawTeamLayer(t,x0,y0,x1,y1){
+  if(typeof claims==="undefined")return;
+  for(const [k,c] of claims){
+    if(now>=c.until){claims.delete(k);continue;}
+    const x=k%W, y=(k/W)|0;
+    if(x<x0||x>x1||y<y0||y>y1)continue;
+    const owner=robots[c.by];
+    const col=(owner&&owner.color)||"#ffd66b";
+    const left=(c.until-now)/CLAIM_MS;               // ring drains as the claim ages
+    const cx=(x+.5)*TILE, cy=(y+.5)*TILE, rad=TILE*.42;
+    ctx.save();
+    ctx.strokeStyle=col;ctx.lineWidth=2.5;ctx.globalAlpha=.85;
+    ctx.setLineDash([5,4]);ctx.lineDashOffset=-t/70;
+    ctx.beginPath();ctx.arc(cx,cy,rad,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.max(0,left));ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha=.16;ctx.fillStyle=col;
+    ctx.beginPath();ctx.arc(cx,cy,rad,0,6.2832);ctx.fill();
+    ctx.restore();
+  }
+  if(typeof radio==="undefined")return;
+  for(const ch in radio){
+    const m=radio[ch];
+    const age=now-m.at;
+    if(age>RADIO_MS){delete radio[ch];continue;}
+    if(m.x<x0||m.x>x1||m.y<y0||m.y>y1)continue;
+    const cx=(m.x+.5)*TILE, cy=(m.y+.5)*TILE;
+    const owner=robots[m.by], col=(owner&&owner.color)||"#5ab8ff";
+    // three expanding rings, so a fresh call is loud and an old one is a whisper
+    ctx.save();
+    const fade=Math.max(0,1-age/RADIO_MS);
+    for(let i=0;i<3;i++){
+      const ph=((t/900)+i/3)%1;
+      ctx.globalAlpha=(1-ph)*.5*fade;
+      ctx.strokeStyle=col;ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(cx,cy,TILE*(.2+ph*.75),0,6.2832);ctx.stroke();
+    }
+    ctx.globalAlpha=fade;
+    const sp=sprite(RADIO_EM[ch]||"📻",TILE*.42);
+    ctx.drawImage(sp,cx-sp.lw/2,cy-TILE*.72,sp.lw,sp.lw);
+    ctx.restore();
+  }
+}
 function drawBoardRobot(g,cx,cy,s2,dir,color,running,t){
   const RS=TILE*0.72, k=s2/RS;
   g.save();g.translate(cx,cy);g.scale(k,k);

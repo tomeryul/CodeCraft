@@ -1,7 +1,8 @@
 "use strict";
 /* ---------------- blocks ---------------- */
-const CONDS=["treeAhead","rockAhead","ironAhead","waterAhead","blocked","bagFull","bagEmpty","tired"];
+const CONDS=["treeAhead","rockAhead","ironAhead","waterAhead","blocked","bagFull","bagEmpty","tired","taken"];
 const COND_LBL={treeAhead:"tree ahead 🌳",rockAhead:"rock ahead 🪨",ironAhead:"iron ahead ⛓️",waterAhead:"water ahead 🌊",blocked:"blocked 🚧",bagFull:"bag full 🎒",bagEmpty:"bag empty 🕳️",tired:"tired 😴",
+  taken:"another robot called it 🤝",
   // challenge-board sensors (see CHALLENGE_CONDS in challenges.js)
   wallAhead:"wall ahead 🧱",pitAhead:"pit ahead 🕳️",brickHere:"block under me 🟧",onTarget:"on a target 🎯",holding:"carrying a block ✊",
   doorAhead:"locked door ahead 🚪",keyAhead:"key ahead 🔑",gateAhead:"closed gate ahead 🚧",onPlate:"on a plate 🔘"};
@@ -43,6 +44,11 @@ const DEFS={
   // 🔧 Call a named routine. Decomposition: name a repeated idea once and reuse
   // it — including from inside itself, which is recursion.
   call:{cat:"funcs",ic:"🔧",lbl:"Call"},
+  /* 🤝 the team blocks. One program pasted onto every robot makes them all walk to
+     the SAME nearest tree; these are how a fleet divides the work instead. */
+  claim:{cat:"team",ic:"🤝",lbl:"Call It"},        // reserve what I'm facing
+  broadcast:{cat:"team",ic:"📡",lbl:"Tell Team"},  // pin this spot to a channel
+  goTo:{cat:"team",ic:"📻",lbl:"Go To Call"},      // walk to what the team pinned
 };
 // what 📖 Read can look at
 const READ_SRC=["here","ahead","held","x","y"];
@@ -55,6 +61,9 @@ const CATS=[
   {id:"smart",name:"Smart",types:["faceNearest","goHome","sellAll","bankAll"],lock:"smart",need:"Earn 150 🪙 total (or own 2 robots) to unlock 🧭 smart blocks!"},
   {id:"vars",name:"Memory",types:["setVar","changeVar","countLoop","read","say"],lock:"vars",need:"Earn 250 🪙 total to unlock 🧠 memory & variables!"},
   {id:"funcs",name:"Routines",types:["call"],lock:"vars",need:"Earn 250 🪙 total to unlock 🔧 routines!"},
+  // unlocked by owning a second robot — exactly when "they keep bumping into each
+  // other" becomes a problem worth programming around
+  {id:"team",name:"Teamwork",types:["claim","broadcast","goTo"],lock:"team",need:"Buy a 2nd robot 🤖 to unlock 🤝 teamwork blocks!"},
 ];
 function newBlock(t){
   const b={t,uid:uid()};
@@ -68,6 +77,7 @@ function newBlock(t){
   if(t==="rest")b.n=2;
   if(t==="build")b.opt="sapling";
   if(t==="faceNearest")b.opt="tree";
+  if(t==="broadcast"||t==="goTo")b.opt="tree"; // which channel on the noticeboard
   if(t==="setVar"){b.name="x";b.val={k:"num",n:5};}
   if(t==="changeVar"){b.name="x";b.n=1;}
   if(t==="countLoop"){b.name="i";b.to=5;b.body=[];}

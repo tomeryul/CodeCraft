@@ -770,6 +770,148 @@ async function ev(expr) {
   check("CC_DECOR draws pieces + renders palette icons", DEC.drew===true && DEC.icon===true, dec);
   check("every decor id draws with a time arg (no addColorStop crash)", DEC.threw===null, dec);
 
+  const solid = await ev(`(()=>{
+    const out={};
+    objects=new Map();
+    const r=R(); r.x=homePos.x-4; r.y=homePos.y+3; r.rx=r.x; r.ry=r.y; r.dir=1; r.energy=100;
+    const at=(dx,dy)=>key(r.x+dx,r.y+dy);
+    // a wall you paid stone for is really there
+    terrain[at(1,0)]=T_GRASS;
+    objects.set(at(1,0),{type:'decor',deco:'wall',em:'🧱'});
+    out.wallBlocks=!canWalk(r.x+1,r.y);
+    out.wallSensed=evalCond(r,'blocked');
+    doAction(r,{t:'move'});
+    out.stayedPut=(r.x===homePos.x-4);
+    // ...but you can still walk your own paths, through your own doorways
+    objects.set(at(1,0),{type:'decor',deco:'path',em:'⬜'});
+    out.pathWalkable=canWalk(r.x+1,r.y);
+    objects.set(at(1,0),{type:'decor',deco:'door',em:'🚪'});
+    out.doorWalkable=canWalk(r.x+1,r.y);
+    // and pathing routes around a built wall instead of through it
+    objects.set(at(1,0),{type:'decor',deco:'wall',em:'🧱'});
+    const p=pathTo(r,r.x+2,r.y);
+    out.pathRoutesAround=!!p&&!p.some(s=>s.x===r.x+1&&s.y===r.y);
+    // every solid piece is a real building material, every walkable one is ground/flat
+    out.solidIds=DECOR.filter(d=>d.solid).map(d=>d.id).length;
+    out.costClean=DECOR.every(d=>!('solid' in d.cost));
+    objects=new Map();
+    return JSON.stringify(out);
+  })()`);
+  const SO = JSON.parse(solid);
+  check("a wall you built blocks robots (was: they walked straight through)",
+    SO.wallBlocks === true && SO.stayedPut === true, solid);
+  check("...and 'blocked 🚧' senses it, so programs can route around", SO.wallSensed === true && SO.pathRoutesAround === true, solid);
+  check("paths, floors and doorways stay walkable", SO.pathWalkable === true && SO.doorWalkable === true, solid);
+  check("the solid flag lives beside cost, not inside it", SO.costClean === true && SO.solidIds === 20, solid);
+
+  console.log("▶ 🤝 teamwork: claims, the noticeboard, and a fleet that fans out");
+  const team = await ev(`(()=>{ try{
+    const out={};
+    objects=new Map(); claims=new Map(); radio={};
+    const a=robots[0];
+    // a second robot to coordinate with
+    while(robots.length<2)robots.push(makeRobot(homePos.x+1,homePos.y+1,"R2"));
+    const b=robots[1];
+    a.x=5;a.y=5;a.rx=5;a.ry=5;a.dir=1;a.energy=100;
+    b.x=5;b.y=7;b.rx=5;b.ry=7;b.dir=1;b.energy=100;
+    // three trees, all reachable
+    for(const t of [[8,5],[8,7],[9,6]]){terrain[key(t[0],t[1])]=T_GRASS;objects.set(key(t[0],t[1]),{type:'tree',stage:2,hits:0});}
+    // --- without claiming, both robots pick the SAME nearest tree ---
+    let n1=findNearest(a,'tree'), n2=findNearest(b,'tree');
+    out.sameWhenNaive=(n1.x===8&&n1.y===5)&&(n2.x===8&&n2.y===7); // each nearest to itself
+    // put them side by side so they genuinely compete for one tree
+    b.x=5;b.y=5;b.rx=5;b.ry=5;
+    n1=findNearest(a,'tree'); n2=findNearest(b,'tree');
+    out.collide=(n1.x===n2.x&&n1.y===n2.y);
+    // --- one 🤝 Call It and the other robot looks elsewhere ---
+    faceTo(a,n1.x,n1.y); a.dir=1; a.x=7; a.y=5; a.rx=7; a.ry=5;   // stand next to it, facing it
+    doAction(a,{t:'claim'});
+    out.claimed=!!claimAt(key(8,5));
+    out.claimOwner=claimAt(key(8,5)).by===0;
+    const n2b=findNearest(b,'tree');
+    out.otherMovedOn=!(n2b.x===8&&n2b.y===5);
+    out.takenSensed=(()=>{b.x=7;b.y=5;b.rx=7;b.ry=5;b.dir=1;return evalCond(b,'taken');})();
+    out.ownerNotBlockedByOwnClaim=!evalCond(a,'taken');
+    // claiming something already called by someone else just fails, it never steals
+    doAction(b,{t:'claim'});
+    out.noSteal=claimAt(key(8,5)).by===0 && b.blocked===true;
+    // --- claims expire, so an idle robot can't wedge a tile forever ---
+    claims.get(key(8,5)).until=now-1;
+    out.expires=!claimAt(key(8,5)) && findNearest(b,'tree').x===8;
+    // --- everything called? still return SOMETHING rather than deadlock ---
+    claims=new Map();
+    for(const t of [[8,5],[8,7],[9,6]])claims.set(key(t[0],t[1]),{by:0,until:now+CLAIM_MS});
+    out.neverDeadlocks=!!findNearest(b,'tree');
+    claims=new Map();
+    // --- 📡 the noticeboard ---
+    a.x=11;a.y=6;a.rx=11;a.ry=6;a.dir=3;              // facing the tree at 9,6? no: 10,6
+    a.dir=1; a.x=8; a.y=6; a.rx=8; a.ry=6;             // facing 9,6
+    doAction(a,{t:'broadcast',opt:'tree'});
+    const m=radioGet('tree');
+    out.posted=!!m && m.x===9 && m.y===6;
+    b.x=5;b.y=5;b.rx=5;b.ry=5;b.path=null;
+    doAction(b,{t:'goTo',opt:'tree'});
+    out.walksThere=!!(b.path&&b.path.length);
+    // an empty channel reads as blocked, so a program can fall back to its own search
+    b.path=null; doAction(b,{t:'goTo',opt:'crystal'});
+    out.emptyChannelBlocks=(b.blocked===true&&!b.path);
+    // and a stale call is forgotten
+    radio.tree.at=now-RADIO_MS-1;
+    out.expiresToo=!radioGet('tree');
+    // --- the blocks are real blocks: palette, editor chip, python ---
+    out.inCats=CATS.some(c=>c.id==='team'&&c.types.length===3);
+    out.locked=CATS.find(c=>c.id==='team').lock==='team';
+    const prog=[{t:'claim',uid:'t1'},{t:'broadcast',uid:'t2',opt:'crystal'},{t:'goTo',uid:'t3',opt:'crystal'},
+                {t:'if',uid:'t4',cond:'taken',body:[{t:'turnR',uid:'t5'}],els:[]}];
+    out.py=toPy(prog,'');
+    // --- the payoff, measured: does a fleet actually fan out? ---
+    // Four robots on one tile, four trees around them. Each runs the SAME program;
+    // the only difference is whether it calls its target before walking.
+    const fan=(useClaim)=>{
+      objects=new Map(); claims=new Map();
+      const cx=20,cy=20;
+      const spots=[[cx+2,cy],[cx-2,cy],[cx,cy+2],[cx,cy-2]];
+      for(const s of spots){terrain[key(s[0],s[1])]=T_GRASS;objects.set(key(s[0],s[1]),{type:'tree',stage:2,hits:0});}
+      const crew=[];
+      while(robots.length<4)robots.push(makeRobot(cx,cy,'X'+robots.length));
+      for(let i=0;i<4;i++){const r=robots[i];r.x=cx;r.y=cy;r.rx=cx;r.ry=cy;r.dir=1;r.energy=100;crew.push(r);}
+      const picked=[];
+      for(const r of crew){
+        const t=findNearest(r,'tree');
+        if(!t){picked.push('none');continue;}
+        picked.push(t.x+','+t.y);
+        if(useClaim){faceTo(r,t.x,t.y);
+          // stand next to it so 🤝 can reach it, the way the robot would after walking
+          r.x=t.x-DX[r.dir];r.y=t.y-DY[r.dir];r.rx=r.x;r.ry=r.y;
+          doAction(r,{t:'claim'});}
+      }
+      return new Set(picked).size;                 // how many DIFFERENT trees the fleet works
+    };
+    out.fanNaive=fan(false);
+    out.fanClaim=fan(true);
+    objects=new Map(); claims=new Map(); radio={};
+    return JSON.stringify(out);
+  }catch(e){return JSON.stringify({ERR:e.message+' @ '+(e.stack||'').split('\\n')[1]});} })()`);
+  const TM = JSON.parse(team);
+  if(TM.ERR) throw new Error("teamwork block threw: "+TM.ERR);
+  check("without 🤝, two robots side by side target the very same tree", TM.collide === true, team);
+  check("🤝 Call It reserves a tile for its owner", TM.claimed === true && TM.claimOwner === true, team);
+  check("...and the rest of the fleet's Face Nearest goes elsewhere", TM.otherMovedOn === true, team);
+  check("...'another robot called it 🤝' senses it, and never fires on your own call",
+    TM.takenSensed === true && TM.ownerNotBlockedByOwnClaim === true, team);
+  check("a call cannot be stolen, only waited out", TM.noSteal === true && TM.expires === true, team);
+  check("a fully-called map still returns a target instead of deadlocking", TM.neverDeadlocks === true, team);
+  check("📡 Tell Team pins the spot ahead to a channel", TM.posted === true, team);
+  check("📻 Go To Call walks there, and an empty channel reads as blocked",
+    TM.walksThere === true && TM.emptyChannelBlocks === true, team);
+  check("a stale call fades off the noticeboard", TM.expiresToo === true, team);
+  check("the team blocks ship as a locked palette category", TM.inCats === true && TM.locked === true, team);
+  check("...and generate Python", /call_it\(\)/.test(TM.py) && /team\.tell\("crystal"\)/.test(TM.py) &&
+    /team\.already_called\(\)/.test(TM.py), TM.py);
+  // the point of the whole feature, stated as a number
+  check("4 robots + one pasted program all pick the SAME tree", TM.fanNaive === 1, team);
+  check("...the same program with 🤝 Call It spreads them over 4 different trees", TM.fanClaim === 4, team);
+
   console.log("▶ drag & drop (moveBlock core)");
   const dnd = await ev(`(()=>{
     const r=R(); r.program=[]; r.hist=[]; r.redoS=[];
