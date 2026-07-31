@@ -30,6 +30,9 @@ const DEFS={
   whileLoop:{cat:"loops",ic:"🔄",lbl:"While",container:true},
   "if":{cat:"logic",ic:"❓",lbl:"If",container:true},
   faceNearest:{cat:"smart",ic:"🧭",lbl:"Face Nearest"},
+  // walk there, around whatever is in the way — the world's only pathfinding used
+  // to be Go Home, so off-axis targets were simply unreachable
+  goNear:{cat:"smart",ic:"🚶",lbl:"Walk To"},
   goHome:{cat:"smart",ic:"🏠",lbl:"Go Home"},
   sellAll:{cat:"smart",ic:"💰",lbl:"Sell All"},
   bankAll:{cat:"smart",ic:"🏦",lbl:"Bank All"},
@@ -58,7 +61,7 @@ const CATS=[
   {id:"basic",name:"Basics",types:["move","turnL","turnR","collect","chop","mine","scoop","drop","build","rest","wait"],lock:null},
   {id:"loops",name:"Loops",types:["repeat","forever","whileLoop"],lock:"loops",need:"Collect 5 resources to unlock 🔁 loops!"},
   {id:"logic",name:"Logic",types:["if"],lock:"logic",need:"Sell something at the market 🏪 to unlock ❓ logic!"},
-  {id:"smart",name:"Smart",types:["faceNearest","goHome","sellAll","bankAll"],lock:"smart",need:"Earn 150 🪙 total (or own 2 robots) to unlock 🧭 smart blocks!"},
+  {id:"smart",name:"Smart",types:["faceNearest","goNear","goHome","sellAll","bankAll"],lock:"smart",need:"Earn 150 🪙 total (or own 2 robots) to unlock 🧭 smart blocks!"},
   {id:"vars",name:"Memory",types:["setVar","changeVar","countLoop","read","say"],lock:"vars",need:"Earn 250 🪙 total to unlock 🧠 memory & variables!"},
   {id:"funcs",name:"Routines",types:["call"],lock:"vars",need:"Earn 250 🪙 total to unlock 🔧 routines!"},
   // unlocked by owning a second robot — exactly when "they keep bumping into each
@@ -76,7 +79,7 @@ function newBlock(t){
   if(t==="wait")b.n=1;
   if(t==="rest")b.n=2;
   if(t==="build")b.opt="sapling";
-  if(t==="faceNearest")b.opt="tree";
+  if(t==="faceNearest"||t==="goNear")b.opt="tree";
   if(t==="broadcast"||t==="goTo")b.opt="tree"; // which channel on the noticeboard
   if(t==="setVar"){b.name="x";b.val={k:"num",n:5};}
   if(t==="changeVar"){b.name="x";b.n=1;}

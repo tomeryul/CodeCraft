@@ -215,7 +215,7 @@ function renderList(list,parent){
       else inner+='<button class="pbtn" data-p="cond">'+COND_LBL[b.cond]+'</button>';
     }
     if(b.t==="build")inner+='<button class="pbtn" data-p="build">'+BUILD_LBL[b.opt]+'</button>';
-    if(b.t==="faceNearest")inner+='<button class="pbtn" data-p="tgt">'+TGT_EM[b.opt]+' '+b.opt+'</button>';
+    if(b.t==="faceNearest"||b.t==="goNear")inner+='<button class="pbtn" data-p="tgt">'+TGT_EM[b.opt]+' '+b.opt+'</button>';
     if(b.t==="broadcast"||b.t==="goTo")inner+='<button class="pbtn" data-p="ch">'+(RADIO_EM[b.opt]||"📻")+' '+b.opt+'</button>';
     row.innerHTML=inner;
     row.title="Hold & drag to move";

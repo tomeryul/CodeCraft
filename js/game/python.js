@@ -17,6 +17,7 @@ function toPy(list,ind){
       case "wait":P.push(ind+"robot.wait("+b.n+")");break;
       case "build":P.push(ind+'robot.build("'+b.opt+'")');break;
       case "faceNearest":P.push(ind+'robot.face_nearest("'+b.opt+'")');break;
+      case "goNear":P.push(ind+'robot.walk_to_nearest("'+b.opt+'")');break;
       case "goHome":P.push(ind+"robot.go_home()");break;
       case "sellAll":P.push(ind+"robot.sell_all()");break;
       case "bankAll":P.push(ind+"robot.bank_all()");break;

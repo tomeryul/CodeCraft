@@ -80,6 +80,11 @@ function tickRobot(r){
     const s=r.path.shift();
     faceTo(r,s.x,s.y);
     if(canWalk(s.x,s.y)){r.x=s.x;r.y=s.y;}else{r.path=null;r.blocked=true;}
+    // On arrival, turn to FACE what we walked here for. Without this the robot
+    // ends up facing the way it last stepped, so the 🪓 Chop right after a
+    // 🧭 Go To Nearest would swing at empty grass — the single most confusing
+    // thing about walking somewhere on purpose.
+    if(r.path&&!r.path.length&&r.faceAfter){faceTo(r,r.faceAfter.x,r.faceAfter.y);r.faceAfter=null;r.path=null;}
     return;
   }
   let guard=0;
@@ -245,11 +250,34 @@ function doAction(r,b){
       if(!m){r.blocked=true;break;}
       if(Math.abs(r.x-m.x)+Math.abs(r.y-m.y)<=1){faceTo(r,m.x,m.y);break;}
       const p=pathTo(r,m.x,m.y);
-      if(p)r.path=p;else r.blocked=true;
+      if(p){r.path=p;r.faceAfter={x:m.x,y:m.y};}else r.blocked=true;
       break;}
     case "goHome":{
       const p=pathTo(r,homePos.x,homePos.y);
-      if(p)r.path=p;else r.blocked=true;
+      if(p){r.path=p;r.faceAfter={x:homePos.x,y:homePos.y};}else r.blocked=true;
+      break;}
+    // 🧭 Go To Nearest — actually WALK to the nearest tree/rock/ore/crystal.
+    // Until now the only pathfinding in the world was Go Home, so a robot could
+    // aim at a target with Face Nearest but only ever travel in a straight line:
+    // anything off-axis or behind an obstacle was simply unreachable, and no
+    // interesting navigation program was expressible. This is that gap closed.
+    case "goNear":{
+      // Walking somewhere CALLS it on the way. Making that automatic matters: a
+      // 🤝 Call It block costs a whole tick, so on a resource-rich map paying it
+      // every cycle made the coordinated program ~10% SLOWER than the naive one —
+      // the new feature would have been a trap. Claiming what you are already
+      // walking to is free, so a fleet fans out by default and 🤝 stays for the
+      // deliberate case: holding a spot you are not walking to yet.
+      const cands=findNearestList(r,b.opt,6);
+      let done=false;
+      for(const c of cands){
+        const ck=key(c.x,c.y);
+        if(Math.abs(r.x-c.x)+Math.abs(r.y-c.y)===1){faceTo(r,c.x,c.y);r.path=null;r.faceAfter=null;setClaim(r,ck);done=true;break;}
+        const p=pathTo(r,c.x,c.y);
+        if(p&&p.length){r.path=p;r.faceAfter={x:c.x,y:c.y};setClaim(r,ck);done=true;break;}
+        if(p){faceTo(r,c.x,c.y);setClaim(r,ck);done=true;break;} // already adjacent by another route
+      }
+      if(!done)r.blocked=true;   // nothing of that kind, or every one walled off
       break;}
     case "sellAll":{
       if(Math.abs(r.x-marketPos.x)<=2&&Math.abs(r.y-marketPos.y)<=2)sellInv(r);
@@ -348,6 +376,25 @@ function findNearest(r,what){
     if(d<bd){bd=d;best={x,y};}
   }
   return best||anyBest;
+}
+// Every candidate in range, nearest first, with the ones nobody has called ranked
+// ahead of the ones somebody has. 🧭 Go To Nearest walks this list until one of
+// them is actually REACHABLE, so a tree behind a wall you built (or on the far
+// side of the lake) makes the robot pick the next one instead of giving up.
+function findNearestList(r,what,max){
+  const out=[];
+  const R2=14;
+  for(let dy=-R2;dy<=R2;dy++)for(let dx=-R2;dx<=R2;dx++){
+    const x=r.x+dx,y=r.y+dy;if(!inB(x,y))continue;
+    const k=key(x,y), o=objects.get(k);if(!o)continue;
+    const ok=(what==="tree")?(o.type==="tree"&&o.stage===2):(o.type===what);
+    if(!ok)continue;
+    const d=Math.abs(dx)+Math.abs(dy);
+    if(d<=0)continue;
+    out.push({x,y,d,taken:claimedByOther(r,k)?1:0});
+  }
+  out.sort((a,b)=>a.taken-b.taken||a.d-b.d);
+  return out.slice(0,max||6);
 }
 function pathTo(r,tx,ty){
   // BFS to any tile adjacent to (tx,ty)

@@ -804,6 +804,96 @@ async function ev(expr) {
   check("paths, floors and doorways stay walkable", SO.pathWalkable === true && SO.doorWalkable === true, solid);
   check("the solid flag lives beside cost, not inside it", SO.costClean === true && SO.solidIds === 20, solid);
 
+  console.log("▶ 🚶 Walk To: real pathfinding to a target, not just facing it");
+  const walkTo = await ev(`(()=>{ try{
+    const out={};
+    objects=new Map(); claims=new Map(); radio={};
+    const r=R(); r.energy=100; r.running=true;
+    const cx=24, cy=24;
+    r.x=cx;r.y=cy;r.rx=cx;r.ry=cy;r.dir=1;r.path=null;r.faceAfter=null;
+    for(let y=cy-6;y<=cy+6;y++)for(let x=cx-6;x<=cx+6;x++)terrain[key(x,y)]=T_GRASS;
+    // a tree OFF the robot's axis — the case straight-line movement can never reach
+    const tx=cx+4, ty=cy+3;
+    objects.set(key(tx,ty),{type:'tree',stage:2});
+    doAction(r,{t:'faceNearest',opt:'tree'});
+    out.faceOnly=(r.x===cx&&r.y===cy&&!r.path);       // Face Nearest only turns
+    doAction(r,{t:'goNear',opt:'tree'});
+    out.gotPath=!!(r.path&&r.path.length);
+    for(let i=0;i<60&&r.path&&r.path.length;i++)tickRobot(r);
+    out.arrived=(Math.abs(r.x-tx)+Math.abs(r.y-ty))===1;
+    // and it ARRIVES FACING the tree, so the very next Chop works
+    out.facing=evalCond(r,'treeAhead');
+    doAction(r,{t:'chop'});
+    out.chopped=(r.blocked===false);
+    // a tree walled off behind your own build: it takes the next one instead of stalling
+    objects=new Map(); r.x=cx;r.y=cy;r.rx=cx;r.ry=cy;r.path=null;r.faceAfter=null;
+    objects.set(key(cx+2,cy),{type:'tree',stage:2});                 // near, but sealed in
+    for(const d of [[1,0],[3,0],[2,-1],[2,1]])objects.set(key(cx+d[0],cy+d[1]),{type:'decor',deco:'wall',em:'🧱'});
+    objects.set(key(cx),{type:undefined}); objects.delete(key(cx));
+    objects.set(key(cx-4,cy),{type:'tree',stage:2});                 // farther, but reachable
+    doAction(r,{t:'goNear',opt:'tree'});
+    for(let i=0;i<80&&r.path&&r.path.length;i++)tickRobot(r);
+    out.wentRound=(Math.abs(r.x-(cx-4))+Math.abs(r.y-cy))===1&&evalCond(r,'treeAhead');
+    // nothing of that kind in range → blocked, so a program can react
+    objects=new Map(); r.path=null;
+    doAction(r,{t:'goNear',opt:'crystal'});
+    out.noneBlocks=(r.blocked===true&&!r.path);
+    out.py=toPy([{t:'goNear',uid:'w1',opt:'iron'}],'');
+    out.inPalette=CATS.find(c=>c.id==='smart').types.indexOf('goNear')>=0;
+    objects=new Map(); claims=new Map();
+    return JSON.stringify(out);
+  }catch(e){return JSON.stringify({ERR:e.message});} })()`);
+  const WT = JSON.parse(walkTo);
+  if(WT.ERR) throw new Error("walkTo block threw: "+WT.ERR);
+  check("🧭 Face Nearest only turns — it never travels", WT.faceOnly === true, walkTo);
+  check("🚶 Walk To paths to an off-axis target and arrives", WT.gotPath === true && WT.arrived === true, walkTo);
+  check("...arriving FACING it, so the next Chop lands", WT.facing === true && WT.chopped === true, walkTo);
+  check("...and picks a reachable target when the nearest is walled off", WT.wentRound === true, walkTo);
+  check("nothing in range reads as blocked 🚧", WT.noneBlocks === true, walkTo);
+  check("Walk To is in the Smart palette and generates Python",
+    WT.inPalette === true && /walk_to_nearest\("iron"\)/.test(WT.py), walkTo);
+
+  // Does a fleet actually get more done? Same program both arms; the only
+  // difference is whether walking to a target also calls it. Without that, adding
+  // robots changes nothing — they all converge on one tree — which is exactly the
+  // "shallow open world" complaint, measured.
+  const scale = await ev(`(()=>{ try{
+    const res={}; let u=0; const B=t=>({t:t,uid:'sc'+(++u)});
+    const prog=[{t:'forever',uid:'scf',body:[{t:'goNear',uid:'scg',opt:'tree'},B('chop'),B('chop'),B('chop')]}];
+    const realClaim=setClaim, origSI=window.setInterval;
+    window.setInterval=()=>0;
+    const cx=24,cy=24;
+    function setup(n){
+      objects=new Map(); claims=new Map(); radio={}; respawnQ.length=0;
+      for(let y=cy-10;y<=cy+10;y++)for(let x=cx-10;x<=cx+10;x++){
+        terrain[key(x,y)]=T_GRASS;
+        if((x+y)%2===0&&!(x===cx&&y===cy))objects.set(key(x,y),{type:'tree',stage:2});
+      }
+      robots.length=0;
+      for(let i=0;i<n;i++){const r=makeRobot(cx,cy,'S'+i);r.x=cx;r.y=cy;r.rx=cx;r.ry=cy;r.energy=1e9;r.cap=1e9;robots.push(r);}
+      totals.collected=0;
+    }
+    function run(n){
+      setup(n);
+      for(const r of robots){r.program=JSON.parse(JSON.stringify(prog));
+        r.frames=[{blocks:r.program,i:0,reps:1}];r.running=true;r.wait=0;r.path=null;r.vars={};}
+      for(let t=0;t<300;t++){now+=120;for(const r of robots)tickRobot(r);}
+      return totals.collected;
+    }
+    setClaim=()=>{};  res.solo1=run(1); res.solo4=run(4);
+    setClaim=realClaim; res.team1=run(1); res.team4=run(4);
+    window.setInterval=origSI;
+    objects=new Map(); claims=new Map(); robots.length=1;
+    return JSON.stringify(res);
+  }catch(e){return JSON.stringify({ERR:e.message});} })()`);
+  const SC = JSON.parse(scale);
+  if(SC.ERR) throw new Error("scaling block threw: "+SC.ERR);
+  check("uncoordinated, 4 robots gather barely more than 1 — the fleet doesn't scale",
+    SC.solo4 < SC.solo1 * 1.6, scale);
+  check("...calling what you walk to makes 4 robots gather 2x+ what 4 uncoordinated ones do",
+    SC.team4 > SC.solo4 * 2, scale);
+  check("...and costs a lone robot nothing", SC.team1 >= SC.solo1 * 0.95, scale);
+
   console.log("▶ 🤝 teamwork: claims, the noticeboard, and a fleet that fans out");
   const team = await ev(`(()=>{ try{
     const out={};
