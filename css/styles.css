@@ -830,7 +830,7 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
    was 161px tall — the stats pill floated in the middle of it and the market
    handle landed 178px down the screen, nowhere near the row it belongs with.
    The tray comes out of flow and pins itself top-right; what is left is a simple
-   column: market handle flush at the top, resources directly under it. */
+   column: the resources flush at the top, the market handle directly under them. */
 #topbar{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;
   flex-wrap:nowrap;gap:7px;padding-right:180px;}
 /* position:STATIC on purpose. Two reasons: the old fixed-position rule left a
@@ -838,9 +838,9 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
    nudge (which was pushing the handle away from the resources); and static keeps
    #topbar as the panel's containing block, so the panel can open below BOTH rows
    instead of below the handle alone. */
-#topbar #ticker{order:0;position:static;top:auto;left:auto;right:auto;bottom:auto;
+#topbar #ticker{order:1;position:static;top:auto;left:auto;right:auto;bottom:auto;
   flex:none;width:auto;margin:0;}
-#topbar #stats{order:1;flex:none;}
+#topbar #stats{order:0;flex:none;}
 #topbar #tbBtns{position:absolute;top:0;right:0;}
 /* The panel is anchored to the BOTTOM OF THE TOP BAR (#topbar is position:fixed,
    so it is the containing block), not to the handle. Two reasons: it never grows
