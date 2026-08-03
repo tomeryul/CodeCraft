@@ -823,3 +823,31 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #ticker .tk-ev{border-radius:11px;padding:6px 11px;font-size:11.5px;box-shadow:none;}
 #ticker .tk-order{background:var(--glass-hi);border-color:rgba(122,77,255,.45);border-radius:12px;
   flex-wrap:wrap;gap:6px 8px;backdrop-filter:none;}
+
+/* ---- top bar: market handle at the very top, resources right beneath it ----
+   Before: [stats | icon tray] shared one flex line and #ticker wrapped to a
+   third. On phones the tray is a vertical column 161px tall, so that first line
+   was 161px tall — the stats pill floated in the middle of it and the market
+   handle landed 178px down the screen, nowhere near the row it belongs with.
+   The tray comes out of flow and pins itself top-right; what is left is a simple
+   column: market handle flush at the top, resources directly under it. */
+#topbar{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;
+  flex-wrap:nowrap;gap:7px;padding-right:180px;}
+/* position:STATIC on purpose. Two reasons: the old fixed-position rule left a
+   top:58px behind, and any positioned value turns that leftover inset into a 58px
+   nudge (which was pushing the handle away from the resources); and static keeps
+   #topbar as the panel's containing block, so the panel can open below BOTH rows
+   instead of below the handle alone. */
+#topbar #ticker{order:0;position:static;top:auto;left:auto;right:auto;bottom:auto;
+  flex:none;width:auto;margin:0;}
+#topbar #stats{order:1;flex:none;}
+#topbar #tbBtns{position:absolute;top:0;right:0;}
+/* The panel is anchored to the BOTTOM OF THE TOP BAR (#topbar is position:fixed,
+   so it is the containing block), not to the handle. Two reasons: it never grows
+   the handle's row, so opening the market cannot shove the resources down; and it
+   opens below BOTH rows, so the handle and the resources both stay readable
+   while it is open. */
+#topbar .tk-panel{position:absolute;top:100%;left:0;margin-top:7px;z-index:2;}
+/* the tray is a 4-wide row above 600px and a narrow column below it, so the space
+   the two left-hand rows must keep clear of it differs */
+@media (max-width: 600px){ #topbar{padding-right:52px;} }
