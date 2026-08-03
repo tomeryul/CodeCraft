@@ -851,3 +851,18 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 /* the tray is a 4-wide row above 600px and a narrow column below it, so the space
    the two left-hand rows must keep clear of it differs */
 @media (max-width: 600px){ #topbar{padding-right:52px;} }
+
+/* ---- 📚 My Functions ---- */
+#funcLib{height:82vh;z-index:60;}
+#funcLibBody{flex:1;overflow-y:auto;padding:2px 14px 18px;}
+#funcLibBody .fl-save{display:flex;flex-direction:column;gap:7px;}
+#routineTabs .rtab.rp{background:rgba(196,71,143,.2);border-color:rgba(196,71,143,.5);}
+#routineTabs .rtab.rlib{margin-left:auto;}
+.blk .pnm{font-size:11.5px;font-weight:800;opacity:.85;margin-left:2px;}
+#ticker .tk-btn .tk-shape{color:var(--accent2);font-weight:900;}
+/* .rowbtn was only ever styled inside the creator bar, so the same button in the
+   📚 library rendered as an unstyled white chip with unreadable text */
+#funcLibBody .rowbtn{display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+  background:var(--glass-hi);color:var(--ink);border:1px solid var(--hair);border-bottom:none;
+  border-radius:12px;padding:11px 13px;font-size:13px;font-weight:700;box-shadow:none;}
+#funcLibBody .rowbtn:active{transform:scale(.99);background:var(--glass-on);}

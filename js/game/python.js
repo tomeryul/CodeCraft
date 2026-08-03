@@ -24,6 +24,7 @@ function toPy(list,ind){
       case "claim":P.push(ind+"robot.call_it()");break;
       case "broadcast":P.push(ind+'team.tell("'+b.opt+'")');break;
       case "goTo":P.push(ind+'robot.go_to(team.get("'+b.opt+'"))');break;
+      case "give":P.push(ind+"robot.give_bag_to_robot_ahead()");break;
       case "repeat":
         P.push(ind+"for i in range("+(b.src?b.src:b.n)+"):");
         P.push(b.body.length?toPy(b.body,ind+"    "):ind+"    pass");break;
@@ -37,7 +38,11 @@ function toPy(list,ind){
         break;
       case "say":P.push(ind+"robot.say("+pyVal(b.val)+")");break;
       case "read":P.push(ind+b.name+" = "+pyRead(b.src,b.opt));break;
-      case "call":P.push(ind+"routine_"+String(b.fn).toLowerCase()+"()");break;
+      case "call":{
+        const args=(b.args||[]).map(pyVal).join(", ");
+        const c="routine_"+String(b.fn).toLowerCase()+"("+args+")";
+        P.push(ind+(b.out?b.out+" = "+c:c));break;}
+      case "ret":P.push(ind+"return "+pyVal(b.val));break;
       case "forever":
         P.push(ind+"while True:");
         P.push(b.body.length?toPy(b.body,ind+"    "):ind+"    pass");break;
@@ -95,9 +100,9 @@ function renderPy(){
   let defs="";
   if(typeof ROUTINE_IDS!=="undefined"&&r.routines){
     for(const id of ROUTINE_IDS){
-      const body=r.routines[id]||[];
-      if(!body.length)continue;
-      defs+="def routine_"+id.toLowerCase()+"():\n"+toPy(body,"    ")+"\n\n";
+      const f=(typeof routineOf==="function")?routineOf(r,id):{params:[],body:r.routines[id]||[]};
+      if(!f.body.length)continue;
+      defs+="def routine_"+id.toLowerCase()+"("+(f.params||[]).join(", ")+"):\n"+toPy(f.body,"    ")+"\n\n";
     }
   }
   const src = "# "+r.name+" — program\n" + defs +

@@ -31,27 +31,26 @@ const ROUTINE_IDS=["A","B"];
 let edTarget="main";
 function robotRoutines(r){
   if(!r.routines)r.routines={};
-  for(const id of ROUTINE_IDS)if(!r.routines[id])r.routines[id]=[];
+  for(const id of ROUTINE_IDS)routineOf(r,id);   // normalises old array-shaped saves
   return r.routines;
 }
 function curList(){
   const r=R();
-  return edTarget==="main"?r.program:robotRoutines(r)[edTarget];
+  return edTarget==="main"?r.program:routineOf(r,edTarget).body;
 }
 // total blocks the player has written: a routine body counts ONCE however many
 // times it's called, so factoring repeated work into a routine is rewarded by
 // the budget instead of punished by it.
 function progSize(r){
   let n=countBlocks(r.program);
-  const R2=robotRoutines(r);
-  for(const id of ROUTINE_IDS)n+=countBlocks(R2[id]);
+  for(const id of ROUTINE_IDS)n+=countBlocks(routineOf(r,id).body);
   return n;
 }
 // stored form: a plain array while no routines are used (so every existing save
 // and every stored solution keeps loading), an object once they are.
 function packProg(r){
   const R2=robotRoutines(r);
-  const used=ROUTINE_IDS.some(id=>R2[id].length);
+  const used=ROUTINE_IDS.some(id=>routineOf(r,id).body.length);
   return used?{main:r.program,routines:JSON.parse(JSON.stringify(R2))}:r.program;
 }
 function unpackProg(stored){
@@ -62,8 +61,11 @@ function unpackProg(stored){
 function applyProg(r,stored){
   const u=unpackProg(stored);
   r.program=u.program; reUid(r.program);
-  const R2=robotRoutines(r);
-  for(const id of ROUTINE_IDS){R2[id]=(u.routines&&u.routines[id])||[];reUid(R2[id]);}
+  r.routines={};
+  for(const id of ROUTINE_IDS){
+    r.routines[id]=(u.routines&&u.routines[id])||{params:[],body:[]};
+    reUid(routineOf(r,id).body);          // routineOf upgrades an old bare array
+  }
 }
 /* move a block to a new spot in the program tree (drag & drop core; also unit-tested) */
 function moveBlock(dragUid,mode,anchorUid,which){
@@ -104,8 +106,11 @@ function restoreProgram(r,json,toStack){
   toStack.push(progSnapshot(r));
   const s=JSON.parse(json);
   r.program=s.main||[];reUid(r.program);
-  const R2=robotRoutines(r);
-  for(const id of ROUTINE_IDS){R2[id]=(s.routines&&s.routines[id])||[];reUid(R2[id]);}
+  r.routines={};
+  for(const id of ROUTINE_IDS){
+    r.routines[id]=(s.routines&&s.routines[id])||{params:[],body:[]};
+    reUid(routineOf(r,id).body);
+  }
   selBlock=null;elseSel=null;programChanged();
 }
 function doUndo(){const r=R();if(r.hist&&r.hist.length)restoreProgram(r,r.hist.pop(),(r.redoS=r.redoS||[]));}
@@ -151,11 +156,29 @@ function renderRoutineTabs(){
     return '<button class="rtab'+(edTarget===id?" on":"")+'" data-rt="'+id+'">'+
       label+' <span class="rn">'+countBlocks(list)+'</span>'+(running?' ●':'')+'</button>';
   };
-  el.innerHTML=tab("main","🧩 Main",r.program)+ROUTINE_IDS.map(id=>tab(id,"🔧 "+id,R2[id])).join("");
-  el.querySelectorAll(".rtab").forEach(b=>b.addEventListener("click",()=>{
+  el.innerHTML=tab("main","🧩 Main",r.program)+
+    ROUTINE_IDS.map(id=>tab(id,"🔧 "+fnLabel(r,id),routineOf(r,id).body)).join("")+
+    (edTarget!=="main"?'<button class="rtab rp" data-params="1" title="Edit this function\'s parameters">🏷️ inputs</button>':"")+
+    '<button class="rtab rlib" data-lib="1" title="My saved functions">📚</button>';
+  el.querySelectorAll(".rtab[data-rt]").forEach(b=>b.addEventListener("click",()=>{
     edTarget=b.dataset.rt; selBlock=null; elseSel=null;
     sfx(520,.03); renderProgram(); renderPy(); updateSelUI();
   }));
+  const pb=el.querySelector("[data-params]");
+  if(pb)pb.addEventListener("click",()=>editParams(edTarget));
+  const lb=el.querySelector("[data-lib]");
+  if(lb)lb.addEventListener("click",()=>openFuncLib());
+}
+// name the values a function takes in. Kept to plain comma-separated names so a
+// child types "a, b" rather than meeting a form.
+function editParams(id){
+  const r=R(), f=routineOf(r,id);
+  const cur=(f.params||[]).join(", ");
+  const t=prompt("What does function "+id+" take in?\nComma-separated names, or leave empty for none:",cur);
+  if(t===null)return;
+  pushUndo();
+  f.params=t.split(",").map(x=>x.trim().replace(/\W+/g,"_").slice(0,10)).filter(Boolean).slice(0,3);
+  sfx(560,.04); programChanged();
 }
 function renderProgram(){
   const r=R(), root=$("programEl");
@@ -201,7 +224,6 @@ function renderList(list,parent){
     if(b.t==="countLoop")inner+='<button class="pbtn" data-p="vname">'+esc(b.name)+'</button><span>1→</span><button class="pbtn" data-p="tdec">−</button><span class="num">'+b.to+'</span><button class="pbtn" data-p="tinc">＋</button>';
     if(b.t==="setVar")inner+='<button class="pbtn" data-p="vname">'+esc(b.name)+'</button><span>=</span>'+valCtl(b.val);
     if(b.t==="say")inner+=valCtl(b.val);
-    if(b.t==="call")inner+='<button class="pbtn" data-p="fn">🔧 '+esc(b.fn)+'</button>';
     if(b.t==="read")inner+='<button class="pbtn" data-p="vname">'+esc(b.name)+'</button><span>=</span><button class="pbtn" data-p="rsrc">'+(READ_LBL[b.src]||b.src)+'</button>';
     if(b.t==="if"||b.t==="whileLoop"){
       if(typeof b.cond==="object"){
@@ -216,6 +238,23 @@ function renderList(list,parent){
     }
     if(b.t==="build")inner+='<button class="pbtn" data-p="build">'+BUILD_LBL[b.opt]+'</button>';
     if(b.t==="faceNearest"||b.t==="goNear")inner+='<button class="pbtn" data-p="tgt">'+TGT_EM[b.opt]+' '+b.opt+'</button>';
+    if(b.t==="call"){
+      const f=routineOf(R(),b.fn||"A");
+      inner+='<button class="pbtn" data-p="fn">🔧 '+(b.fn||"A")+'</button>';
+      (f.params||[]).forEach((pn,i)=>{
+        const av=(b.args&&b.args[i])||{k:"num",n:0};
+        inner+='<span class="pnm">'+esc(pn)+'=</span>'+
+          '<button class="pbtn" data-p="akind" data-i="'+i+'">'+(av.k==="var"?"📦":"🔢")+'</button>'+
+          (av.k==="var"
+            ? '<button class="pbtn" data-p="aname" data-i="'+i+'">'+esc(av.name||"x")+'</button>'
+            : '<button class="pbtn" data-p="adec" data-i="'+i+'">−</button><span class="num">'+(av.n|0)+'</span><button class="pbtn" data-p="ainc" data-i="'+i+'">＋</button>');
+      });
+      inner+='<button class="pbtn" data-p="out">'+(b.out?"→ 📦 "+esc(b.out):"→ —")+'</button>';
+    }
+    if(b.t==="ret"){
+      const v=b.val||{k:"num",n:0};
+      inner+=valCtl(v);
+    }
     if(b.t==="read"&&b.src==="price")inner+='<button class="pbtn" data-p="pres">'+RES[b.opt||"wood"].em+'</button>';
     if(b.t==="broadcast"||b.t==="goTo")inner+='<button class="pbtn" data-p="ch">'+(RADIO_EM[b.opt]||"📻")+' '+b.opt+'</button>';
     row.innerHTML=inner;
@@ -258,11 +297,25 @@ function renderList(list,parent){
           const i=SRCS.indexOf(b.src);
           b.src=SRCS[(i<0?0:i+1)%SRCS.length];
         }
-        if(p==="fn")b.fn=ROUTINE_IDS[(ROUTINE_IDS.indexOf(b.fn)+1)%ROUTINE_IDS.length];
         if(p==="build")b.opt=BUILDS[(BUILDS.indexOf(b.opt)+1)%BUILDS.length];
         if(p==="tgt")b.opt=TARGETS[(TARGETS.indexOf(b.opt)+1)%TARGETS.length];
         if(p==="ch")b.opt=RADIO_CH[(RADIO_CH.indexOf(b.opt)+1)%RADIO_CH.length];
         if(p==="pres")b.opt=MKT_RES[(MKT_RES.indexOf(b.opt)+1)%MKT_RES.length];
+        if(p==="fn"){b.fn=ROUTINE_IDS[(ROUTINE_IDS.indexOf(b.fn)+1)%ROUTINE_IDS.length];b.args=[];}
+        if(p==="out"){
+          const nm=prompt("Put the value it gives back into which variable?\n(empty = throw it away)",b.out||"result");
+          b.out=(nm===null)?b.out:(nm.trim().replace(/\W+/g,"_").slice(0,10)||null);
+        }
+        if(p==="akind"||p==="aname"||p==="adec"||p==="ainc"){
+          const i=+btn.dataset.i;
+          b.args=b.args||[];
+          if(!b.args[i])b.args[i]={k:"num",n:0};
+          const av=b.args[i];
+          if(p==="akind")b.args[i]=av.k==="var"?{k:"num",n:0}:{k:"var",name:"x"};
+          else if(p==="aname")av.name=promptName(av.name);
+          else if(p==="adec")av.n=(av.n|0)-1;
+          else if(p==="ainc")av.n=(av.n|0)+1;
+        }
         if(p==="vname")b.name=promptName(b.name);
         if(p==="vkind")b.val=b.val.k==="num"?{k:"str",s:"Hello!"}:b.val.k==="str"?{k:"var",name:"x"}:{k:"num",n:5};
         if(p==="vdec")b.val.n--;

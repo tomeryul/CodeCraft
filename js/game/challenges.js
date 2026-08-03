@@ -3,9 +3,9 @@
 // full programming toolbox available inside every challenge (loops, conditions, variables, values)
 // every challenge (built-in, community, custom) gets the full toolbox — incl.
 // ✊ Lift / ⤵️ Drop so bricks can be moved when PLAYING, not just while editing
-const CHALLENGE_BLOCKS=["move","turnL","turnR","build","pickUp","drop","wait","repeat","forever","whileLoop","countLoop","if","setVar","changeVar","read","say","call"];
+const CHALLENGE_BLOCKS=["move","turnL","turnR","build","pickUp","drop","wait","repeat","forever","whileLoop","countLoop","if","setVar","changeVar","read","say","call","ret"];
 // sorting toolbox: lift/drop, no build — for rearranging numbered bricks
-const SORT_BLOCKS=["move","turnL","turnR","pickUp","drop","wait","repeat","forever","whileLoop","countLoop","if","setVar","changeVar","read","say","call"];
+const SORT_BLOCKS=["move","turnL","turnR","pickUp","drop","wait","repeat","forever","whileLoop","countLoop","if","setVar","changeVar","read","say","call","ret"];
 const CREATOR_BLOCKS=CHALLENGE_BLOCKS;
 const PROJECTS=[
   {id:"house",em:"🏡",name:"Big House",diff:1,coins:150,xp:60,maxBlocks:8,gw:8,gh:7,
@@ -495,7 +495,9 @@ function renderMgCaseEdit(){
    sending the main program too would just be giving away the answer. */
 function presetSize(preset){
   const r=preset&&preset.routines;
-  return r?ROUTINE_IDS.reduce((a,id)=>a+countBlocks(r[id]||[]),0):0;
+  // a routine may be stored as a bare array (old saves) or {params,body}
+  const bodyOf=v=>Array.isArray(v)?v:((v&&v.body)||[]);
+  return r?ROUTINE_IDS.reduce((a,id)=>a+countBlocks(bodyOf(r[id])),0):0;
 }
 function mgTogglePreset(){
   if(!mgState||!mgState.creator)return;
@@ -503,7 +505,7 @@ function mgTogglePreset(){
   if(p.preset){p.preset=null;toast("🎁 Starter routines off — players begin from a blank program.");}
   else{
     const R2=robotRoutines(mgRobot);
-    const n=ROUTINE_IDS.reduce((a,id)=>a+countBlocks(R2[id]),0);
+    const n=ROUTINE_IDS.reduce((a,id)=>a+countBlocks(routineOf(mgRobot,id).body),0);
     if(!n){toast("🔧 Write something in routine A or B first — that is what players will be given.");sfx(200,.06);return;}
     p.preset={main:[],routines:JSON.parse(JSON.stringify(R2))};
     toast("🎁 Players will open this challenge with your routines ("+n+" blocks) already written.");
@@ -1032,6 +1034,8 @@ function mgTick(){
         continue;
       }
       st.frames.pop();
+      // falling off the end of a function returns 0 and restores the caller's scope
+      if(fr.fn)fnExit(mgRobot,fr,0);
       const p=st.frames[st.frames.length-1];
       if(p){p.i++;continue;}
       mgFinish();return;
@@ -1043,13 +1047,26 @@ function mgTick(){
       st.frames.push({blocks:b.body,i:0,reps:times});continue;
     }
     if(b.t==="call"){
-      const body=(mgRobot.routines&&mgRobot.routines[b.fn])||[];
-      if(!body.length){fr.i++;continue;}
+      const f=routineOf(mgRobot,b.fn);
+      if(!f.body.length){fr.i++;continue;}
       if(st.frames.length>30){ // recursion without a base case — say so, don't hang
-        mgStop();toast("🔁 Routine "+b.fn+" called itself too many times — it never stops!");return;
+        mgStop();toast("🔁 Function "+b.fn+" called itself too many times — it never stops!");return;
       }
+      const saved=fnEnter(mgRobot,f,b);
       mgRobot.curUid=b.uid;
-      st.frames.push({blocks:body,i:0,reps:1});continue;
+      st.frames.push({blocks:f.body,i:0,reps:1,fn:1,out:b.out||null,saved});continue;
+    }
+    if(b.t==="ret"){
+      // hand a value back: unwind to and including the nearest function frame
+      const val=resolveVal(mgRobot,b.val);
+      let done=false;
+      while(st.frames.length){
+        const f2=st.frames.pop();
+        if(f2.fn){fnExit(mgRobot,f2,val);done=true;break;}
+      }
+      const pr=st.frames[st.frames.length-1];
+      if(pr&&done){pr.i++;continue;}
+      mgFinish();return;
     }
     if(b.t==="whileLoop"){
       // re-tests its condition every pass: an endless frame tagged with the cond,

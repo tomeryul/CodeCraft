@@ -583,7 +583,7 @@ async function ev(expr) {
       const b=JSON.parse(body||'{}');
       // THE REGRESSION: publish used to send mgRobot.program, dropping A and B
       out.pubSolShape=Array.isArray(b.solution)?'array':'object';
-      out.pubRoutineLen=((b.solution||{}).routines||{}).A ? b.solution.routines.A.length : 0;
+      out.pubRoutineLen=(((b.solution||{}).routines||{}).A||{}).body ? b.solution.routines.A.body.length : 0;
       out.pubMainLen=(b.solution&&b.solution.main||[]).length;
       out.pubPresetLen=presetSize(b.preset);
       // ...and comes back whole through ✏️ Edit
@@ -591,14 +591,14 @@ async function ev(expr) {
         max_blocks:12,solves:0,cells:b.cells,initial:b.initial,tiles:b.tiles,
         solution:b.solution,cases:b.cases,preset:b.preset,stages:[]};
       mgEditCommunity(row);
-      out.editRoutineLen=mgRobot.routines.A.length;
+      out.editRoutineLen=routineOf(mgRobot,'A').body.length;
       out.editMainLen=mgRobot.program.length;
       out.editPresetOn=!!mgState.proj.preset;
       mgExit(false);
       // a player opening the published challenge is HANDED the routine, not the answer
       delete player.projPrograms['cc_rr'];
       mgEnter(ccToProj(row));
-      out.playerGotRoutine=mgRobot.routines.A.length;
+      out.playerGotRoutine=routineOf(mgRobot,'A').body.length;
       out.playerGotNoAnswer=mgRobot.program.length;
       mgExit(false);
 
@@ -913,6 +913,147 @@ async function ev(expr) {
     MK.openEvent === true && MK.closesAgain === true, mkt);
   check("a price read generates Python", /market\.price\("crystal"\)/.test(MK.py), mkt);
 
+  console.log("▶ 🔧 functions: parameters, a value back, and a saved library");
+  const fn = await ev(`(()=>{ try{
+    const out={};
+    const origSI=window.setInterval; window.setInterval=()=>0;
+    const r=R(); r.energy=1e9; objects=new Map();
+    const run=(prog,ticks)=>{r.program=prog;r.frames=[{blocks:prog,i:0,reps:1}];r.running=true;
+      r.wait=0;r.path=null;r.vars={};
+      for(let i=0;i<(ticks||200)&&r.running;i++)tickRobot(r);return r.vars;};
+    // --- a function that TAKES a value and GIVES one back ---
+    r.routines={A:{params:["n"],body:[
+      {t:"setVar",uid:"a1",name:"t",val:{k:"var",name:"n"}},
+      {t:"changeVar",uid:"a2",name:"t",n:{k:"var",name:"n"}},
+      {t:"ret",uid:"a3",val:{k:"var",name:"t"}}]},B:{params:[],body:[]}};
+    let v=run([{t:"call",uid:"c1",fn:"A",args:[{k:"num",n:5}],out:"answer"},
+               {t:"say",uid:"s1",val:{k:"var",name:"answer"}}]);
+    out.doubled=v.answer;                    // double(5) === 10
+    // called again with a different argument — the point of a parameter
+    v=run([{t:"call",uid:"c2",fn:"A",args:[{k:"num",n:12}],out:"answer"}]);
+    out.reusable=v.answer;
+    // an argument may be a VARIABLE from the caller's scope
+    v=run([{t:"setVar",uid:"v1",name:"k",val:{k:"num",n:7}},
+           {t:"call",uid:"c3",fn:"A",args:[{k:"var",name:"k"}],out:"answer"}]);
+    out.varArg=v.answer;
+    // --- local scope: the callee's names cannot leak into the caller ---
+    v=run([{t:"setVar",uid:"v2",name:"t",val:{k:"num",n:99}},
+           {t:"call",uid:"c4",fn:"A",args:[{k:"num",n:1}],out:"answer"}]);
+    out.callerKeptT=v.t;                     // still 99, not the callee's t
+    out.scopedOut=v.answer;
+    // --- returning early actually stops the rest of the function ---
+    r.routines.A={params:[],body:[
+      {t:"ret",uid:"e1",val:{k:"num",n:3}},
+      {t:"setVar",uid:"e2",name:"leaked",val:{k:"num",n:1}}]};
+    v=run([{t:"call",uid:"c5",fn:"A",args:[],out:"answer"}]);
+    out.earlyReturn=(v.answer===3&&v.leaked===undefined);
+    // a function with no 🔙 hands back 0 and still restores the caller
+    // With no declared inputs it is the old kind of routine and shares the
+    // caller's variables — deliberate back-compat for every program written
+    // before functions existed.
+    r.routines.A={params:[],body:[{t:"setVar",uid:"n1",name:"z",val:{k:"num",n:5}}]};
+    v=run([{t:"setVar",uid:"v3",name:"z",val:{k:"num",n:1}},
+           {t:"call",uid:"c6",fn:"A",args:[],out:"answer"}]);
+    out.noReturn=(v.answer===0&&v.z===5);
+    // --- old array-shaped routines still run (back-compat) ---
+    r.routines={A:[{t:"setVar",uid:"o1",name:"old",val:{k:"num",n:8}}],B:[]};
+    v=run([{t:"call",uid:"c7",fn:"A",args:[]}]);
+    out.legacyRuns=v.old;
+    out.legacyUpgraded=!Array.isArray(r.routines.A)&&routineOf(r,"A").body.length===1;
+    // --- Python shows a real def with parameters and a return ---
+    r.routines={A:{params:["n"],body:[{t:"ret",uid:"p1",val:{k:"var",name:"n"}}]},B:{params:[],body:[]}};
+    r.program=[{t:"call",uid:"p2",fn:"A",args:[{k:"num",n:4}],out:"answer"}];
+    renderPy();
+    const py=$("pyCode").textContent||"";
+    out.pyDef=/def routine_a\\(n\\):/.test(py);
+    out.pyRet=/return n/.test(py);
+    out.pyCall=/answer = routine_a\\(4\\)/.test(py);
+    // --- 📚 the library: save, reload into the other slot, and it persists ---
+    player.funcLib=[];
+    window.prompt=()=>"dbl";
+    edTarget="A"; saveFuncToLib("A");
+    out.saved=(player.funcLib.length===1&&player.funcLib[0].params[0]==="n");
+    r.routines.B={params:[],body:[]};
+    loadFuncFromLib(player.funcLib[0].id,"B");
+    out.loadedIntoB=routineOf(r,"B").body.length===1&&routineOf(r,"B").params[0]==="n";
+    // editing the copy must never reach back into the stored one
+    routineOf(r,"B").body.push({t:"move",uid:"zz"});
+    out.libIsolated=player.funcLib[0].body.length===1;
+    // it rides the normal save, so it is there in the world AND in any minigame
+    const blob=buildSave();
+    out.inSave=(blob.player.funcLib||[]).length===1;
+    player.funcLib=[];
+    r.routines={A:{params:[],body:[]},B:{params:[],body:[]}};r.program=[];
+    r.running=false; edTarget="main"; window.setInterval=origSI;
+    return JSON.stringify(out);
+  }catch(e){return JSON.stringify({ERR:e.message+" @ "+(e.stack||"").split("\\n")[1]});} })()`);
+  const FN = JSON.parse(fn);
+  if(FN.ERR) throw new Error("functions block threw: "+FN.ERR);
+  check("a function takes a parameter and hands a value back", FN.doubled === 10, fn);
+  check("...and the same function works for a different argument", FN.reusable === 24 && FN.varArg === 14, fn);
+  check("a function has its OWN variables — the caller's are untouched",
+    FN.callerKeptT === 99 && FN.scopedOut === 2, fn);
+  check("🔙 Give Back stops the rest of the function", FN.earlyReturn === true, fn);
+  check("a function with no inputs still shares the caller variables (back-compat)", FN.noReturn === true, fn);
+  check("old routines with no parameters still run, and upgrade in place",
+    FN.legacyRuns === 8 && FN.legacyUpgraded === true, fn);
+  check("it renders as a real Python def with a parameter and a return",
+    FN.pyDef === true && FN.pyRet === true && FN.pyCall === true, fn);
+  check("📚 saving a function keeps its parameters", FN.saved === true, fn);
+  check("...loading it into another slot copies it, never aliases it",
+    FN.loadedIntoB === true && FN.libIsolated === true, fn);
+  check("...and the library rides the normal save, so it follows the account", FN.inSave === true, fn);
+
+  console.log("▶ 📦 Give Bag + order shapes: parallel vs pipeline");
+  const coop = await ev(`(()=>{ try{
+    const out={};
+    objects=new Map(); claims=new Map();
+    while(robots.length<2)robots.push(makeRobot(homePos.x,homePos.y,"H"+robots.length));
+    const a=robots[0], b=robots[1];
+    a.x=20;a.y=20;a.rx=20;a.ry=20;a.dir=1;a.energy=100;
+    b.x=21;b.y=20;b.rx=21;b.ry=20;b.energy=100;
+    for(const k in a.inv)a.inv[k]=0; for(const k in b.inv)b.inv[k]=0;
+    a.inv.wood=5; a.inv.stone=2; a.cap=8; b.cap=20;
+    doAction(a,{t:"give"});
+    out.handedOver=(bagCount(a)===0&&b.inv.wood===5&&b.inv.stone===2);
+    // nobody there → blocked, so a program can notice and wait
+    a.inv.wood=3; a.dir=0;
+    doAction(a,{t:"give"});
+    out.noMateBlocks=(a.blocked===true&&a.inv.wood===3);
+    // a hauler that is full only takes what fits — nothing is destroyed
+    a.dir=1; b.cap=8; for(const k in b.inv)b.inv[k]=0; b.inv.iron=7; a.inv.wood=4;
+    doAction(a,{t:"give"});
+    out.noLoss=(b.inv.wood+a.inv.wood===4&&bagCount(b)<=b.cap);
+    // --- orders come in two shapes, and they pay differently ---
+    market=freshMarket();
+    const shapes={}; let bulkPer=0,spreadPer=0,nb=0,ns=0;
+    for(let i=0;i<60;i++){
+      market.order=null; newOrder();
+      const o=market.order, ks=Object.keys(o.need);
+      shapes[o.shape]=(shapes[o.shape]||0)+1;
+      const units=ks.reduce((s2,k)=>s2+o.need[k],0);
+      if(o.shape==="bulk"){bulkPer+=o.reward/units;nb++; if(ks.length!==1)out.bulkNotSingle=true;}
+      else{spreadPer+=o.reward/units;ns++; if(ks.length<2)out.spreadNotMulti=true;}
+    }
+    out.bothShapes=(shapes.bulk>0&&shapes.spread>0);
+    out.shapesClean=!out.bulkNotSingle&&!out.spreadNotMulti;
+    out.bulkPaysMore=(bulkPer/nb)>(spreadPer/ns);
+    // a bulk order is genuinely more than one bagful, which is what makes hauling matter
+    market.order=null; while(market.order===null||market.order.shape!=="bulk"){market.order=null;newOrder();}
+    out.bulkIsMultiBag=Object.values(market.order.need)[0]>8;
+    market=freshMarket(); objects=new Map(); robots.length=1;
+    return JSON.stringify(out);
+  }catch(e){return JSON.stringify({ERR:e.message});} })()`);
+  const CO = JSON.parse(coop);
+  if(CO.ERR) throw new Error("coop block threw: "+CO.ERR);
+  check("📦 Give Bag hands the whole bag to the robot ahead", CO.handedOver === true, coop);
+  check("...blocked when nobody is there, and never destroys what will not fit",
+    CO.noMateBlocks === true && CO.noLoss === true, coop);
+  check("orders come in both shapes: ⇉ several resources, ⛓ one in bulk",
+    CO.bothShapes === true && CO.shapesClean === true, coop);
+  check("...a bulk order is several bagfuls and pays more per unit, so hauling is worth it",
+    CO.bulkIsMultiBag === true && CO.bulkPaysMore === true, coop);
+
   console.log("▶ 🚶 Walk To: real pathfinding to a target, not just facing it");
   const walkTo = await ev(`(()=>{ try{
     const out={};
@@ -1007,6 +1148,9 @@ async function ev(expr) {
   const team = await ev(`(()=>{ try{
     const out={};
     objects=new Map(); claims=new Map(); radio={};
+    respawnQ.length=0;   // the 1s world tick re-adds harvested nodes at their old
+                         // coordinates, which can drop a rock into the corridor
+                         // this test paths through — that made it racy
     const a=robots[0];
     // a second robot to coordinate with
     while(robots.length<2)robots.push(makeRobot(homePos.x+1,homePos.y+1,"R2"));
@@ -1051,6 +1195,11 @@ async function ev(expr) {
     b.x=5;b.y=5;b.rx=5;b.ry=5;b.path=null;
     doAction(b,{t:'goTo',opt:'tree'});
     out.walksThere=!!(b.path&&b.path.length);
+    if(!out.walksThere){
+      out.dbg={m:radioGet('tree'),raw:pathTo(b,9,6),
+        near:[[5,5],[6,5],[7,5],[8,5],[6,6],[7,6],[8,6]].map(q=>q.join(',')+':'+(canWalk(q[0],q[1])?1:0)).join(' '),
+        objs:[...objects.entries()].slice(0,8).map(e=>e[0]+':'+e[1].type).join(' ')};
+    }
     // an empty channel reads as blocked, so a program can fall back to its own search
     b.path=null; doAction(b,{t:'goTo',opt:'crystal'});
     out.emptyChannelBlocks=(b.blocked===true&&!b.path);
@@ -1058,7 +1207,7 @@ async function ev(expr) {
     radio.tree.at=now-RADIO_MS-1;
     out.expiresToo=!radioGet('tree');
     // --- the blocks are real blocks: palette, editor chip, python ---
-    out.inCats=CATS.some(c=>c.id==='team'&&c.types.length===3);
+    out.inCats=CATS.some(c=>c.id==='team'&&c.types.length===4);
     out.locked=CATS.find(c=>c.id==='team').lock==='team';
     const prog=[{t:'claim',uid:'t1'},{t:'broadcast',uid:'t2',opt:'crystal'},{t:'goTo',uid:'t3',opt:'crystal'},
                 {t:'if',uid:'t4',cond:'taken',body:[{t:'turnR',uid:'t5'}],els:[]}];
@@ -1753,7 +1902,7 @@ async function ev(expr) {
     const sortLvl=PUZZLE_PACKS.find(p=>p.id==='algo').stages.find(x=>x.name==='Sort Any Row');
     const pl=JSON.parse(JSON.stringify(sortLvl)); pl.id='presetchk';
     mgEnter(pl);
-    const presetGiven=mgRobot.routines.A.length===21&&mgRobot.program.length===0;
+    const presetGiven=routineOf(mgRobot,'A').body.length===21&&mgRobot.program.length===0;
     mgExit(false);
     const gated=PUZZLE_PACKS.filter(p=>p.needs).length;
     const levels=PUZZLE_PACKS.reduce((a,p)=>a+p.stages.length,0);
@@ -2042,17 +2191,17 @@ async function ev(expr) {
     mgEnter(lvl());
     mgRobot.routines={A:[],B:[]}; mgRobot.program=[];
     edTarget='A'; addBlock('move'); addBlock('move');
-    const beforeUndo=mgRobot.routines.A.length;
+    const beforeUndo=routineOf(mgRobot,'A').body.length;
     doUndo();
-    const afterUndo=mgRobot.routines.A.length;
+    const afterUndo=routineOf(mgRobot,'A').body.length;
     edTarget='main';
     // a program WITH routines survives store → load, and an OLD array still loads
     const stored=packProg(mgRobot);
     const isObj=!Array.isArray(stored);
     const r2=makeRobot(0,0,'x'); applyProg(r2,stored);
-    const roundTrip=r2.routines.A.length===afterUndo;
+    const roundTrip=routineOf(r2,'A').body.length===afterUndo;
     const r3=makeRobot(0,0,'y'); applyProg(r3,[{t:'move',uid:9},{t:'move',uid:8}]);
-    const legacyLoads=r3.program.length===2&&r3.routines.A.length===0;
+    const legacyLoads=r3.program.length===2&&routineOf(r3,'A').body.length===0;
     // and it reads as real Python
     mgRobot.routines={A:[{t:'move',uid:11}],B:[]}; mgRobot.program=[{t:'call',fn:'A',uid:1}];
     renderPy();

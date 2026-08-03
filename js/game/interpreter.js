@@ -101,6 +101,8 @@ function tickRobot(r){
         continue;
       }
       r.frames.pop();
+      // falling off the end of a function returns 0 and restores the caller's scope
+      if(fr.fn)fnExit(r,fr,0);
       const p=r.frames[r.frames.length-1];
       if(p){p.i++;continue;}
       stopRobot(r);return;
@@ -119,11 +121,24 @@ function tickRobot(r){
       if(!b.body.length||!evalCond(r,b.cond)){fr.i++;continue;}
       r.curUid=b.uid;r.frames.push({blocks:b.body,i:0,reps:Infinity,wc:b.cond});continue;}
     if(b.t==="call"){
-      const body=(r.routines&&r.routines[b.fn])||[];
-      if(!body.length){fr.i++;continue;}
+      const f=routineOf(r,b.fn);
+      if(!f.body.length){fr.i++;continue;}
       if(r.frames.length>30){ // recursion with no base case
-        stopRobot(r);toast("🔁 "+r.name+": routine "+b.fn+" called itself too many times!");return;}
-      r.curUid=b.uid;r.frames.push({blocks:body,i:0,reps:1});continue;}
+        stopRobot(r);toast("🔁 "+r.name+": function "+b.fn+" called itself too many times!");return;}
+      const saved=fnEnter(r,f,b);
+      r.curUid=b.uid;
+      r.frames.push({blocks:f.body,i:0,reps:1,fn:1,out:b.out||null,saved});continue;}
+    if(b.t==="ret"){
+      // hand a value back: unwind to and including the nearest function frame
+      const val=resolveVal(r,b.val);
+      let done=false;
+      while(r.frames.length){
+        const f2=r.frames.pop();
+        if(f2.fn){fnExit(r,f2,val);done=true;break;}
+      }
+      const pr=r.frames[r.frames.length-1];
+      if(pr&&done){pr.i++;continue;}
+      stopRobot(r);return;}
     if(b.t==="if"){
       const br=evalCond(r,b.cond)?b.body:(b.els||[]);
       if(br.length){r.curUid=b.uid;r.frames.push({blocks:br,i:0,reps:1});}
@@ -241,6 +256,24 @@ function doAction(r,b){
       if(k<0){r.blocked=true;break;}
       radioPost(b.opt||"tree",a.x,a.y,robotIndex(r),bagCount(r));
       r.pop=1;addPop(r.x,r.y,"📡 "+(RADIO_EM[b.opt]||"")); sfxIf(r,880,.05);
+      break;}
+    case "give":{
+      // pass everything to whoever is standing on the tile ahead
+      const mate=robots.find(x=>x!==r&&x.x===a.x&&x.y===a.y);
+      if(!mate){r.blocked=true;sfxIf(r,180,.05);break;}
+      let moved=0;
+      for(const res in r.inv){
+        const space=Math.max(0,mate.cap-bagCount(mate));
+        if(space<=0)break;
+        const take=Math.min(space,r.inv[res]);
+        if(take<=0)continue;
+        mate.inv[res]+=take;r.inv[res]-=take;moved+=take;
+      }
+      if(!moved){r.blocked=true;sfxIf(r,180,.05);break;}
+      r.pop=1;mate.pop=1;
+      addPop(mate.x,mate.y,"📦 +"+moved);
+      burst(mate.x,mate.y,"sparkle");
+      sfxIf(r,720,.05);updateHud();
       break;}
     case "goTo":{
       // walk to whatever the team last pinned on this channel. Nothing pinned (or
@@ -396,15 +429,27 @@ function findNearest(r,what){
 function findNearestList(r,what,max){
   const out=[];
   const R2=14;
+  // 💧 water is terrain, not an object; 🏪 market and 🏠 home are fixed places.
+  // Everything else is an object on a tile.
   for(let dy=-R2;dy<=R2;dy++)for(let dx=-R2;dx<=R2;dx++){
     const x=r.x+dx,y=r.y+dy;if(!inB(x,y))continue;
-    const k=key(x,y), o=objects.get(k);if(!o)continue;
-    const ok=(what==="tree")?(o.type==="tree"&&o.stage===2):(o.type===what);
+    const k=key(x,y);
+    let ok;
+    if(what==="water")ok=terrain[k]===T_WATER&&!(objects.get(k)||{type:0}).type;
+    else{
+      const o=objects.get(k);
+      if(!o)continue;
+      ok=(what==="tree")?(o.type==="tree"&&o.stage===2):(o.type===what);
+    }
     if(!ok)continue;
     const d=Math.abs(dx)+Math.abs(dy);
     if(d<=0)continue;
     out.push({x,y,d,taken:claimedByOther(r,k)?1:0});
   }
+  // the market and home are single known spots — reachable from anywhere, not
+  // just inside the 14-tile scan window
+  if(what==="market"&&!out.length&&marketPos)out.push({x:marketPos.x,y:marketPos.y,d:0,taken:0});
+  if(what==="home"&&!out.length&&homePos)out.push({x:homePos.x,y:homePos.y,d:0,taken:0});
   out.sort((a,b)=>a.taken-b.taken||a.d-b.d);
   return out.slice(0,max||6);
 }

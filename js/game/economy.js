@@ -83,18 +83,42 @@ function marketTick(){
 }
 
 /* ---- 📋 orders: a goal with a clock ---- */
+/* Orders come in two shapes, and which one is up is what makes "parallel" or
+   "cooperative" the right answer — the difference is played, not explained.
+
+   ⇉ SPREAD asks for two or three DIFFERENT resources in modest amounts. They sit
+     in different places, so the fast answer is every robot taking one resource and
+     running the whole loop itself: pure parallelism.
+
+   ⛓ BULK asks for a LOT of one resource. Volume is far past one bag, so the job
+     becomes round trips and the fast answer is a pipeline: gatherers stay on the
+     seam and 📦 Give Bag to a hauler that runs the route. It pays more per unit
+     precisely because it is travel-heavy.
+
+   Same board, same clock, same 🪙/min readout — so the player sees which shape of
+   fleet wins which shape of job. */
 function newOrder(){
   const m=marketReady();
-  // ask for two resources, weighted toward what the market wants
   const pool=MKT_RES.filter(k=>k!=="water");
-  const a=m.want!=="water"?m.want:pool[Math.floor(Math.random()*pool.length)];
-  let b=pool[Math.floor(Math.random()*pool.length)];
-  if(b===a)b=pool[(pool.indexOf(a)+1)%pool.length];
-  const amt=r2=>Math.max(4,Math.round((6+Math.random()*14)*(3/Math.max(1,RES[r2].price))*2));
-  const need={};need[a]=amt(a);need[b]=amt(b);
+  const bulk=Math.random()<0.45;
+  const need={};
+  let shape;
+  if(bulk){
+    shape="bulk";
+    const a=(m.want!=="water")?m.want:pool[Math.floor(Math.random()*pool.length)];
+    // deliberately several bags' worth, so the trip is the cost, not the mining
+    need[a]=Math.max(18,Math.round((26+Math.random()*22)*(3/Math.max(1,RES[a].price))));
+  }else{
+    shape="spread";
+    const a=(m.want!=="water")?m.want:pool[Math.floor(Math.random()*pool.length)];
+    let b=pool[Math.floor(Math.random()*pool.length)];
+    if(b===a)b=pool[(pool.indexOf(a)+1)%pool.length];
+    const amt=r2=>Math.max(4,Math.round((6+Math.random()*14)*(3/Math.max(1,RES[r2].price))*2));
+    need[a]=amt(a);need[b]=amt(b);
+  }
   let reward=0;for(const k in need)reward+=need[k]*priceOf(k);
-  reward=Math.round(reward*1.7)+40;              // beating the clock beats selling
-  m.order={need,got:{},until:now+ORDER_MS,reward};
+  reward=Math.round(reward*(bulk?2.1:1.7))+40;   // hauling is paid for
+  m.order={need,got:{},until:now+ORDER_MS,reward,shape};
   bigToast("📋 New order! "+orderText(m.order)+" → "+reward+" 🪙");
   sfx(660,.08);sfx(880,.08,.1);
 }
@@ -226,7 +250,7 @@ function renderMarket(){
   let html='<button class="tk-btn'+(ev?" live":"")+'" type="button" aria-expanded="'+open+'">'+
     '<span class="tk-ic">📈</span>'+
     '<span class="tk-rate">🪙/min '+cpm+'</span>'+
-    (m.order?'<span class="tk-clk">⏱ '+mktClock(m.order.until)+'</span>':'')+
+    (m.order?'<span class="tk-shape">'+(m.order.shape==="bulk"?"⛓":"⇉")+'</span><span class="tk-clk">⏱ '+mktClock(m.order.until)+'</span>':'')+
     '<span class="tk-car">'+(open?"▴":"▾")+'</span></button>';
   if(open){
     html+='<div class="tk-panel">';
@@ -243,7 +267,7 @@ function renderMarket(){
     html+='</div>';
     html+='<div class="tk-note">'+RES[m.want].em+' is most wanted right now — it sells for a premium.</div>';
     if(m.order){
-      html+='<div class="tk-order"><b>📋</b> '+orderText(m.order)+
+      html+='<div class="tk-order"><b>'+(m.order.shape==="bulk"?"⛓":"⇉")+'</b> '+orderText(m.order)+
         ' <span class="tk-rw">'+m.order.reward+' 🪙</span>'+
         ' <span class="tk-clk">⏱ '+mktClock(m.order.until)+'</span></div>';
     }

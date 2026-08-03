@@ -40,6 +40,7 @@ $("mgGoal").addEventListener("click",()=>$("mgGoal").classList.toggle("open"));
 $("projClose").addEventListener("click",()=>$("projects").classList.remove("open"));
 $("mgGuide").addEventListener("click",()=>{$("mgCreatorBar").classList.remove("setup");openGuide();});
 $("guideClose").addEventListener("click",()=>closeGuide());
+$("funcLibClose").addEventListener("click",()=>closeFuncLib());
 /* --- challenge creator controls (the tool strip renders itself in mgToolsUI) --- */
 $("mgBrickDec").addEventListener("click",()=>mgStepArg(-1));
 $("mgBrickInc").addEventListener("click",()=>mgStepArg(1));

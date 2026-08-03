@@ -19,7 +19,7 @@ function buildSave(){
     // by design and simply do not come back.
     market:market?{prices:market.prices,want:market.want,
       wantIn:Math.max(0,market.wantAt-now),
-      order:market.order?{need:market.order.need,got:market.order.got,
+      order:market.order?{need:market.order.need,got:market.order.got,shape:market.order.shape,
         untilIn:Math.max(0,market.order.until-now),reward:market.order.reward}:null}:null};
 }
 let saveT=null, cloudT=null;
@@ -45,8 +45,9 @@ function applySave(d){
     unlocks=Object.assign({loops:false,logic:false,smart:false,vars:false,team:false},d.unlocks);
     muted=!!d.muted;
     tut.done=d.v===1?true:!!d.tutDone;
-    player=Object.assign({xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{},myChallenges:[],academy:{}},d.player||{});
+    player=Object.assign({xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{},myChallenges:[],academy:{},funcLib:[]},d.player||{});
     if(!player.academy)player.academy={};
+    if(!player.funcLib)player.funcLib=[];
     market=freshMarket();
     if(d.market){
       market.prices=Object.assign(market.prices,d.market.prices||{});
@@ -54,7 +55,7 @@ function applySave(d){
       market.wantAt=(d.market.wantIn||MKT_WANT_MS);
       const o=d.market.order;
       // an order whose clock ran out while you were away is simply gone
-      if(o&&o.untilIn>0)market.order={need:o.need,got:o.got||{},until:o.untilIn,reward:o.reward};
+      if(o&&o.untilIn>0)market.order={need:o.need,got:o.got||{},until:o.untilIn,reward:o.reward,shape:o.shape||'spread'};
     }
     skills=freshSkills();
     if(d.skills)for(const k in skills)if(d.skills[k])skills[k]=d.skills[k];
