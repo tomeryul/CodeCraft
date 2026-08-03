@@ -863,13 +863,29 @@ async function ev(expr) {
     out.lodeReal=lodeKeys.every(k=>objects.has(k));
     market.event.until=now-1; eventTick();
     out.lodeSinks=lodeKeys.every(k=>!objects.has(k));   // untouched seam goes away
-    // --- the ticker renders, and 🪙/min tracks recent earnings ---
+    // --- the ticker is ONE handle you tap open; 🪙/min tracks recent earnings ---
     noteEarning(120);
     out.cpm=coinsPerMin()>=120;
     $("editor").classList.remove("open");$("projects").classList.remove("open");
-    renderMarket();
     const tk=$("ticker");
-    out.ticker=tk.querySelectorAll('.tk').length>=MKT_RES.length;
+    tk.classList.remove("open"); renderMarket();
+    // collapsed: the rate and the order clock are still on show, prices are folded away
+    out.handle=!!tk.querySelector('.tk-btn');
+    out.collapsedRate=/min/.test((tk.querySelector('.tk-rate')||{}).textContent||"");
+    out.collapsedNoPrices=tk.querySelectorAll('.tk-panel .tk').length===0;
+    // an event is never lost while folded — the handle goes .live
+    market.event={kind:'rush',res:'iron',until:now+30000};
+    renderMarket();
+    out.liveWhileFolded=tk.querySelector('.tk-btn').classList.contains('live');
+    // tapping the handle opens it; every price is there, the wanted one flagged
+    tk.querySelector('.tk-btn').click();
+    out.opens=tk.classList.contains('open');
+    out.openPrices=tk.querySelectorAll('.tk-panel .tk').length===MKT_RES.length;
+    out.openHot=tk.querySelectorAll('.tk-panel .tk.hot').length>=1;
+    out.openEvent=!!tk.querySelector('.tk-panel .tk-ev');
+    tk.querySelector('.tk-btn').click();
+    out.closesAgain=!tk.classList.contains('open');
+    market.event=null; tk.classList.remove('open'); renderMarket();
     out.py=toPy([{t:'read',uid:'m1',name:'p',src:'price',opt:'crystal'}],'');
     objects=new Map(); radio={}; market=freshMarket();
     return JSON.stringify(out);
@@ -889,8 +905,12 @@ async function ev(expr) {
   check("💎 a rich seam really appears and posts itself on the 📻 channel",
     MK.lodeSpawned === true && MK.lodeOnRadio === true && MK.lodeReal === true, mkt);
   check("...and what is left of it sinks away when it expires", MK.lodeSinks === true, mkt);
-  check("the ticker renders prices and 🪙/min tracks earnings",
-    MK.ticker === true && MK.cpm === true, mkt);
+  check("the market folds into one handle, keeping 🪙/min and the order clock",
+    MK.handle === true && MK.cpm === true && MK.collapsedRate === true && MK.collapsedNoPrices === true, mkt);
+  check("...a live event still shows through while it's folded", MK.liveWhileFolded === true, mkt);
+  check("...and tapping it opens every price, the wanted one flagged",
+    MK.opens === true && MK.openPrices === true && MK.openHot === true &&
+    MK.openEvent === true && MK.closesAgain === true, mkt);
   check("a price read generates Python", /market\.price\("crystal"\)/.test(MK.py), mkt);
 
   console.log("▶ 🚶 Walk To: real pathfinding to a target, not just facing it");

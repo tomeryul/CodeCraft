@@ -206,7 +206,13 @@ function coinsPerMin(){
   return m.earnedWindow.reduce((s,e)=>s+(e.at>=cut?e.n:0),0);
 }
 
-/* ---- the ticker: prices, the order and its clock, live under the top bar ---- */
+/* ---- the market handle: ONE button under the top bar. Prices, the live event
+   and the 📋 order used to be three permanent rows over the world; now they are
+   one line you tap open. Same numbers, same tick, just folded away. ---- */
+function mktClock(t){
+  const s=Math.max(0,Math.ceil((t-now)/1000));
+  return Math.floor(s/60)+":"+("0"+(s%60)).slice(-2);
+}
 function renderMarket(){
   const el=$("ticker");if(!el)return;
   const m=marketReady();
@@ -214,25 +220,41 @@ function renderMarket(){
   el.style.display=showing?"":"none";
   if(!showing)return;
   const ev=m.event&&now<m.event.until?m.event:null;
-  let html='<div class="tk-row">';
-  for(const k of MKT_RES){
-    const hot=(m.want===k)||(ev&&ev.kind==="rush"&&ev.res===k);
-    html+='<span class="tk'+(hot?" hot":"")+'">'+RES[k].em+' '+priceOf(k)+
-      '<i>'+priceTrend(k)+'</i></span>';
-  }
+  const open=el.classList.contains("open");
   const cpm=coinsPerMin();
-  html+='<span class="tk rate" title="Coins earned in the last minute">🪙/min '+cpm+'</span>';
-  html+='</div>';
-  if(ev){
-    const left=Math.max(0,Math.ceil((ev.until-now)/1000));
-    const txt=ev.kind==="rush"?"📣 "+RES[ev.res].em+" RUSH":ev.kind==="night"?"🌙 Nightfall":"💎 Rich seam — on 📻";
-    html+='<div class="tk-ev '+ev.kind+'">'+txt+' · '+left+'s</div>';
-  }
-  if(m.order){
-    const left=Math.max(0,Math.ceil((m.order.until-now)/1000));
-    const mm=Math.floor(left/60), ss=("0"+(left%60)).slice(-2);
-    html+='<div class="tk-order"><b>📋</b> '+orderText(m.order)+
-      ' <span class="tk-rw">'+m.order.reward+' 🪙</span> <span class="tk-clk">⏱ '+mm+":"+ss+'</span></div>';
+  /* the handle: rate, the order clock, and a dot when the world is doing something */
+  let html='<button class="tk-btn'+(ev?" live":"")+'" type="button" aria-expanded="'+open+'">'+
+    '<span class="tk-ic">📈</span>'+
+    '<span class="tk-rate">🪙/min '+cpm+'</span>'+
+    (m.order?'<span class="tk-clk">⏱ '+mktClock(m.order.until)+'</span>':'')+
+    '<span class="tk-car">'+(open?"▴":"▾")+'</span></button>';
+  if(open){
+    html+='<div class="tk-panel">';
+    if(ev){
+      const txt=ev.kind==="rush"?"📣 "+RES[ev.res].em+" RUSH":ev.kind==="night"?"🌙 Nightfall":"💎 Rich seam — on 📻";
+      html+='<div class="tk-ev '+ev.kind+'">'+txt+' · '+Math.max(0,Math.ceil((ev.until-now)/1000))+'s</div>';
+    }
+    html+='<div class="tk-grid">';
+    for(const k of MKT_RES){
+      const hot=(m.want===k)||(ev&&ev.kind==="rush"&&ev.res===k);
+      html+='<span class="tk'+(hot?" hot":"")+'">'+RES[k].em+' '+priceOf(k)+
+        '<i>'+priceTrend(k)+'</i></span>';
+    }
+    html+='</div>';
+    html+='<div class="tk-note">'+RES[m.want].em+' is most wanted right now — it sells for a premium.</div>';
+    if(m.order){
+      html+='<div class="tk-order"><b>📋</b> '+orderText(m.order)+
+        ' <span class="tk-rw">'+m.order.reward+' 🪙</span>'+
+        ' <span class="tk-clk">⏱ '+mktClock(m.order.until)+'</span></div>';
+    }
+    html+='</div>';
   }
   el.innerHTML=html;
 }
+/* one delegated listener — renderMarket rewrites innerHTML on every tick */
+$("ticker").addEventListener("click",e=>{
+  if(!e.target.closest(".tk-btn"))return;
+  $("ticker").classList.toggle("open");
+  if(typeof sfx==="function")sfx(520,.03);
+  renderMarket();
+});

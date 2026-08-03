@@ -645,3 +645,181 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   display:inline-flex;align-items:center;gap:7px;backdrop-filter:blur(6px);}
 #ticker .tk-order .tk-rw{color:var(--accent2);font-weight:800;}
 #ticker .tk-order .tk-clk{color:var(--ink2);}
+/* =====================================================================
+   v3 — CALM PASS  (appended; visuals only, no markup or ids touched)
+   Rules: (1) one loud element per screen — the green run button; every
+   other control is a quiet glass surface. (2) loose buttons are grouped
+   into ONE object (status bar, tool tray, segmented pairs) instead of a
+   field of separate chunky pills. (3) one radius + one shadow language.
+   ===================================================================== */
+:root{
+  --glass:rgba(26,19,50,.8);
+  --glass-hi:rgba(255,255,255,.06);
+  --glass-on:rgba(255,255,255,.13);
+  --hair:rgba(255,255,255,.1);
+  --lift:0 6px 18px rgba(0,0,0,.34);
+}
+
+/* ---- top: one status bar + one tool tray (was 8 floating objects) ---- */
+#topbar{align-items:center;gap:10px;}
+#topbar #stats{flex-wrap:nowrap;gap:0;padding:3px;border-radius:999px;pointer-events:auto;
+  background:var(--glass);backdrop-filter:blur(16px);border:1px solid var(--hair);box-shadow:var(--lift);}
+#stats .chip{position:relative;background:none;border:none;box-shadow:none;backdrop-filter:none;
+  border-radius:999px;padding:5px 12px;font-size:13.5px;font-weight:700;gap:5px;}
+#stats .chip+.chip::before{content:"";position:absolute;left:0;top:50%;margin-top:-8px;
+  width:1px;height:16px;background:var(--hair);}
+#stats #lvlChip{padding-bottom:10px;}
+#stats #xpBar{left:12px;right:12px;bottom:4px;height:3px;}
+#topbar #tbBtns{padding:3px;gap:3px;border-radius:15px;pointer-events:auto;
+  background:var(--glass);backdrop-filter:blur(16px);border:1px solid var(--hair);box-shadow:var(--lift);}
+#tbBtns .iconbtn{width:38px;height:38px;border-radius:12px;font-size:17px;color:var(--ink);
+  background:var(--glass-hi);border:none;box-shadow:none;backdrop-filter:none;
+  transition:transform .09s,background .12s;}
+#tbBtns .iconbtn:active{transform:scale(.93);border-bottom-width:0;background:var(--glass-on);}
+
+/* ---- bottom: Code|Build as ONE segmented control, FAB is the only accent ---- */
+#bottombar{gap:0;align-items:center;}
+#bottombar #codeBtn,#bottombar #buildBtn{height:48px;padding:0 20px;font-size:15px;font-weight:700;gap:8px;
+  color:var(--ink);background:var(--glass);backdrop-filter:blur(16px);
+  border:1px solid var(--hair);box-shadow:var(--lift);transition:background .14s,transform .09s;}
+#bottombar #codeBtn{border-radius:16px 0 0 16px;border-right:none;
+  background:linear-gradient(180deg,rgba(150,104,255,.5),rgba(112,68,240,.5));}
+#bottombar #buildBtn{border-radius:0 16px 16px 0;}
+#bottombar #codeBtn:active,#bottombar #buildBtn:active{transform:none;background:var(--glass-on);}
+#bottombar #buildBtn.on{background:linear-gradient(180deg,var(--accent2),var(--accent));
+  color:var(--accent-text);border-color:transparent;}
+#fabRun{width:60px;height:60px;font-size:22px;border-bottom-width:4px;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.4), 0 6px 18px rgba(55,200,92,.34);}
+#fabRun.running{box-shadow:inset 0 2px 0 rgba(255,255,255,.28), 0 6px 18px rgba(255,93,115,.34);}
+
+/* ---- build tray: flat cells, one accent for the pick ---- */
+#buildBar{background:var(--glass);backdrop-filter:blur(18px);border:1px solid var(--hair);
+  border-radius:20px;box-shadow:var(--lift);padding:10px;}
+#buildBar .bb-cats{gap:3px;background:rgba(0,0,0,.24);border-radius:13px;padding:3px;}
+#buildBar .bb-cat{background:none;border:none;box-shadow:none;border-radius:10px;padding:8px 4px;}
+#buildBar .bb-cat:active{transform:none;border-bottom-width:0;background:var(--glass-hi);}
+#buildBar .bb-cat.sel{background:var(--glass-on);color:var(--ink);border:none;}
+#buildBar .bb-item{background:var(--glass-hi);border:1px solid transparent;border-radius:14px;}
+#buildBar .bb-item.sel{background:rgba(255,184,48,.18);border-color:rgba(255,184,48,.55);}
+#buildBar .bb-item.sel .bc{color:var(--accent2);}
+
+/* ---- sheets: one calm header everywhere ---- */
+.m-head{gap:12px;padding:6px 16px 10px;}
+.m-head .face{width:40px;height:40px;border-radius:13px;font-size:20px;
+  background:var(--glass-hi);border:1px solid var(--hair);border-bottom:1px solid var(--hair);box-shadow:none;}
+.m-head h3{font-size:16.5px;letter-spacing:.1px;}
+.m-head p{font-size:11.5px;line-height:1.4;}
+.m-head .x,.iconbtn.x{width:36px;height:36px;border-radius:12px;font-size:15px;
+  background:var(--glass-hi);border:1px solid var(--hair);box-shadow:none;color:var(--ink2);}
+.m-head .x:active,.iconbtn.x:active{transform:scale(.93);border-bottom-width:0;background:var(--glass-on);}
+
+/* ---- editor: three grouped clusters instead of six loose buttons ---- */
+.ed-head{padding:4px 12px 2px;gap:8px;}
+.ed-btns{gap:3px;padding:3px;border-radius:14px;background:rgba(0,0,0,.24);border:1px solid var(--hair);}
+.ed-btns button{width:32px;height:32px;border-radius:10px;font-size:14px;color:var(--ink);
+  background:var(--glass-hi);border:none;box-shadow:none;transition:transform .08s,background .12s;}
+.ed-btns button:active{transform:scale(.92);border-bottom-width:0;background:var(--glass-on);}
+.ed-btns .go{background:#2e9e4a;border:none;box-shadow:none;}
+.ed-btns .halt{background:rgba(207,74,96,.34);border:none;box-shadow:none;}
+#edMax{margin-right:3px;}
+#edClose{margin-left:3px;}
+.rchip{background:var(--glass-hi);border:1px solid var(--hair);font-size:12.5px;padding:6px 11px;}
+.rchip.sel{background:var(--glass-on);border-color:rgba(255,184,48,.6);box-shadow:none;}
+
+#tabs{margin:2px 12px 8px;padding:3px;gap:2px;border-radius:14px;background:rgba(0,0,0,.24);border:1px solid var(--hair);}
+#tabs button{padding:8px;border-radius:11px;background:none;font-size:13.5px;font-weight:700;}
+#tabs button.on{background:var(--glass-on);color:var(--ink);border-bottom:none;box-shadow:none;}
+#tabs #boardTabBtn.on{background:rgba(255,184,48,.2);color:var(--accent2);}
+
+/* selection actions: one strip, quiet until you need them */
+#selActions{gap:2px;padding:8px 0 2px;}
+#selActions button{background:var(--glass-hi);border:none;border-radius:10px;padding:8px 12px;
+  box-shadow:none;color:var(--ink);transition:transform .08s,background .12s;}
+#selActions button:active{transform:scale(.94);border-bottom-width:0;background:var(--glass-on);}
+#selActions .paste{background:rgba(63,142,207,.34);border:none;}
+#selActions .del{background:rgba(207,74,96,.34);border:none;}
+
+/* ---- blocks: keep the colour coding, drop the heavy 3-D ---- */
+.blk{border-bottom-width:2.5px;border-radius:12px;}
+.pblk{border-bottom-width:2.5px;border-radius:11px;box-shadow:inset 0 1px 0 rgba(255,255,255,.16);}
+.pcat h4{font-size:10px;letter-spacing:1.4px;opacity:.8;}
+.pcat .row{gap:5px;}
+#programWrap{background:rgba(0,0,0,.2);border-radius:14px;}
+
+/* ---- dialogs & overlays ---- */
+#shop{border-radius:22px;border:1px solid var(--hair);}
+.shopitem{background:var(--glass-hi);border:1px solid var(--hair);box-shadow:none;border-radius:14px;}
+.shopitem button{border-bottom-width:2.5px;}
+#shop .closerow button{background:var(--glass-hi);border:1px solid var(--hair);border-bottom:1px solid var(--hair);}
+#objMenu{border-radius:18px;border:1px solid var(--hair);}
+#objMenu button{background:var(--glass-hi);border:1px solid var(--hair);border-bottom:1px solid var(--hair);
+  box-shadow:none;font-weight:700;}
+#objMenu button:active{transform:scale(.95);border-bottom-width:1px;background:var(--glass-on);}
+#objMenu button.danger{background:rgba(181,58,77,.5);border-color:rgba(255,93,115,.4);}
+#chips button{background:var(--glass-hi);border:1px solid var(--hair);border-bottom:1px solid var(--hair);}
+#askrow button{border-bottom-width:2.5px;}
+#coach{border-width:1.5px;border-color:rgba(255,184,48,.7);background:rgba(23,18,48,.96);
+  backdrop-filter:blur(10px);box-shadow:var(--lift);}
+.toast{background:rgba(18,12,40,.94);backdrop-filter:blur(10px);border-color:var(--hair);box-shadow:var(--lift);}
+
+/* ---- phones: the status bar stacks instead of overflowing ---- */
+@media (max-width: 600px){
+  #topbar #stats{flex-wrap:wrap;border-radius:19px;gap:1px;}
+  #stats .chip{padding:4px 10px;font-size:12.5px;}
+  #stats .chip+.chip::before{display:none;}
+  #tbBtns .iconbtn{width:36px;height:36px;font-size:16px;border-radius:11px;}
+  #bottombar #codeBtn,#bottombar #buildBtn{height:46px;padding:0 15px;font-size:14px;}
+}
+
+/* ---- v3, second pass: sheet content follows the same language ---- */
+#projBanner{background:var(--glass-hi);border:1px solid var(--hair);border-bottom:1px solid var(--hair);
+  border-radius:16px;padding:11px 13px;box-shadow:none;color:var(--ink);gap:12px;}
+#projBanner:active{transform:scale(.99);border-bottom-width:1px;background:var(--glass-on);}
+#projBanner .pb-em{width:38px;height:38px;border-radius:12px;background:rgba(255,184,48,.16);
+  display:flex;align-items:center;justify-content:center;font-size:20px;flex:0 0 auto;}
+#projBanner .pb-tx small{color:var(--ink2);}
+#projBanner .pb-go{color:var(--accent2);opacity:1;font-size:15px;}
+.quest{background:var(--glass-hi);border:1px solid var(--hair);box-shadow:none;}
+.quest:has(button){border-color:rgba(255,184,48,.45);box-shadow:none;}
+.quest button{border-bottom-width:2.5px;}
+.quest button::after{display:none;}
+.acad-card{border-color:rgba(122,77,255,.45);box-shadow:none;}
+.skill{background:var(--glass-hi);border:1px solid var(--hair);}
+.qsec .secbtn{background:var(--glass-hi);border:1px solid var(--hair);border-bottom:1px solid var(--hair);}
+.qsec .secbtn:active{transform:scale(.94);border-bottom-width:1px;background:var(--glass-on);}
+.pcard{background:var(--glass-hi);border-color:var(--hair);box-shadow:none;}
+.pcard.hot{border-color:rgba(255,184,48,.5);box-shadow:none;}
+.authbtn{background:var(--glass-hi);border:1px solid var(--hair);border-bottom:1px solid var(--hair);}
+.authbtn:active{transform:scale(.97);border-bottom-width:1px;background:var(--glass-on);}
+.authbtn.go{background:#2e9e4a;border-color:transparent;}
+#ccCreate{background:var(--glass-hi);border:1px solid var(--hair);border-bottom:1px solid var(--hair);
+  box-shadow:none;border-radius:16px;color:var(--ink);}
+#ccCreate:active{transform:scale(.99);border-bottom-width:1px;background:var(--glass-on);}
+#buildBar .bb-cat.sel{background:rgba(255,184,48,.18);color:var(--accent2);}
+#buildBar .bb-res{color:var(--ink2);font-size:12.5px;}
+
+/* ---- the market handle: one row inside the top bar, panel folds out of it ---- */
+#topbar{flex-wrap:wrap;}
+#ticker{position:static;order:3;flex:0 0 100%;padding:0;margin-top:7px;gap:0;}
+#ticker .tk-btn{pointer-events:auto;display:inline-flex;align-items:center;gap:8px;font-family:inherit;
+  background:var(--glass);backdrop-filter:blur(16px);border:1px solid var(--hair);border-radius:999px;
+  padding:5px 12px;font-size:12px;font-weight:800;color:var(--ink);box-shadow:var(--lift);
+  transition:transform .09s,border-color .15s;}
+#ticker .tk-btn:active{transform:scale(.96);}
+#ticker .tk-btn.live{border-color:rgba(255,184,48,.65);}
+#ticker .tk-btn .tk-ic{display:inline-flex;}
+#ticker .tk-btn .tk-rate{color:#bff3c8;}
+#ticker .tk-btn .tk-clk{color:var(--accent2);}
+#ticker .tk-btn .tk-car{color:var(--ink2);font-size:10px;margin-left:-2px;}
+#ticker .tk-panel{pointer-events:auto;margin-top:7px;width:min(300px,calc(100vw - 92px));
+  background:var(--glass);backdrop-filter:blur(18px);border:1px solid var(--hair);border-radius:16px;
+  box-shadow:var(--lift);padding:10px;display:flex;flex-direction:column;gap:8px;}
+#ticker .tk-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+#ticker .tk{background:var(--glass-hi);border:1px solid var(--hair);border-radius:10px;
+  padding:5px 9px;font-size:12px;justify-content:space-between;backdrop-filter:none;box-shadow:none;}
+#ticker .tk.hot{background:rgba(255,184,48,.16);border-color:rgba(255,184,48,.6);color:var(--accent2);box-shadow:none;}
+#ticker .tk.rate{display:none;}
+#ticker .tk-note{font-size:11px;color:var(--ink2);line-height:1.45;}
+#ticker .tk-ev{border-radius:11px;padding:6px 11px;font-size:11.5px;box-shadow:none;}
+#ticker .tk-order{background:var(--glass-hi);border-color:rgba(122,77,255,.45);border-radius:12px;
+  flex-wrap:wrap;gap:6px 8px;backdrop-filter:none;}
