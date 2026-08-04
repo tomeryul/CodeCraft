@@ -177,7 +177,7 @@ function editParams(id){
   const t=prompt("What does function "+id+" take in?\nComma-separated names, or leave empty for none:",cur);
   if(t===null)return;
   pushUndo();
-  f.params=t.split(",").map(x=>x.trim().replace(/\W+/g,"_").slice(0,10)).filter(Boolean).slice(0,3);
+  f.params=t.split(",").map(x=>x.trim().replace(/\W+/g,"_").slice(0,10)).filter(Boolean).slice(0,4);
   sfx(560,.04); programChanged();
 }
 function renderProgram(){
@@ -249,11 +249,21 @@ function renderList(list,parent){
             ? '<button class="pbtn" data-p="aname" data-i="'+i+'">'+esc(av.name||"x")+'</button>'
             : '<button class="pbtn" data-p="adec" data-i="'+i+'">−</button><span class="num">'+(av.n|0)+'</span><button class="pbtn" data-p="ainc" data-i="'+i+'">＋</button>');
       });
-      inner+='<button class="pbtn" data-p="out">'+(b.out?"→ 📦 "+esc(b.out):"→ —")+'</button>';
+      const outs=callOuts(b);
+      inner+='<button class="pbtn" data-p="out">'+(outs.length?"→ 📦 "+outs.map(esc).join(", "):"→ —")+'</button>';
     }
     if(b.t==="ret"){
-      const v=b.val||{k:"num",n:0};
-      inner+=valCtl(v);
+      // one chip group per value handed back, plus ＋ / ✂ to change how many
+      const vs=retVals(b);
+      vs.forEach((v,i)=>{
+        if(i)inner+='<span class="pnm">,</span>';
+        inner+='<button class="pbtn" data-p="rkind" data-i="'+i+'">'+(v.k==="var"?"📦":"🔢")+'</button>'+
+          (v.k==="var"
+            ? '<button class="pbtn" data-p="rname" data-i="'+i+'">'+esc(v.name||"x")+'</button>'
+            : '<button class="pbtn" data-p="rdec" data-i="'+i+'">−</button><span class="num">'+(v.n|0)+'</span><button class="pbtn" data-p="rinc" data-i="'+i+'">＋</button>');
+      });
+      if(vs.length<4)inner+='<button class="pbtn" data-p="rmore" title="Give back one more value">＋val</button>';
+      if(vs.length>1)inner+='<button class="pbtn" data-p="rless" title="One fewer">✂</button>';
     }
     if(b.t==="read"&&b.src==="price")inner+='<button class="pbtn" data-p="pres">'+RES[b.opt||"wood"].em+'</button>';
     if(b.t==="broadcast"||b.t==="goTo")inner+='<button class="pbtn" data-p="ch">'+(RADIO_EM[b.opt]||"📻")+' '+b.opt+'</button>';
@@ -303,8 +313,26 @@ function renderList(list,parent){
         if(p==="pres")b.opt=MKT_RES[(MKT_RES.indexOf(b.opt)+1)%MKT_RES.length];
         if(p==="fn"){b.fn=ROUTINE_IDS[(ROUTINE_IDS.indexOf(b.fn)+1)%ROUTINE_IDS.length];b.args=[];}
         if(p==="out"){
-          const nm=prompt("Put the value it gives back into which variable?\n(empty = throw it away)",b.out||"result");
-          b.out=(nm===null)?b.out:(nm.trim().replace(/\W+/g,"_").slice(0,10)||null);
+          const cur=callOuts(b).join(", ");
+          const nm=prompt("Catch the values it gives back in which variables?\nComma-separated, in order. Empty = throw them away.",cur||"result");
+          if(nm!==null){
+            b.outs=nm.split(",").map(x=>x.trim().replace(/\W+/g,"_").slice(0,10)).filter(Boolean).slice(0,4);
+            delete b.out;
+          }
+        }
+        if(p==="rkind"||p==="rname"||p==="rdec"||p==="rinc"||p==="rmore"||p==="rless"){
+          b.vals=retVals(b).map(v=>Object.assign({},v)); delete b.val;
+          if(p==="rmore"){ if(b.vals.length<4)b.vals.push({k:"num",n:0}); }
+          else if(p==="rless"){ if(b.vals.length>1)b.vals.pop(); }
+          else{
+            const i=+btn.dataset.i;
+            if(!b.vals[i])b.vals[i]={k:"num",n:0};
+            const v=b.vals[i];
+            if(p==="rkind")b.vals[i]=v.k==="var"?{k:"num",n:0}:{k:"var",name:"x"};
+            else if(p==="rname")v.name=promptName(v.name);
+            else if(p==="rdec")v.n=(v.n|0)-1;
+            else if(p==="rinc")v.n=(v.n|0)+1;
+          }
         }
         if(p==="akind"||p==="aname"||p==="adec"||p==="ainc"){
           const i=+btn.dataset.i;

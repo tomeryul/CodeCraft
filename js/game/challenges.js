@@ -1035,7 +1035,7 @@ function mgTick(){
       }
       st.frames.pop();
       // falling off the end of a function returns 0 and restores the caller's scope
-      if(fr.fn)fnExit(mgRobot,fr,0);
+      if(fr.fn)fnExit(mgRobot,fr,[]);
       const p=st.frames[st.frames.length-1];
       if(p){p.i++;continue;}
       mgFinish();return;
@@ -1054,15 +1054,15 @@ function mgTick(){
       }
       const saved=fnEnter(mgRobot,f,b);
       mgRobot.curUid=b.uid;
-      st.frames.push({blocks:f.body,i:0,reps:1,fn:1,out:b.out||null,saved});continue;
+      st.frames.push({blocks:f.body,i:0,reps:1,fn:1,outs:callOuts(b),saved});continue;
     }
     if(b.t==="ret"){
       // hand a value back: unwind to and including the nearest function frame
-      const val=resolveVal(mgRobot,b.val);
+      const vals=retVals(b).map(v=>resolveVal(mgRobot,v));
       let done=false;
       while(st.frames.length){
         const f2=st.frames.pop();
-        if(f2.fn){fnExit(mgRobot,f2,val);done=true;break;}
+        if(f2.fn){fnExit(mgRobot,f2,vals);done=true;break;}
       }
       const pr=st.frames[st.frames.length-1];
       if(pr&&done){pr.i++;continue;}

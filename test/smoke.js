@@ -955,19 +955,43 @@ async function ev(expr) {
     v=run([{t:"setVar",uid:"v3",name:"z",val:{k:"num",n:1}},
            {t:"call",uid:"c6",fn:"A",args:[],out:"answer"}]);
     out.noReturn=(v.answer===0&&v.z===5);
+    // --- MANY in, MANY out: x, y = f(a, b) ---
+    r.routines={A:{params:["a","b"],body:[
+      {t:"setVar",uid:"m1",name:"sum",val:{k:"var",name:"a"}},
+      {t:"changeVar",uid:"m2",name:"sum",n:{k:"var",name:"b"}},
+      {t:"setVar",uid:"m3",name:"diff",val:{k:"var",name:"a"}},
+      {t:"changeVar",uid:"m4",name:"diff",n:-1},
+      {t:"ret",uid:"m5",vals:[{k:"var",name:"sum"},{k:"var",name:"diff"},{k:"num",n:42}]}]},
+      B:{params:[],body:[]}};
+    v=run([{t:"call",uid:"m6",fn:"A",args:[{k:"num",n:10},{k:"num",n:4}],outs:["s","d","tag"]}]);
+    out.multiIn=(v.s===14);                       // both arguments landed
+    out.multiOut=(v.d===9&&v.tag===42);           // all three values came back
+    // asking for fewer than it gives back is fine — you just take the first ones
+    v=run([{t:"call",uid:"m7",fn:"A",args:[{k:"num",n:2},{k:"num",n:3}],outs:["only"]}]);
+    out.takeFewer=(v.only===5&&v.d===undefined);
+    // asking for MORE than it gives back reads the extras as 0, never undefined
+    v=run([{t:"call",uid:"m8",fn:"A",args:[{k:"num",n:1},{k:"num",n:1}],outs:["p","q","r2","extra"]}]);
+    out.padsMissing=(v.extra===0);
+    // a missing argument reads as 0 too
+    v=run([{t:"call",uid:"m9",fn:"A",args:[{k:"num",n:7}],outs:["s2"]}]);
+    out.missingArgZero=(v.s2===7);
+    // the OLD single-value shapes still work, both sides
+    r.routines.A={params:[],body:[{t:"ret",uid:"m10",val:{k:"num",n:6}}]};
+    v=run([{t:"call",uid:"m11",fn:"A",args:[],out:"legacyOut"}]);
+    out.legacyShapes=(v.legacyOut===6);
     // --- old array-shaped routines still run (back-compat) ---
     r.routines={A:[{t:"setVar",uid:"o1",name:"old",val:{k:"num",n:8}}],B:[]};
     v=run([{t:"call",uid:"c7",fn:"A",args:[]}]);
     out.legacyRuns=v.old;
     out.legacyUpgraded=!Array.isArray(r.routines.A)&&routineOf(r,"A").body.length===1;
     // --- Python shows a real def with parameters and a return ---
-    r.routines={A:{params:["n"],body:[{t:"ret",uid:"p1",val:{k:"var",name:"n"}}]},B:{params:[],body:[]}};
-    r.program=[{t:"call",uid:"p2",fn:"A",args:[{k:"num",n:4}],out:"answer"}];
+    r.routines={A:{params:["n","m"],body:[{t:"ret",uid:"p1",vals:[{k:"var",name:"n"},{k:"var",name:"m"}]}]},B:{params:[],body:[]}};
+    r.program=[{t:"call",uid:"p2",fn:"A",args:[{k:"num",n:4},{k:"num",n:9}],outs:["a2","b2"]}];
     renderPy();
     const py=$("pyCode").textContent||"";
-    out.pyDef=/def routine_a\\(n\\):/.test(py);
-    out.pyRet=/return n/.test(py);
-    out.pyCall=/answer = routine_a\\(4\\)/.test(py);
+    out.pyDef=/def routine_a\\(n, m\\):/.test(py);
+    out.pyRet=/return n, m/.test(py);
+    out.pyCall=/a2, b2 = routine_a\\(4, 9\\)/.test(py);
     // --- 📚 the library: save, reload into the other slot, and it persists ---
     player.funcLib=[];
     window.prompt=()=>"dbl";
@@ -997,7 +1021,12 @@ async function ev(expr) {
   check("a function with no inputs still shares the caller variables (back-compat)", FN.noReturn === true, fn);
   check("old routines with no parameters still run, and upgrade in place",
     FN.legacyRuns === 8 && FN.legacyUpgraded === true, fn);
-  check("it renders as a real Python def with a parameter and a return",
+  check("a function takes MANY values in and hands MANY back",
+    FN.multiIn === true && FN.multiOut === true, fn);
+  check("...catching fewer takes the first ones; catching more reads the extras as 0",
+    FN.takeFewer === true && FN.padsMissing === true && FN.missingArgZero === true, fn);
+  check("...and the old single-value call/return shapes still work", FN.legacyShapes === true, fn);
+  check("it renders as real Python: def f(n, m) / return n, m / a, b = f(4, 9)",
     FN.pyDef === true && FN.pyRet === true && FN.pyCall === true, fn);
   check("📚 saving a function keeps its parameters", FN.saved === true, fn);
   check("...loading it into another slot copies it, never aliases it",

@@ -84,8 +84,8 @@ function newBlock(t){
   if(t==="if"){b.cond="treeAhead";b.body=[];b.els=[];}
   if(t==="whileLoop"){b.cond=(typeof mgState!=="undefined"&&mgState)?"brickHere":"treeAhead";b.body=[];}
   if(t==="read"){b.name="x";b.src="here";b.opt="wood";}
-  if(t==="call"){b.fn="A";b.args=[];b.out=null;}
-  if(t==="ret")b.val={k:"num",n:0};
+  if(t==="call"){b.fn="A";b.args=[];b.outs=[];}
+  if(t==="ret")b.vals=[{k:"num",n:0}];
   if(t==="wait")b.n=1;
   if(t==="rest")b.n=2;
   if(t==="build")b.opt="sapling";
@@ -143,9 +143,17 @@ function fnEnter(r,f,b){
   r.vars=scope;
   return saved;
 }
-function fnExit(r,fr,val){
+// A function hands back a LIST of values and the call names a LIST of variables
+// to catch them — the block form of `x, y = f(a, b)`. Both sides accept the old
+// single-value shape (`ret.val`, `call.out`), so every program written before
+// this keeps running and simply has a list of one.
+function retVals(b){return b.vals?b.vals:(b.val!==undefined?[b.val]:[]);}
+function callOuts(b){return b.outs?b.outs:(b.out?[b.out]:[]);}
+function fnExit(r,fr,vals){
   if(fr.saved)r.vars=fr.saved;   // only a scoped call swapped anything
-  if(fr.out)r.vars[fr.out]=val;
+  const outs=fr.outs||[];
+  for(let i=0;i<outs.length;i++)
+    r.vars[outs[i]]=(vals&&vals[i]!==undefined)?vals[i]:0;   // missing ones read as 0
 }
 function fnLabel(r,id){
   const f=routineOf(r,id);

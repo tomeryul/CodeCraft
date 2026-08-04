@@ -41,8 +41,11 @@ function toPy(list,ind){
       case "call":{
         const args=(b.args||[]).map(pyVal).join(", ");
         const c="routine_"+String(b.fn).toLowerCase()+"("+args+")";
-        P.push(ind+(b.out?b.out+" = "+c:c));break;}
-      case "ret":P.push(ind+"return "+pyVal(b.val));break;
+        const outs=(typeof callOuts==="function")?callOuts(b):(b.out?[b.out]:[]);
+        P.push(ind+(outs.length?outs.join(", ")+" = "+c:c));break;}
+      case "ret":{
+        const vs=(typeof retVals==="function")?retVals(b):(b.val!==undefined?[b.val]:[]);
+        P.push(ind+"return "+(vs.length?vs.map(pyVal).join(", "):"0"));break;}
       case "forever":
         P.push(ind+"while True:");
         P.push(b.body.length?toPy(b.body,ind+"    "):ind+"    pass");break;

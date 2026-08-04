@@ -102,7 +102,7 @@ function tickRobot(r){
       }
       r.frames.pop();
       // falling off the end of a function returns 0 and restores the caller's scope
-      if(fr.fn)fnExit(r,fr,0);
+      if(fr.fn)fnExit(r,fr,[]);
       const p=r.frames[r.frames.length-1];
       if(p){p.i++;continue;}
       stopRobot(r);return;
@@ -127,14 +127,14 @@ function tickRobot(r){
         stopRobot(r);toast("🔁 "+r.name+": function "+b.fn+" called itself too many times!");return;}
       const saved=fnEnter(r,f,b);
       r.curUid=b.uid;
-      r.frames.push({blocks:f.body,i:0,reps:1,fn:1,out:b.out||null,saved});continue;}
+      r.frames.push({blocks:f.body,i:0,reps:1,fn:1,outs:callOuts(b),saved});continue;}
     if(b.t==="ret"){
       // hand a value back: unwind to and including the nearest function frame
-      const val=resolveVal(r,b.val);
+      const vals=retVals(b).map(v=>resolveVal(r,v));
       let done=false;
       while(r.frames.length){
         const f2=r.frames.pop();
-        if(f2.fn){fnExit(r,f2,val);done=true;break;}
+        if(f2.fn){fnExit(r,f2,vals);done=true;break;}
       }
       const pr=r.frames[r.frames.length-1];
       if(pr&&done){pr.i++;continue;}
