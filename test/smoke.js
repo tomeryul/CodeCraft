@@ -1624,6 +1624,67 @@ async function ev(expr) {
   check("solving a level auto-advances to the next", AD.advanced === true, adv);
   check("clearing the last level completes the pack", AD.packDone === true && AD.exited === true, adv);
 
+  console.log("▶ creator: a banked level must not leak into the next one");
+  const leak = await ev(`(()=>{ try{
+    const out={};
+    const origSI=window.setInterval; window.setInterval=()=>0;
+    mgEnterCreator();
+    const p=mgState.proj;
+    // ---- level 1: a board, two 🔢 inputs and 🎁 starter routines ----
+    p.gw=4;p.gh=2;p.start={x:0,y:1,dir:1};p.cells=[[0,1],[1,1]];p.tiles=[];
+    p.initial=[[0,1,2],[1,1,1]];
+    mgState.robot={x:0,y:1,dir:1};mgSeed(mgState.robot,p);
+    setBudget(30);
+    mgAddCase();                              // input 1
+    p.initial=[[0,1,1],[1,1,2]];
+    mgAddCase();                              // input 2
+    mgRobot.routines.A={params:[],body:[{t:"move",uid:"L1"}]};
+    mgTogglePreset();
+    out.l1Cases=(p.cases||[]).length;
+    out.l1Preset=!!p.preset;
+    mgState.solved=true; mgAddStage();
+    // ---- the next level must start from nothing ----
+    out.nextCases=(mgState.proj.cases||[]).length;      // was 2 — the leak
+    out.nextPreset=!!mgState.proj.preset;               // was true — the leak
+    out.nextRoutines=routineOf(mgRobot,"A").body.length;
+    out.nextProgram=mgRobot.program.length;
+    out.cursorClear=(mgState.caseEdit===null);
+    out.banked1=(mgState.stages[0].cases||[]).length;   // level 1 kept its own
+    // ---- design level 2 with ONE input of its own ----
+    const p2=mgState.proj;
+    p2.gw=4;p2.gh=2;p2.start={x:0,y:1,dir:1};p2.cells=[[0,1],[1,1]];
+    p2.initial=[[0,1,5],[1,1,6]];
+    mgState.robot={x:0,y:1,dir:1};mgSeed(mgState.robot,p2);
+    mgAddCase();
+    out.l2Cases=(p2.cases||[]).length;                  // exactly 1, not 3
+    mgState.solved=true; mgAddStage();
+    out.stage2Cases=(mgState.stages[1].cases||[]).length;
+    // level 1 is untouched by anything level 2 did
+    out.stage1Still=(mgState.stages[0].cases||[]).length;
+    out.stage1First=JSON.stringify((mgState.stages[0].cases[0]||{}).initial);
+    // ---- and editing level 2's input cannot reach back into level 1 ----
+    mgEditStage(1);
+    mgLoadCase(0);
+    mgState.proj.initial=[[0,1,9],[1,1,9]];
+    mgAddCase();                                        // updates level 2's input
+    mgState.solved=true; mgAddStage();
+    out.afterEditStage1=JSON.stringify((mgState.stages[0].cases[0]||{}).initial);
+    out.afterEditStage2=JSON.stringify((mgState.stages[1].cases[0]||{}).initial);
+    out.independent=(out.afterEditStage1===out.stage1First)&&(out.afterEditStage2!==out.stage1First);
+    mgExit(false); document.getElementById("editor").classList.remove("open","max");
+    window.setInterval=origSI;
+    return JSON.stringify(out);
+  }catch(e){return JSON.stringify({ERR:e.message+" @ "+(e.stack||"").split("\\n")[1]});} })()`);
+  const LK = JSON.parse(leak);
+  if(LK.ERR) throw new Error("leak block threw: "+LK.ERR);
+  check("a level banks with its own inputs and starter routines",
+    LK.l1Cases === 2 && LK.l1Preset === true && LK.banked1 === 2, leak);
+  check("...and the NEXT level starts clean — no inputs, no preset, no solution",
+    LK.nextCases === 0 && LK.nextPreset === false &&
+    LK.nextRoutines === 0 && LK.nextProgram === 0 && LK.cursorClear === true, leak);
+  check("...so level 2 has only the input it was given", LK.l2Cases === 1 && LK.stage2Cases === 1, leak);
+  check("editing level 2 never reaches back into level 1", LK.independent === true && LK.stage1Still === 2, leak);
+
   console.log("▶ creator: Save/Publish gated behind proving solvable + edit/delete levels");
   const gate = await ev(`(()=>{
     const out={}; window.confirm=()=>true;

@@ -395,6 +395,7 @@ function mgEditStage(i){
   // Leave it in `stages`. It used to be spliced out and only put back by
   // "➕ Update level", so exiting or editing a different level lost it silently.
   mgState.editIndex=i;
+  mgState.caseEdit=null;mgState.caseBase=null;mgState.draftInitial=null;
   mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir};mgSeed(mgState.robot,p);
   mgState.solved=false;
   mgLoadSolution(sol);
@@ -539,11 +540,21 @@ function mgAddStage(){
     mgState.stages.push(snapshotStage(p));
     toast("🎬 Level "+mgState.stages.length+" banked — design the next, then 💾 Save the pack!");
   }
-  // reset the canvas for the next level (keep size / budget / difficulty / name)
+  // Reset EVERYTHING that belongs to a level, not just the tiles. Size, budget,
+  // difficulty and name are pack-wide and stay; the board, its 🔢 inputs, its 🎁
+  // starter routines and the author's solution are per level. Leaving any of them
+  // behind leaked one level's settings into the next — and because the next level
+  // then re-banked them, editing them looked like it was reaching back and
+  // changing the level before it.
   p.cells=[]; p.initial=[]; p.tiles=[]; p.start={x:0,y:0,dir:1};
+  p.cases=[]; p.preset=null;
   mgState.robot={x:0,y:0,dir:1}; mgSeed(mgState.robot,p);
   mgState.solved=false;
-  if(mgRobot)mgRobot.program=[];
+  mgState.caseEdit=null;      // or ➕ would UPDATE the old level's input
+  mgState.caseBase=null;
+  mgState.draftInitial=null;
+  if(mgRobot){mgRobot.program=[];mgRobot.routines={A:{params:[],body:[]},B:{params:[],body:[]}};}
+  edTarget="main";
   renderProgram();mgUpdateCount();
   sfx(680,.05);sfx(880,.05,.08);
   mgCreatorUI(); mgDraw();
