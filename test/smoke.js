@@ -1180,6 +1180,10 @@ async function ev(expr) {
     respawnQ.length=0;   // the 1s world tick re-adds harvested nodes at their old
                          // coordinates, which can drop a rock into the corridor
                          // this test paths through — that made it racy
+    // ...and the corridor itself has to BE walkable: this box is whatever the world
+    // generated otherwise, so a lake in it made the pathing assertion depend on the
+    // seed rather than on the code under test
+    for(let y=3;y<=9;y++)for(let x=3;x<=12;x++)terrain[key(x,y)]=T_GRASS;
     const a=robots[0];
     // a second robot to coordinate with
     while(robots.length<2)robots.push(makeRobot(homePos.x+1,homePos.y+1,"R2"));
@@ -1684,6 +1688,60 @@ async function ev(expr) {
     LK.nextRoutines === 0 && LK.nextProgram === 0 && LK.cursorClear === true, leak);
   check("...so level 2 has only the input it was given", LK.l2Cases === 1 && LK.stage2Cases === 1, leak);
   check("editing level 2 never reaches back into level 1", LK.independent === true && LK.stage1Still === 2, leak);
+
+  console.log("▶ creator: edit mode is visible and can be left");
+  const edm = await ev(`(()=>{ try{
+    const out={};
+    const origSI=window.setInterval; window.setInterval=()=>0;
+    mgEnterCreator();
+    const P=()=>mgState.proj;
+    const design=(w,h,budget,cell)=>{const p=P();p.gw=w;p.gh=h;setBudget(budget);
+      p.cells=[cell];p.initial=[];p.tiles=[];p.start={x:0,y:1,dir:1};
+      mgState.robot={x:0,y:1,dir:1};mgSeed(mgState.robot,p);mgState.solved=true;};
+    design(5,4,12,[1,1]); mgAddStage();
+    design(9,7,25,[2,2]); mgAddStage();
+    out.banked=mgState.stages.length;
+    out.hiddenWhenAdding=$("mgStageInfo").style.display==="none";
+    // tapping ✏️ enters edit mode — and it must SAY so
+    mgEditStage(0);
+    out.editIndex=mgState.editIndex;
+    out.shown=$("mgStageInfo").style.display!=="none";
+    out.saysWhich=/Editing level/.test($("mgStageInfo").textContent||"")&&
+                  /1/.test($("mgStageInfo").textContent||"");
+    out.btnSaysUpdate=/Update/.test($("mgAddStage").textContent||"");
+    out.hasCancel=!!$("mgCancelEdit");
+    // THE BUG: designing a fresh board here and pressing ➕ replaces level 1
+    design(6,5,20,[3,3]);
+    mgAddStage();
+    out.replacedNotAdded=(mgState.stages.length===2&&mgState.stages[0].gw===6);
+    // ...but now there is a way out. Redo it and cancel instead.
+    design(5,4,12,[1,1]); mgState.editIndex=null; mgState.stages[0].gw=5;
+    mgEditStage(0);
+    design(7,6,18,[4,4]);
+    mgCancelEdit();
+    out.cancelledIndex=(mgState.editIndex===null);
+    out.level1Untouched=(mgState.stages[0].gw===5);
+    out.boardCleared=(P().cells.length===0&&(P().cases||[]).length===0);
+    out.backToAdd=/Add level/.test($("mgAddStage").textContent||"");
+    out.hiddenAgain=$("mgStageInfo").style.display==="none";
+    // and ➕ now ADDS rather than replacing
+    design(8,3,15,[5,1]);
+    mgAddStage();
+    out.addsAfterCancel=(mgState.stages.length===3&&mgState.stages[2].gw===8&&mgState.stages[0].gw===5);
+    mgExit(false); document.getElementById("editor").classList.remove("open","max");
+    window.setInterval=origSI;
+    return JSON.stringify(out);
+  }catch(e){return JSON.stringify({ERR:e.message+" @ "+(e.stack||"").split("\\n")[1]});} })()`);
+  const EDM = JSON.parse(edm);
+  if(EDM.ERR) throw new Error("edit-mode block threw: "+EDM.ERR);
+  check("tapping ✏️ on a banked level says which level ➕ will overwrite",
+    EDM.shown === true && EDM.saysWhich === true && EDM.btnSaysUpdate === true &&
+    EDM.hasCancel === true && EDM.hiddenWhenAdding === true, edm);
+  check("...and in edit mode ➕ really does replace that level, not add one", EDM.replacedNotAdded === true, edm);
+  check("✖ leaves edit mode without touching the level, and clears the board",
+    EDM.cancelledIndex === true && EDM.level1Untouched === true &&
+    EDM.boardCleared === true && EDM.backToAdd === true && EDM.hiddenAgain === true, edm);
+  check("...after which ➕ adds a new level again", EDM.addsAfterCancel === true, edm);
 
   console.log("▶ creator: Save/Publish gated behind proving solvable + edit/delete levels");
   const gate = await ev(`(()=>{

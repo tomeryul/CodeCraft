@@ -337,7 +337,18 @@ function mgCreatorUI(){
   const dl=["","⭐ Easy","⭐⭐ Medium","⭐⭐⭐ Hard"];
   if($("mgDiff"))$("mgDiff").textContent=dl[p.diff||1];
   const banked=(mgState.stages&&mgState.stages.length)||0, editing=mgState.editIndex!=null;
-  if($("mgStageInfo"))$("mgStageInfo").textContent=editing?("✏️"+(mgState.editIndex+1)):(banked+1);
+  // Edit mode used to be invisible (this element was `hidden`), so after tapping
+  // ✏️ on a banked level the ➕ button quietly REPLACED that level instead of
+  // adding a new one — the author designed what they thought was the next level
+  // and watched an earlier one change. Say which level is open, and give a way out.
+  const si=$("mgStageInfo");
+  if(si){
+    si.style.display=editing?"flex":"none";
+    if(editing)si.innerHTML='<span class="edchip">✏️ Editing level <b>'+(mgState.editIndex+1)+
+      '</b> — ➕ updates it<button id="mgCancelEdit" title="Leave edit mode and start a new level">✖</button></span>';
+    const cb=$("mgCancelEdit");
+    if(cb)cb.addEventListener("click",()=>mgCancelEdit());
+  }
   if($("mgAddStage"))$("mgAddStage").textContent=editing?"➕ Update level":"➕ Add level";
   $("mgTitle").textContent="✏️ "+p.name+(banked?" · 🎬"+(banked+(editing?0:1)):"");
   // ---- gate Save / Add / Publish behind proving the level solvable ----
@@ -558,6 +569,24 @@ function mgAddStage(){
   renderProgram();mgUpdateCount();
   sfx(680,.05);sfx(880,.05,.08);
   mgCreatorUI(); mgDraw();
+}
+// step out of "editing level N" without touching it: the board clears and ➕ goes
+// back to adding a new level
+function mgCancelEdit(){
+  if(!mgState||!mgState.creator||mgState.editIndex==null)return;
+  const was=mgState.editIndex+1;
+  mgState.editIndex=null;
+  const p=mgState.proj;
+  p.cells=[]; p.initial=[]; p.tiles=[]; p.start={x:0,y:0,dir:1};
+  p.cases=[]; p.preset=null;
+  mgState.robot={x:0,y:0,dir:1}; mgSeed(mgState.robot,p);
+  mgState.solved=false;
+  mgState.caseEdit=null;mgState.caseBase=null;mgState.draftInitial=null;
+  if(mgRobot){mgRobot.program=[];mgRobot.routines={A:{params:[],body:[]},B:{params:[],body:[]}};}
+  edTarget="main";
+  toast("✖ Left level "+was+" as it was — designing a new level now.");
+  sfx(420,.05);
+  renderProgram();mgUpdateCount();mgCreatorUI();mgDraw();
 }
 /* ---------------- creator: painting the board ----------------
    Every tool goes through mgPaintTile, which is the SINGLE place that clears

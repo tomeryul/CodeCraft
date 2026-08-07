@@ -866,3 +866,12 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   background:var(--glass-hi);color:var(--ink);border:1px solid var(--hair);border-bottom:none;
   border-radius:12px;padding:11px 13px;font-size:13px;font-weight:700;box-shadow:none;}
 #funcLibBody .rowbtn:active{transform:scale(.99);background:var(--glass-on);}
+/* ✏️ which banked level the ➕ button will overwrite — this was `hidden`, so the
+   creator could silently replace an earlier level instead of adding a new one */
+#mgStageInfo{margin-top:2px;}
+#mgStageInfo .edchip{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:800;
+  background:rgba(122,77,255,.24);border:1.5px solid rgba(122,77,255,.65);color:var(--ink);
+  border-radius:999px;padding:4px 5px 4px 11px;}
+#mgStageInfo .edchip b{color:var(--accent2);}
+#mgStageInfo .edchip button{width:24px;height:24px;padding:0;border-radius:999px;font-size:12px;
+  background:rgba(0,0,0,.28);color:var(--ink);border:none;box-shadow:none;}
