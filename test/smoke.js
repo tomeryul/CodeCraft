@@ -609,9 +609,10 @@ async function ev(expr) {
       p.initial=[[0,1,2],[1,1,1]];                 // out of order
       mgState.robot={x:0,y:1,dir:1};mgSeed(mgState.robot,p);
       setBudget(30);
-      mgAddCase();                                  // input 1
-      p.initial=[[0,1,1],[1,1,2]];                  // already in order
-      mgAddCase();                                  // input 2
+      mgNewCase();                                  // input 1 = this board; input 2 = blank
+      p.initial=[[0,1,1],[1,1,2]];                  // draw input 2: already in order
+      p.cells=[[0,1],[1,1]];                        // ...on its own copy of the blueprint
+      mgSyncCase();
       mgToggleCaseHidden(1);
       out.nCases=p.cases.length; out.hidden1=!!p.cases[1].hidden;
       out.addBlanks=mgState.solved===false;
@@ -1639,9 +1640,8 @@ async function ev(expr) {
     p.initial=[[0,1,2],[1,1,1]];
     mgState.robot={x:0,y:1,dir:1};mgSeed(mgState.robot,p);
     setBudget(30);
-    mgAddCase();                              // input 1
-    p.initial=[[0,1,1],[1,1,2]];
-    mgAddCase();                              // input 2
+    mgNewCase();                              // input 1 = this board; input 2 = blank
+    p.initial=[[0,1,1],[1,1,2]];p.cells=[[0,1],[1,1]];mgSyncCase();   // draw input 2
     mgRobot.routines.A={params:[],body:[{t:"move",uid:"L1"}]};
     mgTogglePreset();
     out.l1Cases=(p.cases||[]).length;
@@ -1654,13 +1654,14 @@ async function ev(expr) {
     out.nextProgram=mgRobot.program.length;
     out.cursorClear=(mgState.caseEdit===null);
     out.banked1=(mgState.stages[0].cases||[]).length;   // level 1 kept its own
-    // ---- design level 2 with ONE input of its own ----
+    // ---- design level 2 with inputs of its OWN ----
     const p2=mgState.proj;
     p2.gw=4;p2.gh=2;p2.start={x:0,y:1,dir:1};p2.cells=[[0,1],[1,1]];
     p2.initial=[[0,1,5],[1,1,6]];
     mgState.robot={x:0,y:1,dir:1};mgSeed(mgState.robot,p2);
-    mgAddCase();
-    out.l2Cases=(p2.cases||[]).length;                  // exactly 1, not 3
+    mgNewCase();
+    p2.initial=[[0,1,6],[1,1,5]];p2.cells=[[0,1],[1,1]];mgSyncCase();
+    out.l2Cases=(p2.cases||[]).length;                  // exactly 2 — never level 1's as well
     mgState.solved=true; mgAddStage();
     out.stage2Cases=(mgState.stages[1].cases||[]).length;
     // level 1 is untouched by anything level 2 did
@@ -1670,7 +1671,7 @@ async function ev(expr) {
     mgEditStage(1);
     mgLoadCase(0);
     mgState.proj.initial=[[0,1,9],[1,1,9]];
-    mgAddCase();                                        // updates level 2's input
+    mgSyncCase();                                       // edits land in level 2's input 1
     mgState.solved=true; mgAddStage();
     out.afterEditStage1=JSON.stringify((mgState.stages[0].cases[0]||{}).initial);
     out.afterEditStage2=JSON.stringify((mgState.stages[1].cases[0]||{}).initial);
@@ -1686,10 +1687,10 @@ async function ev(expr) {
   check("...and the NEXT level starts clean — no inputs, no preset, no solution",
     LK.nextCases === 0 && LK.nextPreset === false &&
     LK.nextRoutines === 0 && LK.nextProgram === 0 && LK.cursorClear === true, leak);
-  check("...so level 2 has only the input it was given", LK.l2Cases === 1 && LK.stage2Cases === 1, leak);
+  check("...so level 2 has only the inputs it was given", LK.l2Cases === 2 && LK.stage2Cases === 2, leak);
   check("editing level 2 never reaches back into level 1", LK.independent === true && LK.stage1Still === 2, leak);
 
-  console.log("▶ creator: ➕ Add input clears the board for the next input");
+  console.log("▶ creator: ➕ clears the board FIRST, and an input owns its whole board");
   const aclr = await ev(`(()=>{ try{
     const out={};
     const origSI=window.setInterval; window.setInterval=()=>0;
@@ -1699,76 +1700,95 @@ async function ev(expr) {
     p.initial=[[0,1,2],[1,1,1]];
     mgState.robot={x:0,y:1,dir:1};mgSeed(mgState.robot,p);
     setBudget(30);
-    mgAddCase();                                    // input 1
+
+    // ---- ➕ #1: what was drawn becomes input 1, and a BLANK board opens for input 2
+    mgNewCase();
+    out.made=(p.cases||[]).length;                     // 2 — input 1 + the blank one
     out.case1=JSON.stringify(p.cases[0].initial);
-    out.boardCleared=(p.initial||[]).length===0;    // the whole point
-    out.numberReset=(mgState.brickNum===1);         // the 🔢 No. picker restarts too
-    out.robotCleared=mgState.robot.bricks.size===0; // ...and the canvas actually redrew empty
-    out.cursorClear=(mgState.caseEdit===null);      // ➕ ADDS the next one, never updates #1
-    // pressing ➕ again on the empty board is refused rather than banking a twin
-    mgAddCase();
-    out.refusedEmpty=(p.cases.length===1);
-    // an empty canvas + banked inputs still counts as a designed level
-    out.stillDesigned=mgHasDesign(p) && mgHasNumbers(p);
-    // lay out a DIFFERENT input — two inputs, two different boards
-    p.initial=[[0,1,1],[1,1,2]];
-    mgSeed(mgState.robot,p);
-    mgAddCase();
-    out.nCases=p.cases.length;
-    out.distinct=JSON.stringify(p.cases[1].initial)!==out.case1;
-    // banking a twin of an existing input is refused, whatever order it was tapped in
-    p.initial=[[1,1,2],[0,1,1]];
-    mgSeed(mgState.robot,p);
-    mgAddCase();
-    out.twinRefused=(p.cases.length===2);
-    // a level built before ➕ cleared the board can still be CARRYING twins, so
-    // the chip strip has to point at them
-    p.cases.push({initial:JSON.parse(JSON.stringify(p.cases[0].initial))});
+    out.case1Cells=JSON.stringify(p.cases[0].cells);   // input 1 kept the blueprint
+    out.onInput2=(mgState.caseEdit===1);
+    out.blocksCleared=(p.initial||[]).length===0;
+    out.drawCleared=(p.cells||[]).length===0;          // the DRAWING resets too
+    out.tilesCleared=(p.tiles||[]).length===0;
+    out.canvasCleared=mgState.robot.bricks.size===0;
+    out.numberReset=(mgState.brickNum===1);
+
+    // ---- painting now lands straight in input 2 — no "bank" step at all
+    mgState.paintMode="paint"; mgState.brickNum=null;
+    mgPaintTile(2,1); mgPaintTile(3,1);                // a DIFFERENT blueprint
+    mgState.paintMode="brick"; mgState.brickNum=9;
+    mgPaintTile(2,1);
+    out.liveCells=JSON.stringify(p.cases[1].cells);
+    out.liveBlocks=JSON.stringify(p.cases[1].initial);
+    out.input1Untouched=JSON.stringify(p.cases[0].cells)===out.case1Cells;
+    out.distinctDraw=out.liveCells!==out.case1Cells;   // each input has its own drawing
+
+    // ---- a DRAWN input can be left for a new one...
+    mgNewCase();
+    out.third=(p.cases.length===3&&mgState.caseEdit===2&&(p.cells||[]).length===0);
+    // ...but the blank one it just handed over must be drawn before another
+    mgNewCase();
+    out.blankGuard=(p.cases.length===3&&mgState.caseEdit===2);
+
+    // ---- ✏️ switches inputs, carrying the whole board with it
+    mgLoadCase(0);
+    out.backToOne=(mgState.caseEdit===0)&&JSON.stringify(p.initial)===out.case1
+                  &&JSON.stringify(p.cells)===out.case1Cells;
+    // an empty canvas is still a designed numbered level while inputs hold the work
+    out.stillDesigned=mgHasDesign(p)&&mgHasNumbers(p);
+
+    // ---- twins are flagged live (and catch what older levels already carry)
+    p.cases.push(JSON.parse(JSON.stringify(p.cases[0])));
     mgCreatorUI();
     out.twinFlagged=document.querySelectorAll("#mgCaseEdit .lvchip.dup").length;
     out.originalNotFlagged=!document.querySelectorAll("#mgCaseEdit .lvchip")[0].classList.contains("dup");
-    mgDeleteCase(2);
+    mgDeleteCase(3);
     mgCreatorUI();
-    out.flagGoneAfterDelete=document.querySelectorAll("#mgCaseEdit .lvchip.dup").length;
-    p.initial=[];mgReset();
-    // ✏️ still puts an input back on the board, and ➕ then UPDATES it
+    out.flagGone=document.querySelectorAll("#mgCaseEdit .lvchip.dup").length;
+
+    // ---- deleting the input on screen shows a neighbour rather than a dead board
+    mgLoadCase(2); mgDeleteCase(2);
+    out.afterDelete=(mgState.caseEdit===1)&&JSON.stringify(p.cells)===out.liveCells;
+
+    // ---- a run overlays every input, then hands the author their own board back
     mgLoadCase(0);
-    out.loadedBack=JSON.stringify(p.initial)===out.case1;
-    p.initial=[[0,1,7],[1,1,8]];
-    mgAddCase();
-    out.stillTwo=p.cases.length===2;
-    out.updated=JSON.stringify(p.cases[0].initial)==='[[0,1,7],[1,1,8]]';
-    out.clearedAfterUpdate=(p.initial||[]).length;  // an UPDATE keeps the board as-is
-    // ...and a run hands the author back the empty board it started from
-    p.initial=[];mgReset();
     mgRobot.program=[{t:'move',uid:'R1'}];mgRobot.routines={A:[],B:[]};
     mgRun();
     for(let g=0;g<10&&mgState&&mgState.running;g++)for(let t=0;t<900&&mgState&&mgState.running;t++)mgTick();
-    out.boardStillClear=(mgState.proj.initial||[]).length===0;
+    out.boardHandedBack=JSON.stringify(p.cells)===out.case1Cells&&JSON.stringify(p.initial)===out.case1;
+
+    // ---- what gets SAVED opens on input 1, not on whatever was on screen
+    mgLoadCase(1); mgState.solved=true;
+    saveMyChallenge();
+    const e2=player.myChallenges[player.myChallenges.length-1];
+    out.savedBase=JSON.stringify(e2.cells)===out.case1Cells;
+    out.savedCases=(e2.cases||[]).length;
     mgExit(false); document.getElementById("editor").classList.remove("open","max");
     window.setInterval=origSI;
     return JSON.stringify(out);
   }catch(e){return JSON.stringify({ERR:e.message+" @ "+(e.stack||"").split("\\n")[1]});} })()`);
   const ACL = JSON.parse(aclr);
-  if(ACL.ERR) throw new Error("add-case block threw: "+ACL.ERR);
-  check("➕ Add input banks the board and then clears it",
-    ACL.boardCleared === true && ACL.robotCleared === true && ACL.cursorClear === true &&
-    ACL.numberReset === true, aclr);
-  check("an input identical to one already banked is refused",
-    ACL.twinRefused === true, aclr);
-  check("...and twins already saved in an older level are flagged for deletion",
-    ACL.twinFlagged === 1 && ACL.originalNotFlagged === true && ACL.flagGoneAfterDelete === 0, aclr);
-  check("...so ➕ on the now-empty board is refused, never banking a duplicate",
-    ACL.refusedEmpty === true, aclr);
-  check("...and two inputs laid out in a row stay different",
-    ACL.nCases === 2 && ACL.distinct === true, aclr);
-  check("a cleared board with banked inputs is still a designed numbered level",
-    ACL.stillDesigned === true, aclr);
-  check("✏️ puts an input back and ➕ updates it in place",
-    ACL.loadedBack === true && ACL.stillTwo === true && ACL.updated === true &&
-    ACL.clearedAfterUpdate === 2, aclr);
-  check("running with inputs hands the cleared board back to the author",
-    ACL.boardStillClear === true, aclr);
+  if(ACL.ERR) throw new Error("new-case block threw: "+ACL.ERR);
+  check("➕ banks what was drawn as input 1 and opens a BLANK board for input 2",
+    ACL.made === 2 && ACL.onInput2 === true && ACL.blocksCleared === true &&
+    ACL.canvasCleared === true && ACL.numberReset === true, aclr);
+  check("...the 🖌️ drawing resets too, and input 1 keeps its own",
+    ACL.drawCleared === true && ACL.tilesCleared === true && ACL.case1Cells !== "[]", aclr);
+  check("painting goes straight into the selected input — no bank step",
+    ACL.liveCells === '[[2,1],[3,1]]' && ACL.liveBlocks === '[[2,1,9]]' &&
+    ACL.input1Untouched === true && ACL.distinctDraw === true, aclr);
+  check("a blank input must be drawn before another can be started",
+    ACL.blankGuard === true && ACL.third === true, aclr);
+  check("✏️ switches inputs, blueprint and blocks together",
+    ACL.backToOne === true && ACL.stillDesigned === true, aclr);
+  check("an input that repeats another is flagged, and unflagged when deleted",
+    ACL.twinFlagged === 1 && ACL.originalNotFlagged === true && ACL.flagGone === 0, aclr);
+  check("deleting the input on screen falls back to a neighbour",
+    ACL.afterDelete === true, aclr);
+  check("a run hands the author back the exact input they were drawing",
+    ACL.boardHandedBack === true, aclr);
+  check("a saved level opens on input 1, not on whichever input was on screen",
+    ACL.savedBase === true && ACL.savedCases === 2, aclr);
 
   console.log("▶ creator: edit mode is visible and can be left");
   const edm = await ev(`(()=>{ try{

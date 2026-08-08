@@ -89,7 +89,8 @@
           <button id="mgName" class="rowbtn">✏️ <span>Rename challenge</span></button>
           <!-- the label span carries a class: ui-icons.js swaps each emoji for a
                <span class="ui-emoji">, so a bare querySelector("span") finds THAT -->
-          <button id="mgAddCase" class="rowbtn" title="One program, several inputs">🔢 <span class="lb">Add this board as an input</span></button>
+          <button id="mgAddCase" class="rowbtn" title="Clears the board and starts a new input on it">🔢 <span class="lb">Split into inputs — this board becomes input 1</span></button>
+          <div id="mgCaseNow" class="cb-note" style="display:none"></div>
           <button id="mgPreset" class="rowbtn" title="Hand players a ready-made routine">🎁 <span class="lb">Starter routines: off</span></button>
           <div class="cb-row" id="mgCaseEdit" style="display:none"></div>
           <button id="mgDiff" class="rowbtn" title="Difficulty">⭐ Easy</button>

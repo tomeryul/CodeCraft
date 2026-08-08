@@ -202,7 +202,7 @@ function mgEnterCreator(){
   mgState.stages=[];        // banked levels for a multi-level pack (empty = single challenge)
   mgState.editIndex=null;   // when re-editing a banked level, the slot to put it back
   mgState.caseEdit=null;    // when re-editing a banked input, the slot to put it back
-  mgState.draftInitial=null;// the board the author was editing when they pressed ▶
+  mgState.draftBoard=null;// the board the author was editing when they pressed ▶
   mgState.editingId=null;   // when editing an already-saved My Challenges entry, its id (→ Save updates in place)
   mgState.publishId=null;   // when editing an already-published community challenge, its id (→ Publish PATCHes it)
   $("mgCreatorBar").classList.add("on");
@@ -229,7 +229,7 @@ function mgEditCommunity(row){
     p.start={x:row.start_x||0,y:row.start_y||0,dir:row.start_dir==null?1:row.start_dir};
     p.cases=JSON.parse(JSON.stringify(row.cases||[]));
     p.preset=row.preset&&(row.preset.routines||row.preset.length)?JSON.parse(JSON.stringify(row.preset)):null;
-    mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir}; mgSeed(mgState.robot,p);
+    mgSelectFirstCase();
     sol=row.solution||[]; // reload the author's own solution program (edit mode only)
   }
   mgLoadSolution(sol);
@@ -266,7 +266,7 @@ function mgEditMyChallenge(entry){
     p.start=JSON.parse(JSON.stringify(entry.start||{x:0,y:0,dir:1}));
     p.cases=JSON.parse(JSON.stringify(entry.cases||[]));
     p.preset=entry.preset?JSON.parse(JSON.stringify(entry.preset)):null;
-    mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir}; mgSeed(mgState.robot,p);
+    mgSelectFirstCase();
     sol=entry.sol||[]; // reload the author's own solution program (edit mode only)
   }
   mgState.solved=false; // must re-prove after any change
@@ -274,6 +274,28 @@ function mgEditMyChallenge(entry){
   renderPalette();renderProgram();renderPy();updateUndoBtns();mgUpdateCount();
   mgCreatorUI(); mgDraw();
   toast("✏️ Editing “"+esc(entry.name)+"” — change it, prove it ▶, then 💾 Save to update.");
+}
+/* Old saves stored only `initial` per input — the blueprint, terrain and start
+   were shared by all of them. Now an input owns its whole board, so fill the
+   missing halves from the level's own board: that is exactly the fallback
+   mgApplyCase has always applied at run time, so the level keeps playing
+   identically while becoming editable per input. */
+function migrateCases(p){
+  for(const c of (p.cases||[])){
+    if(!c.initial)c.initial=[];
+    if(!c.cells)c.cells=JSON.parse(JSON.stringify(p.cells||[]));
+    if(!c.tiles)c.tiles=JSON.parse(JSON.stringify(p.tiles||[]));
+    if(!c.start)c.start=JSON.parse(JSON.stringify(p.start||{x:0,y:0,dir:1}));
+  }
+}
+// A level that has inputs always opens with input 1 on the board, so the creator
+// is never showing a board that belongs to none of them.
+function mgSelectFirstCase(){
+  const p=mgState.proj;
+  migrateCases(p);
+  if((p.cases||[]).length){mgState.caseEdit=0;putBoard(p,p.cases[0]);}
+  else mgState.caseEdit=null;
+  mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir};mgSeed(mgState.robot,p);
 }
 function mgSetBtn(id,on){const b=$(id);if(!b)return;b.style.opacity=on?"":".4";b.classList.toggle("locked",!on);}
 // The creator's tool strip: the fixed board tools plus one chip per terrain type,
@@ -366,8 +388,15 @@ function mgCreatorUI(){
   // 🔢 inputs and 🎁 starter routines
   const nc=(p.cases||[]).length, ce=mgState.caseEdit;
   const ac=$("mgAddCase")&&$("mgAddCase").querySelector(".lb");
-  if(ac)ac.textContent=(ce!=null)?"Update input "+(ce+1)
-    :nc?"Add another input ("+nc+" so far)":"Add this board as an input";
+  // ➕ clears the board FIRST and you draw after, so the label promises a blank
+  // board rather than describing something that gets saved.
+  if(ac)ac.textContent=nc?"New blank input (this makes it "+(nc+1)+")"
+    :"Split into inputs — this board becomes input 1";
+  const ce2=$("mgCaseNow");
+  if(ce2){
+    ce2.style.display=(ce!=null&&nc)?"":"none";
+    if(ce!=null&&nc)ce2.textContent="✏️ You are drawing input "+(ce+1)+" of "+nc;
+  }
   const pr=$("mgPreset")&&$("mgPreset").querySelector(".lb");
   if(pr)pr.textContent=p.preset
     ?"Starter routines: ON ("+presetSize(p.preset)+" blocks)":"Starter routines: off";
@@ -406,8 +435,8 @@ function mgEditStage(i){
   // Leave it in `stages`. It used to be spliced out and only put back by
   // "➕ Update level", so exiting or editing a different level lost it silently.
   mgState.editIndex=i;
-  mgState.caseEdit=null;mgState.caseBase=null;mgState.draftInitial=null;
-  mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir};mgSeed(mgState.robot,p);
+  mgState.caseBase=null;mgState.draftBoard=null;
+  mgSelectFirstCase();       // this level's input 1 goes on the board
   mgState.solved=false;
   mgLoadSolution(sol);
   renderPalette();renderProgram();renderPy();updateUndoBtns();mgUpdateCount();
@@ -430,86 +459,125 @@ function mgDeleteStage(i){
    and the terrain stay shared, because for an algorithm question the thing that
    has to change is the DATA, and one varying axis keeps the strip readable and the
    authoring loop obvious: lay out the numbers, bank it, move them, bank again. */
-// the 🔢 blocks of every banked input, flattened. Once an input is banked the
-// board is cleared for the next one, so "what numbers does this level use?" can
-// no longer be answered by looking at p.initial alone.
+/* ---------------- inputs: the board IS the selected input ----------------
+   An input is a whole board of its own — its 🖌️ blueprint, its terrain, its 🔢
+   blocks and where the robot starts — not just the numbers laid over one shared
+   picture. mgApplyCase has always been able to swap all of that per input; this
+   is the creator finally storing it.
+
+   There is no "bank the board" step. `mgState.caseEdit` says which input is on
+   screen, and every stroke lands in it immediately (mgSyncCase). So ➕ means
+   "give me a blank board for a NEW input" — you press it FIRST and draw after,
+   which is the only order in which a new input can't start life as a copy of
+   the last one. Board size and block budget stay pack-wide: they describe the
+   challenge, not one test of it. */
+function boardOf(p){
+  return JSON.parse(JSON.stringify({
+    initial:p.initial||[], cells:p.cells||[], tiles:p.tiles||[], start:p.start||{x:0,y:0,dir:1}}));
+}
+function putBoard(p,b){
+  b=b||{};
+  p.initial=JSON.parse(JSON.stringify(b.initial||[]));
+  p.cells=JSON.parse(JSON.stringify(b.cells||[]));
+  p.tiles=JSON.parse(JSON.stringify(b.tiles||[]));
+  p.start=JSON.parse(JSON.stringify(b.start||{x:0,y:0,dir:1}));
+}
+function caseEmpty(c){return !((c&&(c.initial||[]).length)||(c&&(c.cells||[]).length)||(c&&(c.tiles||[]).length));}
+// write the live board back into the input it belongs to. Called after every
+// edit, so there is never an unsaved board to lose.
+function mgSyncCase(){
+  const st=mgState; if(!st||!st.creator)return;
+  const i=st.caseEdit, cs=(st.proj&&st.proj.cases)||[];
+  if(i==null||!cs[i])return;
+  const hid=cs[i].hidden;
+  cs[i]=boardOf(st.proj); if(hid)cs[i].hidden=true;
+}
+// every 🔢 block in the level, wherever it lives
 function caseBricks(p){
   return ((p&&p.cases)||[]).reduce((a,c)=>a.concat((c&&c.initial)||[]),[]);
 }
-// Does this level have any content at all — painted targets, blocks on the board,
-// or blocks banked into an input? Gates ➕ Add level / 💾 Save / 🌍 Publish.
+// Does this level have any content at all — on the board or inside any input?
+// Gates ➕ Add level / 💾 Save / 🌍 Publish.
 function mgHasDesign(p){
-  return !!((p.cells||[]).length||(p.initial||[]).length||caseBricks(p).length);
+  if((p.cells||[]).length||(p.initial||[]).length)return true;
+  return ((p.cases)||[]).some(c=>(c&&(c.cells||[]).length)||(c&&(c.initial||[]).length));
 }
-/* A stable fingerprint of one input's blocks: sorted, so two boards holding the
-   same numbers in the same cells match no matter which order the author tapped
-   them in. Two inputs with the same fingerprint are the same test — whatever
-   program solves one solves the other, so the second proves nothing. */
-function caseKey(init){
-  return ((init)||[]).map(c=>c[0]+","+c[1]+","+(c.length>2&&c[2]!=null?c[2]:"")).sort().join("|");
+/* A stable fingerprint of one input: sorted, so two boards built the same way
+   match no matter which order the author tapped them in. Two inputs with the
+   same fingerprint are the same test — whatever program solves one solves the
+   other, so the second proves nothing. */
+function caseKey(c){
+  c=c||{};
+  const pts=a=>((a)||[]).map(v=>v.join(",")).sort().join("|");
+  const s=c.start||{};
+  return pts(c.initial)+"/"+pts(c.cells)+"/"+pts(c.tiles)+"/"+s.x+","+s.y+","+s.dir;
 }
-// which OTHER banked input is identical to this one? -1 = none. `skip` is the
-// slot being updated, which is allowed to match itself.
-function dupCaseIndex(p,init,skip){
-  const k=caseKey(init), cs=(p&&p.cases)||[];
-  for(let i=0;i<cs.length;i++){ if(i===skip)continue; if(caseKey(cs[i]&&cs[i].initial)===k)return i; }
+// which OTHER input is identical to this one? -1 = none. An input that hasn't
+// been drawn yet is "not finished", not a duplicate, so it never matches.
+function dupCaseIndex(p,c,skip){
+  if(caseEmpty(c))return -1;
+  const k=caseKey(c), cs=(p&&p.cases)||[];
+  for(let i=0;i<cs.length;i++){ if(i===skip)continue; if(caseKey(cs[i])===k)return i; }
   return -1;
 }
-function mgAddCase(){
+/* ➕ — clear the board and start a new input on it. The FIRST press also turns
+   whatever is already drawn into input 1, so nothing the author has done is
+   thrown away by splitting the level into inputs. */
+function mgNewCase(){
   if(!mgState||!mgState.creator)return;
   const p=mgState.proj;
-  if(!(p.initial||[]).length){
-    toast("🔢 Place some numbered blocks first — those blocks ARE the input!");sfx(200,.06);return;}
   p.cases=p.cases||[];
-  const snap={initial:JSON.parse(JSON.stringify(p.initial))};
-  const i=mgState.caseEdit;
-  // A twin of an input that already exists is never worth banking, so say so
-  // instead of quietly adding a second chip with the same numbers on it.
-  const dup=dupCaseIndex(p,p.initial,i==null?-1:i);
-  if(dup>=0){
-    toast("🔁 That's the same as input "+(dup+1)+" — change some numbers, or one program solves both for free.");
+  if(!p.cases.length&&!mgHasDesign(p)){
+    toast("🖌️ Draw a board first — the first ➕ turns it into input 1 and hands you a blank one for input 2.");
     sfx(200,.06);return;}
-  if(i!=null&&p.cases[i]){
-    snap.hidden=p.cases[i].hidden;p.cases[i]=snap;mgState.caseEdit=null;
-    toast("✅ Input "+(i+1)+" updated — prove it again with ▶.");
-  }else{
-    if(p.cases.length>=8){toast("🔢 Eight inputs is the maximum.");sfx(200,.06);return;}
-    p.cases.push(snap);
-    // Clear the board so the NEXT input starts from a clean slate. Leaving the
-    // 🔢 blocks where they were made every new input an exact copy of the one
-    // before it unless the author remembered to wipe them by hand — and two
-    // identical inputs prove nothing. ✏️ on a chip puts an input back if the
-    // author does want to build the next one from it.
-    p.initial=[];
-    mgState.caseEdit=null;
-    mgState.brickNum=1;   // the 🔢 No. picker restarts too — "clean" means clean
-    mgReset();
-    toast(p.cases.length===1
-      ? "➕ Input 1 saved and the board is clear. Lay out the next set of numbers — ONE program will have to solve them all."
-      : "➕ Input "+p.cases.length+" saved, board cleared. "+p.cases.length+" inputs, one program.");
-  }
-  mgState.solved=false;mgState.caseBase=null; // more inputs = a new thing to prove
-  sfx(660,.05);mgCreatorUI();mgDraw();
+  mgSyncCase();
+  const cur=mgState.caseEdit;
+  if(cur!=null&&caseEmpty(p.cases[cur])){
+    toast("✏️ Input "+(cur+1)+" is still blank — draw it before starting another.");sfx(200,.06);return;}
+  if(!p.cases.length)p.cases.push(boardOf(p));   // the board so far becomes input 1
+  if(p.cases.length>=8){toast("🔢 Eight inputs is the maximum.");sfx(200,.06);return;}
+  // A blank board: no blueprint, no terrain, no blocks. The robot keeps its
+  // current corner so it doesn't jump around between inputs.
+  p.cases.push({initial:[],cells:[],tiles:[],start:JSON.parse(JSON.stringify(p.start))});
+  mgState.caseEdit=p.cases.length-1;
+  putBoard(p,p.cases[mgState.caseEdit]);
+  mgState.brickNum=1;   // the 🔢 No. picker restarts too — "blank" means blank
+  mgState.solved=false;mgState.caseBase=null;
+  mgReset();mgCreatorUI();mgDraw();
+  toast("➕ Input "+p.cases.length+" — blank board. Draw its blueprint and place its blocks; everything you do now belongs to this input.");
+  sfx(660,.05);
 }
-// pull an input back onto the board so it can be tweaked (➕ then UPDATES it)
+var mgAddCase=mgNewCase; // the ⚙️ panel's button
+// put an input on the board. Whatever the author changes from here belongs to it.
 function mgLoadCase(i){
   if(!mgState||!mgState.creator)return;
   const p=mgState.proj,cs=p.cases||[];
   if(i<0||i>=cs.length)return;
-  p.initial=JSON.parse(JSON.stringify(cs[i].initial||[]));
+  mgSyncCase();                       // don't lose edits to the input we're leaving
   mgState.caseEdit=i;mgState.caseBase=null;
-  mgReset();mgCreatorUI();
-  toast("✏️ Input "+(i+1)+" is on the board — change the numbers, then ➕ to update it.");
+  putBoard(p,cs[i]);
+  mgState.solved=false;
+  mgReset();mgCreatorUI();mgDraw();
+  toast("✏️ Input "+(i+1)+" is on the board — everything you change now belongs to it.");
   sfx(520,.04);
 }
 function mgDeleteCase(i){
   if(!mgState||!mgState.creator)return;
-  const cs=mgState.proj.cases||[];
+  const p=mgState.proj, cs=p.cases||[];
   if(i<0||i>=cs.length)return;
+  mgSyncCase();
   cs.splice(i,1);
-  if(mgState.caseEdit!=null){ if(i===mgState.caseEdit)mgState.caseEdit=null; else if(i<mgState.caseEdit)mgState.caseEdit--; }
+  if(mgState.caseEdit!=null){
+    if(i===mgState.caseEdit){
+      // the board was showing the input that just went — show its neighbour, or
+      // fall back to being a plain single-board level if that was the last one
+      mgState.caseEdit=cs.length?Math.min(i,cs.length-1):null;
+      if(mgState.caseEdit!=null)putBoard(p,cs[mgState.caseEdit]);
+    }else if(i<mgState.caseEdit)mgState.caseEdit--;
+  }
   mgState.solved=false;mgState.caseBase=null;
-  sfx(300,.05);toast("🗑 Input removed.");mgCreatorUI();
+  mgReset();
+  sfx(300,.05);toast("🗑 Input removed.");mgCreatorUI();mgDraw();
 }
 // 🙈 a hidden input is never shown to the player — they cannot study it while
 // writing, which is the only way to be sure they generalised instead of guessed
@@ -530,13 +598,13 @@ function renderMgCaseEdit(){
   cs.forEach((c,i)=>{
     const chip=document.createElement("span");
     // A twin of an EARLIER input is dead weight — one program solves both for
-    // free. ➕ refuses to create one now, but levels designed before it did can
-    // still be carrying twins, so mark them where the 🗑 that removes them is.
-    const twin=dupCaseIndex(p,c&&c.initial,i);
+    // free. Flagged live as the author draws, and it also catches the twins that
+    // levels designed before ➕ cleared the board are still carrying.
+    const twin=dupCaseIndex(p,c,i);
     const dup=twin>=0&&twin<i;
     chip.className="lvchip"+(mgState.caseEdit===i?" ed":"")+(dup?" dup":"");
     chip.innerHTML='<b>'+(i+1)+'</b> '+esc(c.hidden?"?":mgCaseLabel(c,i))+
-      (dup?'<span class="dupw" title="Same numbers as input '+(twin+1)+
+      (dup?'<span class="dupw" title="The same board as input '+(twin+1)+
            ' — it tests nothing extra. 🗑 to remove it.">⚠️</span>':'')+
       '<button data-h="'+i+'" title="Hide this input from the player">'+(c.hidden?"🙈":"👁")+'</button>'+
       '<button data-e="'+i+'" title="Put this input on the board">✏️</button>'+
@@ -572,11 +640,21 @@ function mgTogglePreset(){
   sfx(600,.05);mgCreatorUI();
 }
 // a self-contained snapshot of the current creator design (one level of a pack)
+/* The board a level OPENS on. With inputs it must mirror input 1: `cases` are
+   layered over this base, and it's also what a client that ignores `cases`
+   plays. Left as "whichever input happened to be on screen when the author hit
+   Save", a level would open showing input 3's blueprint with input 1's blocks
+   on it. Without inputs the level's single board is the base, as it always was. */
+function baseBoard(p){
+  const b=(p.cases&&p.cases.length)?p.cases[0]:p;
+  return {cells:b.cells||[], initial:b.initial||[], tiles:b.tiles||[], start:b.start||p.start};
+}
 function snapshotStage(p){
-  const sort=mgHasNumbers(p);
+  mgSyncCase();               // the live board belongs to an input — put it there first
+  const sort=mgHasNumbers(p), b=baseBoard(p);
   return JSON.parse(JSON.stringify({
     em:sort?"🔢":"🧩", name:p.name, diff:p.diff||1, maxBlocks:p.maxBlocks, gw:p.gw, gh:p.gh,
-    allowed:p.allowed, start:p.start, cells:p.cells, initial:p.initial||[], tiles:p.tiles||[],
+    allowed:p.allowed, start:b.start, cells:b.cells, initial:b.initial, tiles:b.tiles,
     cases:p.cases||[],        // the inputs one program has to handle
     preset:p.preset||null,    // starter routines handed to the player
     sol:(mgRobot?packProg(mgRobot):[]), // author's proving solution — loaded only in edit mode
@@ -610,7 +688,7 @@ function mgAddStage(){
   mgState.solved=false;
   mgState.caseEdit=null;      // or ➕ would UPDATE the old level's input
   mgState.caseBase=null;
-  mgState.draftInitial=null;
+  mgState.draftBoard=null;
   if(mgRobot){mgRobot.program=[];mgRobot.routines={A:{params:[],body:[]},B:{params:[],body:[]}};}
   edTarget="main";
   renderProgram();mgUpdateCount();
@@ -628,7 +706,7 @@ function mgCancelEdit(){
   p.cases=[]; p.preset=null;
   mgState.robot={x:0,y:0,dir:1}; mgSeed(mgState.robot,p);
   mgState.solved=false;
-  mgState.caseEdit=null;mgState.caseBase=null;mgState.draftInitial=null;
+  mgState.caseEdit=null;mgState.caseBase=null;mgState.draftBoard=null;
   if(mgRobot){mgRobot.program=[];mgRobot.routines={A:{params:[],body:[]},B:{params:[],body:[]}};}
   edTarget="main";
   toast("✖ Left level "+was+" as it was — designing a new level now.");
@@ -689,6 +767,7 @@ function mgPaintTile(x,y){
   }
   st.solved=false;      // design changed — must re-prove (re-locks Save/Publish)
   st.caseBase=null;     // ...and any board snapshot taken by a previous run is now void
+  mgSyncCase();         // the board IS an input — the stroke belongs to it
   sfx(500,.03);mgDraw();mgCreatorUI();
 }
 // Would a tile of this type block the robot on an empty board? Answered with a
@@ -718,6 +797,15 @@ function mgSetSize(dw,dh){
   mgState.caseBase=null; // the board changed shape — drop any snapshot of the old one
   if(p.start.x>=p.gw)p.start.x=p.gw-1;
   if(p.start.y>=p.gh)p.start.y=p.gh-1;
+  // Size is pack-wide, so shrinking has to clip EVERY input — an off-board block
+  // in an input the author isn't looking at would be invisible and unreachable.
+  for(const c of (p.cases||[])){
+    if(c.initial)c.initial=c.initial.filter(v=>v[0]<p.gw&&v[1]<p.gh);
+    if(c.cells)c.cells=c.cells.filter(v=>v[0]<p.gw&&v[1]<p.gh);
+    if(c.tiles)c.tiles=c.tiles.filter(v=>v[0]<p.gw&&v[1]<p.gh);
+    if(c.start){c.start.x=Math.min(c.start.x,p.gw-1);c.start.y=Math.min(c.start.y,p.gh-1);}
+  }
+  mgSyncCase();
   mgState.robot.x=Math.min(mgState.robot.x,p.gw-1);
   mgState.robot.y=Math.min(mgState.robot.y,p.gh-1);
   mgState.solved=false;
@@ -728,13 +816,14 @@ function mgSetSize(dw,dh){
 // while the top-level columns mirror the FIRST level (so old clients still play it).
 async function publishChallenge(){
   const p=mgState.proj, diff=p.diff||2;
+  mgSyncCase();               // the live board belongs to an input — put it there first
   const banked=mgState.stages||[];
   const curHas=mgHasDesign(p);
   // multi-level only when there are banked levels; a lone current design stays single
   let stages=[];
   if(banked.length)stages=(curHas&&mgState.solved)?banked.concat([snapshotStage(p)]):banked.slice();
   const multi=stages.length>0;
-  const base=multi?stages[0]:{cells:p.cells,initial:p.initial||[],tiles:p.tiles||[],start:p.start,maxBlocks:p.maxBlocks,gw:p.gw,gh:p.gh};
+  const base=multi?stages[0]:Object.assign(baseBoard(p),{maxBlocks:p.maxBlocks,gw:p.gw,gh:p.gh});
   // Author's solution: level 1's for the top-level column (multi levels keep their
   // own sol in `stages`). packProg, NOT mgRobot.program — publishing used to send
   // the bare main list, so a challenge solved with 🔧 Routines lost A and B and
@@ -765,6 +854,7 @@ async function publishChallenge(){
 function saveMyChallenge(){
   if(!mgState||!mgState.creator)return;
   const p=mgState.proj, sort=mgHasNumbers(p), diff=p.diff||1;
+  mgSyncCase();               // the live board belongs to an input — put it there first
   const curHas=mgHasDesign(p);
   const banked=mgState.stages||[];
   // Save unlocks only once a level is proven solvable: the current design must be
@@ -797,10 +887,11 @@ function saveMyChallenge(){
   }
   // single challenge — proven solvable above
   if(!curHas){toast("🖌️ Paint target tiles or 🔢 place some blocks first!");return;}
+  const b=baseBoard(p);       // with inputs, the level opens on input 1's board
   const copy=JSON.parse(JSON.stringify({
     id:"my_"+Date.now(), mine:true, em:sort?"🔢":"🧩", name:p.name, diff,
     coins:0, xp:0, maxBlocks:p.maxBlocks, gw:p.gw, gh:p.gh,
-    allowed:p.allowed, start:p.start, cells:p.cells, initial:p.initial||[], tiles:p.tiles||[],
+    allowed:p.allowed, start:b.start, cells:b.cells, initial:b.initial, tiles:b.tiles,
     cases:p.cases||[], preset:p.preset||null,
     sol:(mgRobot?packProg(mgRobot):[]), // author's solution (loaded only when editing)
     desc:(sort?"Sort the numbered blocks into order ":"Fill the blueprint ")+"— your custom challenge!"}));
@@ -865,9 +956,10 @@ function mgWalkable(st,x,y){
 // does this project use numbered bricks / numbered target cells (→ numbers matter)?
 function mgHasNumbers(proj){
   const numbered=a=>(a||[]).some(c=>c.length>2&&c[2]!=null);
-  // banked inputs count too: the board is cleared after each ➕, so a finished
-  // sort level can have all of its numbers in `cases` and none on the canvas.
-  return numbered(proj.initial)||numbered(proj.cells)||numbered(caseBricks(proj));
+  // the inputs count too: each one owns its whole board, so a finished sort level
+  // can have all of its numbers inside `cases` and none on the live canvas.
+  if(numbered(proj.initial)||numbered(proj.cells))return true;
+  return ((proj.cases)||[]).some(c=>numbered(c&&c.initial)||numbered(c&&c.cells));
 }
 // the win target: an explicit goalOrder, or the Paint-mode per-cell target numbers,
 // or (for pre-placed numbered bricks) derived as "the blueprint cells, row-major,
@@ -983,6 +1075,9 @@ function mgCaseLabel(c,i){
   const init=(c&&c.initial)||(mgState&&mgState.caseBase&&mgState.caseBase.initial)||[];
   const nums=init.filter(x=>x.length>2&&x[2]!=null).map(x=>x[2]);
   if(nums.length)return nums.join(" ");                       // "3 1 2" — the data itself
+  if(caseEmpty(c))return "blank";                              // ➕'d but not drawn yet
+  if(init.length)return "🔢"+init.length;                      // unnumbered blocks
+  if(c&&(c.cells||[]).length)return "🖌️"+c.cells.length;       // a blueprint of its own
   if(c&&c.start)return "start "+c.start.x+","+c.start.y;       // cases that move the robot
   return "#"+(i+1);
 }
@@ -1067,18 +1162,18 @@ function mgCaseStrip(){
   }).join("");
 }
 // Undo the board-swapping a creator run does: a run overlays every input onto the
-// canvas, and the author's own canvas has to come back afterwards — whether the run
-// finished or was stopped half-way.
+// canvas in turn, so the input the author was actually drawing has to come back
+// afterwards — whether the run finished or was stopped half-way.
 function mgRestoreDraft(){
   const st=mgState;
-  if(!st||!st.draftInitial)return;
-  st.proj.initial=st.draftInitial;st.draftInitial=null;st.caseBase=null;mgReset();
+  if(!st||!st.draftBoard)return;
+  putBoard(st.proj,st.draftBoard);st.draftBoard=null;st.caseBase=null;mgReset();
 }
 function mgRun(){
   if(!mgState)return;
   // ⏹ half-way through a creator run: put the author's own board back, exactly as
-  // finishing the run does, or the aborted input's blocks stay on the canvas and
-  // the next ➕ would bank a copy of it.
+  // finishing the run does, or the aborted input's board stays on the canvas and
+  // the next stroke would be recorded into the wrong input.
   if(mgState.running){mgStop();mgRestoreDraft();return;}
   const prog=mgRobot.program;
   if(!prog.length){toast("🧩 Add some blocks first!");return;}
@@ -1088,13 +1183,11 @@ function mgRun(){
   mgState.cases=mgCases(mgState.proj);
   mgState.ci=0;mgState.results=[];mgState.failMsg=null;mgState.failAt=-1;mgState.costs=[];
   mgState.stepping=false;               // ▶ takes over from ⏭ Step
-  // A creator run overlays each input onto the board, which would silently eat the
-  // blocks the author was in the middle of laying out. Keep them and put them back.
-  // Any banked input counts, not just two or more: with one input banked the board
-  // is deliberately empty, and without this the run would leave that input's blocks
-  // sitting on it — so the next ➕ would bank a copy of it.
-  mgState.draftInitial=(mgState.creator&&(mgState.proj.cases||[]).length)
-    ? JSON.parse(JSON.stringify(mgState.proj.initial||[])) : null;
+  // A creator run overlays each input onto the board in turn, ending on the LAST
+  // one. The board the author was drawing — blueprint, terrain, blocks and start —
+  // has to come back, or they'd carry on editing while looking at another input.
+  mgState.draftBoard=(mgState.creator&&(mgState.proj.cases||[]).length)
+    ? boardOf(mgState.proj) : null;
   $("mgCost").innerHTML="";
   mgApplyCase(mgState.cases[0]);
   mgStartCase(false);

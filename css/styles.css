@@ -434,6 +434,8 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #mgLevels .lvchip.ed,#mgCaseEdit .lvchip.ed{background:rgba(122,77,255,.32);box-shadow:0 0 0 1.5px rgba(122,77,255,.7);}
 #mgLevels .lvchip button,#mgCaseEdit .lvchip button{width:26px;height:26px;padding:0;border-radius:999px;font-size:13px;background:rgba(0,0,0,.2);}
 #mgCaseEdit .lvchip b{color:var(--accent2);margin-right:2px;}
+/* which input the board is currently showing */
+#mgCaseNow{font-size:12px;font-weight:800;color:var(--accent2);padding:1px 4px;}
 /* an input whose numbers repeat an earlier one — it proves nothing extra */
 #mgCaseEdit .lvchip.dup{background:rgba(255,93,115,.18);box-shadow:0 0 0 1.5px rgba(255,93,115,.55);}
 #mgCaseEdit .lvchip .dupw{margin-left:3px;font-size:12px;}
