@@ -352,7 +352,7 @@ function mgCreatorUI(){
   if($("mgAddStage"))$("mgAddStage").textContent=editing?"➕ Update level":"➕ Add level";
   $("mgTitle").textContent="✏️ "+p.name+(banked?" · 🎬"+(banked+(editing?0:1)):"");
   // ---- gate Save / Add / Publish behind proving the level solvable ----
-  const curHas=p.cells.length||(p.initial&&p.initial.length);
+  const curHas=mgHasDesign(p);
   const solved=!!mgState.solved;
   const canSaveCur=curHas&&solved;               // current design proven
   mgSetBtn("mgAddStage",canSaveCur);             // must prove before banking
@@ -430,6 +430,17 @@ function mgDeleteStage(i){
    and the terrain stay shared, because for an algorithm question the thing that
    has to change is the DATA, and one varying axis keeps the strip readable and the
    authoring loop obvious: lay out the numbers, bank it, move them, bank again. */
+// the 🔢 blocks of every banked input, flattened. Once an input is banked the
+// board is cleared for the next one, so "what numbers does this level use?" can
+// no longer be answered by looking at p.initial alone.
+function caseBricks(p){
+  return ((p&&p.cases)||[]).reduce((a,c)=>a.concat((c&&c.initial)||[]),[]);
+}
+// Does this level have any content at all — painted targets, blocks on the board,
+// or blocks banked into an input? Gates ➕ Add level / 💾 Save / 🌍 Publish.
+function mgHasDesign(p){
+  return !!((p.cells||[]).length||(p.initial||[]).length||caseBricks(p).length);
+}
 function mgAddCase(){
   if(!mgState||!mgState.creator)return;
   const p=mgState.proj;
@@ -444,9 +455,17 @@ function mgAddCase(){
   }else{
     if(p.cases.length>=8){toast("🔢 Eight inputs is the maximum.");sfx(200,.06);return;}
     p.cases.push(snap);
+    // Clear the board so the NEXT input starts from a clean slate. Leaving the
+    // 🔢 blocks where they were made every new input an exact copy of the one
+    // before it unless the author remembered to wipe them by hand — and two
+    // identical inputs prove nothing. ✏️ on a chip puts an input back if the
+    // author does want to build the next one from it.
+    p.initial=[];
+    mgState.caseEdit=null;
+    mgReset();
     toast(p.cases.length===1
-      ? "➕ Input 1 saved. Now move the blocks and add another — ONE program will have to solve them all."
-      : "➕ Input "+p.cases.length+" saved. "+p.cases.length+" inputs, one program.");
+      ? "➕ Input 1 saved and the board is clear. Lay out the next set of numbers — ONE program will have to solve them all."
+      : "➕ Input "+p.cases.length+" saved, board cleared. "+p.cases.length+" inputs, one program.");
   }
   mgState.solved=false;mgState.caseBase=null; // more inputs = a new thing to prove
   sfx(660,.05);mgCreatorUI();mgDraw();
@@ -539,7 +558,7 @@ function snapshotStage(p){
 function mgAddStage(){
   if(!mgState||!mgState.creator)return;
   const p=mgState.proj;
-  if(!p.cells.length&&!(p.initial&&p.initial.length)){toast("🖌️ Design this level first — paint tiles or 🔢 place blocks.");sfx(200,.06);return;}
+  if(!mgHasDesign(p)){toast("🖌️ Design this level first — paint tiles or 🔢 place blocks.");sfx(200,.06);return;}
   if(!mgState.solved){toast("▶ First prove this level is solvable — write a program and run it, then it can be added!");sfx(200,.06);return;}
   mgState.stages=mgState.stages||[];
   if(mgState.editIndex!=null&&mgState.editIndex<mgState.stages.length){ // replace the level in place
@@ -682,7 +701,7 @@ function mgSetSize(dw,dh){
 async function publishChallenge(){
   const p=mgState.proj, diff=p.diff||2;
   const banked=mgState.stages||[];
-  const curHas=p.cells.length||(p.initial&&p.initial.length);
+  const curHas=mgHasDesign(p);
   // multi-level only when there are banked levels; a lone current design stays single
   let stages=[];
   if(banked.length)stages=(curHas&&mgState.solved)?banked.concat([snapshotStage(p)]):banked.slice();
@@ -718,7 +737,7 @@ async function publishChallenge(){
 function saveMyChallenge(){
   if(!mgState||!mgState.creator)return;
   const p=mgState.proj, sort=mgHasNumbers(p), diff=p.diff||1;
-  const curHas=p.cells.length||(p.initial&&p.initial.length);
+  const curHas=mgHasDesign(p);
   const banked=mgState.stages||[];
   // Save unlocks only once a level is proven solvable: the current design must be
   // solved to be saved/included; a pack of already-proven banked levels can save
@@ -816,7 +835,12 @@ function mgWalkable(st,x,y){
   return !(window.CC_TILES&&CC_TILES.solid(st.robot,x+"_"+y));
 }
 // does this project use numbered bricks / numbered target cells (→ numbers matter)?
-function mgHasNumbers(proj){return (proj.initial||[]).some(c=>c.length>2&&c[2]!=null)||(proj.cells||[]).some(c=>c.length>2&&c[2]!=null);}
+function mgHasNumbers(proj){
+  const numbered=a=>(a||[]).some(c=>c.length>2&&c[2]!=null);
+  // banked inputs count too: the board is cleared after each ➕, so a finished
+  // sort level can have all of its numbers in `cases` and none on the canvas.
+  return numbered(proj.initial)||numbered(proj.cells)||numbered(caseBricks(proj));
+}
 // the win target: an explicit goalOrder, or the Paint-mode per-cell target numbers,
 // or (for pre-placed numbered bricks) derived as "the blueprint cells, row-major,
 // must hold the brick numbers in ascending order".
@@ -1014,9 +1038,20 @@ function mgCaseStrip(){
     return '<span class="lvchip casechip '+cls+'">'+mark+" "+lab+'</span>';
   }).join("");
 }
+// Undo the board-swapping a creator run does: a run overlays every input onto the
+// canvas, and the author's own canvas has to come back afterwards — whether the run
+// finished or was stopped half-way.
+function mgRestoreDraft(){
+  const st=mgState;
+  if(!st||!st.draftInitial)return;
+  st.proj.initial=st.draftInitial;st.draftInitial=null;st.caseBase=null;mgReset();
+}
 function mgRun(){
   if(!mgState)return;
-  if(mgState.running){mgStop();return;}
+  // ⏹ half-way through a creator run: put the author's own board back, exactly as
+  // finishing the run does, or the aborted input's blocks stay on the canvas and
+  // the next ➕ would bank a copy of it.
+  if(mgState.running){mgStop();mgRestoreDraft();return;}
   const prog=mgRobot.program;
   if(!prog.length){toast("🧩 Add some blocks first!");return;}
   const n=progSize(mgRobot);
@@ -1027,7 +1062,10 @@ function mgRun(){
   mgState.stepping=false;               // ▶ takes over from ⏭ Step
   // A creator run overlays each input onto the board, which would silently eat the
   // blocks the author was in the middle of laying out. Keep them and put them back.
-  mgState.draftInitial=(mgState.creator&&mgState.cases.length>1)
+  // Any banked input counts, not just two or more: with one input banked the board
+  // is deliberately empty, and without this the run would leave that input's blocks
+  // sitting on it — so the next ➕ would bank a copy of it.
+  mgState.draftInitial=(mgState.creator&&(mgState.proj.cases||[]).length)
     ? JSON.parse(JSON.stringify(mgState.proj.initial||[])) : null;
   $("mgCost").innerHTML="";
   mgApplyCase(mgState.cases[0]);
@@ -1330,8 +1368,7 @@ function mgFinish(){
     return;
   }
   mgCostUI(); // every input has run — show what each one cost
-  // give the author their working board back (see mgRun)
-  if(st.draftInitial){st.proj.initial=st.draftInitial;st.draftInitial=null;st.caseBase=null;mgReset();}
+  mgRestoreDraft(); // give the author their working board back (see mgRun)
   const total=st.cases.length, passed=st.results.filter(Boolean).length;
   if(passed===total){mgSuccess();return;}
   if(total>1){

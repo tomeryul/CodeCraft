@@ -1689,6 +1689,66 @@ async function ev(expr) {
   check("...so level 2 has only the input it was given", LK.l2Cases === 1 && LK.stage2Cases === 1, leak);
   check("editing level 2 never reaches back into level 1", LK.independent === true && LK.stage1Still === 2, leak);
 
+  console.log("▶ creator: ➕ Add input clears the board for the next input");
+  const aclr = await ev(`(()=>{ try{
+    const out={};
+    const origSI=window.setInterval; window.setInterval=()=>0;
+    mgEnterCreator();
+    const p=mgState.proj;
+    p.gw=4;p.gh=2;p.start={x:0,y:1,dir:1};p.cells=[[0,1],[1,1]];p.tiles=[];
+    p.initial=[[0,1,2],[1,1,1]];
+    mgState.robot={x:0,y:1,dir:1};mgSeed(mgState.robot,p);
+    setBudget(30);
+    mgAddCase();                                    // input 1
+    out.case1=JSON.stringify(p.cases[0].initial);
+    out.boardCleared=(p.initial||[]).length===0;    // the whole point
+    out.robotCleared=mgState.robot.bricks.size===0; // ...and the canvas actually redrew empty
+    out.cursorClear=(mgState.caseEdit===null);      // ➕ ADDS the next one, never updates #1
+    // pressing ➕ again on the empty board is refused rather than banking a twin
+    mgAddCase();
+    out.refusedEmpty=(p.cases.length===1);
+    // an empty canvas + banked inputs still counts as a designed level
+    out.stillDesigned=mgHasDesign(p) && mgHasNumbers(p);
+    // lay out a DIFFERENT input — two inputs, two different boards
+    p.initial=[[0,1,1],[1,1,2]];
+    mgSeed(mgState.robot,p);
+    mgAddCase();
+    out.nCases=p.cases.length;
+    out.distinct=JSON.stringify(p.cases[1].initial)!==out.case1;
+    // ✏️ still puts an input back on the board, and ➕ then UPDATES it
+    mgLoadCase(0);
+    out.loadedBack=JSON.stringify(p.initial)===out.case1;
+    p.initial=[[0,1,7],[1,1,8]];
+    mgAddCase();
+    out.stillTwo=p.cases.length===2;
+    out.updated=JSON.stringify(p.cases[0].initial)==='[[0,1,7],[1,1,8]]';
+    out.clearedAfterUpdate=(p.initial||[]).length;  // an UPDATE keeps the board as-is
+    // ...and a run hands the author back the empty board it started from
+    p.initial=[];mgReset();
+    mgRobot.program=[{t:'move',uid:'R1'}];mgRobot.routines={A:[],B:[]};
+    mgRun();
+    for(let g=0;g<10&&mgState&&mgState.running;g++)for(let t=0;t<900&&mgState&&mgState.running;t++)mgTick();
+    out.boardStillClear=(mgState.proj.initial||[]).length===0;
+    mgExit(false); document.getElementById("editor").classList.remove("open","max");
+    window.setInterval=origSI;
+    return JSON.stringify(out);
+  }catch(e){return JSON.stringify({ERR:e.message+" @ "+(e.stack||"").split("\\n")[1]});} })()`);
+  const ACL = JSON.parse(aclr);
+  if(ACL.ERR) throw new Error("add-case block threw: "+ACL.ERR);
+  check("➕ Add input banks the board and then clears it",
+    ACL.boardCleared === true && ACL.robotCleared === true && ACL.cursorClear === true, aclr);
+  check("...so ➕ on the now-empty board is refused, never banking a duplicate",
+    ACL.refusedEmpty === true, aclr);
+  check("...and two inputs laid out in a row stay different",
+    ACL.nCases === 2 && ACL.distinct === true, aclr);
+  check("a cleared board with banked inputs is still a designed numbered level",
+    ACL.stillDesigned === true, aclr);
+  check("✏️ puts an input back and ➕ updates it in place",
+    ACL.loadedBack === true && ACL.stillTwo === true && ACL.updated === true &&
+    ACL.clearedAfterUpdate === 2, aclr);
+  check("running with inputs hands the cleared board back to the author",
+    ACL.boardStillClear === true, aclr);
+
   console.log("▶ creator: edit mode is visible and can be left");
   const edm = await ev(`(()=>{ try{
     const out={};
