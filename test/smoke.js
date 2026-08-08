@@ -1702,6 +1702,7 @@ async function ev(expr) {
     mgAddCase();                                    // input 1
     out.case1=JSON.stringify(p.cases[0].initial);
     out.boardCleared=(p.initial||[]).length===0;    // the whole point
+    out.numberReset=(mgState.brickNum===1);         // the 🔢 No. picker restarts too
     out.robotCleared=mgState.robot.bricks.size===0; // ...and the canvas actually redrew empty
     out.cursorClear=(mgState.caseEdit===null);      // ➕ ADDS the next one, never updates #1
     // pressing ➕ again on the empty board is refused rather than banking a twin
@@ -1715,6 +1716,21 @@ async function ev(expr) {
     mgAddCase();
     out.nCases=p.cases.length;
     out.distinct=JSON.stringify(p.cases[1].initial)!==out.case1;
+    // banking a twin of an existing input is refused, whatever order it was tapped in
+    p.initial=[[1,1,2],[0,1,1]];
+    mgSeed(mgState.robot,p);
+    mgAddCase();
+    out.twinRefused=(p.cases.length===2);
+    // a level built before ➕ cleared the board can still be CARRYING twins, so
+    // the chip strip has to point at them
+    p.cases.push({initial:JSON.parse(JSON.stringify(p.cases[0].initial))});
+    mgCreatorUI();
+    out.twinFlagged=document.querySelectorAll("#mgCaseEdit .lvchip.dup").length;
+    out.originalNotFlagged=!document.querySelectorAll("#mgCaseEdit .lvchip")[0].classList.contains("dup");
+    mgDeleteCase(2);
+    mgCreatorUI();
+    out.flagGoneAfterDelete=document.querySelectorAll("#mgCaseEdit .lvchip.dup").length;
+    p.initial=[];mgReset();
     // ✏️ still puts an input back on the board, and ➕ then UPDATES it
     mgLoadCase(0);
     out.loadedBack=JSON.stringify(p.initial)===out.case1;
@@ -1736,7 +1752,12 @@ async function ev(expr) {
   const ACL = JSON.parse(aclr);
   if(ACL.ERR) throw new Error("add-case block threw: "+ACL.ERR);
   check("➕ Add input banks the board and then clears it",
-    ACL.boardCleared === true && ACL.robotCleared === true && ACL.cursorClear === true, aclr);
+    ACL.boardCleared === true && ACL.robotCleared === true && ACL.cursorClear === true &&
+    ACL.numberReset === true, aclr);
+  check("an input identical to one already banked is refused",
+    ACL.twinRefused === true, aclr);
+  check("...and twins already saved in an older level are flagged for deletion",
+    ACL.twinFlagged === 1 && ACL.originalNotFlagged === true && ACL.flagGoneAfterDelete === 0, aclr);
   check("...so ➕ on the now-empty board is refused, never banking a duplicate",
     ACL.refusedEmpty === true, aclr);
   check("...and two inputs laid out in a row stay different",

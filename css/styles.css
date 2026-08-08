@@ -434,6 +434,9 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #mgLevels .lvchip.ed,#mgCaseEdit .lvchip.ed{background:rgba(122,77,255,.32);box-shadow:0 0 0 1.5px rgba(122,77,255,.7);}
 #mgLevels .lvchip button,#mgCaseEdit .lvchip button{width:26px;height:26px;padding:0;border-radius:999px;font-size:13px;background:rgba(0,0,0,.2);}
 #mgCaseEdit .lvchip b{color:var(--accent2);margin-right:2px;}
+/* an input whose numbers repeat an earlier one — it proves nothing extra */
+#mgCaseEdit .lvchip.dup{background:rgba(255,93,115,.18);box-shadow:0 0 0 1.5px rgba(255,93,115,.55);}
+#mgCaseEdit .lvchip .dupw{margin-left:3px;font-size:12px;}
 #mgGoal{color:var(--ink2);font-size:12.5px;line-height:1.45;margin:7px 0;}
 /* per-test-case verdict strip: one chip per input the program must solve */
 #mgCases{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 7px;}

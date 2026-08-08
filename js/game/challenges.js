@@ -441,6 +441,20 @@ function caseBricks(p){
 function mgHasDesign(p){
   return !!((p.cells||[]).length||(p.initial||[]).length||caseBricks(p).length);
 }
+/* A stable fingerprint of one input's blocks: sorted, so two boards holding the
+   same numbers in the same cells match no matter which order the author tapped
+   them in. Two inputs with the same fingerprint are the same test — whatever
+   program solves one solves the other, so the second proves nothing. */
+function caseKey(init){
+  return ((init)||[]).map(c=>c[0]+","+c[1]+","+(c.length>2&&c[2]!=null?c[2]:"")).sort().join("|");
+}
+// which OTHER banked input is identical to this one? -1 = none. `skip` is the
+// slot being updated, which is allowed to match itself.
+function dupCaseIndex(p,init,skip){
+  const k=caseKey(init), cs=(p&&p.cases)||[];
+  for(let i=0;i<cs.length;i++){ if(i===skip)continue; if(caseKey(cs[i]&&cs[i].initial)===k)return i; }
+  return -1;
+}
 function mgAddCase(){
   if(!mgState||!mgState.creator)return;
   const p=mgState.proj;
@@ -449,6 +463,12 @@ function mgAddCase(){
   p.cases=p.cases||[];
   const snap={initial:JSON.parse(JSON.stringify(p.initial))};
   const i=mgState.caseEdit;
+  // A twin of an input that already exists is never worth banking, so say so
+  // instead of quietly adding a second chip with the same numbers on it.
+  const dup=dupCaseIndex(p,p.initial,i==null?-1:i);
+  if(dup>=0){
+    toast("🔁 That's the same as input "+(dup+1)+" — change some numbers, or one program solves both for free.");
+    sfx(200,.06);return;}
   if(i!=null&&p.cases[i]){
     snap.hidden=p.cases[i].hidden;p.cases[i]=snap;mgState.caseEdit=null;
     toast("✅ Input "+(i+1)+" updated — prove it again with ▶.");
@@ -462,6 +482,7 @@ function mgAddCase(){
     // author does want to build the next one from it.
     p.initial=[];
     mgState.caseEdit=null;
+    mgState.brickNum=1;   // the 🔢 No. picker restarts too — "clean" means clean
     mgReset();
     toast(p.cases.length===1
       ? "➕ Input 1 saved and the board is clear. Lay out the next set of numbers — ONE program will have to solve them all."
@@ -508,8 +529,15 @@ function renderMgCaseEdit(){
   el.innerHTML='<span class="clab">🔢 Inputs</span>';
   cs.forEach((c,i)=>{
     const chip=document.createElement("span");
-    chip.className="lvchip"+(mgState.caseEdit===i?" ed":"");
+    // A twin of an EARLIER input is dead weight — one program solves both for
+    // free. ➕ refuses to create one now, but levels designed before it did can
+    // still be carrying twins, so mark them where the 🗑 that removes them is.
+    const twin=dupCaseIndex(p,c&&c.initial,i);
+    const dup=twin>=0&&twin<i;
+    chip.className="lvchip"+(mgState.caseEdit===i?" ed":"")+(dup?" dup":"");
     chip.innerHTML='<b>'+(i+1)+'</b> '+esc(c.hidden?"?":mgCaseLabel(c,i))+
+      (dup?'<span class="dupw" title="Same numbers as input '+(twin+1)+
+           ' — it tests nothing extra. 🗑 to remove it.">⚠️</span>':'')+
       '<button data-h="'+i+'" title="Hide this input from the player">'+(c.hidden?"🙈":"👁")+'</button>'+
       '<button data-e="'+i+'" title="Put this input on the board">✏️</button>'+
       '<button data-d="'+i+'" title="Delete this input">🗑</button>';
