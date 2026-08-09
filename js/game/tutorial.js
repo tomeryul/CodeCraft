@@ -11,7 +11,7 @@ function tutSet(step){
     coach.innerHTML='👋 Your robot only moves when you <b>program</b> it!<small>Step 1 of 3 — tap the 🧩 Code button</small>';
     tutTarget=$("codeBtn");
   }else if(step===2){
-    coach.innerHTML='Tap <b>⬆️ Move</b> a few times, then <b>✋ Collect</b>!<small>Step 2 of 3 — your blocks appear in the program above</small>';
+    coach.innerHTML='Tap <b>🚶 Walk To 🌳</b>, then <b>✋ Collect</b>!<small>Step 2 of 3 — your blocks appear in the program above</small>';
     coach.classList.add("hi");
     tutTarget=$("palette").querySelector(".pblk");
   }else if(step===3){

@@ -1046,11 +1046,16 @@ async function ev(expr) {
     a.inv.wood=5; a.inv.stone=2; a.cap=8; b.cap=20;
     doAction(a,{t:"give"});
     out.handedOver=(bagCount(a)===0&&b.inv.wood===5&&b.inv.stone===2);
-    // nobody there → blocked, so a program can notice and wait
-    a.inv.wood=3; a.dir=0;
+    // facing away no longer matters — a neighbour is a neighbour
+    a.inv.wood=3; a.dir=0; for(const k in b.inv)b.inv[k]=0;
+    doAction(a,{t:"give"});
+    out.sideways=(bagCount(a)===0&&b.inv.wood===3);
+    // nobody WITHIN REACH → blocked, so a program can notice and wait
+    b.x=26;b.y=26;b.rx=26;b.ry=26; a.inv.wood=3;
     doAction(a,{t:"give"});
     out.noMateBlocks=(a.blocked===true&&a.inv.wood===3);
     // a hauler that is full only takes what fits — nothing is destroyed
+    b.x=21;b.y=20;b.rx=21;b.ry=20;
     a.dir=1; b.cap=8; for(const k in b.inv)b.inv[k]=0; b.inv.iron=7; a.inv.wood=4;
     doAction(a,{t:"give"});
     out.noLoss=(b.inv.wood+a.inv.wood===4&&bagCount(b)<=b.cap);
@@ -1078,7 +1083,7 @@ async function ev(expr) {
   if(CO.ERR) throw new Error("coop block threw: "+CO.ERR);
   check("📦 Give Bag hands the whole bag to the robot ahead", CO.handedOver === true, coop);
   check("...blocked when nobody is there, and never destroys what will not fit",
-    CO.noMateBlocks === true && CO.noLoss === true, coop);
+    CO.noMateBlocks === true && CO.noLoss === true && CO.sideways === true, coop);
   check("orders come in both shapes: ⇉ several resources, ⛓ one in bulk",
     CO.bothShapes === true && CO.shapesClean === true, coop);
   check("...a bulk order is several bagfuls and pays more per unit, so hauling is worth it",
@@ -1119,7 +1124,9 @@ async function ev(expr) {
     doAction(r,{t:'goNear',opt:'crystal'});
     out.noneBlocks=(r.blocked===true&&!r.path);
     out.py=toPy([{t:'goNear',uid:'w1',opt:'iron'}],'');
-    out.inPalette=CATS.find(c=>c.id==='smart').types.indexOf('goNear')>=0;
+    out.inPalette=CATS.find(c=>c.id==='basic').types.indexOf('goNear')>=0;
+    out.noStepping=['move','turnL','turnR'].every(t=>CATS.every(c=>c.types.indexOf(t)<0));
+    out.stepsStillRun=(()=>{const r=robots[0],x0=r.x;r.dir=1;doAction(r,{t:'move'});const ok=(r.x!==x0)||r.blocked===true;r.x=x0;return ok;})();
     objects=new Map(); claims=new Map();
     return JSON.stringify(out);
   }catch(e){return JSON.stringify({ERR:e.message});} })()`);
@@ -1130,8 +1137,10 @@ async function ev(expr) {
   check("...arriving FACING it, so the next Chop lands", WT.facing === true && WT.chopped === true, walkTo);
   check("...and picks a reachable target when the nearest is walled off", WT.wentRound === true, walkTo);
   check("nothing in range reads as blocked 🚧", WT.noneBlocks === true, walkTo);
-  check("Walk To is in the Smart palette and generates Python",
+  check("Walk To is the world's Basic movement block, and generates Python",
     WT.inPalette === true && /walk_to_nearest\("iron"\)/.test(WT.py), walkTo);
+  check("...and step-by-step blocks are gone from the world palette but still RUN",
+    WT.noStepping === true && WT.stepsStillRun === true, walkTo);
 
   // Does a fleet actually get more done? Same program both arms; the only
   // difference is whether walking to a target also calls it. Without that, adding

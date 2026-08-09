@@ -33,9 +33,13 @@ const DEFS={
   whileLoop:{cat:"loops",ic:"🔄",lbl:"While",container:true},
   "if":{cat:"logic",ic:"❓",lbl:"If",container:true},
   faceNearest:{cat:"smart",ic:"🧭",lbl:"Face Nearest"},
-  // walk there, around whatever is in the way — the world's only pathfinding used
-  // to be Go Home, so off-axis targets were simply unreachable
-  goNear:{cat:"smart",ic:"🚶",lbl:"Walk To"},
+  /* 🚶 Walk To is how you travel in the world — the FIRST block a player meets,
+     not a reward. Stepping one tile at a time (⬆️ Move + ↩️/↪️) is a puzzle-board
+     skill: on an open map it is all bookkeeping and no thinking, and it made
+     every world program a fragile list of steps that broke the moment a tree
+     grew in the way. Naming a destination is the real idea, and it composes —
+     "go to the nearest X" is what a loop over a changing world needs. */
+  goNear:{cat:"basic",ic:"🚶",lbl:"Walk To"},
   goHome:{cat:"smart",ic:"🏠",lbl:"Go Home"},
   sellAll:{cat:"smart",ic:"💰",lbl:"Sell All"},
   bankAll:{cat:"smart",ic:"🏦",lbl:"Bank All"},
@@ -66,11 +70,16 @@ const DEFS={
 const READ_SRC=["here","ahead","held","x","y","price"];
 const READ_LBL={here:"number under me 🟧",ahead:"number ahead ⬆️",held:"number I'm holding ✊",
   x:"my column ↔️",y:"my row ↕️",price:"💰 market price of"};
+/* The world's palette. ⬆️ Move / ↩️ Turn Left / ↪️ Turn Right are deliberately NOT
+   here: in the open world you travel by naming a destination (🚶 Walk To), never
+   by counting tiles. The blocks still exist in DEFS and still run, so every
+   program written before this — and every challenge, where stepping IS the
+   puzzle — keeps working untouched. */
 const CATS=[
-  {id:"basic",name:"Basics",types:["move","turnL","turnR","collect","chop","mine","scoop","drop","build","rest","wait"],lock:null},
+  {id:"basic",name:"Basics",types:["goNear","collect","chop","mine","scoop","drop","build","rest","wait"],lock:null},
   {id:"loops",name:"Loops",types:["repeat","forever","whileLoop"],lock:"loops",need:"Collect 5 resources to unlock 🔁 loops!"},
   {id:"logic",name:"Logic",types:["if"],lock:"logic",need:"Sell something at the market 🏪 to unlock ❓ logic!"},
-  {id:"smart",name:"Smart",types:["faceNearest","goNear","goHome","sellAll","bankAll"],lock:"smart",need:"Earn 150 🪙 total (or own 2 robots) to unlock 🧭 smart blocks!"},
+  {id:"smart",name:"Smart",types:["faceNearest","goHome","sellAll","bankAll"],lock:"smart",need:"Earn 150 🪙 total (or own 2 robots) to unlock 🧭 smart blocks!"},
   {id:"vars",name:"Memory",types:["setVar","changeVar","countLoop","read","say"],lock:"vars",need:"Earn 250 🪙 total to unlock 🧠 memory & variables!"},
   {id:"funcs",name:"Functions",types:["call","ret"],lock:"vars",need:"Earn 250 🪙 total to unlock 🔧 functions!"},
   // unlocked by owning a second robot — exactly when "they keep bumping into each

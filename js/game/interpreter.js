@@ -79,7 +79,14 @@ function tickRobot(r){
   if(r.path&&r.path.length){
     const s=r.path.shift();
     faceTo(r,s.x,s.y);
-    if(canWalk(s.x,s.y)){r.x=s.x;r.y=s.y;}else{r.path=null;r.blocked=true;}
+    if(canWalk(s.x,s.y)){
+      r.x=s.x;r.y=s.y;
+      // A path step IS a step. The world used to count distance only for ⬆️ Move,
+      // so once 🚶 Walk To became the way you travel, "Walk 150 steps" could never
+      // finish and the distance stat froze.
+      totals.dist=(totals.dist||0)+1;qProg("walk");skillXP("agility",1);
+      if(Math.random()<.25)burst(r.x,r.y,"dust");
+    }else{r.path=null;r.blocked=true;}
     // On arrival, turn to FACE what we walked here for. Without this the robot
     // ends up facing the way it last stepped, so the 🪓 Chop right after a
     // 🧭 Go To Nearest would swing at empty grass — the single most confusing
@@ -258,8 +265,12 @@ function doAction(r,b){
       r.pop=1;addPop(r.x,r.y,"📡 "+(RADIO_EM[b.opt]||"")); sfxIf(r,880,.05);
       break;}
     case "give":{
-      // pass everything to whoever is standing on the tile ahead
-      const mate=robots.find(x=>x!==r&&x.x===a.x&&x.y===a.y);
+      // Pass everything to a robot standing next to me — the one I'm facing first,
+      // otherwise any neighbour. It used to be the faced tile only, which meant a
+      // hand-off needed ↩️/↪️ to line up; with step-by-step walking gone from the
+      // world there is no way to aim, so proximity is the whole requirement.
+      let mate=robots.find(x=>x!==r&&x.x===a.x&&x.y===a.y);
+      if(!mate)mate=robots.find(x=>x!==r&&Math.abs(x.x-r.x)+Math.abs(x.y-r.y)===1);
       if(!mate){r.blocked=true;sfxIf(r,180,.05);break;}
       let moved=0;
       for(const res in r.inv){
