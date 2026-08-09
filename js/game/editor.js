@@ -229,7 +229,7 @@ function renderList(list,parent){
       if(typeof b.cond==="object"){
         // the right side is a VALUE: a number (−/+) or another variable, so `x > y` works
         const rv=b.cond.val, isVar=!!(rv&&typeof rv==="object"&&rv.k==="var");
-        inner+='<button class="pbtn" data-p="cvar">📦 '+esc(b.cond.var)+'</button><button class="pbtn" data-p="cop">'+b.cond.op+'</button>';
+        inner+='<button class="pbtn" data-p="cvar">📦 '+esc(b.cond.var)+'</button><button class="pbtn" data-p="cop">'+opLbl(b.cond.op)+'</button>';
         if(isVar)inner+='<button class="pbtn" data-p="crname">📦 '+esc(rv.name)+'</button>';
         else inner+='<button class="pbtn" data-p="cvdec">−</button><span class="num">'+condNum(b.cond)+'</span><button class="pbtn" data-p="cvinc">＋</button>';
         inner+='<button class="pbtn" data-p="cvkind">'+(isVar?"🔢":"📦")+'</button>';
@@ -289,8 +289,10 @@ function renderList(list,parent){
         }
         if(p==="cvar")b.cond.var=promptName(b.cond.var);
         if(p==="cop"){
-          b.cond.op=b.cond.op===">"?"<":b.cond.op==="<"?"=":null;
-          if(!b.cond.op)b.cond=((mgState&&typeof mgCondList==="function")?mgCondList():CONDS)[0];
+          // cycle > < = ≠, then fall back out to the sensor list
+          const oi=OPS.indexOf(b.cond.op);
+          if(oi>=0&&oi<OPS.length-1)b.cond.op=OPS[oi+1];
+          else b.cond=((mgState&&typeof mgCondList==="function")?mgCondList():CONDS)[0];
         }
         if(p==="cvdec")condSetNum(b.cond,condNum(b.cond)-1);
         if(p==="cvinc")condSetNum(b.cond,condNum(b.cond)+1);

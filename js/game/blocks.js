@@ -66,6 +66,15 @@ const DEFS={
   // route — as opposed to N robots each doing the whole job in parallel.
   give:{cat:"team",ic:"📦",lbl:"Give Bag"},
 };
+/* Comparisons. The block shows maths (x ≠ 3); the Python tab shows Python
+   (x != 3). "not equal" is the one every real loop needs — "keep going while the
+   answer ISN'T what I want" cannot be said with >, < or = alone.
+   Stored as ASCII so a save file, a published solution and the database row all
+   stay readable; ≠ is presentation only. */
+const OPS=[">","<","=","!="];
+const OP_LBL={">":">","<":"<","=":"=","!=":"≠"};
+const OP_PY={">":">","<":"<","=":"==","!=":"!="};
+function opLbl(op){return OP_LBL[op]||op;}
 // what 📖 Read can look at
 const READ_SRC=["here","ahead","held","x","y","price"];
 const READ_LBL={here:"number under me 🟧",ahead:"number ahead ⬆️",held:"number I'm holding ✊",

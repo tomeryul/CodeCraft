@@ -1377,7 +1377,7 @@ function mgReadSrc(st,src){
 function mgCond(st,c){
   if(c&&typeof c==="object"){
     const v=Number(mgRobot.vars[c.var])||0, w=condRhs(mgRobot,c);
-    return c.op===">"?v>w:c.op==="<"?v<w:v===w;
+    return c.op===">"?v>w:c.op==="<"?v<w:c.op==="!="?v!==w:v===w;
   }
   const rb=st.robot, ax=rb.x+DX[rb.dir], ay=rb.y+DY[rb.dir];
   const ka=ax+"_"+ay, kh=rb.x+"_"+rb.y, T=window.CC_TILES;

@@ -46,7 +46,8 @@ function evalCond(r,c){
     const v=Number(r.vars[c.var])||0, w=condRhs(r,c);
     if(c.op===">")return v>w;
     if(c.op==="<")return v<w;
-    return v===w;
+    if(c.op==="!=")return v!==w;
+    return v===w;   // no op / "=" — the shape every save before ≠ existed used
   }
   const a=ahead(r), o=inB(a.x,a.y)?objects.get(key(a.x,a.y)):null;
   switch(c){

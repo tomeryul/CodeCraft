@@ -74,7 +74,7 @@ function pyRead(src,opt){
 }
 function pyCond(c){
   // the right side is a value: a number, or another variable
-  if(c&&typeof c==="object")return c.var+" "+(c.op==="="?"==":c.op)+" "+
+  if(c&&typeof c==="object")return c.var+" "+(OP_PY[c.op]||"==")+" "+
     ((c.val&&typeof c.val==="object")?pyVal(c.val):c.val);
   switch(c){
     case "treeAhead":return 'robot.sees("tree")';

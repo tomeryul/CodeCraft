@@ -1323,6 +1323,62 @@ async function ev(expr) {
   check("cannot drop a container into its own descendant", D.ok2 === false, dnd);
   check("drag to reorder at root works", D.ok3 === true && D.order === "collect,repeat", dnd);
 
+  console.log("▶ ≠ not-equal in ❓ If and 🔄 While");
+  const neq = await ev(`(()=>{ try{
+    const out={};
+    const r=robots[0];
+    r.vars={x:5,y:5,z:2};
+    // --- the world VM ---
+    out.neqTrue =evalCond(r,{var:"x",op:"!=",val:{k:"num",n:3}});   // 5 != 3
+    out.neqFalse=evalCond(r,{var:"x",op:"!=",val:{k:"num",n:5}});   // 5 != 5
+    out.neqVar  =evalCond(r,{var:"x",op:"!=",val:{k:"var",name:"z"}});
+    out.neqVarSame=evalCond(r,{var:"x",op:"!=",val:{k:"var",name:"y"}});
+    out.eqStillWorks=evalCond(r,{var:"x",op:"=",val:{k:"num",n:5}});
+    // a save written before ≠ existed has no op at all — still reads as "="
+    out.legacyNoOp=evalCond(r,{var:"x",val:5});
+    // --- Python ---
+    out.py   =pyCond({var:"x",op:"!=",val:{k:"num",n:3}});
+    out.pyEq =pyCond({var:"x",op:"=",val:{k:"num",n:3}});
+    out.pyOld=pyCond({var:"x",val:3});
+    // --- the ❓/🔄 chip cycles > < = ≠ and then back out to the sensors ---
+    document.getElementById("editor").classList.add("open");
+    setTab("blocks"); edTarget="main";
+    r.program=[{t:"whileLoop",uid:"NQ",cond:{var:"x",op:">",val:{k:"num",n:3}},body:[]}];
+    renderProgram();
+    const chip=()=>document.querySelector('#programEl .blk[data-uid="NQ"] [data-p="cop"]');
+    const seen=[];
+    for(let i=0;i<4;i++){
+      const c=chip(); if(!c)break;
+      seen.push(c.textContent);
+      c.click();
+    }
+    out.cycle=seen.join(" ");
+    out.fellBackToSensor=(typeof r.program[0].cond==="string");
+    // ...and ≠ survives a round trip through the editor's own chip
+    r.program=[{t:"if",uid:"NQ2",cond:{var:"x",op:"!=",val:{k:"num",n:3}},body:[],els:[]}];
+    renderProgram();
+    const c2=document.querySelector('#programEl .blk[data-uid="NQ2"] [data-p="cop"]');
+    out.shownAs=c2?c2.textContent:null;
+    renderPy();
+    out.pyProgram=/x != 3/.test(document.getElementById("pyCode").textContent);
+    r.program=[]; renderProgram();
+    document.getElementById("editor").classList.remove("open");
+    return JSON.stringify(out);
+  }catch(e){return JSON.stringify({ERR:e.message+" @ "+(e.stack||"").split("\\n")[1]});} })()`);
+  const NQ = JSON.parse(neq);
+  if(NQ.ERR) throw new Error("not-equal block threw: "+NQ.ERR);
+  check("≠ compares a variable against a number",
+    NQ.neqTrue === true && NQ.neqFalse === false, neq);
+  check("≠ compares a variable against another variable",
+    NQ.neqVar === true && NQ.neqVarSame === false, neq);
+  check("= still works, and a save written before ≠ still reads as =",
+    NQ.eqStillWorks === true && NQ.legacyNoOp === true && NQ.pyOld === "x == 3", neq);
+  check("≠ generates Python !=",
+    NQ.py === "x != 3" && NQ.pyEq === "x == 3" && NQ.pyProgram === true, neq);
+  check("the comparison chip cycles > < = ≠ then back to the sensors",
+    NQ.cycle === "> < = ≠" && NQ.fellBackToSensor === true, neq);
+  check("a ≠ condition renders as ≠ on the block", NQ.shownAs === "≠", neq);
+
   console.log("▶ copy / paste blocks");
   const cp = await ev(`(()=>{
     const r=R(); r.program=[]; r.hist=[]; r.redoS=[];
