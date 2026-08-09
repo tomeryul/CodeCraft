@@ -1379,6 +1379,69 @@ async function ev(expr) {
     NQ.cycle === "> < = ≠" && NQ.fellBackToSensor === true, neq);
   check("a ≠ condition renders as ≠ on the block", NQ.shownAs === "≠", neq);
 
+  console.log("▶ 🔧 Call argument chips: setting the values a function takes in");
+  const callarg = await ev(`(()=>{ try{
+    const out={};
+    const r=robots[0];
+    document.getElementById("editor").classList.add("open");
+    setTab("blocks"); edTarget="main"; selBlock=null; elseSel=null;
+    r.routines={A:{params:["x","y"],body:[{t:"move",uid:"AB"}]},B:{params:[],body:[]}};
+    r.program=[{t:"call",uid:"CA",fn:"A",args:[],outs:[]}];
+    renderProgram();
+    const chip=q=>document.querySelector('#programEl .blk[data-uid="CA"] [data-p="'+q+'"]');
+    // ＋ on the first argument: this threw ReferenceError: btn is not defined
+    out.threw=null;
+    try{ chip("ainc").click(); chip("ainc").click(); }catch(e){ out.threw=String(e.message||e); }
+    out.arg0=JSON.stringify(r.program[0].args[0]);
+    chip("adec").click();
+    out.afterDec=JSON.stringify(r.program[0].args[0]);
+    // the SECOND argument must move on its own, not share slot 0
+    const incs=[...document.querySelectorAll('#programEl .blk[data-uid="CA"] [data-p="ainc"]')];
+    out.twoArgChips=incs.length;
+    incs[1].click();
+    out.arg1=JSON.stringify(r.program[0].args[1]);
+    out.arg0Untouched=JSON.stringify(r.program[0].args[0])===out.afterDec;
+    // 🔢 → 📦 turns that one argument into a variable, still per-slot
+    document.querySelectorAll('#programEl .blk[data-uid="CA"] [data-p="akind"]')[1].click();
+    out.arg1IsVar=(r.program[0].args[1]||{}).k==="var";
+    out.arg0StillNum=(r.program[0].args[0]||{}).k!=="var";
+    // ---- the same bug on 🔙 Give Back ----
+    r.program=[{t:"ret",uid:"RT",vals:[{k:"num",n:0},{k:"num",n:0}]}];
+    renderProgram();
+    const rincs=[...document.querySelectorAll('#programEl .blk[data-uid="RT"] [data-p="rinc"]')];
+    out.retThrew=null;
+    try{ rincs[1].click(); }catch(e){ out.retThrew=String(e.message||e); }
+    out.retVals=JSON.stringify(r.program[0].vals);
+    // ---- tapping the ICON inside a chip counts as tapping the chip ----
+    // ui-icons.js swaps every emoji for a <span class="ui-emoji">, so a finger
+    // landing on the picture used to hit a span with no data-p and do nothing.
+    r.program=[{t:"call",uid:"CB",fn:"A",args:[{k:"var",name:"q"},{k:"num",n:0}],outs:[]}];
+    renderProgram();
+    const kindChip=document.querySelector('#programEl .blk[data-uid="CB"] [data-p="akind"]');
+    // ui-icons.js swaps emoji on a MutationObserver, so it hasn't run yet inside
+    // this one synchronous block — build the same shape it produces by hand.
+    kindChip.innerHTML='<span class="ui-emoji"><svg></svg></span>';
+    const icon=kindChip.querySelector("svg");
+    out.hadIcon=!!icon&&icon!==kindChip;
+    icon.dispatchEvent(new MouseEvent("click",{bubbles:true}));
+    out.iconWorked=(r.program[0].args[0]||{}).k!=="var";   // 📦 → 🔢 happened
+    r.program=[]; r.routines={A:{params:[],body:[]},B:{params:[],body:[]}};
+    renderProgram();
+    document.getElementById("editor").classList.remove("open");
+    return JSON.stringify(out);
+  }catch(e){return JSON.stringify({ERR:e.message+" @ "+(e.stack||"").split("\\n")[1]});} })()`);
+  const CAG = JSON.parse(callarg);
+  if(CAG.ERR) throw new Error("call-args block threw: "+CAG.ERR);
+  check("＋/− on a 🔧 Call argument sets its value instead of throwing",
+    CAG.threw === null && CAG.arg0 === '{"k":"num","n":2}' && CAG.afterDec === '{"k":"num","n":1}', callarg);
+  check("each argument chip edits its OWN slot",
+    CAG.twoArgChips === 2 && CAG.arg1 === '{"k":"num","n":1}' && CAG.arg0Untouched === true &&
+    CAG.arg1IsVar === true && CAG.arg0StillNum === true, callarg);
+  check("🔙 Give Back's per-value chips work the same way",
+    CAG.retThrew === null && CAG.retVals === '[{"k":"num","n":0},{"k":"num","n":1}]', callarg);
+  check("tapping the icon inside a chip counts as tapping the chip",
+    CAG.hadIcon === true && CAG.iconWorked === true, callarg);
+
   console.log("▶ copy / paste blocks");
   const cp = await ev(`(()=>{
     const r=R(); r.program=[]; r.hist=[]; r.redoS=[];

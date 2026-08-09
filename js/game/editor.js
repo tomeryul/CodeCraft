@@ -272,7 +272,14 @@ function renderList(list,parent){
     attachDrag(row,b);
     row.addEventListener("click",e=>{
       if(dragSuppress){dragSuppress=false;e.stopPropagation();return;}
-      const p=e.target.dataset&&e.target.dataset.p;
+      /* Find the chip that was tapped, not merely whatever pixel the finger hit.
+         ui-icons.js swaps every emoji for a <span class="ui-emoji"><svg>…</svg></span>,
+         so on a chip like "🔧 A" or "＋" the event target is that span (or the svg
+         inside it) and reading dataset.p off it found nothing — the chip looked
+         dead. Anything with no [data-p] ancestor inside the row still falls
+         through to "select this block", exactly as before. */
+      const el=(e.target.closest&&e.target.closest("[data-p]"))||e.target;
+      const p=el.dataset&&el.dataset.p;
       if(p){
         pushUndo();
         if(p==="inc")b.n=Math.min(99,numOf(b.n)+1);
@@ -327,7 +334,7 @@ function renderList(list,parent){
           if(p==="rmore"){ if(b.vals.length<4)b.vals.push({k:"num",n:0}); }
           else if(p==="rless"){ if(b.vals.length>1)b.vals.pop(); }
           else{
-            const i=+btn.dataset.i;
+            const i=+el.dataset.i;   // was `btn` — a name that never existed here
             if(!b.vals[i])b.vals[i]={k:"num",n:0};
             const v=b.vals[i];
             if(p==="rkind")b.vals[i]=v.k==="var"?{k:"num",n:0}:{k:"var",name:"x"};
@@ -337,7 +344,7 @@ function renderList(list,parent){
           }
         }
         if(p==="akind"||p==="aname"||p==="adec"||p==="ainc"){
-          const i=+btn.dataset.i;
+          const i=+el.dataset.i;     // was `btn` — a name that never existed here
           b.args=b.args||[];
           if(!b.args[i])b.args[i]={k:"num",n:0};
           const av=b.args[i];
