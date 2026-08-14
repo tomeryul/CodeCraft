@@ -63,6 +63,14 @@ const ICONS={/* ---- v3: the last of the UI emoji ---- */
 "📣":W('<path d="M4 10 h3.2 L15.4 5.2 v13.6 L7.2 14 H4 a1.6 1.6 0 0 1 -1.6-1.6 v-.8 A1.6 1.6 0 0 1 4 10 Z" fill="#ffd66b"/><path d="M18 8.6 a5 5 0 0 1 0 6.8" stroke="#ffb830" stroke-width="2.1" stroke-linecap="round" fill="none"/><path d="M7.6 14.6 l1.4 5 h3 l-1.4-5" fill="#e8b23e"/>'),
 "🌙":W('<path d="M20 14.6 A8.6 8.6 0 0 1 9.4 4 a8.8 8.8 0 1 0 10.6 10.6 Z" fill="#cfd9ea"/>'),
 "📻":W('<rect x="2.8" y="8.4" width="18.4" height="11.2" rx="2.4" fill="#8a91a4"/><path d="M8.6 8 L18.4 4.2" stroke="#9aa1b0" stroke-width="2" stroke-linecap="round"/><circle cx="8" cy="14" r="3" fill="#241b45"/><rect x="13.4" y="11.4" width="5.4" height="2" rx="1" fill="#cfd4e0"/><rect x="13.4" y="15.2" width="5.4" height="2" rx="1" fill="#cfd4e0"/>'),
+// ---- 🧊 Tower Mode (js/game/tower3d.js) ----
+"🪜":W('<path d="M7.4 3.4 V20.6 M16.6 3.4 V20.6" stroke="#c98d4b" stroke-width="2.4" stroke-linecap="round"/><path d="M7.4 7.6 H16.6 M7.4 12 H16.6 M7.4 16.4 H16.6" stroke="#e0a45f" stroke-width="2.1" stroke-linecap="round"/>'),
+"🦘":W('<path d="M4 17.4 C6.6 8.6 17.4 8.6 20 17.4" stroke="#54d66a" stroke-width="2.4" stroke-linecap="round" fill="none"/><path d="M2.6 19.8 H8.4 M15.6 19.8 H21.4" stroke="#8a91a4" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="10.1" r="2.1" fill="#54d66a"/>'),
+// three faces of one hue, so the cube reads on a light chip and on a dark sheet
+// alike — fixed light-blue faces vanished on the light-blue Tower Mode chip
+"🧊":W('<path d="M12 3.2 L20.2 7.6 L12 12 L3.8 7.6 Z" fill="'+CC+'" opacity=".95"/><path d="M3.8 7.6 L12 12 v8.8 L3.8 16.4 Z" fill="'+CC+'" opacity=".5"/><path d="M20.2 7.6 L12 12 v8.8 l8.2-4.4 Z" fill="'+CC+'" opacity=".72"/>'),
+"⛰":W('<path d="M2.4 19.4 L9.2 7.2 L13.4 14.2 L15.6 10.8 L21.6 19.4 Z" fill="#8a91a4"/><path d="M9.2 7.2 L11.9 12 h-5.4 Z" fill="#eaf6ff"/>'),
+"🛤":W('<path d="M3.6 20.2 L8.4 4.4 M20.4 20.2 L15.6 4.4" stroke="#8a91a4" stroke-width="2.3" stroke-linecap="round"/><path d="M5.6 16.6 H18.4 M7 11.8 H17 M8.3 7.2 H15.7" stroke="#c98d4b" stroke-width="2.1" stroke-linecap="round"/>'),
 "🧱":W('<rect x="3.4" y="6.2" width="17.2" height="11.6" rx="1.8" fill="#c96f45"/><path d="M3.4 10.1 H20.6 M3.4 13.9 H20.6 M9.2 6.2 V10.1 M15 6.2 V10.1 M6.3 10.1 V13.9 M12 10.1 V13.9 M17.7 10.1 V13.9 M9.2 13.9 V17.8 M15 13.9 V17.8" stroke="#f0e2d2" stroke-width="1.5" stroke-linecap="round"/>'),
 "🔑":W('<circle cx="8.2" cy="8.4" r="4.6" fill="none" stroke="#ffd66b" stroke-width="2.6"/><path d="M11.2 11.6 L19.6 20 M16.4 16.8 L18.8 14.4 M13.8 14.2 L16.2 11.8" stroke="#ffd66b" stroke-width="2.6" stroke-linecap="round"/>'),
 "🚪":W('<rect x="5.2" y="2.9" width="13.6" height="18.2" rx="1.9" fill="#a8642f"/><rect x="7.4" y="5.1" width="9.2" height="13.8" rx="1.2" fill="#c07c3f"/><circle cx="14.9" cy="12" r="1.35" fill="#ffd66b"/>'),

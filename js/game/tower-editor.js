@@ -13,7 +13,15 @@
    ===================================================================== */
 (function(){
 if(typeof window==="undefined"||typeof mgState==="undefined")return;
-if(window.__t3ed)return; window.__t3ed=1;
+if(window.__t3ed)return;
+/* Tower Mode is the engine this edits. Without tower3d.js there is no
+   t3Enter to play a level, no renderer behind the 🧊 view and no TOWER_LEVELS
+   band to hang the cards on — so install nothing rather than half of it. */
+if(typeof window.t3Enter!=="function"){
+  console.warn("tower-editor.js: js/game/tower3d.js is not loaded — 3D design mode disabled.");
+  return;
+}
+window.__t3ed=1;
 
 const MAXH=5, MAXG=4;                       // brick peak / terrain peak
 const K=(x,y)=>x+"_"+y;

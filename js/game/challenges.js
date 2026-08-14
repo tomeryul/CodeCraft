@@ -947,8 +947,6 @@ function mgSeed(rs,proj){
   // puzzle terrain (walls, pits, …). Absent on every pre-existing project → empty board.
   if(window.CC_TILES)CC_TILES.seed(rs,proj);
   else{rs.tiles=new Map();rs.keys=new Set();rs.open=new Set();}
-  // 🧊 a Tower level is a height map instead — see tower3d.js
-  if(window.T3&&proj.mode3d)T3.seed(rs,proj);
 }
 // can the robot stand on this cell? (grid bounds + solid terrain)
 function mgWalkable(st,x,y){
@@ -1296,9 +1294,10 @@ function mgTick(){
     }
     mgRobot.curUid=b.uid;
     const rb=st.robot;
-    // 🧊 One seam for Tower levels, so loops, functions, variables and 💬 Say
-    // stay shared — T3.act claims only the blocks whose meaning changes.
-    if(window.T3&&st.proj.mode3d&&T3.act(st,rb,b)){/* handled up there */}
+    // 3D levels handle their own actions before anything falls through
+    // to the flat-board rules. Answers false off 3D levels, and no-ops when the
+    // file isn't loaded.
+    if(window.T3Act&&T3Act(st,b)){}
     else if(b.t==="move"){
       const nx=rb.x+DX[rb.dir],ny=rb.y+DY[rb.dir];
       const oneWay=window.CC_TILES&&!CC_TILES.canLeave(rb,rb.x,rb.y,rb.dir);
@@ -1358,7 +1357,6 @@ const CHALLENGE_CONDS=["blocked","wallAhead","pitAhead","doorAhead","keyAhead","
 function mgCondList(){
   if(!mgState)return CONDS;
   const p=mgState.proj, has=c=>(p.tiles||[]).some(t=>t[2]===c);
-  if(window.T3&&p.mode3d)return T3.conds();   // 🧊 heights, not tiles
   const L=["blocked","brickHere","onTarget","holding"];
   if(has("wall"))L.push("wallAhead");
   if(has("pit"))L.push("pitAhead");
@@ -1381,7 +1379,6 @@ function mgReadSrc(st,src){
   return rb.brickNo[k]!=null?rb.brickNo[k]:0;
 }
 function mgCond(st,c){
-  if(window.T3&&st.proj.mode3d&&typeof c==="string"&&T3.conds().indexOf(c)>=0)return T3.cond(st,c);
   if(c&&typeof c==="object"){
     const v=Number(mgRobot.vars[c.var])||0, w=condRhs(mgRobot,c);
     return c.op===">"?v>w:c.op==="<"?v<w:c.op==="!="?v!==w:v===w;
@@ -1423,7 +1420,6 @@ function mgStray(st,bp){
 // verdict and the nudge to show when it isn't. mgGoalMet() is the pure predicate
 // (used by ♾️ Forever programs, which never run out of blocks to check at the end).
 function mgCheck(st){
-  if(window.T3&&st.proj.mode3d)return T3.check(st);   // 🧊 built to the blueprint?
   // A board with nothing to achieve is never "won" — otherwise a ♾️ Forever
   // program would instantly succeed on a blank creator canvas.
   if(!st.proj.goalType&&!(st.proj.cells||[]).length&&!(st.proj.initial||[]).length)
@@ -1561,7 +1557,6 @@ function mgHash(x,y){let h=(x*374761393+y*668265263)^0x9e3779b9;h=Math.imul(h^(h
 function mgDraw(){
   if(!mgState)return;
   if($("boardTab").style.display==="none")return; // board hidden — nothing to draw
-  if(window.T3&&mgState.proj.mode3d){T3.draw();return;} // 🧊 Tower: a different board entirely
   const cv=$("mgCanvas"),st=mgState,p=st.proj;
   const cw=cv.clientWidth||300;
   const cell=Math.floor(cw/p.gw);

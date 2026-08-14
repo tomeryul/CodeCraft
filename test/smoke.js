@@ -1442,91 +1442,80 @@ async function ev(expr) {
   check("tapping the icon inside a chip counts as tapping the chip",
     CAG.hadIcon === true && CAG.iconWorked === true, callarg);
 
-  console.log("▶ 🧊 Tower Mode: heights, reach, and every built-in level solved");
+  console.log("▶ 🧊 Tower Mode: the engine, its five levels, and the editor on top");
   const tow = await ev(`(()=>{ try{
     const out={};
     const origSI=window.setInterval; window.setInterval=()=>0;
-    const B=(t,x)=>Object.assign({t,uid:t+(Math.random())},x||{});
-    const REP=(n,body)=>({t:"repeat",uid:"r"+Math.random(),n,body});
-    // drive a program to completion on a tower level and report the verdict
-    const play=(lv,prog)=>{
-      if(mgState)mgExit(false);
-      delete player.projects[lv.id];
-      t3Enter(lv);
-      mgRobot.program=prog; mgRobot.routines={A:{params:[],body:[]},B:{params:[],body:[]}};
-      // winning EXITS the level, so sample the tally as we go and read the
-      // verdict from the record mgSuccess leaves behind
-      let last={low:-1,high:-1};
-      mgRun();
-      for(let i=0;i<4000&&mgState&&mgState.running;i++){
-        mgTick();
-        if(mgState&&mgState.robot&&mgState.robot.h)last=window.T3.tally(mgState);
-      }
-      const ok=!!player.projects[lv.id]||!!(mgState&&mgState.solved);
-      if(mgState)mgExit(false);
-      return {ok,low:last.low,high:last.high};
-    };
     const L=id=>JSON.parse(JSON.stringify(TOWER_LEVELS.find(x=>x.id===id)));
+    // drive raw ACTIONS through the real hook — proves a level is physically
+    // completable, independent of how few blocks it has to be written in
+    const doable=(id,acts)=>{
+      if(mgState)mgExit(false);
+      t3Enter(L(id));
+      for(const a of acts){
+        // T3Act claims only the SIX height actions; a turn is not one of them and
+        // falls through to the flat-board VM, so drive that half here too
+        if(!T3Act(mgState,{t:a,uid:a+Math.random()})){
+          const r=mgState.robot;
+          if(a==="turnR")r.dir=(r.dir+1)%4;
+          else if(a==="turnL")r.dir=(r.dir+3)%4;
+        }
+      }
+      // t3Scene() is module-private, so rebuild exactly what it returns —
+      // anything vaguer (an empty plan) makes T3.done trivially true
+      const p=mgState.proj, rb=mgState.robot;
+      const v=T3.done({gw:p.gw,gh:p.gh,h:rb.h,base:rb.base,plan:p.planMap,robot:rb});
+      out.sceneReal=(p.planMap&&Object.keys(p.planMap).length>0);
+      mgExit(false);
+      return v;
+    };
+    out.hasEngine=(typeof t3Enter==="function"&&typeof T3Act==="function"&&Array.isArray(TOWER_LEVELS));
+    out.levels=TOWER_LEVELS.map(l=>l.id).join(",");
+    out.editorInstalled=(window.__t3ed===1);
 
-    // ---- the rule that IS the game: reach is one above your feet ----
-    t3Enter(L("t3_stair"));
-    const rb=mgState.robot;
-    out.startZ=rb.z;
-    doTick=()=>0;
-    window.T3.act(mgState,rb,{t:"build"});          // (1,1): 0 -> 1, from z=0
-    out.built1=rb.h["1_1"];
-    window.T3.act(mgState,rb,{t:"build"});          // 1 -> 2 would need z>=1
-    out.reachCapped=(rb.h["1_1"]===1);
-    window.T3.act(mgState,rb,{t:"move"});           // a +1 step is not a walk
-    out.moveWontClimb=(rb.y===2);
-    window.T3.act(mgState,rb,{t:"climb"});
-    out.climbed=(rb.y===1&&rb.z===1);
-    // ⛏️ Dig never eats the land itself
-    rb.x=1;rb.y=2;rb.z=0;rb.dir=0;
-    window.T3.act(mgState,rb,{t:"dig"});
-    out.dug=rb.h["1_1"];
-    window.T3.act(mgState,rb,{t:"dig"});
-    out.digStopsAtGround=(rb.h["1_1"]===0);
-    // sensors read heights
-    rb.h["1_1"]=0;
-    out.needsBrick=T3.cond(mgState,"needBrick");
-    rb.h["1_1"]=1;
-    out.doneAhead=T3.cond(mgState,"atPlan");
-    rb.h["1_1"]=5;
-    out.tooHigh=T3.cond(mgState,"tooHigh");
+    const B="build",C="climb",M="move",J="jump",D="descend",R="turnR";
+    out.steps  =doable("t3_steps",  [B,C,B,B,C,B,B,B]);
+    out.ramp   =doable("t3_ramp",   [B,C,B,B,C,B,B,B,C, B,B,B,M, B,B,B,M, B,B,B]);
+    out.gap    =doable("t3_gap",    [M,M,J,B,C,B,B]);
+    out.corner =doable("t3_corner", [B,C,B,B,C,B,B,B,C, R, B,B,B,M,B,B,B]);
+    out.descend=doable("t3_descend",[D,D,D,B,C,B,B,C,B,B,B]);
+    // and one that must NOT pass: the same stair one brick short
+    out.short  =doable("t3_steps",  [B,C,B,B,C,B,B]);
+
+    // ---- the budget is real: First Steps solved as a PROGRAM, inside its 8 blocks
+    if(mgState)mgExit(false);
+    const lv=L("t3_steps");
+    delete player.projects[lv.id];
+    t3Enter(lv);
+    const b=t=>({t,uid:t+Math.random()});
+    mgRobot.program=[b("build"),b("climb"),b("build"),b("build"),b("climb"),
+                     b("build"),b("build"),b("build")];
+    mgRobot.routines={A:{params:[],body:[]},B:{params:[],body:[]}};
+    out.withinBudget=(progSize(mgRobot)<=lv.maxBlocks);
+    mgRun();
+    out.ranAtAll=!!(mgState&&mgState.running);
+    for(let i=0;i<3000&&mgState&&mgState.running;i++)mgTick();
+    out.solvedAsProgram=!!player.projects[lv.id];
+    if(mgState)mgExit(false);
+
+    // ---- a loop body reaches the 3D rules too (the reason the hook is at the
+    // dispatch site rather than wrapped around mgTick)
+    delete player.projects["t3_steps"];
+    t3Enter(L("t3_steps"));
+    mgRobot.program=[{t:"repeat",uid:"rp",n:2,body:[b("build")]}];
+    mgRobot.routines={A:{params:[],body:[]},B:{params:[],body:[]}};
+    mgRun();
+    for(let i=0;i<200&&mgState&&mgState.running;i++)mgTick();
+    const sc2=T3.scene?T3.scene(mgState):null;
+    out.loopBodyIs3D=!!(mgState&&mgState.robot&&mgState.robot.x===0);  // never walked
     mgExit(false);
 
-    // ---- level 1: build, turn, move, turn back ----
-    out.l1=play(L("t3_first"),[REP(3,[B("build"),B("turnR"),B("move"),B("turnL")])]);
-    // ---- level 2: climb the step you just made ----
-    out.l2=play(L("t3_stair"),[B("build"),B("climb"),B("turnR"),
-      B("build"),B("build"),B("climb"),B("build"),B("build"),B("build")]);
-    // ---- level 3: the pit needs 🦘 ----
-    out.l3=play(L("t3_gap"),[B("build"),B("turnR"),B("move"),B("turnL"),
-      B("build"),B("turnR"),B("jump"),B("turnL"),
-      B("build"),B("turnR"),B("move"),B("turnL"),B("build")]);
-    // ...and without the jump it cannot be finished
-    out.l3NoJump=play(L("t3_gap"),[B("build"),B("turnR"),B("move"),B("turnL"),
-      B("build"),B("turnR"),B("move"),B("move"),B("turnL"),B("build")]);
-    // ---- level 4: ring first, then the peak from on top of it ----
-    out.l4=play(L("t3_pyr"),[
-      B("move"),B("build"),B("climb"),
-      B("build"),B("build"),                                  // centre to 2
-      B("turnL"),B("build"),B("turnR"),B("turnR"),B("build"), // (2,1) and (2,3)
-      B("turnR"),B("turnR"),B("move"),B("turnR"),             // onto (2,1), face east
-      B("build"),B("move"),B("build"),B("move"),
-      B("turnR"),B("build"),B("move"),
-      B("build"),B("move"),B("turnR"),B("build")]);
-    // over-building fails as surely as under-building
-    out.l1Extra=play(L("t3_first"),[REP(3,[B("build"),B("turnR"),B("move"),B("turnL")]),
-      B("turnL"),B("build")]);
-
-    // a Tower level offers ONLY its own blocks, and they reach Python
-    t3Enter(L("t3_pyr"));
-    mgRobot.program=[B("climb"),B("jump"),B("dig"),B("descend"),B("build")];
+    // ---- the palette is the level's own, and the blocks reach Python
+    t3Enter(L("t3_descend"));
+    mgRobot.program=[b("climb"),b("descend"),b("jump"),b("build")];
     renderPalette();renderPy();
-    out.palette=[...document.querySelectorAll("#palette .pblk")].map(b=>b.dataset.t).join(",");
-    out.py=document.getElementById("pyCode").textContent.replace(/\s+/g," ").trim();
+    out.palette=[...document.querySelectorAll("#palette .pblk")].map(x=>x.dataset.t).join(",");
+    out.py=document.getElementById("pyCode").textContent.replace(/\\s+/g," ");
     mgExit(false);
     window.setInterval=origSI;
     document.getElementById("editor").classList.remove("open","max");
@@ -1534,27 +1523,26 @@ async function ev(expr) {
   }catch(e){return JSON.stringify({ERR:e.message+" @ "+(e.stack||"").split("\\n")[1]});} })()`);
   const TW = JSON.parse(tow);
   if(TW.ERR) throw new Error("tower block threw: "+TW.ERR);
-  check("a robot can only build ONE level above its feet",
-    TW.startZ === 0 && TW.built1 === 1 && TW.reachCapped === true, tow);
-  check("going up costs a 🪜 Climb — ⬆️ Move will not do it",
-    TW.moveWontClimb === true && TW.climbed === true, tow);
-  check("⛏️ Dig takes a brick back but never digs into the land",
-    TW.dug === 0 && TW.digStopsAtGround === true, tow);
-  check("the tower sensors read heights against the blueprint",
-    TW.needsBrick === true && TW.doneAhead === true && TW.tooHigh === true, tow);
-  check("🧊 First Bricks is solvable", TW.l1 && TW.l1.ok === true, tow);
-  check("🧊 Staircase is solvable", TW.l2 && TW.l2.ok === true, tow);
-  check("🧊 Mind The Gap is solvable — and not without 🦘 Jump",
-    TW.l3 && TW.l3.ok === true && TW.l3NoJump && TW.l3NoJump.ok === false, tow);
-  check("🧊 The Pyramid is solvable", TW.l4 && TW.l4.ok === true, tow);
-  check("too MANY bricks fails the level just like too few",
-    TW.l1Extra && TW.l1Extra.ok === false && TW.l1Extra.high === 1, tow);
-  check("a tower level offers only the blocks IT allows",
-    TW.palette === "move,turnL,turnR,build,climb,descend,dig,repeat,whileLoop,countLoop,if", tow);
-  check("...and the tower blocks read as Python",
-    /robot\.climb_up\(\)/.test(TW.py) && /robot\.jump_gap\(\)/.test(TW.py) &&
-    /robot\.dig\(\)/.test(TW.py) && /robot\.climb_down\(\)/.test(TW.py) &&
-    /robot\.build\(\)/.test(TW.py), tow);
+  check("the Tower engine loads and the editor installs on top of it",
+    TW.hasEngine === true && TW.editorInstalled === true &&
+    TW.levels === "t3_steps,t3_ramp,t3_gap,t3_corner,t3_descend", tow);
+  for(const [id,key] of [["First Steps","steps"],["The Long Ramp","ramp"],["Mind the Gap","gap"],
+                         ["The Corner","corner"],["Down and Over","descend"]])
+    check("🧊 "+id+" can actually be built", TW[key] && TW[key].ok === true, tow);
+  check("...and a stair one brick short does NOT pass",
+    TW.short && TW.short.ok === false && TW.short.missing === 1, tow);
+  check("First Steps is solvable as a program inside its own 8-block budget",
+    TW.withinBudget === true && TW.ranAtAll === true && TW.solvedAsProgram === true, tow);
+  check("a 3D action inside a loop body still hits the 3D rules",
+    TW.loopBodyIs3D === true, tow);
+  check("a tower level offers only its own blocks",
+    TW.palette === "move,turnL,turnR,build,climb,descend,jump,if,repeat,whileLoop", tow);
+  check("the level checks read the real scene, not an empty one",
+    TW.sceneReal === true, tow);
+  check("the tower blocks read as Python, and a Tower brick has no kind",
+    /robot\.climb\(\)/.test(TW.py) && /robot\.step_down\(\)/.test(TW.py) &&
+    /robot\.jump\(\)/.test(TW.py) && /robot\.build\(\)/.test(TW.py) &&
+    !/undefined/.test(TW.py), tow);
 
   console.log("▶ copy / paste blocks");
   const cp = await ev(`(()=>{

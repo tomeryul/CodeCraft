@@ -881,6 +881,62 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #mgStageInfo .edchip button{width:24px;height:24px;padding:0;border-radius:999px;font-size:12px;
   background:rgba(0,0,0,.28);color:var(--ink);border:none;box-shadow:none;}
 
+/* ---- its own band at the top of the projects sheet ------------------ */
+.t3sec{
+  margin:2px 0 16px;padding:13px 13px 12px;border-radius:18px;
+  background:linear-gradient(180deg,rgba(138,212,255,.14),rgba(63,154,214,.07));
+  border:1px solid rgba(138,212,255,.28);
+}
+.t3head{display:flex;align-items:center;gap:11px;margin-bottom:11px;}
+/* both chips name their own ink — the 🧊 icon is currentColor-driven */
+.t3ico{flex:0 0 auto;width:40px;height:40px;border-radius:13px;font-size:20px;color:#0e2432;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(160deg,#8ad4ff,#3f9ad6);
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.45);}
+.t3ico .ui-emoji{width:22px;height:22px;vertical-align:0;}
+.t3title{font-weight:700;font-size:15px;line-height:1.2;}
+.t3sub{font-size:11.5px;color:var(--ink2);line-height:1.35;margin-top:2px;}
+.t3prog{flex:0 0 auto;margin-left:auto;align-self:flex-start;
+  font-size:11.5px;font-weight:700;color:#0e2432;background:#8ad4ff;
+  padding:3px 9px;border-radius:999px;}
+
+/* level cards: a compact grid — height is the whole point, so each card
+   states its peak (⛰) next to its block budget */
+.t3grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px;}
+.t3card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:3px;
+  padding:11px 12px;border-radius:14px;text-align:left;cursor:pointer;
+  background:var(--glass-hi);border:1px solid var(--hair);color:inherit;font:inherit;
+  transition:transform .08s,border-color .15s;}
+.t3card:active{transform:scale(.97);border-color:rgba(138,212,255,.6);}
+.t3card.done{opacity:.62;}
+.t3badge{font-size:19px;line-height:1;}
+.t3badge .ui-emoji{width:20px;height:20px;vertical-align:0;}
+.t3name{font-weight:700;font-size:13.5px;line-height:1.25;}
+.t3meta{font-size:11px;color:var(--ink2);line-height:1.3;}
+.t3meta .ui-emoji{width:11px;height:11px;vertical-align:0;}
+.t3done{position:absolute;top:9px;right:10px;font-size:12px;font-weight:800;color:#54d66a;}
+
+/* ---- camera bar under the 3D board --------------------------------- */
+.t3bar{display:flex;align-items:center;gap:7px;margin:7px 0 2px;
+  padding:6px 8px;border-radius:12px;background:var(--glass-hi);border:1px solid var(--hair);}
+.t3tag{font-size:10.5px;font-weight:800;letter-spacing:.06em;color:#0e2432;
+  background:#8ad4ff;padding:3px 7px;border-radius:7px;}
+.t3tag .ui-emoji{width:11px;height:11px;vertical-align:0;}
+.t3btn{width:30px;height:30px;padding:0;border-radius:9px;font-size:15px;line-height:1;
+  background:var(--glass-hi);border:1px solid var(--hair);color:var(--ink);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.t3btn:active{transform:scale(.92);background:var(--glass-on);}
+.t3h{font-size:12px;font-weight:700;color:var(--ink2);min-width:38px;}
+.t3key{margin-left:auto;display:flex;align-items:center;gap:5px;
+  font-size:10.5px;color:var(--ink2);white-space:nowrap;}
+.t3sw{width:9px;height:9px;border-radius:2px;display:inline-block;margin-left:5px;}
+.t3sw-b{background:#e6bd7d;}
+.t3sw-p{border:1.5px dashed #e98c20;}
+.t3sw-x{background:#ff8fa0;}
+
+/* the 3D board is wider than it is tall — let it breathe */
+#boardTab #mgCanvas{border-radius:12px;}
+
 /* ---- Tower level editor (3D design mode in the creator) ------------- */
 #mgCreatorBar #t3Btn.on{background:linear-gradient(180deg,#8ad4ff,#4aa6dd);color:#082436;
   border-bottom-color:#2a7ba8;box-shadow:inset 0 1px 0 rgba(255,255,255,.4);}
@@ -919,24 +975,3 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .t3card.t3new{border-style:dashed;border-color:rgba(138,212,255,.5);background:rgba(138,212,255,.07);}
 .t3mine{position:absolute;top:8px;right:9px;font-size:9px;font-weight:800;letter-spacing:.05em;
   text-transform:uppercase;color:#0e2432;background:#8ad4ff;padding:2px 6px;border-radius:6px;}
-
-/* ---- 🧊 Tower Mode ---------------------------------------------------- */
-/* the band of tower levels in Projects. Its own grid rather than ccCard:
-   a tower is read by its shape, so the card is short and shows ⛰ height. */
-.t3sec{margin:2px 0 4px;}
-.t3grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px;}
-.t3card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;
-  padding:11px 12px 10px;border-radius:15px;text-align:left;cursor:pointer;
-  background:linear-gradient(180deg,rgba(138,212,255,.13),rgba(96,140,220,.10));
-  border:1px solid var(--hair);}
-.t3card:active{transform:scale(.97);}
-.t3card.done{background:linear-gradient(180deg,rgba(67,184,98,.15),rgba(45,140,80,.10));}
-.t3badge{font-size:19px;line-height:1;}
-.t3name{font-size:13.5px;font-weight:800;color:var(--ink);}
-.t3meta{font-size:10.5px;font-weight:700;color:var(--ink2);}
-/* the ⟲ ⟳ view control, above the board so it never covers the tower */
-#t3Bar{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 6px;}
-#t3Bar button{width:36px;height:30px;border-radius:10px;font-size:16px;font-weight:800;
-  background:var(--glass-hi);border:1px solid var(--hair);color:var(--ink);cursor:pointer;}
-#t3Bar button:active{transform:scale(.92);}
-#t3Bar .t3hint{font-size:10.5px;font-weight:700;color:var(--ink2);letter-spacing:.02em;}

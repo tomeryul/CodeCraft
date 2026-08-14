@@ -1,216 +1,536 @@
 "use strict";
 /* =====================================================================
-   🧊 Tower Mode — the world has a THIRD axis
+   CodeCraft — Tower Mode (3D builds)                    drop-in module
    ---------------------------------------------------------------------
-   A flat challenge board asks "which tiles?". A tower asks "how high?",
-   and that one extra number is what turns a route into an algorithm: you
-   cannot reach the top of a stack you have not already built, so the
-   order of the work becomes the puzzle.
+   A third kind of challenge: the board has HEIGHT. The robot stacks
+   bricks on the tile ahead, climbs onto them, and rebuilds a blueprint
+   in three dimensions.
 
-   A level is a height map:
-     terrain [x,y,h]  the ground the robot starts on
-     plan    [x,y,h]  the blueprint — what each column must END UP at
-     holes   [x,y]    pits: no floor, nothing can stand or be built there
+   The file is two halves that never touch each other's globals:
 
-   The robot carries unlimited bricks and can only reach ONE level above
-   where it is standing, so a tall column has to be climbed as it grows.
-   That single rule is the whole game.
+     T3.*   a pure renderer + rules engine. Knows nothing about the game;
+            takes a plain scene object and a 2D context. Previewable and
+            testable on its own.
+     glue   monkey-patches mgDraw / mgTick / mgCheck / mgSeed / mgCond /
+            mgCondList / renderProjects so 3D levels ride the EXISTING
+            challenge machinery. No edits to challenges.js required.
 
-   This file owns Tower Mode end to end: the level data, the height-aware
-   VM, the isometric renderer, the camera, and the band of levels in the
-   Projects sheet. challenges.js calls into it through four small seams
-   (window.T3), all guarded, so with this file absent nothing changes.
+   Load order: after js/game/challenges.js, before boot.
    ===================================================================== */
+
+/* ============================ 1. renderer ============================ */
 (function(){
-if(typeof window==="undefined")return;
+const T3={};
 
+/* ---- palette ----
+   Taken from the board, not invented: bricks ride drawBoardBrick's ramp
+   (render.js) and the robot is ROBOT_COLORS[0], the same colour the 2D
+   challenge board hands drawBoardRobot. Read at runtime where the game's
+   files are present; the literals are the standalone-preview fallback. */
+const SKY0="#cfeaff", SKY1="#eaf7ff";
+const GRASS=["#79c34e","#71ba47","#7fc957"];
+// top-face colours; the face shading below walks them down to the ramp's
+// dark end (#b9793c on plan, #e23b57 off it) all by itself
+const BRICK="#e6bd7d", BRICK_OK="#e6bd7d", BRICK_BAD="#ff8fa0";
+const PLAN="#ffb347";
+var BOT=(typeof ROBOT_COLORS!=="undefined"?ROBOT_COLORS[0]:"#ffb830");
+var BOT_LT=(typeof window!=="undefined"&&window.CC_EXTRAS?CC_EXTRAS.lighten(BOT,.3):"#ffcd6e");
+
+// world-fixed light: faces keep their identity while the camera spins
+const FACE={top:1, N:.88, W:.78, E:.60, S:.50};
+const shade=(hex,m)=>{
+  const n=parseInt(hex.slice(1),16);
+  const r=Math.min(255,Math.round((n>>16&255)*m)), g=Math.min(255,Math.round((n>>8&255)*m)), b=Math.min(255,Math.round((n&255)*m));
+  return "rgb("+r+","+g+","+b+")";
+};
 const K=(x,y)=>x+"_"+y;
-const D4=[[0,-1],[1,0],[0,1],[-1,0]];   // matches DX/DY: 0=N 1=E 2=S 3=W
+T3.K=K;
 
-/* ---------------- the built-in levels ----------------
-   Each one exists to make exactly one block necessary for the first time:
-   nothing here can be solved by the previous level's program. */
-const TOWER_LEVELS=[
-  {id:"t3_first", em:"🧊", name:"First Bricks", diff:1, coins:40, xp:25,
-   gw:6, gh:4, maxBlocks:8, start:{x:1,y:2,dir:0},
-   allowed:["move","turnL","turnR","build","repeat"],
-   terrain:[], holes:[],
-   plan:[[1,1,1],[2,1,1],[3,1,1]],
-   desc:"Lay three bricks in a row. 🔨 Build puts a brick on the tile you FACE — so build, turn, move, turn back."},
+/* ---- projection ----------------------------------------------------
+   Real perspective, not isometric: a pinhole camera pitched down over
+   the board. Scale is solved once against ALL FOUR yaw steps so the
+   build never breathes or clips while the camera rotates.            */
+function makeProj(sc,W,H,yaw){
+  const pitch=0.60, cx=sc.gw/2, cy=sc.gh/2;
+  const maxZ=(sc.maxZ||3)+1;
+  const CAMD=Math.max(sc.gw,sc.gh)*0.95+4.5;
+  const raw=(x,y,z,yw)=>{
+    const c=Math.cos(yw), s=Math.sin(yw), cp=Math.cos(pitch), sp=Math.sin(pitch);
+    const rx=(x-cx)*c-(y-cy)*s, ry=(x-cx)*s+(y-cy)*c;
+    const yc=ry*cp-z*sp, zc=ry*sp+z*cp;
+    const d=yc+CAMD, f=1/Math.max(.6,d);
+    return {x:rx*f, y:-zc*f, d:d};
+  };
+  let mnx=1e9,mxx=-1e9,mny=1e9,mxy=-1e9;
+  for(let q=0;q<4;q++){const yw=q*Math.PI/2;
+    for(const X of [0,sc.gw])for(const Y of [0,sc.gh])for(const Z of [0,maxZ]){
+      const p=raw(X,Y,Z,yw);
+      if(p.x<mnx)mnx=p.x; if(p.x>mxx)mxx=p.x; if(p.y<mny)mny=p.y; if(p.y>mxy)mxy=p.y;
+    }}
+  const S=Math.min(W*.90/(mxx-mnx), H*.88/(mxy-mny));
+  const mid=raw(cx,cy,maxZ*.45,yaw);
+  const ox=W/2-mid.x*S, oy=H/2-mid.y*S;
+  const f=(x,y,z)=>{const p=raw(x,y,z,yaw);return {x:ox+p.x*S,y:oy+p.y*S,d:p.d};};
+  f.zcos=Math.cos(pitch);
+  return f;
+}
+T3.makeProj=makeProj;
 
-  {id:"t3_stair", em:"🧊", name:"Staircase", diff:1, coins:60, xp:35,
-   gw:6, gh:4, maxBlocks:14, start:{x:1,y:2,dir:0},
+// px per tile at a given world point — the only honest way to size a detail
+// (stud, shadow, the robot) under perspective.
+// Measured along the HEIGHT axis, not along X: a horizontal axis foreshortens
+// as the camera swings onto it (a unit of X collapses to ~56% of its length at
+// yaw 90°, which was shrinking the robot whenever you looked down the board),
+// while the vertical never does. Divide back out by cos(pitch) to get the
+// unforeshortened tile width.
+function unit(P,x,y,z){
+  const a=P(x,y,z), b=P(x,y,z+1);
+  return Math.hypot(b.x-a.x,b.y-a.y)/(P.zcos||1);
+}
+
+function poly(g,pts,fill,stroke,lw){
+  g.beginPath();g.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<pts.length;i++)g.lineTo(pts[i].x,pts[i].y);
+  g.closePath();
+  if(fill){g.fillStyle=fill;g.fill();}
+  if(stroke){g.strokeStyle=stroke;g.lineWidth=lw||1;g.lineJoin="round";g.stroke();}
+}
+
+/* one brick. Sides are drawn back-to-front then the top lid, so the
+   cube is always correct without per-face culling maths. */
+function cube(g,P,x,y,z,col,opt){
+  opt=opt||{};
+  const p=(dx,dy,dz)=>P(x+dx,y+dy,z+dz);
+  const t=[p(0,0,1),p(1,0,1),p(1,1,1),p(0,1,1)];
+  const b=[p(0,0,0),p(1,0,0),p(1,1,0),p(0,1,0)];
+  const sides=[
+    {q:[b[0],b[1],t[1],t[0]],k:"N"},
+    {q:[b[1],b[2],t[2],t[1]],k:"E"},
+    {q:[b[2],b[3],t[3],t[2]],k:"S"},
+    {q:[b[3],b[0],t[0],t[3]],k:"W"}
+  ];
+  sides.sort((a,c)=>((c.q[0].d+c.q[1].d)-(a.q[0].d+a.q[1].d)));
+  const line="rgba(90,58,20,.34)";
+  for(const s of sides)poly(g,s.q,shade(col,FACE[s.k]),opt.line||line,1);
+  poly(g,t,shade(col,FACE.top),opt.line||line,1);
+  // stud — the one detail that says "toy brick" from any angle
+  if(opt.stud!==false){
+    const c0=P(x+.5,y+.5,z+1), r=Math.max(1.5,unit(P,x+.5,y+.5,z+1)*.17);
+    g.beginPath();g.ellipse(c0.x,c0.y,r,r*.55,0,0,7);
+    g.fillStyle=shade(col,1.14);g.fill();
+    g.strokeStyle="rgba(90,58,20,.22)";g.lineWidth=1;g.stroke();
+  }
+}
+
+/* the blueprint: a dashed amber ghost of everything still missing */
+function ghost(g,P,x,y,z,t){
+  const p=(dx,dy,dz)=>P(x+dx,y+dy,z+dz);
+  const t4=[p(0,0,1),p(1,0,1),p(1,1,1),p(0,1,1)];
+  const b4=[p(0,0,0),p(1,0,0),p(1,1,0),p(0,1,0)];
+  poly(g,t4,"rgba(255,214,140,.30)",null);
+  g.setLineDash([5,4]);g.lineDashOffset=-t/70;
+  g.strokeStyle="rgba(233,140,32,.95)";g.lineWidth=1.5;
+  poly(g,t4,null,"rgba(233,140,32,.95)",1.5);
+  poly(g,b4,null,"rgba(233,140,32,.5)",1.2);
+  for(let i=0;i<4;i++){g.beginPath();g.moveTo(b4[i].x,b4[i].y);g.lineTo(t4[i].x,t4[i].y);g.stroke();}
+  g.setLineDash([]);g.lineDashOffset=0;
+}
+
+/* ---- the robot ------------------------------------------------------
+   NOT a block-bot. This is the game's own board robot (drawBoardRobot in
+   render.js) drawn as a billboard: same rounded-square toy body, same
+   bevel gradient, same white eyes / dark pupils / smile, same gold-tipped
+   antenna. Geometry is copied at its authored scale (S=36) and scaled to
+   whatever the perspective says a tile is worth here, so the character
+   reads identically to the rest of the game while the world around it is
+   genuinely 3D.
+
+   The one thing that has to be re-derived is which way "forward" points:
+   on the flat board it is DX/DY, here it is the direction one tile ahead
+   projects to on screen — so the pupils keep tracking the facing through
+   every camera rotation.                                              */
+function rr(g,x,y,w,h,r){
+  g.beginPath();
+  g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);
+  g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();
+}
+function robot(g,P,r,t){
+  const x=r.x+.5, y=r.y+.5, z=r.z;
+  const tile=unit(P,x,y,z);
+  const foot=P(x,y,z);
+
+  // facing, in screen space: one tile ahead, projected
+  const fx=x+DXX[r.dir|0], fy=y+DYY[r.dir|0];
+  const fp=P(fx,fy,z);
+  let dx=fp.x-foot.x, dy=fp.y-foot.y;
+  const m=Math.hypot(dx,dy)||1; dx/=m; dy/=m;
+
+  // ground chevron — the facing stays unambiguous at any yaw
+  (function(){
+    const o=.16, w=.13;
+    const a=P(x+DXX[r.dir]*(o+w)-DYY[r.dir]*w, y+DYY[r.dir]*(o+w)+DXX[r.dir]*w, z+.02);
+    const b=P(x+DXX[r.dir]*(o+w*2.1), y+DYY[r.dir]*(o+w*2.1), z+.02);
+    const c=P(x+DXX[r.dir]*(o+w)+DYY[r.dir]*w, y+DYY[r.dir]*(o+w)-DXX[r.dir]*w, z+.02);
+    g.strokeStyle="rgba(36,27,69,.30)";g.lineWidth=Math.max(1.4,tile*.05);
+    g.lineJoin="round";g.lineCap="round";
+    g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.lineTo(c.x,c.y);g.stroke();
+  })();
+
+  const S=36, k=tile*0.72/S;                 // authored at S=36, scaled to the tile
+  const bob=Math.sin(t/420)*1.4;
+  g.save();
+  g.translate(foot.x, foot.y-S*0.42*k);
+  g.scale(k,k);
+
+  g.fillStyle="rgba(0,0,0,.22)";
+  g.beginPath();g.ellipse(0,S*.42,S*.42,S*.16,0,0,7);g.fill();
+  g.translate(0,bob);
+
+  // body — toy bevel, exactly the game's. The colour follows the live robot
+  // (players recolour theirs), falling back to the board default.
+  const col=r.color||BOT;
+  const colLt=(typeof window!=="undefined"&&window.CC_EXTRAS)?CC_EXTRAS.lighten(col,.3):BOT_LT;
+  const grd=g.createLinearGradient(0,-S/2,0,S/2);
+  grd.addColorStop(0,colLt);grd.addColorStop(1,col);
+  g.fillStyle=grd;rr(g,-S/2,-S/2,S,S,11);g.fill();
+  g.save();rr(g,-S/2,-S/2,S,S,11);g.clip();
+  g.fillStyle="rgba(0,0,0,.25)";g.fillRect(-S/2,S/2-6,S,6);
+  g.fillStyle="rgba(255,255,255,.35)";rr(g,-S/2+4,-S/2+3,S-8,4.5,2.5);g.fill();
+  g.restore();
+
+  // antenna + gold status light
+  g.strokeStyle="#8a6210";g.lineWidth=2.5;g.lineCap="round";
+  g.beginPath();g.moveTo(0,-S/2);g.lineTo(0,-S/2-7);g.stroke();
+  g.fillStyle="#ffd66b";
+  g.beginPath();g.arc(0,-S/2-9,3.5,0,7);g.fill();
+
+  // eyes track the facing; the odd slow blink
+  const ex=dx*2.5, ey=dy*2.5;
+  const shut=(t%3400)<110;
+  g.fillStyle="#fff";
+  g.beginPath();g.arc(-6.5,-3,5,0,7);g.moveTo(11.5,-3);g.arc(6.5,-3,5,0,7);g.fill();
+  if(shut){
+    g.strokeStyle="#241b45";g.lineWidth=2;
+    g.beginPath();g.moveTo(-9,-2.5);g.lineTo(-4,-2.5);g.moveTo(4,-2.5);g.lineTo(9,-2.5);g.stroke();
+  }else{
+    g.fillStyle="#241b45";
+    g.beginPath();g.arc(-6.5+ex,-2.5+ey,2.5,0,7);g.moveTo(9+ex,-2.5+ey);g.arc(6.5+ex,-2.5+ey,2.5,0,7);g.fill();
+  }
+  g.strokeStyle="#1c1638";g.lineWidth=2;
+  g.beginPath();g.arc(ex*.5,4+ey*.5,5,.2*Math.PI,.8*Math.PI);g.stroke();
+  g.restore();
+}
+
+/* ---- the frame -----------------------------------------------------
+   scene = {gw,gh,h:{},base:{},plan:{},robot:{x,y,dir,z},maxZ}
+   h[k]    absolute height of every tile (terrain + placed bricks)
+   base[k] terrain height, so placed bricks are h-base
+   plan[k] the blueprint's target height for that tile               */
+T3.render=function(g,W,H,sc,cam){
+  const t=cam&&cam.t!=null?cam.t:(typeof performance!=="undefined"?performance.now():Date.now());
+  const yaw=(cam&&cam.yaw)||0;
+  const at=(m,x,y)=>{const v=m[K(x,y)];return v==null?0:v;};
+  let maxZ=1;
+  for(const k in sc.h)maxZ=Math.max(maxZ,sc.h[k]);
+  for(const k in (sc.plan||{}))maxZ=Math.max(maxZ,sc.plan[k]);
+  const P=makeProj({gw:sc.gw,gh:sc.gh,maxZ:maxZ},W,H,yaw);
+
+  // sky
+  const sky=g.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,SKY0);sky.addColorStop(1,SKY1);
+  g.fillStyle=sky;g.fillRect(0,0,W,H);
+
+  /* --- ground plate: every tile at its terrain height, back to front.
+     Drawing the terrain as its own low slab (rather than as cubes)
+     keeps flat boards flat and cheap. */
+  const tiles=[];
+  for(let y=0;y<sc.gh;y++)for(let x=0;x<sc.gw;x++){
+    const bz=at(sc.base,x,y);
+    tiles.push({x:x,y:y,z:bz,d:P(x+.5,y+.5,bz).d});
+  }
+  tiles.sort((a,b)=>b.d-a.d);
+  for(const tl of tiles){
+    if(tl.z<0)continue;                      // a hole: nothing to stand on
+    if(tl.z>0){                              // raised terrain reads as a rock plinth
+      for(let z=0;z<tl.z;z++)cube(g,P,tl.x,tl.y,z,"#a89b86",{stud:false,line:"rgba(60,50,40,.35)"});
+    }else{
+      const q=[P(tl.x,tl.y,0),P(tl.x+1,tl.y,0),P(tl.x+1,tl.y+1,0),P(tl.x,tl.y+1,0)];
+      poly(g,q,GRASS[(tl.x*31+tl.y*17)%3],"rgba(40,90,30,.16)",1);
+    }
+  }
+  // holes — a real sunken pit: floor, then the far walls painted over the near
+  // ones (a concave shape is the reverse sort of a convex one)
+  for(let y=0;y<sc.gh;y++)for(let x=0;x<sc.gw;x++){
+    if(at(sc.base,x,y)>=0)continue;
+    const D=1.1;
+    const f4=[P(x,y,-D),P(x+1,y,-D),P(x+1,y+1,-D),P(x,y+1,-D)];
+    const r4=[P(x,y,0),P(x+1,y,0),P(x+1,y+1,0),P(x,y+1,0)];
+    poly(g,r4,"#2f261e",null);
+    g.save();
+    g.beginPath();g.moveTo(r4[0].x,r4[0].y);for(let i=1;i<4;i++)g.lineTo(r4[i].x,r4[i].y);g.closePath();g.clip();
+    poly(g,f4,"#3a2f26",null);
+    const wall=[[0,1,"#5a4a3a"],[1,2,"#4a3d30"],[2,3,"#5f4f3e"],[3,0,"#453829"]]
+      .map(w=>({q:[r4[w[0]],r4[w[1]],f4[w[1]],f4[w[0]]],c:w[2]}));
+    wall.sort((a,b)=>(a.q[0].d+a.q[1].d)-(b.q[0].d+b.q[1].d));
+    for(const w of wall)poly(g,w.q,w.c,null);
+    g.restore();
+    poly(g,r4,null,"rgba(30,22,14,.55)",1.6);
+  }
+
+  /* --- everything with height, in one depth-sorted pass so bricks,
+     ghosts and the robot interleave correctly. */
+  const items=[];
+  for(let y=0;y<sc.gh;y++)for(let x=0;x<sc.gw;x++){
+    const b=at(sc.base,x,y), h=at(sc.h,x,y), want=(sc.plan&&sc.plan[K(x,y)]);
+    for(let z=Math.max(0,b);z<h;z++){
+      const over=want!=null?(z>=want):(sc.plan?true:false);
+      items.push({t:"b",x:x,y:y,z:z,bad:!!(sc.plan&&over),d:P(x+.5,y+.5,z+.5).d});
+    }
+    if(want!=null)for(let z=Math.max(0,h);z<want;z++)
+      items.push({t:"g",x:x,y:y,z:z,d:P(x+.5,y+.5,z+.5).d});
+  }
+  if(sc.robot)items.push({t:"r",d:P(sc.robot.x+.5,sc.robot.y+.5,sc.robot.z+.5).d});
+  items.sort((a,b)=>b.d-a.d);
+  for(const it of items){
+    if(it.t==="b")cube(g,P,it.x,it.y,it.z,it.bad?BRICK_BAD:(sc.plan?BRICK_OK:BRICK));
+    else if(it.t==="g")ghost(g,P,it.x,it.y,it.z,t);
+    else robot(g,P,sc.robot,t);
+  }
+};
+
+/* ---- rules ---------------------------------------------------------
+   One place decides what the robot may do, so the interpreter, the
+   sensors and the level checker can never drift apart.              */
+const DXX=[0,1,0,-1], DYY=[-1,0,1,0];
+T3.ahead=(sc,n)=>({x:sc.robot.x+DXX[sc.robot.dir]*(n||1), y:sc.robot.y+DYY[sc.robot.dir]*(n||1)});
+T3.inB=(sc,x,y)=>x>=0&&y>=0&&x<sc.gw&&y<sc.gh;
+T3.hAt=(sc,x,y)=>{const v=sc.h[K(x,y)];return v==null?0:v;};
+T3.bAt=(sc,x,y)=>{const v=sc.base[K(x,y)];return v==null?0:v;};
+
+// every action returns true when it happened — the caller plays the sound
+T3.act=function(sc,type){
+  const r=sc.robot, a=T3.ahead(sc,1), a2=T3.ahead(sc,2), z=r.z;
+  const H=(p)=>T3.hAt(sc,p.x,p.y), ok=(p)=>T3.inB(sc,p.x,p.y);
+  switch(type){
+    case "move":    if(ok(a)&&H(a)===z&&H(a)>=0){r.x=a.x;r.y=a.y;return true;} return false;
+    // climb: exactly one brick up — the whole point of stacking a stair
+    case "climb":   if(ok(a)&&H(a)===z+1){r.x=a.x;r.y=a.y;r.z=z+1;return true;} return false;
+    case "descend": if(ok(a)&&H(a)===z-1&&H(a)>=0){r.x=a.x;r.y=a.y;r.z=z-1;return true;} return false;
+    // jump: clear ONE low tile and land level on the far side
+    case "jump":    if(ok(a2)&&H(a)<z&&H(a2)===z){r.x=a2.x;r.y=a2.y;return true;} return false;
+    // build: onto the tile ahead, never higher than the robot's own
+    // shoulder — which is what forces build→climb→build ladders
+    case "build":   if(ok(a)&&H(a)<z+1&&H(a)>=Math.max(0,T3.bAt(sc,a.x,a.y))){
+                      sc.h[K(a.x,a.y)]=Math.max(0,H(a))+1;return true;} return false;
+    case "dig":     if(ok(a)&&H(a)>T3.bAt(sc,a.x,a.y)&&H(a)<=z+1){sc.h[K(a.x,a.y)]=H(a)-1;return true;} return false;
+  }
+  return null; // not a 3D action — the caller falls through to the 2D rules
+};
+
+T3.sense=function(sc,c){
+  const r=sc.robot, a=T3.ahead(sc,1), a2=T3.ahead(sc,2);
+  const H=(p)=>T3.hAt(sc,p.x,p.y), ok=(p)=>T3.inB(sc,p.x,p.y);
+  switch(c){
+    case "blocked":    return !(ok(a)&&H(a)===r.z&&H(a)>=0);
+    case "canClimb":   return ok(a)&&H(a)===r.z+1;
+    case "stepDown":   return ok(a)&&H(a)===r.z-1&&H(a)>=0;
+    case "gapAhead":   return ok(a)&&H(a)<r.z;
+    case "canJump":    return ok(a2)&&H(a)<r.z&&H(a2)===r.z;
+    case "planDone":   return T3.done(sc).ok;
+    // "the tile in front still wants another brick"
+    case "needBrick":  {if(!ok(a))return false;const w=sc.plan&&sc.plan[K(a.x,a.y)];return w!=null&&H(a)<w;}
+  }
+  return null;
+};
+
+T3.done=function(sc){
+  let missing=0, extra=0;
+  const plan=sc.plan||{};
+  for(const k in plan){const v=sc.h[k]==null?0:sc.h[k];if(v<plan[k])missing+=plan[k]-v;else if(v>plan[k])extra+=v-plan[k];}
+  for(const k in sc.h){
+    if(plan[k]!=null)continue;
+    const b=sc.base[k]==null?0:sc.base[k];
+    if(sc.h[k]>b)extra+=sc.h[k]-b;
+  }
+  return {ok:missing===0&&extra===0, missing:missing, extra:extra};
+};
+
+if(typeof window!=="undefined")window.T3=T3;
+})();
+
+/* ============================ 2. levels ============================== */
+/* Every plan is reachable under the build rule (never higher than the
+   robot's shoulder), so each one is a genuine build→climb ladder.     */
+/* `var`, not `const`: a double <script src> (or a hot-reload) must not abort
+   the whole module with "already declared" and take the patches down with it. */
+var TOWER_LEVELS=window.TOWER_LEVELS||[
+  {id:"t3_steps", em:"🪜", name:"First Steps", diff:1, coins:60, xp:40, maxBlocks:8, gw:5, gh:3,
+   start:{x:0,y:1,dir:1},
    allowed:["move","turnL","turnR","build","climb","repeat"],
-   terrain:[], holes:[],
    plan:[[1,1,1],[2,1,2],[3,1,3]],
-   desc:"1, then 2, then 3 high. You can only reach ONE above your feet — so climb the step you just built before you build the next."},
+   desc:"Height is new. 🧱 Build drops a brick on the tile IN FRONT of you — but never higher than your own shoulder. 🪜 Climb steps up onto a brick exactly one level high. Build the three-step stair."},
 
-  {id:"t3_gap", em:"🧊", name:"Mind The Gap", diff:2, coins:70, xp:40,
-   gw:7, gh:4, maxBlocks:16, start:{x:1,y:2,dir:0},
-   allowed:["move","turnL","turnR","build","jump","climb","repeat"],
-   terrain:[], holes:[[3,2]],
-   plan:[[1,1,1],[2,1,1],[4,1,1],[5,1,1]],
-   desc:"Four bricks, but the walkway has a hole in it. 🦘 Jump Gap lands you two tiles ahead — and only when that tile is level with your feet."},
+  {id:"t3_ramp", em:"🛤️", name:"The Long Ramp", diff:2, coins:90, xp:60, maxBlocks:9, gw:8, gh:3,
+   start:{x:0,y:1,dir:1},
+   allowed:["move","turnL","turnR","build","climb","repeat","countLoop"],
+   plan:[[1,1,1],[2,1,2],[3,1,3],[4,1,3],[5,1,3],[6,1,3]],
+   desc:"Three steps up, then a walkway. The stair grows by one brick each time — a 🔢 Count loop can build a step whose height is the loop's own number."},
 
-  {id:"t3_pyr", em:"🧊", name:"The Pyramid", diff:3, coins:110, xp:60,
-   gw:7, gh:5, maxBlocks:30, start:{x:0,y:2,dir:1},
-   allowed:["move","turnL","turnR","build","climb","descend","dig","repeat","countLoop","whileLoop","if"],
-   terrain:[], holes:[],
-   plan:[[2,1,1],[3,1,1],[4,1,1],
-         [2,2,1],[3,2,2],[4,2,1],
-         [2,3,1],[3,3,1],[4,3,1]],
-   desc:"A ring one high with a peak of two in the middle. Build the ring from the ground, then climb onto it to reach the top."}
+  {id:"t3_gap", em:"🕳️", name:"Mind the Gap", diff:2, coins:110, xp:70, maxBlocks:10, gw:7, gh:3,
+   start:{x:0,y:1,dir:1}, holes:[[3,1]],
+   allowed:["move","turnL","turnR","build","climb","jump","if","repeat","whileLoop"],
+   plan:[[5,1,1],[6,1,2]],
+   desc:"A hole splits the board. 🦘 Jump clears one low tile and lands you level on the far side. Cross it, then build the two-step marker on the other bank."},
+
+  {id:"t3_corner", em:"📐", name:"The Corner", diff:3, coins:160, xp:100, maxBlocks:12, gw:5, gh:5,
+   start:{x:0,y:1,dir:1},
+   allowed:["move","turnL","turnR","build","climb","descend","repeat","countLoop","if"],
+   plan:[[1,1,1],[2,1,2],[3,1,3],[3,2,3],[3,3,3]],
+   desc:"Climb the stair, then turn and keep going. Up on the top step the tile ahead is three below you — a walkway at height costs three bricks per tile before you can step onto it."},
+
+  {id:"t3_descend", em:"⛰️", name:"Down and Over", diff:3, coins:180, xp:120, maxBlocks:12, gw:7, gh:3,
+   start:{x:0,y:1,dir:1},
+   terrain:[[0,1,3],[1,1,2],[2,1,1]],
+   allowed:["move","turnL","turnR","build","climb","descend","jump","if","repeat","whileLoop"],
+   plan:[[4,1,1],[5,1,2],[6,1,3]],
+   desc:"You start on a cliff. ⬇️ Descend steps DOWN exactly one level — walk yourself to the ground, then build the matching stair back up on the far side. A 🔄 While loop can descend until the ground is flat."}
 ];
 window.TOWER_LEVELS=TOWER_LEVELS;
 
-/* ---------------- reading a level ---------------- */
-function inB(p,x,y){return x>=0&&y>=0&&x<p.gw&&y<p.gh;}
-function isPit(rb,x,y){return rb.hole&&rb.hole.has(K(x,y));}
-// the height of a column right now — undefined for a pit or off the board,
-// which is exactly "nothing to stand on"
-function hAt(rb,p,x,y){return (inB(p,x,y)&&!isPit(rb,x,y))?(rb.h[K(x,y)]||0):undefined;}
-function want(rb,k){return rb.plan[k]!=null?rb.plan[k]:(rb.base[k]||0);}
-// bricks still to lay / to take away — the two numbers the player is playing against
-function tally(st){
-  const rb=st.robot, p=st.proj;
-  let low=0, high=0;
-  for(let y=0;y<p.gh;y++)for(let x=0;x<p.gw;x++){
-    const k=K(x,y); if(isPit(rb,x,y))continue;
-    const d=(rb.h[k]||0)-want(rb,k);
-    if(d<0)low-=d; else high+=d;
-  }
-  return {low,high};
-}
-function planTotal(rb,p){
-  let n=0;
-  for(let y=0;y<p.gh;y++)for(let x=0;x<p.gw;x++){
-    const k=K(x,y); if(isPit(rb,x,y))continue;
-    n+=Math.max(0,want(rb,k)-(rb.base[k]||0));
-  }
-  return n;
+/* ============================ 3. glue =============================== */
+(function(){
+if(typeof window==="undefined"||typeof mgState==="undefined")return; // preview page: renderer only
+if(window.__t3glue)return;                                            // never wrap twice
+window.__t3glue=1;
+
+/* ---- new blocks in the shared palette ----
+   DEFS is the block registry (blocks.js) and COND_LBL the sensor labels;
+   both are plain objects, so a 3D level's palette is just five more keys. */
+DEFS.climb  ={cat:"basic",ic:"🪜",lbl:"Climb Up"};
+DEFS.descend={cat:"basic",ic:"⬇️",lbl:"Step Down"};
+DEFS.jump   ={cat:"basic",ic:"🦘",lbl:"Jump Gap"};
+DEFS.dig    ={cat:"basic",ic:"⛏️",lbl:"Take Brick"};
+COND_LBL.canClimb ="can climb up 🪜";
+COND_LBL.stepDown ="step down ahead ⬇️";
+COND_LBL.gapAhead ="gap ahead 🕳️";
+COND_LBL.canJump  ="can jump across 🦘";
+COND_LBL.needBrick="tile ahead needs a brick 🧱";
+
+const t3On=()=>!!(mgState&&mgState.proj&&mgState.proj.mode3d);
+const T3_ACTS={climb:1,descend:1,jump:1,build:1,move:1,dig:1};
+
+/* the scene the renderer eats, built from the live challenge state.
+   Takes the state explicitly so a caller holding a state that is no longer
+   the global one (mgCheck is handed its own) never reads past it. */
+function t3Scene(st){
+  st=st||mgState;
+  if(!st||!st.proj||!st.robot)return null;
+  const p=st.proj,rb=st.robot;
+  return {gw:p.gw,gh:p.gh,h:rb.h,base:rb.base,plan:p.planMap,robot:rb};
 }
 
-/* ---------------- the height map on the robot ----------------
-   mgSeed calls this for a 3D project. `base` never changes (it is the
-   land); `h` is what has actually been built and is what the robot walks
-   on; `z` is the height of the column it is standing on. The editor
-   clears exactly these three fields when leaving 3D. */
-function seed(rb,p){
-  rb.base={};rb.h={};rb.plan={};rb.hole=new Set();
-  for(const c of (p.terrain||[]))rb.base[K(c[0],c[1])]=c[2];
-  for(const c of (p.holes||[]))rb.hole.add(K(c[0],c[1]));
-  for(const c of (p.plan||[]))rb.plan[K(c[0],c[1])]=c[2];
-  for(let y=0;y<p.gh;y++)for(let x=0;x<p.gw;x++){
-    const k=K(x,y);
-    if(rb.hole.has(k))continue;
-    rb.h[k]=rb.base[k]||0;
-  }
-  rb.z=rb.h[K(rb.x,rb.y)]||0;
-}
+/* ---- state seeding ---- */
+const _mgSeed=window.mgSeed;
+window.mgSeed=function(rs,proj){
+  _mgSeed(rs,proj);
+  if(!proj.mode3d)return;
+  rs.h={};rs.base={};
+  for(const c of (proj.terrain||[])){rs.base[T3.K(c[0],c[1])]=c[2];rs.h[T3.K(c[0],c[1])]=c[2];}
+  for(const c of (proj.holes||[])){rs.base[T3.K(c[0],c[1])]=-1;rs.h[T3.K(c[0],c[1])]=-1;}
+  rs.z=rs.base[T3.K(rs.x,rs.y)]||0;
+};
 
-/* ---------------- what the blocks mean up here ----------------
-   Returns true when it has handled the block. Everything it does NOT
-   claim — turns, variables, 💬 Say, ⏱️ Wait — falls through to the shared
-   challenge VM, so loops, functions and memory work identically. */
-function act(st,rb,b){
-  const p=st.proj;
-  const ax=rb.x+DX[rb.dir], ay=rb.y+DY[rb.dir], ka=K(ax,ay);
-  const nope=()=>{sfx(180,.05);};
-  const step=(x,y)=>{rb.x=x;rb.y=y;rb.z=rb.h[K(x,y)]||0;sfx(430,.03);};
-  const za=hAt(rb,p,ax,ay);
-  switch(b.t){
-    // walk the flat, or step DOWN one — falling off a kerb needs no block
-    case "move":
-      if(za===undefined)return nope(),true;
-      if(za-rb.z===0||za-rb.z===-1)step(ax,ay); else nope();
-      return true;
-    // 🪜 the whole point of the mode: up is never free
-    case "climb":
-      if(za===undefined)return nope(),true;
-      if(za-rb.z===1)step(ax,ay); else nope();
-      return true;
-    // ⬇️ drop off a stack of any height in one action
-    case "descend":
-      if(za===undefined)return nope(),true;
-      if(za<rb.z)step(ax,ay); else nope();
-      return true;
-    // 🦘 clear a pit: land two ahead, and only on ground level with you
-    case "jump":{
-      const jx=rb.x+DX[rb.dir]*2, jy=rb.y+DY[rb.dir]*2;
-      const zj=hAt(rb,p,jx,jy);
-      if(zj!==undefined&&zj===rb.z)step(jx,jy); else nope();
-      return true;}
-    // 🔨 a brick on the tile ahead. Reach is one above your feet, which is
-    // what forces a tall column to be climbed as it grows.
-    case "build":
-      if(za===undefined)return nope(),true;
-      if(za>rb.z)return nope(),true;
-      rb.h[ka]=za+1;sfx(520,.04);
-      return true;
-    // ⛏️ take one back off — the only way to fix an over-build
-    case "dig":{
-      if(za===undefined)return nope(),true;
-      const g=rb.base[ka]||0;
-      if(za<=g)return nope(),true;
-      rb.h[ka]=za-1;sfx(300,.05);
-      return true;}
-  }
-  return false;
-}
+/* ---- the action hook ------------------------------------------------
+   The one edit this feature needs inside challenges.js: mgTick calls
+   window.T3Act at its action-dispatch site, once per leaf block, and skips
+   its own flat-board switch when we answer true.
 
-/* ---------------- sensors ----------------
-   The flat board's sensors ask about tiles; a tower's ask about heights.
-   `needBrick` is the one that makes "keep building until it's right" a
-   loop the player can actually write. */
-const T3_CONDS=["blocked","pitAhead","stepUp","needBrick","tooHigh","atPlan"];
-const T3_LBL={blocked:"can't step ahead 🚧",pitAhead:"pit ahead 🕳️",
-  stepUp:"a step up ahead 🪜",needBrick:"brick needed ahead 🧱",
-  tooHigh:"too high ahead ⛏️",atPlan:"tile ahead is finished ✅"};
-function cond(st,c){
-  const rb=st.robot, p=st.proj;
-  const ax=rb.x+DX[rb.dir], ay=rb.y+DY[rb.dir], ka=K(ax,ay);
-  const za=hAt(rb,p,ax,ay);
-  switch(c){
-    case "blocked":  return !(za!==undefined&&Math.abs(za-rb.z)<=1);
-    case "pitAhead": return inB(p,ax,ay)&&isPit(rb,ax,ay);
-    case "stepUp":   return za!==undefined&&za-rb.z===1;
-    case "needBrick":return za!==undefined&&za<want(rb,ka);
-    case "tooHigh":  return za!==undefined&&za>want(rb,ka);
-    case "atPlan":   return za!==undefined&&za===want(rb,ka);
-  }
-  return false;
-}
+   It has to live there rather than around mgTick. mgTick is a
+   while(guard<60) loop, and every control-flow block (repeat, call, while,
+   forever, count, if) pushes a frame and CONTINUES inside the same call —
+   so a wrapper around mgTick only ever sees a tick's first block, and the
+   body of any loop falls straight through to the 2D rules, which have no
+   climb, descend, jump or dig at all. That is the whole difference between
+   "the levels work" and "no 3D action ever runs inside a loop".
 
-/* ---------------- did they build it? ----------------
-   EXACTLY the blueprint: too many bricks fails as surely as too few, or
-   "fill everything" would solve every level. ⛏️ Dig is the way back. */
-function check(st){
-  const t=tally(st);
-  if(!t.low&&!t.high)return {ok:true,msg:""};
-  if(t.low&&t.high)return {ok:false,msg:"🧱 "+t.low+" brick"+(t.low>1?"s":"")+" missing and "+t.high+" too many — ⛏️ Dig takes the extra ones back off."};
-  if(t.low)return {ok:false,msg:"🧱 "+t.low+" more brick"+(t.low>1?"s":"")+" to lay. Remember you can only build ONE above your feet."};
-  return {ok:false,msg:"⛏️ "+t.high+" brick"+(t.high>1?"s":"")+" too many — Dig the extras back off."};
-}
+   Answering false leaves the block completely alone, so 2D levels behave
+   identically whether or not this file is loaded. */
+window.T3Act=function(st,b){
+  if(!t3On()||!b||!T3_ACTS[b.t])return false;
+  const sc=t3Scene(st), rb=st.robot;
+  if(!sc)return false;
+  rb.z=T3.hAt(sc,rb.x,rb.y);
+  const did=T3.act(sc,b.t);
+  rb.z=T3.hAt(sc,rb.x,rb.y);
+  if(did===null)return false;
+  if(did)sfx(b.t==="build"?430:b.t==="jump"?640:520,.04); else sfx(185,.05);
+  return true;
+};
 
-/* =====================================================================
-   The camera
-   ---------------------------------------------------------------------
-   Yaw is a continuous angle eased toward a target that ⟲/⟳ move in
-   quarter turns, so a tower can be inspected from any side. Everything
-   projected below is recomputed per frame from `yaw` alone.
-   ===================================================================== */
-/* Yaw starts at ZERO, not at 45°: the isometric mapping below ((rx−ry), (rx+ry))
-   is itself a 45° rotation, so a 45° yaw cancels it exactly and every cube
-   collapses into a flat axis-aligned square. */
-let yaw=0, yawT=0, raf=0;
+/* ---- sensors ---- */
+const _mgCond=window.mgCond;
+window.mgCond=function(st,c){
+  if(t3On()&&typeof c==="string"){const sc=t3Scene(st);const v=sc&&T3.sense(sc,c);if(v!==null&&v!==undefined)return v;}
+  return _mgCond(st,c);
+};
+const _mgCondList=window.mgCondList;
+window.mgCondList=function(){
+  if(!t3On())return _mgCondList();
+  const p=mgState.proj, L=["blocked","canClimb","needBrick"];
+  if((p.allowed||[]).indexOf("descend")>=0)L.push("stepDown");
+  if((p.holes||[]).length){L.push("gapAhead");L.push("canJump");}
+  return L;
+};
+
+/* ---- the verdict ---- */
+const _mgCheck=window.mgCheck;
+window.mgCheck=function(st){
+  if(!(st&&st.proj&&st.proj.mode3d))return _mgCheck(st);
+  const sc=t3Scene(st);
+  if(!sc)return _mgCheck(st);
+  const r=T3.done(sc);
+  if(r.ok)return {ok:true, msg:""};
+  // report whichever is wrong; missing first, since it is the commoner miss
+  const msg=r.missing
+    ? "🧱 "+r.missing+" brick"+(r.missing>1?"s":"")+" still missing from the blueprint — the ghost outlines show where."
+    : "🚧 "+r.extra+" brick"+(r.extra>1?"s":"")+" outside the plan — the red ones. ⛏️ Take Brick removes the top one.";
+  return {ok:false, msg:msg};
+};
+
+/* ---- rendering: own the canvas, own the frame loop ---- */
+let raf=0, yaw=0, yawT=0;
+const _mgDraw=window.mgDraw;
+window.mgDraw=function(){
+  if(!t3On())return _mgDraw();
+  if($("boardTab").style.display==="none")return;
+  const cv=$("mgCanvas"), sc=t3Scene();
+  if(!sc)return;
+  const W=cv.clientWidth||320, H=Math.round(W*0.72);
+  const dpr=(typeof DPR!=="undefined"?DPR:Math.min(3,window.devicePixelRatio||1));
+  cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);cv.style.height=H+"px";
+  const g=cv.getContext("2d");
+  g.setTransform(dpr,0,0,dpr,0,0);
+  g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
+  yaw+=(yawT-yaw)*0.18;
+  if(Math.abs(yawT-yaw)<0.001)yaw=yawT;
+  T3.render(g,W,H,sc,{yaw:yaw,t:(typeof now!=="undefined"?now:Date.now())});
+  // the number only — the ⛰ beside it is a one-time SVG the icon pack swapped in.
+  // Rewriting the whole label every frame would destroy that span and re-trigger
+  // the pack's observer sixty times a second.
+  const hb=$("t3Height"), hz=String(T3.hAt(sc,sc.robot.x,sc.robot.y));
+  if(hb&&hb.textContent!==hz)hb.textContent=hz;
+};
 function t3Loop(){
   raf=0;
-  const d=yawT-yaw;
-  if(Math.abs(d)>0.002){
-    yaw+=d*0.18;
-    raf=requestAnimationFrame(t3Loop);
-  }else yaw=yawT;
-  draw();
+  if(!t3On())return;
+  mgDraw();
+  /* Stop once the camera has settled. mgDraw is what eases yaw toward yawT, and
+     every other redraw — an action, a paint stroke, a view toggle — calls mgDraw
+     directly, so nothing needs a frame when nothing is turning. Re-arming
+     unconditionally held a 60fps loop open for a board that was not moving: it
+     drains a phone for as long as a 3D level is open, and it wedged a headless
+     screenshot that waits for the page to go quiet. */
+  if(Math.abs(yawT-yaw)>0.0005)raf=requestAnimationFrame(t3Loop);
 }
 function t3Rotate(d){yawT+=d*Math.PI/2;if(!raf)raf=requestAnimationFrame(t3Loop);}
 /* the camera, for anyone else who wants to show this scene — the level
@@ -219,235 +539,65 @@ window.t3Cam={rot:t3Rotate, bar:on=>t3Bar(on),
   start(){if(!raf)raf=requestAnimationFrame(t3Loop);},
   stop(){if(raf){cancelAnimationFrame(raf);raf=0;}}};
 
-// the ⟲ ⟳ strip. Lives above the board so it never covers the tower.
+/* ---- the camera bar under the board ---- */
 function t3Bar(on){
-  let bar=document.getElementById("t3Bar");
-  if(!bar){
-    const cv=$("mgCanvas"); if(!cv||!cv.parentNode)return;
-    bar=document.createElement("div");
-    bar.id="t3Bar";
-    bar.innerHTML='<button data-r="-1" title="Turn the view left">⟲</button>'+
-      '<span class="t3hint">turn the view</span>'+
-      '<button data-r="1" title="Turn the view right">⟳</button>';
-    cv.parentNode.insertBefore(bar,cv);
-    bar.querySelectorAll("[data-r]").forEach(b=>
-      b.addEventListener("click",()=>{t3Rotate(+b.dataset.r);sfx(560,.03);}));
-  }
-  bar.style.display=on?"":"none";
+  let bar=$("t3Bar");
+  if(!on){if(bar)bar.remove();return;}
+  if(bar)return;
+  bar=document.createElement("div");bar.id="t3Bar";bar.className="t3bar";
+  bar.innerHTML='<span class="t3tag">🧊 3D</span>'+
+    '<button class="t3btn" id="t3RotL" title="Rotate left">↺</button>'+
+    '<button class="t3btn" id="t3RotR" title="Rotate right">↻</button>'+
+    '<span class="t3h">⛰ <b id="t3Height">0</b></span>'+
+    '<span class="t3key"><i class="t3sw t3sw-b"></i>built<i class="t3sw t3sw-p"></i>planned<i class="t3sw t3sw-x"></i>stray</span>';
+  const cv=$("mgCanvas");
+  cv.parentNode.insertBefore(bar,cv.nextSibling);
+  $("t3RotL").onclick=()=>t3Rotate(-1);
+  $("t3RotR").onclick=()=>t3Rotate(1);
 }
 
-/* =====================================================================
-   The isometric renderer
-   ---------------------------------------------------------------------
-   Columns are drawn back to front. Side faces are back-face culled by
-   the sign of their projected area, which is what lets the yaw be any
-   angle rather than four fixed views.
-   ===================================================================== */
-const C_GRASS=["#6cb545","#63a83e","#74bd4d"];
-const C_ROCK ="#a89b86", C_ROCK_T="#c3b7a2";
-const C_BRICK="#e2913a", C_BRICK_T="#ffb347";
-const C_PIT  ="#241d17";
+/* ---- entering / leaving ---- */
+function t3Enter(lv){
+  const p=JSON.parse(JSON.stringify(lv));
+  p.mode3d=true;
+  p.planMap={};for(const c of (p.plan||[]))p.planMap[T3.K(c[0],c[1])]=c[2];
+  p.cells=(p.plan||[]).map(c=>[c[0],c[1]]);   // keeps the 2D "nothing to build" guard happy
+  p.goalType=null;
+  yaw=yawT=0;
+  mgEnter(p);
+  t3Bar(true);
+  if(!raf)raf=requestAnimationFrame(t3Loop);
+}
+const _mgExit=window.mgExit;
+window.mgExit=function(reopen){t3Bar(false);if(raf){cancelAnimationFrame(raf);raf=0;}return _mgExit(reopen);};
 
-function camOf(p,maxZ,W,H){
-  const c=Math.cos(yaw), s=Math.sin(yaw);
-  const cx=(p.gw-1)/2, cy=(p.gh-1)/2;
-  const R=(x,y)=>{const ox=x-cx, oy=y-cy;return [ox*c-oy*s, ox*s+oy*c];};
-  // fit: project the bounding box's eight corners at unit scale
-  let m=[1e9,-1e9,1e9,-1e9];
-  for(const gx of [-0.5,p.gw-0.5])for(const gy of [-0.5,p.gh-0.5])for(const gz of [0,maxZ+1]){
-    const r=R(gx,gy);
-    const X=(r[0]-r[1])*0.92, Y=(r[0]+r[1])*0.53-gz*0.66;
-    m[0]=Math.min(m[0],X);m[1]=Math.max(m[1],X);
-    m[2]=Math.min(m[2],Y);m[3]=Math.max(m[3],Y);
-  }
-  const k=Math.min(W*0.97/Math.max(.001,m[1]-m[0]), H*0.97/Math.max(.001,m[3]-m[2]));
-  return {c,s,cx,cy,k,
-    ox:W/2-(m[0]+m[1])/2*k,
-    oy:H/2-(m[2]+m[3])/2*k};
-}
-function P(cam,x,y,z){
-  const ox=x-cam.cx, oy=y-cam.cy;
-  const rx=ox*cam.c-oy*cam.s, ry=ox*cam.s+oy*cam.c;
-  return [cam.ox+(rx-ry)*0.92*cam.k, cam.oy+((rx+ry)*0.53-z*0.66)*cam.k, rx+ry];
-}
-function poly(g,pts,fill,stroke,lw){
-  g.beginPath();
-  g.moveTo(pts[0][0],pts[0][1]);
-  for(let i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);
-  g.closePath();
-  if(fill){g.fillStyle=fill;g.fill();}
-  if(stroke){g.strokeStyle=stroke;g.lineWidth=lw||1;g.stroke();}
-}
-function area(pts){
-  let a=0;
-  for(let i=0;i<pts.length;i++){
-    const q=pts[(i+1)%pts.length];
-    a+=pts[i][0]*q[1]-q[0]*pts[i][1];
-  }
-  return a/2;
-}
-// one column: the four walls that face us, then the lid
-function box(g,cam,x,y,z0,z1,side,top,dash){
-  const c=[[-.5,-.5],[.5,-.5],[.5,.5],[-.5,.5]];
-  const lo=c.map(o=>P(cam,x+o[0],y+o[1],z0));
-  const hi=c.map(o=>P(cam,x+o[0],y+o[1],z1));
-  for(let i=0;i<4;i++){
-    const j=(i+1)%4;
-    const q=[lo[i],lo[j],hi[j],hi[i]];
-    if(area(q)<=0)continue;                   // a wall pointing away from us
-    if(dash){g.save();g.setLineDash([5,4]);poly(g,q,null,dash,1.4);g.restore();}
-    else poly(g,q,i%2?side:shade(side,-14),"rgba(30,20,10,.30)",1);
-  }
-  if(dash){g.save();g.setLineDash([5,4]);poly(g,hi,null,dash,1.6);g.restore();}
-  else poly(g,hi,top,"rgba(30,20,10,.34)",1);
-}
-function shade(hex,d){
-  const n=parseInt(hex.slice(1),16);
-  const f=v=>Math.max(0,Math.min(255,v+d));
-  return "rgb("+f(n>>16&255)+","+f(n>>8&255)+","+f(n&255)+")";
-}
-function drawBot(g,cam,rb){
-  const [X,Y]=P(cam,rb.x,rb.y,rb.z+1);
-  const s=cam.k*0.46;
-  box(g,cam,rb.x,rb.y,rb.z,rb.z+0.72,"#d99a2b","#ffcd6e");
-  // the face is billboarded: it must read from every angle the yaw allows
-  g.fillStyle="#2b1c40";
-  g.beginPath();g.arc(X-s*.20,Y+s*.16,s*.115,0,7);g.fill();
-  g.beginPath();g.arc(X+s*.20,Y+s*.16,s*.115,0,7);g.fill();
-  g.strokeStyle="#d99a2b";g.lineWidth=Math.max(1.4,s*.09);
-  g.beginPath();g.moveTo(X,Y-s*.24);g.lineTo(X,Y-s*.52);g.stroke();
-  g.fillStyle="#ffe58a";g.beginPath();g.arc(X,Y-s*.58,s*.11,0,7);g.fill();
-  /* An arrow ON THE LID, drawn in world space so it turns with the camera:
-     "which way am I facing" is the one thing the player must read off this
-     board every single step, and a screen-space marker would lie the moment
-     the view is rotated. */
-  const d=D4[rb.dir|0], px=-d[1], py=d[0], lz=rb.z+0.74;
-  const tip=P(cam,rb.x+d[0]*0.40,rb.y+d[1]*0.40,lz);
-  const tail=P(cam,rb.x-d[0]*0.16,rb.y-d[1]*0.16,lz);
-  const bl=P(cam,rb.x+d[0]*0.14+px*0.20,rb.y+d[1]*0.14+py*0.20,lz);
-  const br=P(cam,rb.x+d[0]*0.14-px*0.20,rb.y+d[1]*0.14-py*0.20,lz);
-  g.strokeStyle="rgba(70,40,5,.85)";g.lineWidth=Math.max(1.6,s*.085);
-  g.lineCap="round";g.lineJoin="round";
-  g.beginPath();
-  g.moveTo(tail[0],tail[1]);g.lineTo(tip[0],tip[1]);
-  g.moveTo(bl[0],bl[1]);g.lineTo(tip[0],tip[1]);g.lineTo(br[0],br[1]);
-  g.stroke();
-}
-function draw(){
-  if(typeof mgState==="undefined"||!mgState||!mgState.proj.mode3d)return;
-  const cv=$("mgCanvas"); if(!cv)return;
-  if($("boardTab").style.display==="none")return;
-  const p=mgState.proj, rb=mgState.robot;
-  if(!rb||!rb.h)return;
-  let maxZ0=1;
-  for(const k in rb.h)maxZ0=Math.max(maxZ0,rb.h[k]);
-  for(const k in rb.plan)maxZ0=Math.max(maxZ0,rb.plan[k]);
-  // a tall tower needs a taller frame, or fitting its height squashes the footprint
-  const W=Math.max(200,cv.clientWidth||320);
-  const H=Math.round(W*Math.min(0.95,0.50+maxZ0*0.085));
-  const dpr=(typeof DPR!=="undefined"?DPR:Math.min(3,window.devicePixelRatio||1));
-  cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);cv.style.height=H+"px";
-  const g=cv.getContext("2d");
-  g.setTransform(dpr,0,0,dpr,0,0);
-  g.clearRect(0,0,W,H);
-
-  const cam=camOf(p,maxZ0,W,H);
-
-  // back to front: nearer columns must paint over the ones behind them
-  const cells=[];
-  for(let y=0;y<p.gh;y++)for(let x=0;x<p.gw;x++)
-    cells.push({x,y,d:P(cam,x,y,0)[2]});
-  cells.sort((a,b)=>a.d-b.d);
-
-  for(const c of cells){
-    const k=K(c.x,c.y);
-    if(rb.hole.has(k)){
-      // a pit is drawn as a sunken lid so it reads as absence, not as a black tile
-      const pts=[[-.5,-.5],[.5,-.5],[.5,.5],[-.5,.5]].map(o=>P(cam,c.x+o[0],c.y+o[1],-0.55));
-      poly(g,pts,C_PIT,"rgba(0,0,0,.5)",1);
-      box(g,cam,c.x,c.y,-0.55,0,"#1b1610","#241d17");
-      continue;
-    }
-    const ground=rb.base[k]||0, h=rb.h[k]||0, tgt=want(rb,k);
-    // the land
-    box(g,cam,c.x,c.y,-0.35,Math.max(0,ground),
-      ground>0?C_ROCK:C_GRASS[(c.x*31+c.y*17)%3],
-      ground>0?C_ROCK_T:C_GRASS[(c.x*7+c.y*13)%3]);
-    // bricks laid on top of it
-    if(h>ground)box(g,cam,c.x,c.y,ground,h,C_BRICK,C_BRICK_T);
-    // and what is still owed, as a dashed ghost
-    if(tgt>h)box(g,cam,c.x,c.y,h,tgt,null,null,"rgba(255,240,190,.85)");
-    if(h>tgt)box(g,cam,c.x,c.y,tgt,h,null,null,"rgba(255,110,130,.95)");
-    if(rb.x===c.x&&rb.y===c.y)drawBot(g,cam,rb);
-  }
-
-  // one line of state: how much is left, so progress is visible mid-run
-  const t=tally(mgState), total=planTotal(rb,p);
-  const done=Math.max(0,total-t.low);
-  g.font="800 13px system-ui,-apple-system,sans-serif";
-  g.textAlign="left";g.textBaseline="top";
-  g.fillStyle="rgba(20,14,34,.55)";
-  const label="🧱 "+done+"/"+total+(t.high?"  ⛏️ "+t.high+" too many":"");
-  const wpx=g.measureText(label).width+16;
-  g.beginPath();g.roundRect?g.roundRect(8,8,wpx,24,9):g.rect(8,8,wpx,24);g.fill();
-  g.fillStyle=t.high?"#ffb0bd":(t.low?"#ffd66b":"#8ff0ab");
-  g.fillText(label,16,13);
-}
-
-/* ---------------- entering a Tower level ----------------
-   Deliberately routed through the normal mgEnter: the program editor,
-   block budget, ▶/⏹, undo and the save of the player's program are all
-   the same machinery. Only the board is different. */
-function t3Enter(level){
-  const lv=JSON.parse(JSON.stringify(level));
-  lv.mode3d=true;
-  lv.em=lv.em||"🧊";
-  lv.id=lv.id||("t3_"+Date.now());
-  lv.allowed=(lv.allowed&&lv.allowed.length)?lv.allowed:["move","turnL","turnR","build","climb","repeat"];
-  lv.cells=(lv.plan||[]).map(c=>[c[0],c[1]]);   // the 2D "has content" guards
-  lv.initial=[];lv.tiles=[];lv.cases=[];
-  mgEnter(lv);
-  if(mgState){mgState.t3view="3d";t3Bar(true);t3Cam.start();}
-}
-window.t3Enter=t3Enter;
-window.t3Rotate=t3Rotate;
-window.t3Bar=t3Bar;
-
-/* ---------------- the blocks Tower Mode adds ----------------
-   Registered here rather than in blocks.js: they are meaningless on a
-   flat board, and a challenge only offers what its `allowed` list names. */
-DEFS.climb  ={cat:"basic",ic:"🪜",lbl:"Climb Up"};
-DEFS.descend={cat:"basic",ic:"⬇️",lbl:"Climb Down"};
-DEFS.jump   ={cat:"basic",ic:"🦘",lbl:"Jump Gap"};
-DEFS.dig    ={cat:"basic",ic:"⛏️",lbl:"Dig"};
-for(const k in T3_LBL)COND_LBL[k]=T3_LBL[k];
-
-/* ---------------- the Tower band in Projects ---------------- */
-function towerBand(){
-  const el=$("projList"); if(!el)return;
-  const h=document.createElement("h4");
-  h.className="qsec";h.textContent="🧊 Tower Mode — build upwards";
-  el.appendChild(h);
+/* ---- its own band in the projects sheet ---- */
+const _renderProjects=window.renderProjects;
+window.renderProjects=function(){
+  _renderProjects();
+  const el=$("projList");if(!el)return;
   const sec=document.createElement("div");sec.className="t3sec";
-  const grid=document.createElement("div");grid.className="t3grid";
-  sec.appendChild(grid);el.appendChild(sec);
+  const done=TOWER_LEVELS.filter(l=>player.projects[l.id]).length;
+  sec.innerHTML='<div class="t3head"><div class="t3ico">🧊</div>'+
+    '<div><div class="t3title">Tower Mode</div>'+
+    '<div class="t3sub">Builds with height — stack, climb, and rebuild the blueprint in 3D.</div></div>'+
+    '<div class="t3prog">'+done+'/'+TOWER_LEVELS.length+'</div></div>'+
+    '<div class="t3grid"></div>';
+  const grid=sec.querySelector(".t3grid");
   for(const lv of TOWER_LEVELS){
-    const done=!!player.projects[lv.id];
+    const solved=!!player.projects[lv.id];
     const c=document.createElement("button");
-    c.className="t3card"+(done?" done":"");
-    c.innerHTML='<span class="t3badge">'+(done?"✅":"🧊")+'</span>'+
+    c.className="t3card"+(solved?" done":"");
+    const peak=Math.max.apply(null,(lv.plan||[[0,0,1]]).map(x=>x[2]));
+    c.innerHTML='<span class="t3badge">'+lv.em+'</span>'+
       '<span class="t3name">'+esc(lv.name)+'</span>'+
-      '<span class="t3meta">'+"⭐".repeat(lv.diff||1)+' · 🧩 '+lv.maxBlocks+
-      ' · ⛰ '+lv.plan.reduce((m,q)=>Math.max(m,q[2]),0)+'</span>';
+      '<span class="t3meta">'+"⭐".repeat(lv.diff)+' · 🧩 '+lv.maxBlocks+' · ⛰ '+peak+'</span>'+
+      (solved?'<span class="t3done">✓</span>':'');
     c.onclick=()=>{$("projects").classList.remove("open");t3Enter(lv);};
     grid.appendChild(c);
   }
-}
-const _renderProjects=window.renderProjects;
-window.renderProjects=function(){_renderProjects();towerBand();};
+  el.insertBefore(sec,el.firstChild);
+};
 
-/* ---------------- the seams challenges.js calls ---------------- */
-window.T3={seed,act,cond,check,draw,tally,
-  conds:()=>T3_CONDS.slice(),
-  levels:TOWER_LEVELS};
+window.t3Enter=t3Enter;
 })();
