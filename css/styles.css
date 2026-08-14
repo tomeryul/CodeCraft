@@ -880,3 +880,63 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #mgStageInfo .edchip b{color:var(--accent2);}
 #mgStageInfo .edchip button{width:24px;height:24px;padding:0;border-radius:999px;font-size:12px;
   background:rgba(0,0,0,.28);color:var(--ink);border:none;box-shadow:none;}
+
+/* ---- Tower level editor (3D design mode in the creator) ------------- */
+#mgCreatorBar #t3Btn.on{background:linear-gradient(180deg,#8ad4ff,#4aa6dd);color:#082436;
+  border-bottom-color:#2a7ba8;box-shadow:inset 0 1px 0 rgba(255,255,255,.4);}
+.t3edrow{background:rgba(0,0,0,.2);border-radius:14px;padding:6px 8px;}
+.t3vbtn{padding:5px 10px;border-radius:9px;font-size:11.5px;font-weight:800;
+  background:var(--glass-hi);border:1px solid var(--hair);color:var(--ink);cursor:pointer;}
+.t3vbtn:active{transform:scale(.95);}
+.t3vbtn.on{background:linear-gradient(180deg,#8ad4ff,#4aa6dd);color:#082436;border-color:transparent;}
+.t3stat{font-size:11.5px;font-weight:700;color:var(--ink2);}
+.t3stat b{color:var(--ink);}
+.t3leg{display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--ink2);white-space:nowrap;}
+.t3lg{width:9px;height:9px;border-radius:2px;display:inline-block;margin-left:6px;}
+.t3lg-p{background:#ffb347;}
+.t3lg-g{background:#a89b86;}
+.t3lg-h{background:#2f261e;}
+
+/* the verdict line: green while the plan is buildable, amber when not */
+.t3warn{font-size:11.5px;font-weight:600;line-height:1.4;padding:7px 10px;border-radius:11px;
+  text-wrap:pretty;}
+.t3warn.ok{background:rgba(67,184,98,.14);color:#8ff0ab;border:1px solid rgba(67,184,98,.3);}
+.t3warn.hmm{background:rgba(233,140,32,.14);color:#ffcf8a;border:1px solid rgba(233,140,32,.34);}
+.t3warn.bad{background:rgba(226,59,87,.15);color:#ffb0bd;border:1px solid rgba(226,59,87,.36);}
+
+/* which blocks the level hands the player */
+.t3chips{display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
+.t3chip{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:999px;
+  font-size:11px;font-weight:700;cursor:pointer;color:var(--ink2);
+  background:rgba(0,0,0,.22);border:1px solid transparent;}
+.t3chip .ui-emoji{width:13px;height:13px;vertical-align:0;}
+.t3chip:active{transform:scale(.95);}
+.t3chip.on{background:linear-gradient(180deg,#d8912f,#b06f1a);color:#fff;}
+.t3chip.lock{opacity:.75;cursor:default;}
+.t3sep{width:1px;height:18px;background:var(--hair);margin:0 3px;display:inline-block;}
+
+/* the designer's own levels, and the card that opens the designer */
+.t3card.t3new{border-style:dashed;border-color:rgba(138,212,255,.5);background:rgba(138,212,255,.07);}
+.t3mine{position:absolute;top:8px;right:9px;font-size:9px;font-weight:800;letter-spacing:.05em;
+  text-transform:uppercase;color:#0e2432;background:#8ad4ff;padding:2px 6px;border-radius:6px;}
+
+/* ---- 🧊 Tower Mode ---------------------------------------------------- */
+/* the band of tower levels in Projects. Its own grid rather than ccCard:
+   a tower is read by its shape, so the card is short and shows ⛰ height. */
+.t3sec{margin:2px 0 4px;}
+.t3grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px;}
+.t3card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  padding:11px 12px 10px;border-radius:15px;text-align:left;cursor:pointer;
+  background:linear-gradient(180deg,rgba(138,212,255,.13),rgba(96,140,220,.10));
+  border:1px solid var(--hair);}
+.t3card:active{transform:scale(.97);}
+.t3card.done{background:linear-gradient(180deg,rgba(67,184,98,.15),rgba(45,140,80,.10));}
+.t3badge{font-size:19px;line-height:1;}
+.t3name{font-size:13.5px;font-weight:800;color:var(--ink);}
+.t3meta{font-size:10.5px;font-weight:700;color:var(--ink2);}
+/* the ⟲ ⟳ view control, above the board so it never covers the tower */
+#t3Bar{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 6px;}
+#t3Bar button{width:36px;height:30px;border-radius:10px;font-size:16px;font-weight:800;
+  background:var(--glass-hi);border:1px solid var(--hair);color:var(--ink);cursor:pointer;}
+#t3Bar button:active{transform:scale(.92);}
+#t3Bar .t3hint{font-size:10.5px;font-weight:700;color:var(--ink2);letter-spacing:.02em;}

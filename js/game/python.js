@@ -15,7 +15,12 @@ function toPy(list,ind){
       case "pickUp":P.push(ind+"robot.lift()");break;
       case "rest":P.push(ind+"robot.rest("+b.n+")");break;
       case "wait":P.push(ind+"robot.wait("+b.n+")");break;
-      case "build":P.push(ind+'robot.build("'+b.opt+'")');break;
+      // 🧊 a Tower brick has no kind — it goes on the tile you face
+      case "build":P.push(ind+(b.opt?'robot.build("'+b.opt+'")':"robot.build()"));break;
+      case "climb":P.push(ind+"robot.climb_up()");break;
+      case "descend":P.push(ind+"robot.climb_down()");break;
+      case "jump":P.push(ind+"robot.jump_gap()");break;
+      case "dig":P.push(ind+"robot.dig()");break;
       case "faceNearest":P.push(ind+'robot.face_nearest("'+b.opt+'")');break;
       case "goNear":P.push(ind+'robot.walk_to_nearest("'+b.opt+'")');break;
       case "goHome":P.push(ind+"robot.go_home()");break;
@@ -95,6 +100,11 @@ function pyCond(c){
     case "brickHere":return "robot.on_block()";
     case "onTarget":return "robot.on_target()";
     case "holding":return "robot.is_holding()";
+    // 🧊 Tower sensors read heights, not tiles
+    case "stepUp":return "robot.step_up_ahead()";
+    case "needBrick":return "robot.needs_brick_ahead()";
+    case "tooHigh":return "robot.too_high_ahead()";
+    case "atPlan":return "robot.ahead_is_done()";
   } return "True";
 }
 function renderPy(){
