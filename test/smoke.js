@@ -1544,6 +1544,84 @@ async function ev(expr) {
     /robot\.jump\(\)/.test(TW.py) && /robot\.build\(\)/.test(TW.py) &&
     !/undefined/.test(TW.py), tow);
 
+  console.log("▶ the Journey: one ordered next step, always");
+  const jrn = await ev(`(()=>{ try{
+    const out={};
+    // a clean slate: the spine has to start a brand-new player at step one
+    player.academy={};player.projects={};player.myChallenges=[];player.orders=0;
+    player.journey={claimed:{}};
+    totals={collected:0,earned:0};
+    robots.length=1; robots[0].program=[];
+    journeyCheck();                       // priming pass
+    out.first=journeyStep().id;
+    out.total=JOURNEY.length;
+    out.startsAtZero=(journeyProgress()===0);
+
+    // walk it: each mutation must advance the spine by exactly one, in order
+    const walk=[
+      ["academy",()=>{player.academy={t_move:1,t_turn:1,t_chop:1,t_collect:1,t_loop:1,t_if:1};}],
+      ["chop",   ()=>{totals.collected=3;}],
+      ["sell",   ()=>{totals.earned=40;}],
+      ["loop",   ()=>{robots[0].program=[{t:"repeat",uid:"r",n:2,body:[{t:"collect",uid:"c"}]}];}],
+      ["robot2", ()=>{robots.push(makeRobot(homePos.x,homePos.y+1));}],
+      ["order",  ()=>{player.orders=1;}],
+      ["project",()=>{player.projects["house"]=1;}],
+      ["tower",  ()=>{player.projects[TOWER_LEVELS[0].id]=1;}],
+      ["create", ()=>{player.myChallenges=[{id:"x",name:"mine"}];}]
+    ];
+    out.order=[];
+    for(const [id,mut] of walk){
+      out.order.push(journeyStep()?journeyStep().id:"none");
+      mut(); journeyCheck();
+    }
+    out.finished=(journeyStep()===null);
+    out.progress=journeyProgress();
+    out.expected=walk.map(w=>w[0]).join(",");
+    out.order=out.order.join(",");
+
+    // a step that is NOT yet reachable never claims, even if its own state is true
+    player.academy={};player.journey={claimed:{}};
+    player.projects={house:1};             // step 7's condition is already true...
+    journeyCheck();journeyCheck();
+    out.noSkipping=(journeyStep().id==="academy"&&!player.journey.claimed.project);
+
+    // a save that arrives with progress already in it must not fire a wall of banners
+    player.journey={claimed:{}};
+    player.academy={t_move:1,t_turn:1,t_chop:1,t_collect:1,t_loop:1,t_if:1};
+    totals={collected:9,earned:200};
+    const t0=document.querySelectorAll("#toasts > *").length;
+    (function(){ // simulate a fresh load: the priming pass is the first check
+      const saved=journeyCheck; // eslint-disable-line
+    })();
+    journeyPrimeReset();
+    journeyCheck();
+    out.silentOnLoad=(document.querySelectorAll("#toasts > *").length===t0);
+    out.claimedOnLoad=!!player.journey.claimed.sell;
+
+    // the bar hides behind any sheet, and when the journey is over
+    player.journey={claimed:{}};player.academy={};
+    document.getElementById("projects").classList.add("open");
+    renderJourney();
+    out.hiddenBehindSheet=(document.getElementById("journey").style.display==="none");
+    document.getElementById("projects").classList.remove("open");
+    renderJourney();
+    out.shownInWorld=(document.getElementById("journey").style.display!=="none");
+    out.barNamesStep=/Starter Academy/.test(document.getElementById("journey").textContent);
+    return JSON.stringify(out);
+  }catch(e){return JSON.stringify({ERR:e.message+" @ "+(e.stack||"").split("\\n")[1]});} })()`);
+  const JR = JSON.parse(jrn);
+  if(JR.ERR) throw new Error("journey block threw: "+JR.ERR);
+  check("a brand-new player is pointed at the Academy, step 1 of 9",
+    JR.first === "academy" && JR.total === 9 && JR.startsAtZero === true, jrn);
+  check("the spine advances one step at a time, in order, to the end",
+    JR.order === JR.expected && JR.finished === true && JR.progress === 9, jrn);
+  check("a later step cannot claim before the ones in front of it",
+    JR.noSkipping === true, jrn);
+  check("a save that loads with progress records it silently, no wall of banners",
+    JR.silentOnLoad === true && JR.claimedOnLoad === true, jrn);
+  check("the bar names the step in the world and hides behind a sheet",
+    JR.shownInWorld === true && JR.barNamesStep === true && JR.hiddenBehindSheet === true, jrn);
+
   console.log("▶ copy / paste blocks");
   const cp = await ev(`(()=>{
     const r=R(); r.program=[]; r.hist=[]; r.redoS=[];

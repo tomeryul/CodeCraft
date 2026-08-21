@@ -133,6 +133,7 @@ function orderCredit(res,n){
   o.got[res]=Math.min(o.need[res],(o.got[res]||0)+n);
   if(orderDone(o)){
     coins+=o.reward;totals.earned+=o.reward;
+    player.orders=(player.orders|0)+1;   // the Journey asks for one filled order
     addXP(Math.ceil(o.reward/3));
     m.order=null;
     if(window.CC_EXTRAS)CC_EXTRAS.celebrate("📋","ORDER FILLED!","+"+o.reward+" 🪙",

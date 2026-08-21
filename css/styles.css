@@ -975,3 +975,27 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .t3card.t3new{border-style:dashed;border-color:rgba(138,212,255,.5);background:rgba(138,212,255,.07);}
 .t3mine{position:absolute;top:8px;right:9px;font-size:9px;font-weight:800;letter-spacing:.05em;
   text-transform:uppercase;color:#0e2432;background:#8ad4ff;padding:2px 6px;border-radius:6px;}
+
+/* ---- The Journey: one visible next step, always ---------------------- */
+#journey{position:fixed;left:14px;right:14px;bottom:calc(var(--sab) + 82px);z-index:19;
+  pointer-events:none;display:flex;justify-content:center;}
+#journey .j-btn{pointer-events:auto;display:flex;align-items:center;gap:10px;width:100%;
+  max-width:520px;padding:9px 12px;border-radius:16px;text-align:left;cursor:pointer;
+  background:linear-gradient(180deg,rgba(58,44,104,.96),rgba(43,32,80,.96));
+  border:1px solid rgba(255,214,107,.42);
+  box-shadow:0 6px 20px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.10);}
+#journey .j-btn:active{transform:scale(.985);}
+#journey .j-em{font-size:20px;line-height:1;flex:0 0 auto;}
+#journey .j-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+#journey .j-tx b{font-size:13px;font-weight:800;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#journey .j-tx small{font-size:10.5px;font-weight:600;color:var(--ink2);line-height:1.3;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+#journey .j-go{flex:0 0 auto;font-size:11px;font-weight:800;color:#2b1c40;
+  background:var(--accent2);border-radius:999px;padding:3px 9px;}
+/* the card the step points at, so "where" is answered by the eye, not by reading */
+.j-point{animation:jpoint 1.1s ease-in-out 2;}
+@keyframes jpoint{
+  0%,100%{box-shadow:0 0 0 0 rgba(255,214,107,0);}
+  50%{box-shadow:0 0 0 4px rgba(255,214,107,.75);}
+}

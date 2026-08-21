@@ -36,6 +36,9 @@ function scheduleCloud(data){
 }
 // rebuild live game state from a save object (localStorage OR cloud). Returns true on success.
 function applySave(d){
+  // a different save is a different starting point: record where THIS
+  // player already is without celebrating steps they finished days ago
+  if(typeof journeyPrimeReset==="function")journeyPrimeReset();
   try{
     if(!d||(d.v!==1&&d.v!==2))return false;
     saveOwner=d.owner||null; // remember whose data this is (null for old/guest saves)
