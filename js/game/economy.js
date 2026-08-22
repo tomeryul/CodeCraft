@@ -118,7 +118,7 @@ function newOrder(){
   }
   let reward=0;for(const k in need)reward+=need[k]*priceOf(k);
   reward=Math.round(reward*(bulk?2.1:1.7))+40;   // hauling is paid for
-  m.order={need,got:{},until:now+ORDER_MS,reward,shape};
+  m.order={need,got:{},until:now+ORDER_MS,reward,shape,at:now};
   bigToast("📋 New order! "+orderText(m.order)+" → "+reward+" 🪙");
   sfx(660,.08);sfx(880,.08,.1);
 }
@@ -134,6 +134,9 @@ function orderCredit(res,n){
   if(orderDone(o)){
     coins+=o.reward;totals.earned+=o.reward;
     player.orders=(player.orders|0)+1;   // the Journey asks for one filled order
+    // how fast it went, for the 🏁 best time on the Orders board
+    const took=Math.round((now-(o.at||(o.until-ORDER_MS)))/1000);
+    if(took>0&&(!player.orderBest||took<player.orderBest))player.orderBest=took;
     addXP(Math.ceil(o.reward/3));
     m.order=null;
     if(window.CC_EXTRAS)CC_EXTRAS.celebrate("📋","ORDER FILLED!","+"+o.reward+" 🪙",

@@ -999,3 +999,37 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   0%,100%{box-shadow:0 0 0 0 rgba(255,214,107,0);}
   50%{box-shadow:0 0 0 4px rgba(255,214,107,.75);}
 }
+
+/* ---- 📋 Market Orders ------------------------------------------------ */
+#ordBody{padding:0 2px 6px;display:flex;flex-direction:column;gap:10px;}
+.ord-none{padding:20px 14px;text-align:center;font-size:13px;font-weight:700;color:var(--ink2);}
+.ord-none small{display:block;margin-top:6px;font-size:11.5px;font-weight:600;opacity:.85;}
+.ord-card{display:flex;flex-direction:column;gap:9px;padding:13px;border-radius:17px;
+  background:rgba(0,0,0,.2);border:1px solid var(--hair);}
+.ord-top{display:flex;align-items:center;gap:8px;}
+.ord-top .spacer{flex:1;}
+.ord-shape{font-size:12.5px;font-weight:800;color:#2b1c40;background:var(--accent2);
+  padding:3px 10px;border-radius:999px;}
+.ord-clk{font-size:12.5px;font-weight:800;color:var(--ink);}
+.ord-clk.late{color:#ff8fa0;}
+.ord-row{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;color:var(--ink);}
+.ord-row.done{opacity:.62;}
+.ord-res{flex:0 0 96px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ord-bar{flex:1;height:9px;border-radius:999px;background:rgba(0,0,0,.34);overflow:hidden;}
+.ord-bar i{display:block;height:100%;border-radius:999px;
+  background:linear-gradient(90deg,#ffd66b,#e98c20);transition:width .3s;}
+.ord-n{flex:0 0 auto;font-variant-numeric:tabular-nums;color:var(--ink2);}
+.ord-pay{font-size:13.5px;font-weight:800;color:#ffd66b;}
+.ord-how{font-size:11.5px;font-weight:600;color:var(--ink2);line-height:1.45;}
+.ord-tip{font-size:11.5px;font-weight:600;color:var(--ink2);line-height:1.5;
+  padding:9px 11px;border-radius:12px;background:rgba(138,212,255,.09);
+  border:1px solid rgba(138,212,255,.24);}
+.ord-tip b{color:var(--ink);}
+.ord-go{align-self:flex-start;padding:8px 14px;border-radius:12px;font-size:12.5px;font-weight:800;
+  color:#fff;cursor:pointer;border:none;
+  background:linear-gradient(180deg,#7a4dff,#5f34d6);box-shadow:inset 0 1px 0 rgba(255,255,255,.25);}
+.ord-go:active{transform:scale(.96);}
+.ord-stats{display:flex;gap:14px;justify-content:center;font-size:11.5px;font-weight:700;color:var(--ink2);}
+.ord-stats b{color:var(--ink);}
+/* the ticker's order chip is the way into the board */
+#ticker .tk-shape,#ticker .tk-clk,#ticker .tk-order{cursor:pointer;}

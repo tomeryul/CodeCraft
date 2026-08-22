@@ -1622,6 +1622,76 @@ async function ev(expr) {
   check("the bar names the step in the world and hides behind a sheet",
     JR.shownInWorld === true && JR.barNamesStep === true && JR.hiddenBehindSheet === true, jrn);
 
+  console.log("▶ toasts never bury the game, and the 📋 Orders board");
+  const tst = await ev(`(()=>{ try{
+    const out={};
+    const box=document.getElementById("toasts");
+    const clear=()=>{box.innerHTML="";};
+    // Build mode fires ONE line per removed decoration; eight removals used to
+    // stack eight identical banners over the whole screen
+    clear();
+    for(let i=0;i<8;i++)toast("↩️ Removed — resources refunded to the bank");
+    out.dupCount=box.children.length;
+    out.dupText=box.textContent.trim();
+    // different lines still show, but never more than a few at once
+    clear();
+    ["one","two","three","four","five"].forEach(t=>toast(t));
+    out.capCount=box.children.length;
+    out.capKept=[...box.children].map(c=>c.textContent).join(",");
+    // a big toast is an announcement — two at once is not an announcement
+    clear();
+    for(let i=1;i<=6;i++)bigToast("✅ Step "+i+" done");
+    out.bigCount=box.children.length;
+    out.bigText=box.textContent.trim();
+    clear();
+
+    // ---- the Orders board ----
+    const m=marketReady();
+    m.order={need:{stone:40},got:{stone:14},until:now+161000,reward:492,shape:"bulk",at:now-49000};
+    player.orders=3;player.orderBest=72;
+    renderOrders();
+    const body=document.getElementById("ordBody").textContent;
+    out.showsProgress=/14\\/40/.test(body);
+    out.showsReward=/492/.test(body);
+    out.bulkAdvice=/pipeline/.test(body)&&!/parallel/i.test(body);
+    out.showsStats=/3/.test(body)&&/1:12/.test(body);
+    out.barWidth=(document.querySelector("#ordBody .ord-bar i")||{style:{}}).style.width;
+    // the other shape teaches the other answer
+    m.order={need:{wood:12,crystal:3},got:{wood:12,crystal:1},until:now+38000,reward:310,shape:"spread",at:now};
+    renderOrders();
+    const body2=document.getElementById("ordBody").textContent;
+    out.spreadAdvice=/parallel/i.test(body2)&&!/pipeline/.test(body2);
+    out.perResource=/12\\/12/.test(body2)&&/1\\/3/.test(body2);
+    // an empty board says so rather than rendering nothing
+    m.order=null;renderOrders();
+    out.emptyBoard=/board is empty/i.test(document.getElementById("ordBody").textContent);
+    // and the ticker's clock chip is what opens it
+    m.order={need:{stone:9},got:{},until:now+60000,reward:100,shape:"bulk",at:now};
+    renderMarket();
+    const chip=document.querySelector("#ticker .tk-clk");
+    out.hasChip=!!chip;
+    if(chip)chip.click();
+    out.opens=document.getElementById("orders").classList.contains("open");
+    ordersClose();
+    m.order=null;
+    return JSON.stringify(out);
+  }catch(e){return JSON.stringify({ERR:e.message+" @ "+(e.stack||"").split("\\n")[1]});} })()`);
+  const TS = JSON.parse(tst);
+  if(TS.ERR) throw new Error("toast/orders block threw: "+TS.ERR);
+  check("eight identical toasts collapse into one line with a count",
+    TS.dupCount === 1 && /×8$/.test(TS.dupText), tst);
+  check("no more than three toasts on screen, newest kept",
+    TS.capCount === 3 && TS.capKept === "three,four,five", tst);
+  check("only one big banner at a time, the latest",
+    TS.bigCount === 1 && TS.bigText === "✅ Step 6 done", tst);
+  check("the Orders board shows per-resource progress, the reward and the stats",
+    TS.showsProgress === true && TS.showsReward === true &&
+    TS.perResource === true && TS.showsStats === true && TS.barWidth === "35%", tst);
+  check("each order shape teaches its own answer",
+    TS.bulkAdvice === true && TS.spreadAdvice === true, tst);
+  check("an empty board says so, and the ticker's clock opens the sheet",
+    TS.emptyBoard === true && TS.hasChip === true && TS.opens === true, tst);
+
   console.log("▶ copy / paste blocks");
   const cp = await ev(`(()=>{
     const r=R(); r.program=[]; r.hist=[]; r.redoS=[];

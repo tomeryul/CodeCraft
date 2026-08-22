@@ -82,11 +82,11 @@ const JOURNEY=[
 
   {id:"order", em:"📋", title:"Fill an order at the market",
    hint:"The board posts an order on a clock. Deliver it before it runs out.",
-   where:"the 📈 bar at the top",
+   where:"the 📋 board — tap the ⏱ chip up top",
    done:()=>(player.orders|0)>=1,
    go:()=>{$("editor").classList.remove("open");$("projects").classList.remove("open");
-     $("ticker").classList.add("open");if(typeof renderMarket==="function")renderMarket();
-     toast("📋 That's the order. Gather what it asks for, then sell it.");}},
+     if(typeof ordersOpen==="function")ordersOpen();
+     else{$("ticker").classList.add("open");if(typeof renderMarket==="function")renderMarket();}}},
 
   {id:"project", em:"🏗️", title:"Finish a Build Project",
    hint:"A blueprint to fill in. What you build appears in your world.",

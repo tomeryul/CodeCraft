@@ -1,17 +1,44 @@
 "use strict";
 /* ---------------- toasts & sfx ---------------- */
+/* ---------------- toasts ----------------
+   Two rules, both learned the hard way: never stack the SAME line twice, and
+   never let more than a few on screen at once. Removing eight decorations in
+   Build mode fired eight identical banners and buried the game behind them;
+   a journey step that clears several at once did the same. A repeat now bumps
+   a counter on the line already showing. */
+const TOAST_MAX=3;
+function tArm(d,fade,gone){
+  clearTimeout(d._f);clearTimeout(d._g);
+  d.style.opacity="";d.style.transition="";
+  d._f=setTimeout(()=>{d.style.opacity="0";d.style.transition="opacity .4s";},fade);
+  d._g=setTimeout(()=>d.remove(),gone);
+}
+function tDrop(d){clearTimeout(d._f);clearTimeout(d._g);d.remove();}
 function toast(t){
-  const d=document.createElement("div");d.className="toast";d.textContent=t;
-  $("toasts").appendChild(d);
-  setTimeout(()=>{d.style.opacity="0";d.style.transition="opacity .4s";},2600);
-  setTimeout(()=>d.remove(),3100);
+  const box=$("toasts");
+  const small=[...box.querySelectorAll(".toast:not(.big)")];
+  const same=small.find(d=>d.dataset.msg===t);
+  if(same){
+    const n=(+same.dataset.n||1)+1;
+    same.dataset.n=n;same.textContent=t+"  ×"+n;
+    tArm(same,2600,3100);
+    return;
+  }
+  const d=document.createElement("div");
+  d.className="toast";d.textContent=t;d.dataset.msg=t;d.dataset.n="1";
+  box.appendChild(d);
+  for(let i=0;i<=small.length-TOAST_MAX;i++)tDrop(small[i]);
+  tArm(d,2600,3100);
 }
 function bigToast(t){
   if(window.CC_EXTRAS&&CC_EXTRAS.maybeCelebrate(t))return;
+  const box=$("toasts");
+  // one banner at a time: a big toast is an announcement, and two
+  // announcements on screen at once is neither
+  box.querySelectorAll(".toast.big").forEach(tDrop);
   const d=document.createElement("div");d.className="toast big";d.textContent=t;
-  $("toasts").appendChild(d);
-  setTimeout(()=>{d.style.opacity="0";d.style.transition="opacity .5s";},4200);
-  setTimeout(()=>d.remove(),4800);
+  box.appendChild(d);
+  tArm(d,4200,4800);
 }
 let actx=null;
 function sfx(freq,dur,delay){
