@@ -56,6 +56,25 @@ function renderShop(){
   const sb=document.createElement("button");sb.textContent=muted?"Turn on":"Turn off";
   sb.addEventListener("click",()=>{muted=!muted;saveSoon();renderShop();});
   snd.appendChild(sb);el.appendChild(snd);
+  /* Signing and safety sit next to the sound toggle, because a child who wants
+     to change what other players see about them should not have to go looking
+     for it — and undoing a block has to be as easy as making one. */
+  const modRow=(em,title,sub,btn,fn)=>{
+    const d=document.createElement("div");d.className="shopitem";
+    d.innerHTML='<div class="em">'+em+'</div><div class="tx"><b>'+title+'</b><small>'+sub+'</small></div>';
+    const b=document.createElement("button");b.textContent=btn;
+    b.addEventListener("click",()=>{fn();renderShop();});
+    d.appendChild(b);el.appendChild(d);
+  };
+  if(typeof nickOf==="function")
+    modRow("\u270F\uFE0F","Your name: "+esc(nickOf()),
+      "What other players see on challenges you publish.","Change",()=>askNick(true));
+  if(typeof unblockAll==="function"){
+    const nb=(player.blocked||[]).length;
+    modRow("\u{1F6AB}","Hidden players: "+nb,
+      nb?"Their challenges are hidden from you.":"You haven't hidden anyone.",
+      nb?"Show all":"—", ()=>{ if(nb)unblockAll(); });
+  }
   const ex=document.createElement("div");ex.className="shopitem";
   ex.innerHTML='<div class="em">💾</div><div class="tx"><b>Backup World</b><small>Export your world to a file, or restore a backup.</small></div>';
   const eb=document.createElement("button");eb.textContent="Export";

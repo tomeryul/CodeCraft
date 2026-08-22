@@ -169,7 +169,13 @@ async function loadCommunity(){
   if(!sbReady()){el.innerHTML='<div class="authnote">🔌 Not connected yet.</div>';return;}
   el.innerHTML='<div class="authnote">⏳ Loading challenges…</div>';
   try{
-    const rows=await sbRest("challenges?select=*&order=created_at.desc&limit=30",{method:"GET"});
+    if(typeof loadBlocks==="function")await loadBlocks();
+    const all=await sbRest("challenges?select=*&order=created_at.desc&limit=30",{method:"GET"});
+    // A block and a report are promises to the child that they will not see
+    // that thing again — so both are applied here, before anything renders,
+    // rather than left to depend on the server having hidden it yet.
+    const rows=all.filter(r=>!(typeof isBlocked==="function"&&isBlocked(r.author))
+                          && !(typeof wasReported==="function"&&wasReported(r.id)));
     el.innerHTML="";
     if(!rows.length){el.innerHTML='<div class="authnote">No challenges yet — be the first to publish one! ✏️</div>';return;}
     const myUid=(sbUser&&sbUser.uid)||null;
@@ -180,11 +186,19 @@ async function loadCommunity(){
       const mine=!!(myUid&&row.author===myUid);
       const card=ccCard(el,{em:multi?"🎬":(sortC?"🔢":"🌍"),name:esc(row.name),done:solved,
         stars:"⭐".repeat(row.diff||2),
-        meta:'<i>'+(multi?"🎬 "+row.stages.length+" lv":"🧩 "+row.max_blocks)+' · ✅ '+row.solves+'</i> by '+esc(row.author_name)+(mine?" (you)":""),
+        meta:'<i>'+(multi?"🎬 "+row.stages.length+" lv":"🧩 "+row.max_blocks)+' · ✅ '+row.solves+'</i> by '+esc(row.display_name||row.author_name)+(mine?" (you)":""),
         badge:solved?"🏅":"▶",
         onTap:()=> multi?packEnter(ccToPack(row),0):mgEnter(ccToProj(row))});
       // authors can edit their own published challenge (add levels, tweak it)
       if(mine)ccSideBtn(card,"✏️","Edit this challenge",()=>{$("projects").classList.remove("open");mgEditCommunity(row);});
+      // every level someone ELSE made can be reported, and its author hidden
+      else{
+        if(typeof reportChallenge==="function")
+          ccSideBtn(card,"\u{1F6A9}","Report this challenge",()=>reportChallenge(row));
+        if(typeof blockAuthor==="function")
+          ccSideBtn(card,"\u{1F6AB}","Hide everything by this player",
+            ()=>blockAuthor(row.author,row.display_name||row.author_name||"builder"));
+      }
     }
   }catch(e){el.innerHTML='<div class="authnote">⚠️ Could not load: '+esc(e.message)+'</div>';}
 }
@@ -816,6 +830,14 @@ function mgSetSize(dw,dh){
 // while the top-level columns mirror the FIRST level (so old clients still play it).
 async function publishChallenge(){
   const p=mgState.proj, diff=p.diff||2;
+  // Nothing reaches the public list unsigned or unscreened. The nickname is
+  // asked for once; the name filter is a first sieve, not a content policy —
+  // what it lets through is what reporting is for.
+  if(typeof nameOk==="function"){
+    const bad=nameOk(p.name);
+    if(bad){toast("\u270F\uFE0F "+bad);sfx(200,.06);return;}
+  }
+  if(typeof askNick==="function"&&!askNick()){toast("\u270F\uFE0F Pick a name to publish under first.");return;}
   mgSyncCase();               // the live board belongs to an input — put it there first
   const banked=mgState.stages||[];
   const curHas=mgHasDesign(p);
@@ -833,7 +855,9 @@ async function publishChallenge(){
     cells:base.cells,initial:base.initial||[],tiles:base.tiles||[],max_blocks:base.maxBlocks,diff,stages:multi?stages:[],solution,
     cases:multi?(base.cases||[]):(p.cases||[]),
     preset:multi?(base.preset||[]):(p.preset||[]),
-    author_name:(sbUser.email||"builder").split("@")[0].slice(0,20)};
+    // NEVER the email: its local part is very often a child's real name
+    display_name:(typeof nickOf==="function")?nickOf():"builder",
+    author_name:(typeof nickOf==="function")?nickOf():"builder"};
   try{
     if(mgState.publishId){ // update the player's already-published challenge
       await sbRest("challenges?id=eq."+encodeURIComponent(mgState.publishId),{method:"PATCH",

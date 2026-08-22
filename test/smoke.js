@@ -115,7 +115,11 @@ async function ev(expr) {
   check("one robot exists", await ev("robots.length") === 1);
   // mark the Academy complete so the guided tutorial doesn't auto-launch over the
   // world-mechanics tests below (dedicated Academy tests drive it explicitly later)
-  await ev(`localStorage.removeItem(SAVE_KEY); player.academy={}; TUTS.forEach(t=>player.academy[t.id]=1); document.getElementById('playBtn').click(); 'ok'`);
+  // Publishing asks for a nickname the first time, through window.prompt — which
+  // in a headless CDP session blocks forever waiting for a dialog nobody will
+  // answer. Give the harness a signed-in identity up front; the moderation block
+  // below clears it again to test the asking itself.
+  await ev(`localStorage.removeItem(SAVE_KEY); player.academy={}; TUTS.forEach(t=>player.academy[t.id]=1); player.nick="Tester"; document.getElementById('playBtn').click(); 'ok'`);
   await sleep(600);
 
   console.log("▶ VM: repeat loop");
@@ -1792,6 +1796,129 @@ async function ev(expr) {
   check("🔁 Repeat's variable chip asks once and leaves the block alone",
     OR.repeatHasNameChip === true && OR.promptedOnce === true &&
     OR.repeatStayedClean === true, ord);
+
+  console.log("▶ moderation: nicknames, screening, reporting and blocking");
+  const modq = await ev(`(async ()=>{ try{
+    const out={};
+    const origRest=sbRest, origUser=sbUser;
+    const origPrompt=window.prompt, origConfirm=window.confirm;
+    let sent=null, rpc=[];
+    sbUser={uid:"me",email:"daniel.cohen@school.example"};   // sbReady() is a const arrow, and SB is already configured
+    sbRest=(path,opts)=>{
+      const m=(opts&&opts.method)||"GET";
+      if(path.indexOf("rpc/")===0)rpc.push({path,body:opts&&opts.body?JSON.parse(opts.body):null});
+      if(path==="challenges"&&m==="POST")sent=JSON.parse(opts.body);
+      if(path.indexOf("user_blocks")===0&&m==="GET")return Promise.resolve([]);
+      return Promise.resolve([]);
+    };
+
+    // ---- the nickname is CHOSEN, and it is not the email ----
+    out.cleans=[nickClean("  Danny  Boy  "),nickClean("a@b.com"),nickClean("<script>x"),
+                nickClean("0123456789ABCDEFGHIJ")].join("|");
+    player.nick="";
+    window.prompt=()=>"Sky Builder";
+    out.picked=askNick();
+    out.stored=player.nick;
+
+    // ---- the name screen ----
+    out.nameOkNormal =nameOk("Sort the blocks")===null;
+    out.nameOkShort  =!!nameOk("x");
+    out.nameOkRude   =!!nameOk("stupid shit level");
+    out.nameOkLink   =!!nameOk("find me at instagram");
+    out.nameOkDigits =!!nameOk("call 0541234567");
+
+    // ---- publishing signs with the nickname and never the email ----
+    mgEnterCreator();
+    const p=mgState.proj;
+    p.name="Sort the blocks";
+    p.gw=4;p.gh=2;p.start={x:0,y:1,dir:1};p.cells=[[0,1],[1,1]];p.initial=[[0,1,2],[1,1,1]];
+    mgState.robot={x:0,y:1,dir:1};mgSeed(mgState.robot,p);
+    mgState.solved=true;
+    await publishChallenge();
+    out.sentName=sent&&sent.display_name;
+    out.noEmailAnywhere=!/daniel|school\\.example/.test(JSON.stringify(sent||{}));
+
+    // a name that fails the screen never reaches the network
+    sent=null;
+    if(mgState)mgExit(false);
+    mgEnterCreator();
+    const p2=mgState.proj;
+    p2.name="you are a bitch";
+    p2.gw=4;p2.gh=2;p2.start={x:0,y:1,dir:1};p2.cells=[[0,1]];p2.initial=[[0,1,1]];
+    mgState.robot={x:0,y:1,dir:1};mgSeed(mgState.robot,p2);
+    mgState.solved=true;
+    await publishChallenge();
+    out.rudeNamePublished=(sent!==null);
+    if(mgState)mgExit(false);
+
+    // ---- the list hides blocked authors and reported levels ----
+    const rows=[
+      {id:"c1",author:"me",   display_name:"Sky Builder",name:"Mine",  cells:[[0,0]],max_blocks:9,solves:0,diff:1},
+      {id:"c2",author:"other",display_name:"Alex",       name:"Theirs",cells:[[0,0]],max_blocks:9,solves:0,diff:1},
+      {id:"c3",author:"rude", display_name:"Rude",       name:"Bad",   cells:[[0,0]],max_blocks:9,solves:0,diff:1}
+    ];
+    sbRest=(path,opts)=>{
+      const m=(opts&&opts.method)||"GET";
+      if(path.indexOf("rpc/")===0){rpc.push({path,body:opts&&opts.body?JSON.parse(opts.body):null});return Promise.resolve(null);}
+      if(path.indexOf("user_blocks")===0)return Promise.resolve([]);
+      if(path.indexOf("challenges?")===0)return Promise.resolve(rows);
+      return Promise.resolve([]);
+    };
+    player.blocked=[];player.reported=[];
+    $("projects").classList.add("open");
+    await loadCommunity();
+    const names=()=>[...document.querySelectorAll("#ccList .pcard")].map(c=>c.textContent);
+    out.allThree=names().length;
+    // your own card gets ✏️ Edit; everyone else's gets 🚩 and 🚫
+    const cards=[...document.querySelectorAll("#ccList .pcard")];
+    out.mineHasNoReport=!/Report this challenge/.test(cards[0].innerHTML);
+    out.othersHaveReport=/Report this challenge/.test(cards[1].innerHTML)&&
+                         /Hide everything by this player/.test(cards[1].innerHTML);
+
+    // block one author → their card goes, without waiting for the server
+    window.confirm=()=>true;
+    await blockAuthor("rude","Rude");
+    out.afterBlock=names().length;
+    out.blockPersisted=(player.blocked||[]).indexOf("rude")>=0;
+    out.blockCalledRpc=rpc.some(r=>r.path==="rpc/block_author"&&r.body.uid==="rude");
+
+    // report another → gone for the reporter immediately
+    rpc=[];
+    await sendReport(rows[1],"rude");
+    out.afterReport=names().length;
+    out.reportCalledRpc=rpc.some(r=>r.path==="rpc/report_challenge"&&
+                                    r.body.cid==="c2"&&r.body.why==="rude");
+    out.reportRemembered=wasReported("c2");
+
+    // unblocking brings them back
+    await unblockAll();
+    out.afterUnblock=names().length;
+
+    $("projects").classList.remove("open");
+    sbRest=origRest;sbUser=origUser;
+    window.prompt=origPrompt;window.confirm=origConfirm;
+    player.blocked=[];player.reported=[];player.nick="";
+    return JSON.stringify(out);
+  }catch(e){return JSON.stringify({ERR:e.message+" @ "+(e.stack||"").split("\\n")[1]});} })()`);
+  const MOD = JSON.parse(modq);
+  if(MOD.ERR) throw new Error("moderation block threw: "+MOD.ERR);
+  check("a nickname is cleaned of anything that could be contact details",
+    MOD.cleans === "Danny Boy|abcom|scriptx|0123456789ABCDEF" &&
+    MOD.picked === "Sky Builder" && MOD.stored === "Sky Builder", modq);
+  check("the publish name screen passes a real name and stops the rest",
+    MOD.nameOkNormal === true && MOD.nameOkShort === true && MOD.nameOkRude === true &&
+    MOD.nameOkLink === true && MOD.nameOkDigits === true, modq);
+  check("a published challenge is signed with the nickname, never the email",
+    MOD.sentName === "Sky Builder" && MOD.noEmailAnywhere === true, modq);
+  check("a name that fails the screen never reaches the network",
+    MOD.rudeNamePublished === false, modq);
+  check("every challenge but your own offers 🚩 report and 🚫 block",
+    MOD.allThree === 3 && MOD.mineHasNoReport === true && MOD.othersHaveReport === true, modq);
+  check("blocking an author hides them at once, and is recorded both sides",
+    MOD.afterBlock === 2 && MOD.blockPersisted === true && MOD.blockCalledRpc === true, modq);
+  check("reporting removes it for the reporter and tells the server why",
+    MOD.afterReport === 1 && MOD.reportCalledRpc === true && MOD.reportRemembered === true, modq);
+  check("unblocking brings everyone back", MOD.afterUnblock === 2, modq);
 
   console.log("▶ copy / paste blocks");
   const cp = await ev(`(()=>{

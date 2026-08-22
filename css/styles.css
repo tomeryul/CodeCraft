@@ -1033,3 +1033,19 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .ord-stats b{color:var(--ink);}
 /* the ticker's order chip is the way into the board */
 #ticker .tk-shape,#ticker .tk-clk,#ticker .tk-order{cursor:pointer;}
+
+/* ---- 🚩 reporting -------------------------------------------------- */
+/* Opens ON TOP of the Projects sheet it was launched from, which sits at 50 —
+   at the .sheet default of 40 it slid in underneath and looked like nothing
+   had happened. Above #guide/#funcLib (60) too: a safety control is the one
+   thing that must never be the layer that lost. */
+#report{height:62vh;z-index:70;}
+.rep-note{font-size:12px;font-weight:600;color:var(--ink2);line-height:1.5;
+  padding:10px 12px;margin:0 2px 10px;border-radius:13px;
+  background:rgba(226,59,87,.10);border:1px solid rgba(226,59,87,.26);}
+#repBody{display:flex;flex-direction:column;gap:7px;padding:0 2px 8px;}
+.rep-opt{display:flex;align-items:center;gap:11px;width:100%;padding:12px 13px;
+  border-radius:14px;text-align:left;font-size:13px;font-weight:700;color:var(--ink);
+  cursor:pointer;background:rgba(0,0,0,.2);border:1px solid var(--hair);}
+.rep-opt:active{transform:scale(.98);}
+.rep-em{font-size:19px;line-height:1;flex:0 0 auto;}
