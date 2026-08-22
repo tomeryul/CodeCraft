@@ -237,7 +237,12 @@ function renderList(list,parent){
       else inner+='<button class="pbtn" data-p="cond">'+COND_LBL[b.cond]+'</button>';
     }
     if(b.t==="build")inner+='<button class="pbtn" data-p="build">'+BUILD_LBL[b.opt]+'</button>';
-    if(b.t==="faceNearest"||b.t==="goNear")inner+='<button class="pbtn" data-p="tgt">'+TGT_EM[b.opt]+' '+b.opt+'</button>';
+    if(b.t==="faceNearest"||b.t==="goNear"){
+      // a fixed place, or wherever a variable says — "walk to what the order wants"
+      if(b.src)inner+='<button class="pbtn" data-p="tsrc">📦 '+esc(b.src)+'</button>';
+      else inner+='<button class="pbtn" data-p="tgt">'+TGT_EM[b.opt]+' '+b.opt+'</button>';
+      if(mgState||unlocks.vars)inner+='<button class="pbtn" data-p="tmode">'+(b.src?"🗺️":"📦")+'</button>';
+    }
     if(b.t==="call"){
       const f=routineOf(R(),b.fn||"A");
       inner+='<button class="pbtn" data-p="fn">🔧 '+(b.fn||"A")+'</button>';
@@ -312,12 +317,15 @@ function renderList(list,parent){
         if(p==="rsrc"){
           // 💰 market price is a WORLD reading — there is no market on a challenge
           // board, so don't offer a source that could only ever answer 0 there
-          const SRCS=mgState?READ_SRC.filter(x=>x!=="price"):READ_SRC;
+          const OFF={price:1,order:1,orderLeft:1};   // world-only readings
+          const SRCS=mgState?READ_SRC.filter(x=>!OFF[x]):READ_SRC;
           const i=SRCS.indexOf(b.src);
           b.src=SRCS[(i<0?0:i+1)%SRCS.length];
         }
         if(p==="build")b.opt=BUILDS[(BUILDS.indexOf(b.opt)+1)%BUILDS.length];
         if(p==="tgt")b.opt=TARGETS[(TARGETS.indexOf(b.opt)+1)%TARGETS.length];
+        if(p==="tmode")b.src=b.src?null:"what";
+        if(p==="tsrc")b.src=promptName(b.src);
         if(p==="ch")b.opt=RADIO_CH[(RADIO_CH.indexOf(b.opt)+1)%RADIO_CH.length];
         if(p==="pres")b.opt=MKT_RES[(MKT_RES.indexOf(b.opt)+1)%MKT_RES.length];
         if(p==="fn"){b.fn=ROUTINE_IDS[(ROUTINE_IDS.indexOf(b.fn)+1)%ROUTINE_IDS.length];b.args=[];}
@@ -329,7 +337,7 @@ function renderList(list,parent){
             delete b.out;
           }
         }
-        if(p==="rkind"||p==="rname"||p==="rdec"||p==="rinc"||p==="rmore"||p==="rless"){
+        if(b.t==="ret"&&(p==="rkind"||p==="rname"||p==="rdec"||p==="rinc"||p==="rmore"||p==="rless")){
           b.vals=retVals(b).map(v=>Object.assign({},v)); delete b.val;
           if(p==="rmore"){ if(b.vals.length<4)b.vals.push({k:"num",n:0}); }
           else if(p==="rless"){ if(b.vals.length>1)b.vals.pop(); }

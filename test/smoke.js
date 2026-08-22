@@ -1692,6 +1692,107 @@ async function ev(expr) {
   check("an empty board says so, and the ticker's clock opens the sheet",
     TS.emptyBoard === true && TS.hasChip === true && TS.opens === true, tst);
 
+  console.log("▶ 📋 a robot that serves the order without being told what it is");
+  const ord = await ev(`(()=>{ try{
+    const out={};
+    const r=robots[0];
+    const m=marketReady();
+    // ---- 📖 Read answers the board ----
+    m.order={need:{stone:20},got:{stone:6},until:now+120000,reward:300,shape:"bulk",at:now};
+    r.vars={};
+    doAction(r,{t:"read",name:"what",src:"order"});
+    doAction(r,{t:"read",name:"left",src:"orderLeft"});
+    out.wants=r.vars.what;          // a Walk To TARGET, not the resource key
+    out.left=r.vars.left;
+    // it moves on to the next thing the order is short of
+    m.order.got.stone=20; m.order.need.crystal=2; m.order.got.crystal=0;
+    doAction(r,{t:"read",name:"what",src:"order"});
+    out.thenWants=r.vars.what;
+    // an expired or absent order reads as nothing, never as a stale answer
+    m.order.until=now-1;
+    doAction(r,{t:"read",name:"what",src:"order"});
+    doAction(r,{t:"read",name:"left",src:"orderLeft"});
+    out.expiredWants=r.vars.what; out.expiredLeft=r.vars.left;
+    m.order=null;
+    doAction(r,{t:"read",name:"what",src:"order"});
+    out.noneWants=r.vars.what;
+
+    // ---- 🚶 Walk To aims at what it read ----
+    objects=new Map(); claims=new Map();
+    const cx=30, cy=30;
+    for(let dx=-3;dx<=3;dx++)for(let dy=-3;dy<=3;dy++)terrain[key(cx+dx,cy+dy)]=T_GRASS;
+    objects.set(key(cx+2,cy),{type:"rock"});
+    r.x=cx;r.y=cy;r.rx=cx;r.ry=cy;r.dir=1;r.energy=100;r.path=null;
+    r.vars={what:"rock"};
+    doAction(r,{t:"goNear",src:"what"});
+    out.aimedByVar=!!(r.path&&r.path.length);
+    // a variable holding something that is not a target blocks instead of guessing
+    r.path=null;r.vars={what:"banana"};
+    doAction(r,{t:"goNear",src:"what"});
+    out.junkBlocks=(r.blocked===true&&!r.path);
+    // a fixed target still behaves exactly as before
+    r.path=null;r.blocked=false;
+    doAction(r,{t:"goNear",opt:"rock"});
+    out.fixedStillWorks=!!(r.path&&r.path.length);
+
+    // ---- the whole program, end to end ----
+    m.order={need:{stone:4},got:{},until:now+120000,reward:120,shape:"bulk",at:now};
+    for(const k in r.inv)r.inv[k]=0;
+    r.vars={};
+    r.x=cx;r.y=cy;r.rx=cx;r.ry=cy;r.dir=1;r.path=null;r.blocked=false;
+    // a rock takes several swings, so the mine goes in a loop — which also
+    // proves a variable target survives a loop body
+    r.program=[{t:"read",uid:"p1",name:"what",src:"order"},
+               {t:"goNear",uid:"p2",src:"what"},
+               {t:"repeat",uid:"p3",n:6,body:[{t:"mine",uid:"p4"}]}];
+    startRobot(r);
+    for(let i=0;i<400&&r.running;i++)tickRobot(r);
+    out.gotTheRightThing=(r.inv.stone>0);
+    out.neverToldIt=!r.program.some(b=>b.opt);   // no resource is named in the program
+
+    // ---- and it reads as Python ----
+    document.getElementById("editor").classList.add("open");
+    setTab("blocks"); edTarget="main";
+    renderPy();
+    out.py=document.getElementById("pyCode").textContent.replace(/[ ]+/g," ");
+    document.getElementById("editor").classList.remove("open");
+    r.program=[];
+
+    // ---- 🔁 Repeat's name chip no longer collides with 🔙 Give Back's ----
+    r.program=[{t:"repeat",uid:"RP",n:3,src:"n",body:[]}];
+    renderProgram();
+    const chip=document.querySelector('#programEl .blk[data-uid="RP"] [data-p="rname"]');
+    out.repeatHasNameChip=!!chip;
+    const oldPrompt=window.prompt; let asked=0;
+    window.prompt=(q,d)=>{asked++;return "n";};
+    if(chip)chip.click();
+    window.prompt=oldPrompt;
+    out.promptedOnce=(asked===1);
+    out.repeatStayedClean=!r.program[0].vals;
+    r.program=[]; renderProgram();
+    return JSON.stringify(out);
+  }catch(e){return JSON.stringify({ERR:e.message+" @ "+(e.stack||"").split("\\n")[1]});} })()`);
+  const OR = JSON.parse(ord);
+  if(OR.ERR) throw new Error("order-programming block threw: "+OR.ERR);
+  check("📖 Read answers the order with a Walk To target and a count",
+    OR.wants === "rock" && OR.left === 14, ord);
+  check("...moving on to whatever the order is short of next",
+    OR.thenWants === "crystal", ord);
+  check("...and an expired or absent order reads as nothing, not a stale answer",
+    OR.expiredWants === "" && OR.expiredLeft === 0 && OR.noneWants === "", ord);
+  check("🚶 Walk To can aim at a variable",
+    OR.aimedByVar === true && OR.fixedStillWorks === true, ord);
+  check("...and a variable holding nonsense blocks rather than guessing",
+    OR.junkBlocks === true, ord);
+  check("a three-block program serves the order without naming the resource",
+    OR.gotTheRightThing === true && OR.neverToldIt === true, ord);
+  check("it reads as Python",
+    /what = market\.order_wants\(\)/.test(OR.py) &&
+    /robot\.walk_to_nearest\(what\)/.test(OR.py), ord);
+  check("🔁 Repeat's variable chip asks once and leaves the block alone",
+    OR.repeatHasNameChip === true && OR.promptedOnce === true &&
+    OR.repeatStayedClean === true, ord);
+
   console.log("▶ copy / paste blocks");
   const cp = await ev(`(()=>{
     const r=R(); r.program=[]; r.hist=[]; r.redoS=[];

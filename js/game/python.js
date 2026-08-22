@@ -22,8 +22,8 @@ function toPy(list,ind){
       case "descend":P.push(ind+"robot.step_down()");break;
       case "jump":P.push(ind+"robot.jump()");break;
       case "dig":P.push(ind+"robot.take_brick()");break;
-      case "faceNearest":P.push(ind+'robot.face_nearest("'+b.opt+'")');break;
-      case "goNear":P.push(ind+'robot.walk_to_nearest("'+b.opt+'")');break;
+      case "faceNearest":P.push(ind+"robot.face_nearest("+(b.src?b.src:'"'+b.opt+'"')+")");break;
+      case "goNear":P.push(ind+"robot.walk_to_nearest("+(b.src?b.src:'"'+b.opt+'"')+")");break;
       case "goHome":P.push(ind+"robot.go_home()");break;
       case "sellAll":P.push(ind+"robot.sell_all()");break;
       case "bankAll":P.push(ind+"robot.bank_all()");break;
@@ -75,6 +75,8 @@ function pyVal(v){
 }
 function pyRead(src,opt){
   if(src==="price")return 'market.price("'+(opt||"wood")+'")';
+  if(src==="order")return "market.order_wants()";
+  if(src==="orderLeft")return "market.order_left()";
   return src==="held"?"robot.holding()":src==="x"?"robot.x":src==="y"?"robot.y":
     src==="ahead"?"robot.read_ahead()":"robot.read()";
 }

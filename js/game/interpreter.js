@@ -160,6 +160,16 @@ function faceTo(r,x,y){
 }
 /* actions that get a draw-time animation (see robot drawing in render.js) */
 const ANIM_ACTS={move:1,turnL:1,turnR:1,collect:1,chop:1,mine:1,scoop:1,drop:1,build:1,rest:1,wait:1};
+/* Where a 🚶 Walk To / 🧭 Face Nearest is aimed. A fixed pick is `opt`; a
+   VARIABLE target is `src`, exactly the shape 🔁 Repeat already uses for its
+   count. That is what closes the loop on the 📋 board: 📖 Read hands you what
+   the order wants, and this block goes there — without it a child has to read
+   the order themselves and hard-code the answer. */
+function aimOf(r,b){
+  if(!b.src)return b.opt||"tree";
+  const v=String(r.vars[b.src]==null?"":r.vars[b.src]);
+  return TARGETS.indexOf(v)>=0?v:null;      // nothing named that → blocked
+}
 function doAction(r,b){
   const a=ahead(r), k=inB(a.x,a.y)?key(a.x,a.y):-1, o=k>=0?objects.get(k):null;
   r.blocked=false;
@@ -248,7 +258,8 @@ function doAction(r,b){
       }
       break;}
     case "faceNearest":{
-      const t=findNearest(r,b.opt);
+      const fa=aimOf(r,b);
+      const t=fa&&findNearest(r,fa);
       if(t)faceTo(r,t.x,t.y);else r.blocked=true;
       break;}
     /* --- 🤝 teamwork --- */
@@ -313,7 +324,9 @@ function doAction(r,b){
       // the new feature would have been a trap. Claiming what you are already
       // walking to is free, so a fleet fans out by default and 🤝 stays for the
       // deliberate case: holding a spot you are not walking to yet.
-      const cands=findNearestList(r,b.opt,6);
+      const aim=aimOf(r,b);
+      if(!aim){r.blocked=true;break;}
+      const cands=findNearestList(r,aim,6);
       let done=false;
       for(const c of cands){
         const ck=key(c.x,c.y);
@@ -343,6 +356,9 @@ function doAction(r,b){
       // gathering right now" becomes a decision the PROGRAM makes, and it
       // changes on its own, so a program written once stops being optimal.
       r.vars[b.name]=b.src==="price"?(typeof priceOf==="function"?priceOf(b.opt||"wood"):RES[(b.opt||"wood")].price)
+        // the 📋 board, as two numbers a program can branch on
+        :b.src==="order"?(typeof orderWant==="function"?orderWant():"")
+        :b.src==="orderLeft"?(typeof orderLeft==="function"?orderLeft():0)
         :b.src==="x"?r.x:b.src==="y"?r.y:bagCount(r);
       break;
     case "say":

@@ -76,9 +76,15 @@ const OP_LBL={">":">","<":"<","=":"=","!=":"≠"};
 const OP_PY={">":">","<":"<","=":"==","!=":"!="};
 function opLbl(op){return OP_LBL[op]||op;}
 // what 📖 Read can look at
-const READ_SRC=["here","ahead","held","x","y","price"];
+/* `order` and `orderLeft` are what make the 📋 board programmable: without
+   them a child has to READ the order themselves and hard-code the answer,
+   which is the opposite of the thing this game teaches. `order` answers with
+   a 🚶 Walk To target, not a resource name, so it can be fed straight into
+   the next block. */
+const READ_SRC=["here","ahead","held","x","y","price","order","orderLeft"];
 const READ_LBL={here:"number under me 🟧",ahead:"number ahead ⬆️",held:"number I'm holding ✊",
-  x:"my column ↔️",y:"my row ↕️",price:"💰 market price of"};
+  x:"my column ↔️",y:"my row ↕️",price:"💰 market price of",
+  order:"📋 what the order wants",orderLeft:"📋 how many it still needs"};
 /* The world's palette. ⬆️ Move / ↩️ Turn Left / ↪️ Turn Right are deliberately NOT
    here: in the open world you travel by naming a destination (🚶 Walk To), never
    by counting tiles. The blocks still exist in DEFS and still run, so every

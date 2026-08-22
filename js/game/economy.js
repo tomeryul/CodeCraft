@@ -155,6 +155,21 @@ function orderTick(){
   }
 }
 
+/* ---- what a robot can ask the board ----
+   A 🚶 Walk To target, not a resource key: "wood" is what the market pays
+   for, but "tree" is the thing standing in the world, and the block that
+   comes next needs the second one. */
+const RES_TARGET={wood:"tree",stone:"rock",iron:"iron",crystal:"crystal",water:"water"};
+// the first thing the live order is still short of
+function orderNeeds(){
+  const m=market,o=m&&m.order;
+  if(!o||now>=o.until)return null;
+  for(const k in o.need){ const got=o.got[k]||0; if(got<o.need[k])return {res:k,left:o.need[k]-got}; }
+  return null;
+}
+function orderWant(){const n=orderNeeds();return n?(RES_TARGET[n.res]||n.res):"";}
+function orderLeft(){const n=orderNeeds();return n?n.left:0;}
+
 /* ---- 🎲 events: the world does something you did not plan for ---- */
 function eventTick(){
   const m=marketReady();
