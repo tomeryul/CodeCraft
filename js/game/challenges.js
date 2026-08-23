@@ -96,6 +96,11 @@ function renderAuthBox(){
     const out=document.createElement("button");out.className="authbtn out";out.textContent="Log out";
     out.addEventListener("click",sbLogout);
     box.firstChild.appendChild(out);
+    // Deleting the account has to be reachable from inside the app, not by
+    // writing to support — see js/game/account.js.
+    const del=document.createElement("div");del.className="authdel";
+    del.appendChild(delAccBtn("authbtn danger sm"));
+    box.appendChild(del);
     return;
   }
   // signed out: a single quiet line — the form unfolds only when it is tapped,

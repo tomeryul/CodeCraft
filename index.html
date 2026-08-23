@@ -213,6 +213,23 @@
   <div id="repBody"></div>
 </div>
 
+<!-- ============ DELETE ACCOUNT (App Store 5.1.1(v)) ============ -->
+<div class="sheet" id="delacc">
+  <div class="grab"></div>
+  <div class="m-head">
+    <div class="face">🗑</div>
+    <div><h3>Delete your account</h3><p id="delWho"></p></div>
+    <button class="iconbtn x" id="delClose">✕</button>
+  </div>
+  <div class="del-note">This cannot be undone. Nobody can get any of it back for you — not even us.</div>
+  <div id="delList"></div>
+  <div class="del-actions">
+    <button class="authbtn go" id="delCancel">Keep my account</button>
+    <button class="authbtn danger" id="delGo">Delete everything</button>
+  </div>
+  <div id="delMsg"></div>
+</div>
+
 <!-- ============ SHOP ============ -->
 <div id="shopWrap">
   <div id="shop">
@@ -288,6 +305,7 @@
 <script src="./js/game/moderation.js"></script>
 <script src="./js/game/orders.js"></script>
 <script src="./js/game/journey.js"></script>
+<script src="./js/game/account.js"></script>
 <script src="./js/game/save.js"></script>
 <script src="./js/game/boot.js"></script>
 </body>

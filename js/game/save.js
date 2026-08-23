@@ -23,8 +23,13 @@ function buildSave(){
         untilIn:Math.max(0,market.order.until-now),reward:market.order.reward}:null}:null};
 }
 let saveT=null, cloudT=null;
-function saveSoon(){clearTimeout(saveT);saveT=setTimeout(saveNow,1500);}
+function saveSoon(){if(saveOff)return;clearTimeout(saveT);saveT=setTimeout(saveNow,1500);}
+// Set while an account is being erased. Without it the autosave interval, or
+// the visibilitychange handler firing as the page reloads, writes the live
+// in-memory game straight back over the local save we just deleted.
+let saveOff=false;
 function saveNow(){
+  if(saveOff)return;
   const data=buildSave();
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(data));}catch(_){}
   scheduleCloud(data); // logged-in players also sync to their account

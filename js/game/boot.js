@@ -62,9 +62,12 @@ function renderSplashAuth(){
   const box=$("splashAuth"); if(!box)return;
   if(!sbReady()){ box.innerHTML=""; $("playBtn").textContent="▶ Play"; return; }
   if(sbUser){
-    box.innerHTML='<div class="sp-welcome">☁️ Signed in as <b>'+esc(sbUser.email||"player")+'</b> · <button id="spLogout" class="sp-link">log out</button></div>';
+    // "delete account" sits next to "log out" so it is findable without
+    // digging — App Store review has to be able to reach it too.
+    box.innerHTML='<div class="sp-welcome">☁️ Signed in as <b>'+esc(sbUser.email||"player")+'</b> · <button id="spLogout" class="sp-link">log out</button> · <button id="spDelete" class="sp-link danger">delete account</button></div>';
     $("playBtn").textContent="▶ Play";
     $("spLogout").addEventListener("click",()=>{sbLogout();renderSplashAuth();});
+    $("spDelete").addEventListener("click",openDeleteAccount);
     return;
   }
   box.innerHTML=
