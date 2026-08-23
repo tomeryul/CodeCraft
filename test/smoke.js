@@ -3264,6 +3264,40 @@ async function ev(expr) {
   check("challenge: repeat-by-variable available without the world unlock", VF.hasRmode === true, varsFree);
   check("challenge: if can compare a variable without the world unlock", VF.clicked && VF.isCmp === true, varsFree);
 
+  console.log("▶ the UI icon pack covers every emoji the app ships");
+  // Two ways a glyph slips through and renders as a raw system emoji:
+  //   1. no art for it at all;
+  //   2. art exists, but under the other variation-selector form (U+FE0F),
+  //      so buildRX()'s alternation never matches what the DOM actually holds.
+  // Both looked identical to the player: SVG icons everywhere, except here.
+  const SRC_EMOJI = require("fs").readdirSync(__dirname + "/../js", { recursive: true })
+    .filter(f => f.endsWith(".js") && !/ui-icons|sprites/.test(f))
+    .map(f => require("fs").readFileSync(__dirname + "/../js/" + f, "utf8"))
+    .concat(require("fs").readFileSync(__dirname + "/../index.html", "utf8"))
+    .join("");
+  const wanted = [...new Set([...SRC_EMOJI]
+    .filter(c => /\p{Extended_Pictographic}/u.test(c) && c !== "️"))];
+  const iconMiss = await ev(`(()=>{
+    const want=${JSON.stringify(wanted)}, bad=[], host=document.createElement('div');
+    document.body.appendChild(host);
+    for(const g of want){
+      for(const form of [g, g+'\\uFE0F']){
+        const d=document.createElement('div'); d.textContent=form; host.appendChild(d);
+      }
+    }
+    return new Promise(res=>setTimeout(()=>{
+      let i=0;
+      for(const g of want) for(const tag of ['bare','vs16']){
+        if(!host.children[i++].querySelector('span.ui-emoji svg')) bad.push(g+':'+tag);
+      }
+      host.remove();
+      res(JSON.stringify(bad));
+    },250));
+  })()`);
+  const IM = JSON.parse(iconMiss);
+  check("every emoji in the source has icon art", wanted.length > 40, "scanned " + wanted.length);
+  check("no emoji renders as a raw system glyph", IM.length === 0, IM.join(" "));
+
   check("no uncaught exceptions during entire run", exceptions.length === 0, exceptions.join(" | "));
 
   console.log(`\n${passed} passed, ${failed} failed`);

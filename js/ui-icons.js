@@ -155,12 +155,44 @@ const ICONS={/* ---- v3: the last of the UI emoji ---- */
 "🏃":W('<circle cx="15" cy="4.8" r="2" fill="'+CC+'"/><path d="M8.6 21 l3.2-5 -2.6-3 3-4.2 3.4 2.6 3.4-1 M6 10.4 l3.6-2.8 2.6.2" '+ST+' stroke-width="2.2"/>'),
 "🏗️":W('<rect x="4.4" y="6" width="15.2" height="12.4" rx="1.8" fill="#ff9d5a"/><path d="M4.4 10.2 h15.2 M4.4 14.2 h15.2 M9.5 6 v4.2 M14.5 10.2 v4 M9.5 14.2 v4.2" stroke="#e07840" stroke-width="1.7"/>'),
 "⚠️":W('<path d="M12 3.6 L21.2 19.6 H2.8 Z" fill="#ffd66b" stroke="#e8b23e" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 9.4 v4.6" stroke="#241b45" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.3" fill="#241b45"/>'),
-"🚀":W('<path d="M12 2.8 c3.2 2.2 4.6 6.2 3 11.2 l-3 2 -3-2 C7.4 9 8.8 5 12 2.8 Z" fill="#f6f3ff"/><circle cx="12" cy="9" r="1.9" fill="#5ab8ff"/><path d="M9 14.2 c-2 .6-3.1 2-3.6 4.6 2.6-.5 4.1-1.6 4.6-3.6 Z M15 14.2 c2 .6 3.1 2 3.6 4.6 -2.6-.5-4.1-1.6-4.6-3.6 Z" fill="#ff5d73"/><path d="M12 16.4 v3.6" stroke="#ffb830" stroke-width="2" stroke-linecap="round"/>')
+"🚀":W('<path d="M12 2.8 c3.2 2.2 4.6 6.2 3 11.2 l-3 2 -3-2 C7.4 9 8.8 5 12 2.8 Z" fill="#f6f3ff"/><circle cx="12" cy="9" r="1.9" fill="#5ab8ff"/><path d="M9 14.2 c-2 .6-3.1 2-3.6 4.6 2.6-.5 4.1-1.6 4.6-3.6 Z M15 14.2 c2 .6 3.1 2 3.6 4.6 -2.6-.5-4.1-1.6-4.6-3.6 Z" fill="#ff5d73"/><path d="M12 16.4 v3.6" stroke="#ffb830" stroke-width="2" stroke-linecap="round"/>'),
+/* ---- v4: the glyphs the pack never covered, so these screens still showed
+   raw system emoji next to real icons (guide, function library, palette,
+   orders, moderation, creator tools) ---- */
+"📘":W('<path d="M4.8 5 a2 2 0 0 1 2-2 H19.4 V21 H6.8 a2 2 0 0 1 -2-2 Z" fill="#5ab8ff"/><rect x="4.8" y="3" width="2.6" height="18" rx=".8" fill="#3f8fd0"/><path d="M10.4 8 h6 M10.4 11.4 h6" stroke="#eaf6ff" stroke-width="1.7" stroke-linecap="round"/>'),
+"📚":W('<rect x="3" y="7.6" width="4.4" height="13" rx="1.3" fill="#ff5d73"/><rect x="8" y="5.2" width="4.4" height="15.4" rx="1.3" fill="#5ab8ff"/><rect x="13" y="8.8" width="4.4" height="11.8" rx="1.3" fill="#54d66a"/><rect x="17.2" y="10.6" width="3.8" height="10" rx="1.3" fill="#ffd66b" transform="rotate(12 19.1 15.6)"/>'),
+"🤝":W('<path d="M11.4 8.6 L7.8 5.6 a2 2 0 0 0 -2.7 .3 L1.9 9.6 a1.6 1.6 0 0 0 .2 2.3 l4.7 3.7 Z" fill="#ffd6a8"/><path d="M12.6 8.6 L16.2 5.6 a2 2 0 0 1 2.7 .3 l3.2 3.7 a1.6 1.6 0 0 1 -.2 2.3 l-4.7 3.7 Z" fill="#f0be8c"/><rect x="7.7" y="9.7" width="8.6" height="7" rx="3.5" fill="#ffc894"/><path d="M10.1 12.1 h3.8 M10.1 14.4 h3.8" stroke="#e0a86f" stroke-width="1.4" stroke-linecap="round"/>'),
+"🚶":W('<circle cx="13" cy="4.6" r="2.1" fill="'+CC+'"/><path d="M12.6 8.2 L10 13.8 L7.2 20.8 M10 13.8 L14.2 15.8 L15.6 20.8 M12.8 9.8 L16.8 11.4" '+ST+' stroke-width="2.2"/>'),
+"🔙":W('<rect x="2.4" y="5.2" width="19.2" height="13.6" rx="3.6" fill="#5ab8ff"/><path d="M15.8 12 H8.6 M11.8 8.6 L8.2 12 L11.8 15.4" stroke="#f6f9ff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'),
+"📡":W('<path d="M2.6 9.6 a9.4 9.4 0 0 0 18.8 0 Z" fill="#cfd4e0"/><path d="M2.6 9.6 H21.4" stroke="#adb5c4" stroke-width="1.8" stroke-linecap="round"/><path d="M12 9.2 V5" stroke="#9aa1b0" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="4" r="1.8" fill="#ffd66b"/><path d="M12 18.6 V21.2 M8.4 21.2 h7.2" stroke="#8a91a4" stroke-width="2.1" stroke-linecap="round"/>'),
+"👁":W('<path d="M2.4 12 C5.4 7 8.8 5.2 12 5.2 s6.6 1.8 9.6 6.8 c-3 5-6.4 6.8-9.6 6.8 S5.4 17 2.4 12 Z" fill="#e8ecf5"/><circle cx="12" cy="12" r="3.7" fill="#5ab8ff"/><circle cx="12" cy="12" r="1.6" fill="#241b45"/>'),
+"🙈":W('<path d="M2.4 12 C5.4 7 8.8 5.2 12 5.2 s6.6 1.8 9.6 6.8 c-3 5-6.4 6.8-9.6 6.8 S5.4 17 2.4 12 Z" fill="#cfd4e0"/><circle cx="12" cy="12" r="3.7" fill="#9aa1b0"/><path d="M4.6 19.4 L19.4 4.6" stroke="#ff5d73" stroke-width="2.6" stroke-linecap="round"/>'),
+"🆘":W('<rect x="2.4" y="5.8" width="19.2" height="12.4" rx="3.4" fill="#ff5d73"/><text x="12" y="16.1" font-size="7.4" font-weight="900" text-anchor="middle" font-family="inherit" fill="#fff">SOS</text>'),
+"📏":W('<g transform="rotate(-38 12 12)"><rect x="1.6" y="9" width="20.8" height="6" rx="1.7" fill="#ffd66b"/><path d="M5.4 9 v2.6 M8.6 9 v3.6 M11.8 9 v2.6 M15 9 v3.6 M18.2 9 v2.6" stroke="#c99a20" stroke-width="1.5" stroke-linecap="round"/></g>'),
+"🍳":W('<ellipse cx="10.2" cy="13.6" rx="7.8" ry="6.6" fill="#8a91a4"/><ellipse cx="10.2" cy="13.6" rx="5.8" ry="4.8" fill="#f6f3ff"/><circle cx="10.2" cy="13.6" r="2.5" fill="#ffb830"/><path d="M17.4 10.6 L21.6 6.2" stroke="#5b6178" stroke-width="2.6" stroke-linecap="round"/>'),
+"🏁":W('<path d="M4.6 2.8 V21.2" stroke="#9aa1b0" stroke-width="2.3" stroke-linecap="round"/><rect x="6" y="3.8" width="15" height="11.2" fill="#f6f3ff"/><path d="M6 3.8 h3.75 v2.8 H6 Z M13.5 3.8 h3.75 v2.8 H13.5 Z M9.75 6.6 h3.75 v2.8 H9.75 Z M17.25 6.6 H21 v2.8 h-3.75 Z M6 9.4 h3.75 v2.8 H6 Z M13.5 9.4 h3.75 v2.8 H13.5 Z M9.75 12.2 h3.75 v2.8 H9.75 Z M17.25 12.2 H21 V15 h-3.75 Z" fill="#241b45"/>'),
+"🎲":W('<rect x="4" y="4" width="16" height="16" rx="3.6" fill="#f6f3ff"/><circle cx="8.6" cy="8.6" r="1.7" fill="#ff5d73"/><circle cx="15.4" cy="8.6" r="1.7" fill="#241b45"/><circle cx="12" cy="12" r="1.7" fill="#241b45"/><circle cx="8.6" cy="15.4" r="1.7" fill="#241b45"/><circle cx="15.4" cy="15.4" r="1.7" fill="#241b45"/>'),
+"🏷":W('<path d="M11.6 3.2 H19 a1.9 1.9 0 0 1 1.9 1.9 v7.4 L11.3 21.4 a1.9 1.9 0 0 1 -2.7 0 L3.2 16 a1.9 1.9 0 0 1 0-2.7 Z" fill="#ffd66b"/><circle cx="16.6" cy="7.5" r="1.95" fill="#f6f3ff"/>'),
+"✂":W('<path d="M7 4.6 L16.4 16.8 M17 4.6 L7.6 16.8" stroke="#9aa1b0" stroke-width="2.2" stroke-linecap="round"/><circle cx="6.6" cy="18.8" r="2.6" fill="none" stroke="#ff5d73" stroke-width="2.2"/><circle cx="17.4" cy="18.8" r="2.6" fill="none" stroke="#5ab8ff" stroke-width="2.2"/>'),
+"👍":W('<path d="M8.6 10.6 L12.4 3.7 a2 2 0 0 1 3.7 1.7 L15 9.5 h4.4 a2 2 0 0 1 2 2.4 l-1.4 6.4 a2.6 2.6 0 0 1 -2.6 2.1 H8.6 Z" fill="#ffd6a8"/><rect x="2.8" y="10.2" width="4.9" height="10.2" rx="1.7" fill="#e0a86f"/>'),
+"🤬":W('<circle cx="12" cy="12" r="8.4" fill="#ff8a3d"/><path d="M6.9 9.2 l3.5 1.5 M17.1 9.2 l-3.5 1.5" stroke="#241b45" stroke-width="1.9" stroke-linecap="round"/><rect x="6.5" y="13.7" width="11" height="3.7" rx="1.85" fill="#241b45"/><path d="M8.5 15.55 h1.4 M11.3 15.55 h1.4 M14.1 15.55 h1.4" stroke="#ffd66b" stroke-width="1.5" stroke-linecap="round"/>'),
+"😨":W('<circle cx="12" cy="12" r="8.4" fill="#bfe6ff"/><circle cx="9" cy="10.4" r="2" fill="#f6f9ff"/><circle cx="15" cy="10.4" r="2" fill="#f6f9ff"/><circle cx="9" cy="10.7" r="1" fill="#241b45"/><circle cx="15" cy="10.7" r="1" fill="#241b45"/><ellipse cx="12" cy="16.4" rx="2.4" ry="2.9" fill="#241b45"/>'),
+"📭":W('<rect x="12.6" y="11.8" width="7.8" height="8.4" fill="#cfd4e0"/><path d="M3.6 11.8 a4.5 4.5 0 0 1 9 0 v8.4 H3.6 Z" fill="#e8ecf5"/><path d="M12.6 11.8 A4.5 4.5 0 0 0 8.1 7.3 h7.8 a4.5 4.5 0 0 1 4.5 4.5 Z" fill="#9aa1b0"/><path d="M6.2 13 h4" stroke="#b8bec9" stroke-width="1.8" stroke-linecap="round"/><path d="M21.4 20 V13.6" stroke="#8a91a4" stroke-width="1.8" stroke-linecap="round"/><path d="M21.4 16.6 h-2.6 V19 h2.6 Z" fill="#b8bec9"/>')
 };
+/* An emoji reaches the DOM in two shapes: with the U+FE0F variation selector
+   and without it. Register BOTH for every key, or a glyph whose art we already
+   have (⚠ ✏ ⚙ ➡ 🏗 ⛏ ⤴ ♾ …) never matches the regex and falls
+   through to the browser's own emoji font. */
+const VS='\uFE0F';
+function keyForms(k){
+  const b=k.replace(/\uFE0F/g,'');
+  return b?[b,b+VS]:[k];
+}
 /* longest keys first so variation-selector forms win */
 function buildRX(){
   const keys=Object.keys(ICONS).concat(window.CC_SPRITES?CC_SPRITES.list():[]);
-  const uniq=[...new Set(keys)].sort((a,b)=>b.length-a.length);
+  const all=[]; for(const k of keys)all.push(...keyForms(k));
+  const uniq=[...new Set(all)].sort((a,b)=>b.length-a.length);
   return new RegExp('('+uniq.map(k=>k.replace(/[.*+?^$\{\}()|[\]\\]/g,'\\$&')).join('|')+')','gu');
 }
 let RX=buildRX();
@@ -168,7 +200,8 @@ function svgFor(ch){
   if(ICONS[ch])return ICONS[ch];
   const base=ch.replace(/\uFE0F/g,'');
   if(ICONS[base])return ICONS[base];
-  if(window.CC_SPRITES){const s=CC_SPRITES.svg(ch)||CC_SPRITES.svg(base)||CC_SPRITES.svg(ch+'\uFE0F');if(s)return s;}
+  if(ICONS[base+VS])return ICONS[base+VS];
+  if(window.CC_SPRITES){const s=CC_SPRITES.svg(ch)||CC_SPRITES.svg(base)||CC_SPRITES.svg(base+VS);if(s)return s;}
   return null;
 }
 const SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,PRE:1,svg:1,SVG:1,CANVAS:1,INPUT:1};
