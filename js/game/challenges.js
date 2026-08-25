@@ -91,6 +91,7 @@ function renderAuthBox(){
   const box=$("authBox");
   box.className="";
   if(!sbReady()){box.innerHTML='<div class="authnote">🔌 Online accounts & shared challenges are coming online soon — everything else works offline!</div>';return;}
+  if(!ageOk()){box.innerHTML='<div class="agenote">'+AGE_NOTE+'</div>';return;}
   if(sbUser){
     box.innerHTML='<div class="authrow">🟢 <b>'+esc(sbUser.email)+'</b><span class="spacer"></span></div>';
     const out=document.createElement("button");out.className="authbtn out";out.textContent="Log out";
@@ -401,7 +402,7 @@ function mgCreatorUI(){
   // Publish (or Update) — available once there's proven content: a proven single
   // level, or one or more banked levels (a multi-level challenge). Hidden only
   // while a banked level is pulled out for editing.
-  const canPublish=(canSaveCur||banked>0)&&!editing;
+  const canPublish=(canSaveCur||banked>0)&&!editing&&ageOk();
   const pub=$("mgPublish");
   if(pub){pub.style.display=canPublish?"":"none"; pub.textContent=mgState.publishId?"🌍 Update":"🌍 Publish";}
   // 🔢 inputs and 🎁 starter routines
@@ -834,6 +835,8 @@ function mgSetSize(dw,dh){
 // editing. Supports multi-level challenges: extra levels ride along in `stages`
 // while the top-level columns mirror the FIRST level (so old clients still play it).
 async function publishChallenge(){
+  // The button is hidden below the cutoff, but hiding a button is not a guard.
+  if(!ageOk()){toast("🎈 Publishing opens up when you're older.");return;}
   const p=mgState.proj, diff=p.diff||2;
   // Nothing reaches the public list unsigned or unscreened. The nickname is
   // asked for once; the name filter is a first sieve, not a content policy —
@@ -1708,6 +1711,9 @@ function renderProjects(){
       if(!confirm("Delete “"+p.name+"”?"))return;
       player.myChallenges=player.myChallenges.filter(x=>x!==p);saveNow();renderProjects();});
   }
+  // Below the cutoff the community list is not shown at all — not greyed out,
+  // not empty: user-made content simply is not part of that player's game.
+  if(!ageOk())return;
   const hh=document.createElement("h4");hh.className="qsec";
   hh.innerHTML='🌍 Community <button id="ccRefresh" class="secbtn" title="Refresh">↻</button>';
   el.appendChild(hh);

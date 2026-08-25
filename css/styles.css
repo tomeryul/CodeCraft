@@ -1051,6 +1051,24 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .rep-em{font-size:19px;line-height:1;flex:0 0 auto;}
 /* ---- delete account ---- */
 #delacc{height:70vh;z-index:110;}
+/* ---- age gate: above the splash, because it comes before everything ---- */
+#agegate{position:fixed;top:0;left:0;right:0;height:var(--vh,100lvh);z-index:120;display:none;
+  align-items:center;justify-content:center;padding:22px;
+  background:linear-gradient(168deg,#7350d4 0%,#4a2f9e 46%,#241b56 100%);}
+#agegate.open{display:flex;}
+.age-card{width:min(340px,90vw);text-align:center;}
+.age-bot{font-size:56px;line-height:1;margin-bottom:6px;}
+#agegate h2{font-size:25px;margin:2px 0 8px;color:#fff;}
+.age-sub{font-size:12.5px;line-height:1.55;color:#cfc4f5;margin:0 0 18px;}
+#ageSelects{display:flex;gap:8px;margin-bottom:16px;}
+#ageSelects select{flex:1;min-width:0;padding:13px 10px;border-radius:14px;font-size:14px;font-weight:700;
+  color:var(--ink);background:rgba(0,0,0,.28);border:1px solid var(--hair);appearance:none;
+  text-align:center;text-align-last:center;}
+#ageGo{width:100%;padding:14px;font-size:15px;}
+#ageGo:disabled{opacity:.45;}
+.agenote{font-size:12px;font-weight:600;line-height:1.55;color:#cfc4f5;
+  padding:11px 13px;border-radius:14px;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.16);}
 .del-note{font-size:12px;font-weight:700;color:var(--ink2);line-height:1.5;
   padding:10px 12px;margin:0 2px 10px;border-radius:13px;
   background:rgba(226,59,87,.10);border:1px solid rgba(226,59,87,.26);}

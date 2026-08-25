@@ -119,7 +119,7 @@ async function ev(expr) {
   // in a headless CDP session blocks forever waiting for a dialog nobody will
   // answer. Give the harness a signed-in identity up front; the moderation block
   // below clears it again to test the asking itself.
-  await ev(`localStorage.removeItem(SAVE_KEY); player.academy={}; TUTS.forEach(t=>player.academy[t.id]=1); player.nick="Tester"; document.getElementById('playBtn').click(); 'ok'`);
+  await ev(`localStorage.removeItem(SAVE_KEY); localStorage.setItem(AGE_KEY,"y"); ageLoad(); player.academy={}; TUTS.forEach(t=>player.academy[t.id]=1); player.nick="Tester"; document.getElementById('playBtn').click(); 'ok'`);
   await sleep(600);
 
   console.log("▶ VM: repeat loop");

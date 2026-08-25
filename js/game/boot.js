@@ -61,6 +61,8 @@ async function enterGame(tryCloud){
 function renderSplashAuth(){
   const box=$("splashAuth"); if(!box)return;
   if(!sbReady()){ box.innerHTML=""; $("playBtn").textContent="▶ Play"; return; }
+  // under the cutoff: no sign-in offered, and nothing to try
+  if(!ageOk()){ box.innerHTML='<div class="agenote">'+AGE_NOTE+'</div>'; $("playBtn").textContent="▶ Play"; return; }
   if(sbUser){
     // "delete account" sits next to "log out" so it is findable without
     // digging — App Store review has to be able to reach it too.
@@ -95,8 +97,9 @@ function renderSplashAuth(){
     }catch(err){ m("⚠️ "+err.message); }
   });
 }
-renderSplashAuth();
-sbRestore().then(renderSplashAuth).catch(()=>{});
+// The age answer decides whether a sign-in box is offered at all, so it has
+// to be settled before the splash renders one.
+ageGateInit(()=>{ renderSplashAuth(); sbRestore().then(renderSplashAuth).catch(()=>{}); });
 $("playBtn").addEventListener("click",()=>enterGame(true));
 
 if("serviceWorker" in navigator&&location.protocol.indexOf("http")===0){

@@ -9,6 +9,9 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
   const errs=[]; pg.on('pageerror',e=>errs.push(String(e)));
   await pg.goto('file:///home/user/CodeCraft/index.html'); await pg.waitForTimeout(1000);
 
+  // clear the age gate as an adult — accounts only exist above the cutoff
+  await pg.evaluate(()=>{ ageSet(true); document.getElementById('agegate').classList.remove('open'); });
+
   // a signed-in player with real local progress
   await pg.evaluate(()=>{
     sbUser={email:"kid@example.com",uid:"u-1",access:"tok",refresh:"ref",exp:Date.now()+3600000};
