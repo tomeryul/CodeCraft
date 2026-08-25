@@ -128,6 +128,7 @@ async function answer(pg, month, year){
 
   // ------------------------------------------ signed in, then answers under
   const kicked = await pg.evaluate(()=>{
+    saveNow();   // make sure a local save exists, rather than racing the autosave
     sbUser={email:"x@y.z",uid:"u1",access:"t",refresh:"r",exp:Date.now()+3600000};
     localStorage.setItem(SB_AUTH_KEY,'{"x":1}');
     ageSet(false);

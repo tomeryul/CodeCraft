@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CodeCraft — Privacy Policy</title>
+<link rel="icon" href="./icon-192.png">
+<style>
+  :root{--bg:#1a1230;--panel:#241b45;--ink:#f2eefc;--ink2:#b6abd8;
+        --accent:#ffd66b;--hair:rgba(255,255,255,.12);--good:#54d66a;}
+  *{box-sizing:border-box;}
+  body{margin:0;padding:28px 20px 64px;background:var(--bg);color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;}
+  .wrap{max-width:720px;margin:0 auto;}
+  .back{display:inline-block;color:var(--ink2);text-decoration:none;font-size:14px;
+    font-weight:600;margin-bottom:18px;}
+  .back:hover{color:var(--ink);}
+  h1{font-size:30px;line-height:1.2;margin:0 0 6px;}
+  .sub{color:var(--ink2);font-size:14px;margin:0 0 26px;}
+  h2{font-size:19px;margin:32px 0 10px;padding-top:20px;border-top:1px solid var(--hair);}
+  h2:first-of-type{border-top:0;padding-top:0;}
+  h3{font-size:15px;margin:20px 0 6px;color:var(--accent);}
+  p,li{color:#e2dbf5;}
+  ul{padding-left:22px;margin:8px 0;}
+  li{margin:5px 0;}
+  .card{background:var(--panel);border:1px solid var(--hair);border-radius:16px;
+    padding:16px 18px;margin:16px 0;}
+  .card.good{border-color:rgba(84,214,106,.4);background:rgba(84,214,106,.08);}
+  .card.warn{border-color:rgba(255,214,107,.4);background:rgba(255,214,107,.08);}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14.5px;display:block;overflow-x:auto;}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--hair);vertical-align:top;}
+  th{color:var(--accent);font-size:13px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;}
+  code{background:rgba(0,0,0,.3);padding:1px 6px;border-radius:6px;font-size:13.5px;}
+  .foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--hair);
+    color:var(--ink2);font-size:13.5px;}
+  a{color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<a class="back" href="./index.html">&larr; Back to CodeCraft</a>
+
+<h1>CodeCraft Privacy Policy</h1>
+<p class="sub">Last updated: 25 August 2026</p>
+
+<p>CodeCraft is a game that teaches children to program. This page explains, in
+plain words, exactly what it collects, what it does not, and how to get rid of
+anything it holds.</p>
+
+<div class="card good">
+  <strong>The short version.</strong> You can play the entire game without an
+  account, and if you do, <strong>nothing ever leaves your device</strong>. There
+  is no advertising in CodeCraft, no analytics, and no tracking of any kind.
+  An account is optional, only available from age 13, and exists solely to sync
+  your progress and let you publish levels.
+</div>
+
+<h2>If you play without an account</h2>
+
+<p>Most players never make one. In that case the game makes no network requests
+beyond downloading itself, and stores two things in your browser's local
+storage, on your device only:</p>
+
+<table>
+  <tr><th>What</th><th>Why</th></tr>
+  <tr><td><code>codecraft_save_v1</code></td>
+      <td>Your game — world, coins, robots, the programs you wrote, which
+          lessons you finished. Never sent anywhere.</td></tr>
+  <tr><td><code>codecraft_age_v1</code></td>
+      <td>A single character, <code>y</code> or <code>n</code>: whether you were
+          old enough for an account. See “Children” below.</td></tr>
+</table>
+
+<p>Clearing your browser data removes both, and with them your progress.</p>
+
+<h2>If you make an account</h2>
+
+<p>Accounts are optional and only offered from age 13. Signing up is the only
+point at which CodeCraft collects personal information.</p>
+
+<h3>What is stored</h3>
+<table>
+  <tr><th>Data</th><th>Why</th><th>Who can see it</th></tr>
+  <tr><td>Email address and password</td>
+      <td>To let you log back in. The password is stored only as a
+          cryptographic hash — nobody, including us, can read it.</td>
+      <td>You. Never shown to other players.</td></tr>
+  <tr><td>Your saved game</td>
+      <td>So your progress follows you to another device. Progress, robots,
+          programs, lesson history, your chosen nickname, and your block and
+          report lists.</td>
+      <td>Only you.</td></tr>
+  <tr><td>Challenges you publish</td>
+      <td>The level itself plus the nickname you chose to sign it with.</td>
+      <td>Everyone. This is the point of publishing.</td></tr>
+  <tr><td>Reports you send</td>
+      <td>Which level, and which of five reasons you picked.</td>
+      <td>Only you.</td></tr>
+  <tr><td>Players you hide</td>
+      <td>So a blocked author stays hidden on your other devices too.</td>
+      <td>Only you.</td></tr>
+</table>
+
+<div class="card">
+  <strong>Your email is never attached to anything public.</strong> Published
+  levels are signed with a nickname you pick yourself, never with your email or
+  any part of it — the first half of an email address is very often a child's
+  real name.
+</div>
+
+<h3>Where it is stored</h3>
+<p>On <a href="https://supabase.com/privacy" rel="noopener">Supabase</a>, our
+database provider, in their Frankfurt region (<code>eu-central-1</code>) inside
+the European Union. Row-level security is enforced on every table, so one
+player's account cannot read another's saved game.</p>
+
+<h2>What CodeCraft does not do</h2>
+<ul>
+  <li>No advertising, and no advertising identifiers.</li>
+  <li>No analytics, telemetry, crash reporting, or usage tracking.</li>
+  <li>No selling, renting, or sharing of personal data with anyone.</li>
+  <li>No social-media SDKs, no third-party trackers, no fingerprinting.</li>
+  <li>No location, camera, microphone, contacts, or device identifiers.</li>
+  <li>No messaging between players — there is no chat in CodeCraft.</li>
+</ul>
+
+<p>The app loads its font from its own server rather than from a font CDN,
+specifically so that opening the game does not reveal your IP address to a
+third party.</p>
+
+<h2>Who else is involved</h2>
+<p>Two service providers, and only in order to run the app:</p>
+<ul>
+  <li><strong>GitHub Pages</strong> serves the game's files. Like any web
+      server, it processes the IP address of anyone who loads a page.</li>
+  <li><strong>Supabase</strong> stores accounts and saved games, as described
+      above. It processes data on our behalf and does not use it for its own
+      purposes.</li>
+</ul>
+
+<h2>Children</h2>
+
+<p>CodeCraft is made for children, and is built so that the youngest players
+have no personal data to protect in the first place.</p>
+
+<p>When the game first opens it asks when you were born. It asks for a month and
+a year rather than “are you over 13?”, because a yes-or-no question simply
+teaches a child which answer unlocks the app. <strong>The date is not
+stored.</strong> It is turned into a single yes-or-no the moment it is entered,
+and only that is kept, on the device.</p>
+
+<p>For anyone under 13, the game does not offer an account, does not offer
+publishing, and does not show the community list. Nothing is collected, so
+there is no parental consent to give — and nothing is taken away from the game
+itself: the world, the challenges, Tower, the level editor and market orders are
+all fully playable without an account.</p>
+
+<p>We do not knowingly collect personal information from children under 13. If
+you believe a child has created an account, contact us using the address below
+and we will delete it.</p>
+
+<h2>Deleting your data</h2>
+
+<div class="card">
+  <p style="margin-top:0"><strong>In the app:</strong> tap
+  <em>delete account</em> — it sits next to <em>log out</em> on the opening
+  screen, and in the account box.</p>
+  <p style="margin-bottom:0">It removes, immediately and permanently: your login,
+  your saved game, every challenge you published, and your report and block
+  lists. It also clears the copy on that device. It cannot be undone, and no
+  backup is kept from which it could be restored.</p>
+</div>
+
+<p>Playing without an account leaves nothing to delete on our side; clearing
+your browser data removes the local save.</p>
+
+<h2>Your rights</h2>
+<p>If you are in the EU or UK, the GDPR gives you the right to see the personal
+data held about you, to correct it, to have it erased, and to complain to your
+data protection authority. Deleting your account in the app already carries out
+an erasure in full. For anything else, write to us.</p>
+
+<h2>How long it is kept</h2>
+<p>Your account and saved game are kept until you delete them. There is no
+inactivity expiry, and no archive kept after deletion.</p>
+
+<h2>Changes</h2>
+<p>If this policy changes in a way that affects what is collected, the date at
+the top of this page changes with it.</p>
+
+<h2>Contact</h2>
+<div class="card warn">
+  <strong>TODO before submitting to the App Store:</strong> replace this block
+  with a real contact address, and set the same address as the support and
+  privacy contact in App Store Connect. A privacy policy has to give people a
+  way to reach a human.
+  <br><br>
+  <code>privacy@&lt;your-domain&gt;</code>
+</div>
+
+<p class="foot">CodeCraft is an independent project. This page is the privacy
+policy referenced by the app's listing, and is also reachable from inside the
+game.</p>
+
+</div>
+</body>
+</html>

@@ -1,13 +1,16 @@
-const CACHE = "codecraft-v101";
+const CACHE = "codecraft-v102";
 const ASSETS = [
   "./",
   "./index.html",
+  "./privacy.html",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
   "./apple-touch-icon.png",
   "./css/styles.css",
-  "./js/font.js",
+  "./fonts/fredoka-latin.woff2",
+  "./fonts/fredoka-latin-ext.woff2",
+  "./fonts/fredoka-hebrew.woff2",
   "./js/sprites.js",
   "./js/extras.js",
   "./js/ui-icons.js",

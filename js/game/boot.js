@@ -58,11 +58,12 @@ async function enterGame(tryCloud){
   entering=false;
   startGame();
 }
+const PRIV_LINK='<div class="sp-priv"><a href="./privacy.html" target="_blank" rel="noopener">Privacy policy</a></div>';
 function renderSplashAuth(){
   const box=$("splashAuth"); if(!box)return;
-  if(!sbReady()){ box.innerHTML=""; $("playBtn").textContent="▶ Play"; return; }
+  if(!sbReady()){ box.innerHTML=PRIV_LINK; $("playBtn").textContent="▶ Play"; return; }
   // under the cutoff: no sign-in offered, and nothing to try
-  if(!ageOk()){ box.innerHTML='<div class="agenote">'+AGE_NOTE+'</div>'; $("playBtn").textContent="▶ Play"; return; }
+  if(!ageOk()){ box.innerHTML='<div class="agenote">'+AGE_NOTE+'</div>'+PRIV_LINK; $("playBtn").textContent="▶ Play"; return; }
   if(sbUser){
     // "delete account" sits next to "log out" so it is findable without
     // digging — App Store review has to be able to reach it too.
@@ -70,6 +71,7 @@ function renderSplashAuth(){
     $("playBtn").textContent="▶ Play";
     $("spLogout").addEventListener("click",()=>{sbLogout();renderSplashAuth();});
     $("spDelete").addEventListener("click",openDeleteAccount);
+    box.insertAdjacentHTML("beforeend",PRIV_LINK);
     return;
   }
   box.innerHTML=
@@ -77,7 +79,7 @@ function renderSplashAuth(){
     '<input id="spEmail" type="email" placeholder="Email" autocomplete="email">'+
     '<input id="spPass" type="password" placeholder="Password (6+)" autocomplete="current-password">'+
     '<div class="sp-row"><button class="authbtn go" id="spLogin">Log in</button><button class="authbtn" id="spSignup">Sign up</button></div>'+
-    '<div id="spMsg" class="sp-msg"></div></div>';
+    '<div id="spMsg" class="sp-msg"></div></div>'+PRIV_LINK;
   $("playBtn").textContent="▶ Play offline";
   const m=t=>{$("spMsg").textContent=t;};
   const creds=()=>[($("spEmail").value||"").trim(),$("spPass").value||""];
