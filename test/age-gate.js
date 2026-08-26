@@ -1,11 +1,21 @@
 /* Age gate — drives the real screen in a real browser.
    Run: NODE_PATH=/opt/node22/lib/node_modules /opt/node22/bin/node test/age-gate.js */
 const { chromium } = require('playwright');
+const fs = require('fs');
+const path = require('path');
+/* Paths are derived from this file's own location, and the browser is only
+   pinned when the sandbox's bundled Chromium is present — on a CI runner
+   Playwright resolves its own. Hardcoding either made these suites pass
+   here and fail everywhere else. */
+const ROOT = path.join(__dirname, '..');
+const CHROME = process.env.CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const LAUNCH = require('fs').existsSync(CHROME) ? { executablePath: CHROME } : {};
+const APP = 'file://' + path.join(ROOT, 'index.html');
+
 const OUT = process.env.SHOT_DIR || '/tmp/';
 let pass=0, fail=0;
 const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'':' — '+JSON.stringify(d)));};
 
-const APP='file:///home/user/CodeCraft/index.html';
 
 // answer the gate with a birth month/year and return the page
 async function answer(pg, month, year){
@@ -16,7 +26,7 @@ async function answer(pg, month, year){
 }
 
 (async () => {
-  const b = await chromium.launch({ executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+  const b = await chromium.launch(LAUNCH);
   const errs=[];
 
   // ---------------------------------------------------------------- asked once

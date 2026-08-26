@@ -11,6 +11,7 @@ const crypto = require("crypto");
 const net = require("net");
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
 const { URL } = require("url");
 
 const PORT = 9377;
@@ -18,6 +19,23 @@ const GAME_URL = "file://" + path.resolve(__dirname, "..", "index.html");
 
 function findChrome() {
   if (process.env.CHROME) return process.env.CHROME;
+  // On a CI runner the browser comes from `playwright install`, which puts it
+  // under ~/.cache/ms-playwright — not on PATH and not in /opt. Ask the
+  // library where it put it, then sweep that cache (an install may provide
+  // only the headless shell), before falling back to fixed locations.
+  try {
+    const p = require("playwright").chromium.executablePath();
+    if (p && fs.existsSync(p)) return p;
+  } catch (_) {}
+  try {
+    const root = path.join(os.homedir(), ".cache", "ms-playwright");
+    for (const d of fs.readdirSync(root).filter(d => d.startsWith("chromium")).sort().reverse()) {
+      for (const rel of ["chrome-linux/chrome", "chrome-linux/headless_shell"]) {
+        const c = path.join(root, d, rel);
+        if (fs.existsSync(c)) return c;
+      }
+    }
+  } catch (_) {}
   const candidates = [
     "/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell",
     "/opt/pw-browsers/chromium",
@@ -30,11 +48,17 @@ function findChrome() {
   throw new Error("No Chromium found. Set CHROME=/path/to/chrome");
 }
 
-const chrome = spawn(findChrome(), [
+const CHROME_BIN = findChrome();
+const chrome = spawn(CHROME_BIN, [
   "--headless", "--disable-gpu", "--no-sandbox",
   "--remote-debugging-port=" + PORT, "--window-size=420,800", "about:blank",
 ]);
-chrome.stderr.on("data", () => {});
+// Kept rather than discarded: when the browser refuses to start, this is the
+// only explanation there is, and without it the failure surfaced as an
+// undefined-index TypeError ten seconds later with no cause attached.
+let chromeErr = "";
+chrome.stderr.on("data", d => { chromeErr += d; if (chromeErr.length > 2000) chromeErr = chromeErr.slice(-2000); });
+chrome.on("error", e => { chromeErr += "\nspawn failed: " + e.message; });
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function get(p) {
@@ -82,6 +106,10 @@ function onData(d, onReady) {
 async function connect() {
   let list;
   for (let i = 0; i < 40; i++) { await sleep(250); try { list = JSON.parse(await get("/json/list")); break; } catch (_) {} }
+  if (!list || !list[0] || !list[0].webSocketDebuggerUrl) {
+    throw new Error("the browser never opened a debugging port.\n  binary: " + CHROME_BIN +
+                    "\n  stderr: " + (chromeErr.trim() || "(none)"));
+  }
   const u = new URL(list[0].webSocketDebuggerUrl);
   return new Promise(resolve => {
     sock = net.connect(u.port, u.hostname);

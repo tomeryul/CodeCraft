@@ -5,19 +5,27 @@
    Run: NODE_PATH=/opt/node22/lib/node_modules /opt/node22/bin/node test/privacy.js */
 const { chromium } = require('playwright');
 const fs = require('fs');
-const ROOT = '/home/user/CodeCraft';
-const APP = 'file://' + ROOT + '/index.html';
+const path = require('path');
+/* Paths are derived from this file's own location, and the browser is only
+   pinned when the sandbox's bundled Chromium is present — on a CI runner
+   Playwright resolves its own. Hardcoding either made these suites pass
+   here and fail everywhere else. */
+const ROOT = path.join(__dirname, '..');
+const CHROME = process.env.CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const LAUNCH = require('fs').existsSync(CHROME) ? { executablePath: CHROME } : {};
+const APP = 'file://' + path.join(ROOT, 'index.html');
+
 let pass=0, fail=0;
 const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'':' — '+JSON.stringify(d)));};
 
 (async () => {
-  const b = await chromium.launch({ executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+  const b = await chromium.launch(LAUNCH);
   const errs=[];
 
   // ---------------------------------------------- the page itself
   let ctx = await b.newContext({ viewport:{width:420,height:940} });
   let pg = await ctx.newPage(); pg.on('pageerror',e=>errs.push(String(e)));
-  await pg.goto('file://'+ROOT+'/privacy.html'); await pg.waitForTimeout(400);
+  await pg.goto('file://'+path.join(ROOT,'privacy.html')); await pg.waitForTimeout(400);
   const page = await pg.evaluate(()=>({
     title:document.title,
     h2:[...document.querySelectorAll('h2')].map(h=>h.textContent.trim()),
@@ -64,24 +72,24 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
      JSON.stringify(keys)===JSON.stringify(['codecraft_age_v1','codecraft_save_v1']), keys);
 
   // static claims about the source
-  const src = fs.readdirSync(ROOT+'/js',{recursive:true})
-    .filter(f=>f.endsWith('.js')).map(f=>fs.readFileSync(ROOT+'/js/'+f,'utf8'))
-    .concat(fs.readFileSync(ROOT+'/index.html','utf8')).join('');
+  const src = fs.readdirSync(path.join(ROOT,'js'),{recursive:true})
+    .filter(f=>f.endsWith('.js')).map(f=>fs.readFileSync(path.join(ROOT,'js',f),'utf8'))
+    .concat(fs.readFileSync(path.join(ROOT,'index.html'),'utf8')).join('');
   ck('CLAIM "no advertising, analytics or tracking" — no such SDK in the source',
      !/googletagmanager|gtag\(|firebase|mixpanel|amplitude|segment\.com|sentry|admob|doubleclick|facebook\.net/i.test(src));
   ck('CLAIM the font is served from this origin, not a font CDN',
      !/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(src)
-     && fs.existsSync(ROOT+'/fonts/fredoka-latin.woff2'));
+     && fs.existsSync(path.join(ROOT,'fonts','fredoka-latin.woff2')));
   ck('CLAIM no location, camera, microphone or contacts are used',
      !/getUserMedia|geolocation|navigator\.contacts|DeviceOrientation/i.test(src));
-  ck('the self-hosted font ships its OFL licence', fs.existsSync(ROOT+'/fonts/OFL.txt'));
+  ck('the self-hosted font ships its OFL licence', fs.existsSync(path.join(ROOT,'fonts','OFL.txt')));
 
   const origins = [...new Set((src.match(/https?:\/\/[a-z0-9.-]+/gi)||[])
     .map(u=>u.toLowerCase()).filter(u=>!u.startsWith('http://www.w3.org')))];
   ck('CLAIM only one backend origin is contacted', origins.length===1 && /supabase\.co/.test(origins[0]), origins);
 
   ck('the policy is cached, so it opens offline',
-     /"\.\/privacy\.html"/.test(fs.readFileSync(ROOT+'/sw.js','utf8')));
+     /"\.\/privacy\.html"/.test(fs.readFileSync(path.join(ROOT,'sw.js'),'utf8')));
 
   // the contact placeholder must be impossible to miss before submission
   ck('the unfilled contact address is flagged as a TODO',

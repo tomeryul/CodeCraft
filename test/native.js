@@ -4,7 +4,17 @@
    interface — not a mock of our own invention.
    Run: NODE_PATH=/opt/node22/lib/node_modules /opt/node22/bin/node test/native.js */
 const { chromium } = require('playwright');
-const APP = 'file:///home/user/CodeCraft/index.html';
+const fs = require('fs');
+const path = require('path');
+/* Paths are derived from this file's own location, and the browser is only
+   pinned when the sandbox's bundled Chromium is present — on a CI runner
+   Playwright resolves its own. Hardcoding either made these suites pass
+   here and fail everywhere else. */
+const ROOT = path.join(__dirname, '..');
+const CHROME = process.env.CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const LAUNCH = require('fs').existsSync(CHROME) ? { executablePath: CHROME } : {};
+const APP = 'file://' + path.join(ROOT, 'index.html');
+
 let pass=0, fail=0;
 const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'':' — '+JSON.stringify(d)));};
 
@@ -37,7 +47,7 @@ function bridge(seed){
 }
 
 (async () => {
-  const b = await chromium.launch({ executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+  const b = await chromium.launch(LAUNCH);
   const errs=[];
 
   // ============================================================ native mode

@@ -2,7 +2,7 @@
   "name": "codecraft",
   "version": "1.0.0",
   "private": true,
-  "description": "CodeCraft — an open-world game that teaches kids to program.",
+  "description": "CodeCraft \u2014 an open-world game that teaches kids to program.",
   "license": "MIT",
   "scripts": {
     "www": "node scripts/build-www.js",
@@ -15,7 +15,8 @@
     "test:all": "node test/smoke.js && node test/age-gate.js && node test/delete-account.js && node test/privacy.js && node test/native.js"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.5.0"
+    "@capacitor/cli": "^8.5.0",
+    "playwright": "^1.56.0"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
