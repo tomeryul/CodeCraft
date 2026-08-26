@@ -12,7 +12,9 @@
     "open:ios": "cap open ios",
     "open:android": "cap open android",
     "test": "node test/smoke.js",
-    "test:all": "node test/smoke.js && node test/age-gate.js && node test/delete-account.js && node test/privacy.js && node test/native.js"
+    "test:all": "node test/smoke.js && node test/age-gate.js && node test/delete-account.js && node test/privacy.js && node test/native.js",
+    "sync:android": "npm run www && cap sync android",
+    "sync:ios": "npm run www && cap sync ios"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.0",
