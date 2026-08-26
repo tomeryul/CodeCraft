@@ -1,0 +1,21 @@
+node_modules/
+www/
+.DS_Store
+
+# Capacitor copies the staged web app into each native project. `cap sync`
+# regenerates both from www/, so committing them would duplicate the whole
+# game twice over and churn on every change.
+ios/App/App/public/
+android/app/src/main/assets/public/
+ios/App/App/capacitor.config.json
+android/app/src/main/assets/capacitor.config.json
+
+# Build output
+android/app/build/
+android/build/
+android/.gradle/
+ios/App/build/
+ios/DerivedData/
+*.apk
+*.aab
+*.ipa

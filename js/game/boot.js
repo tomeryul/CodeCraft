@@ -99,11 +99,20 @@ function renderSplashAuth(){
     }catch(err){ m("⚠️ "+err.message); }
   });
 }
-// The age answer decides whether a sign-in box is offered at all, so it has
-// to be settled before the splash renders one.
-ageGateInit(()=>{ renderSplashAuth(); sbRestore().then(renderSplashAuth).catch(()=>{}); });
+// In the native shell the save may need recovering from device storage
+// before anything reads it; nativeInit resolves true only when it reloaded.
+// In a browser it resolves false immediately and changes nothing.
+(typeof nativeInit==="function"?nativeInit():Promise.resolve(false)).then(reloading=>{
+  if(reloading)return;
+  // The age answer decides whether a sign-in box is offered at all, so it has
+  // to be settled before the splash renders one.
+  ageGateInit(()=>{ renderSplashAuth(); sbRestore().then(renderSplashAuth).catch(()=>{}); });
+});
 $("playBtn").addEventListener("click",()=>enterGame(true));
 
-if("serviceWorker" in navigator&&location.protocol.indexOf("http")===0){
+// A packaged app is already local: it ships no sw.js, and a network-first
+// worker pointed at capacitor://localhost would only add a way to fail.
+if("serviceWorker" in navigator&&location.protocol.indexOf("http")===0
+   &&!(typeof isNative==="function"&&isNative())){
   navigator.serviceWorker.register("./sw.js").catch(()=>{});
 }

@@ -44,6 +44,7 @@ function ageOk(){return ageBracket==="y";}
 function ageSet(ok){
   ageBracket=ok?"y":"n";
   try{localStorage.setItem(AGE_KEY,ageBracket);}catch(_){}
+  if(typeof nativeMirror==="function")nativeMirror(AGE_KEY,ageBracket);
 }
 
 const AGE_MONTHS=["January","February","March","April","May","June",

@@ -35,6 +35,9 @@ function accountWipeLocal(){
   saveOff=true;                       // stop autosave writing the game back
   try{localStorage.removeItem(SAVE_KEY);}catch(_){}
   try{localStorage.removeItem(SB_AUTH_KEY);}catch(_){}
+  // the native mirror is a copy of the same data, so deleting has to reach
+  // it as well or the next launch would restore what was just deleted
+  if(typeof nativeMirror==="function"){nativeMirror(SAVE_KEY,null);nativeMirror(SB_AUTH_KEY,null);}
 }
 
 const DEL_GONE=[

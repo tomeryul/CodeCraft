@@ -1,0 +1,22 @@
+{
+  "appId": "io.github.tomeryul.codecraft",
+  "appName": "CodeCraft",
+  "webDir": "www",
+  "backgroundColor": "#1a1230",
+  "android": {
+    "backgroundColor": "#1a1230",
+    "allowMixedContent": false
+  },
+  "ios": {
+    "backgroundColor": "#1a1230",
+    "contentInset": "never",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "plugins": {
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#1a1230",
+      "overlaysWebView": true
+    }
+  }
+}
