@@ -1133,3 +1133,64 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .authbtn.danger.sm{padding:7px 11px;font-size:11.5px;}
 /* advanced Academy lessons read as a second half of the track */
 .acad-dot.adv{box-shadow:inset 0 0 0 1.5px rgba(150,120,255,.55);}
+
+/* =====================================================================
+   HUD v3 — three docks
+   ---------------------------------------------------------------------
+   Measured on the running app at 390x844 before changing anything: the
+   HUD covered only 16.5% of the screen but did it from 13 floating boxes
+   in 5 clusters. Coverage was never the problem; scatter was — a new
+   player had five places to look. This merges those five into three:
+
+     top    status      what I have
+     right  tools       things I open
+     bottom actions     things I do, and the one next step
+
+   Nothing is repainted: every colour and size below already existed.
+   ===================================================================== */
+
+/* ---- 1. the top dock is ONE row. The market handle joins the status
+     tray instead of forcing a second row under it. ---- */
+/* The top bar is a COLUMN on purpose (see the note above #topbar further up):
+   the market panel anchors below BOTH rows, and forcing the handle onto the
+   status row would slide it under #tbBtns — which is absolutely positioned, so
+   the flex row cannot see it — the moment an order adds a shape and a clock.
+   So the structure stays; what changes is that the two rows read as ONE dock
+   instead of two pills that happen to be near each other. */
+#topbar{gap:5px;}
+#topbar #ticker{margin-top:0;}
+#topbar #ticker .tk-btn{padding:6px 12px;}
+#stats .chip{white-space:nowrap;}
+
+/* ---- 2. the right dock hangs below the status bar, so the two never
+     share a line and the tools always sit at the same place. ---- */
+#topbar #tbBtns{align-self:flex-start;}
+
+/* ---- 3. the bottom dock: the next step is a LINE, not a card.
+     It used to be a two-line block sitting out over the map. ---- */
+#journey{bottom:calc(var(--sab) + 74px);}
+#journey .j-btn{padding:7px 11px;gap:9px;border-radius:14px;align-items:center;}
+#journey .j-em{font-size:17px;}
+#journey .j-tx{flex-direction:row;align-items:center;gap:7px;}
+#journey .j-tx b{font-size:12.5px;flex:0 1 auto;}
+/* the hint is what made it two lines tall; it is already in the sheet the
+   step opens, so on a phone the line just says where to go */
+#journey .j-tx small{display:none;}
+@media (min-width: 560px){
+  #journey .j-tx small{display:block;flex:0 1 auto;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;-webkit-line-clamp:1;opacity:.85;}
+}
+
+/* ---- 4. minigames: one title, not two. The editor's own header chip
+     already carries the challenge name AND the block budget, so the board
+     tab repeated both a few pixels below it. Dropping the repeat gives the
+     board back a row and leaves mg-top as what it is: the controls. ---- */
+/* Only the TITLE goes: the editor's header chip already names the challenge a
+   few pixels above. The budget stays — it is the number a player watches while
+   building, and the header chip clips it once the name is long. With the title
+   gone the row is what it always was underneath: the budget, then the controls. */
+.mg-top > b{display:none;}
+.mg-top{gap:6px;}
+.mg-top #mgCount{font-size:13.5px;}
+/* controls reach the 44px target the rest of the chrome uses */
+.mg-top button{min-height:40px;padding:9px 13px;}
