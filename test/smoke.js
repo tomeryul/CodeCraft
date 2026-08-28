@@ -2141,12 +2141,20 @@ async function ev(expr) {
     out.noTree=mgCond(mgState,'treeAhead');
     mgState=null; mgRobot=null;
     out.incomplete=(academyComplete()===false); // t_turn & t_if not solved
+    out.advIds=TUTS.slice(ACADEMY_CORE).map(t=>t.id).join(",");
+    out.coreGate=ACADEMY_CORE;
+    {  // graduating is the core six; the advanced four stay optional
+      const keep=JSON.parse(JSON.stringify(player.academy));
+      player.academy={}; TUTS.slice(0,ACADEMY_CORE).forEach(t=>player.academy[t.id]=1);
+      out.gradOnCore=academyComplete(); out.allDoneOnCore=academyAllDone();
+      player.academy=keep;
+    }
     renderProjects();
     // the whole sheet is one card language now: Academy and Puzzle Chapters use
     // the same compact .pcard as Build Projects, each keeping its dot track inside
     const ac=document.querySelector('#projList .pcard.acad-card');
     out.hasCard=!!ac;
-    out.acadMeta=ac?ac.querySelector('.pmeta').textContent.replace(/\s+/g,' ').trim():null;
+    out.acadMeta=ac?ac.querySelector('.pmeta').textContent.replace(/\\s+/g,' ').trim():null;
     out.acadTrack=ac?ac.querySelectorAll('.pmain .acad-track .acad-dot').length:0;
     out.oldMarkup=document.querySelectorAll('#projList .quest.proj').length; // must be zero
     const packCards=[...document.querySelectorAll('#projList .pcard:not(.acad-card)')]
@@ -2172,8 +2180,15 @@ async function ev(expr) {
     return JSON.stringify(out);
   })()`);
   const AC = JSON.parse(acad);
-  check("Academy defines a full ladder of stages", AC.count === 6, acad);
-  check("stages unlock a growing block set", AC.grows === "[1,3,4,4,5,6]", AC.grows);
+  check("Academy defines a full ladder of stages", AC.count === 10, acad);
+  // The six basics, then four that teach While, variables, functions and
+  // algorithms. A lesson never takes away a block an earlier one taught, so
+  // the allowed set only ever grows.
+  check("stages unlock a growing block set", AC.grows === "[1,3,4,4,5,6,7,10,12,12]", AC.grows);
+  check("the advanced half is present, and teaches the real thing",
+    AC.advIds === "t_while,t_var,t_func,t_algo", AC.advIds);
+  check("graduation still means the six basics, not all ten",
+    AC.coreGate === 6 && AC.gradOnCore === true && AC.allDoneOnCore === false, acad);
   check("reach goal: landing on the flag solves the stage", AC.moveSolved === true, acad);
   check("chop goal: felling the tree solves the stage", AC.chopSolved === true, acad);
   check("collect goal: gathering the gem solves the stage", AC.collectSolved === true, acad);
@@ -2182,7 +2197,8 @@ async function ev(expr) {
   check("Academy tracks partial progress", AC.incomplete === true, acad);
   check("Projects sheet shows the cohesive Academy section", AC.hasCard === true, acad);
   check("Academy card is a compact .pcard with progress meta + lesson track",
-    AC.acadTrack === AC.count && /4\/6 done/.test(AC.acadMeta || ""), AC.acadMeta + " dots=" + AC.acadTrack);
+    AC.acadTrack === AC.count && /4\/10 done/.test(AC.acadMeta || "")
+      && /basics 4\/6/.test(AC.acadMeta || ""), AC.acadMeta + " dots=" + AC.acadTrack);
   check("Puzzle chapters use the same card, one dot per level",
     AC.packCards === 5 && AC.packDots === true, "packs=" + AC.packCards + " dots=" + AC.packDots);
   check("no chapter is locked — every one is open from the start",

@@ -464,6 +464,30 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #mgCanvas{width:100%;border-radius:10px;display:block;touch-action:none;}
 #boardTab{overflow-y:auto;}
 #boardTab #mgPanel{background:none;padding:0;margin:0;}
+/* ---- Academy lesson card ---- */
+#mgLesson{margin:2px 0 10px;padding:12px 13px;border-radius:15px;
+  background:rgba(122,92,255,.10);border:1px solid rgba(150,120,255,.30);}
+#mgLesson.hid{display:none;}
+.ls-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
+.ls-badge{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  color:#c9b8ff;background:rgba(150,120,255,.18);padding:3px 9px;border-radius:999px;}
+.ls-x{background:none;border:0;color:var(--ink2);font-size:14px;padding:2px 4px;cursor:pointer;}
+.ls-sec{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--accent);margin:11px 0 6px;}
+.ls-sec:first-of-type{margin-top:0;}
+.ls-block{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;line-height:1.5;
+  color:#e2dbf5;padding:7px 9px;border-radius:11px;background:rgba(0,0,0,.18);margin-bottom:5px;}
+.ls-em{font-size:16px;line-height:1.3;flex:0 0 auto;}
+.ls-block b{color:#fff;}
+.ls-steps{list-style:none;margin:0;padding:0;}
+.ls-steps li{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;line-height:1.5;
+  color:#e2dbf5;margin-bottom:6px;}
+.ls-n{flex:0 0 auto;width:18px;height:18px;border-radius:50%;background:rgba(150,120,255,.28);
+  color:#fff;font-size:10.5px;font-weight:800;display:flex;align-items:center;
+  justify-content:center;margin-top:1px;}
+.ls-show{display:block;width:100%;margin:2px 0 10px;padding:10px;border-radius:13px;
+  font-size:12.5px;font-weight:700;color:#c9b8ff;cursor:pointer;
+  background:rgba(122,92,255,.10);border:1px solid rgba(150,120,255,.30);}
 #mgBoardHint{color:var(--ink2);font-size:12px;text-align:center;padding:10px 6px 2px;line-height:1.4;}
 #tabs #boardTabBtn{background:linear-gradient(180deg,#c07c22,#9a5f15);color:#fff;}
 #tabs #boardTabBtn.on{background:linear-gradient(180deg,#d8912f,#b06f1a);}
@@ -1107,3 +1131,5 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .sp-link.danger{color:#ff8fa3;}
 .authdel{display:flex;justify-content:flex-end;padding:7px 2px 0;}
 .authbtn.danger.sm{padding:7px 11px;font-size:11.5px;}
+/* advanced Academy lessons read as a second half of the track */
+.acad-dot.adv{box-shadow:inset 0 0 0 1.5px rgba(150,120,255,.55);}

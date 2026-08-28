@@ -1031,12 +1031,23 @@ function mgEnter(proj0){
   $("boardTabBtn").style.display="";
   $("mgTitle").textContent=proj.em+" "+proj.name;
   $("mgGoal").textContent=proj.desc+(proj.question?"  ❓ "+proj.question:"");
+  // Academy stages carry their own teaching card (what each new block does,
+  // and the steps to take). Everything else clears it.
+  if(typeof renderLessonCard==="function"){
+    $("mgLesson").classList.remove("hid");
+    if(typeof lessonBtn==="function")lessonBtn(false);
+    renderLessonCard(proj);
+  }
   selBlock=null;elseSel=null;
   renderPalette();updateChips();renderProgram();renderPy();updateUndoBtns();
   mgUpdateCount();
   // a multi-input level shows its FIRST input, and the verdict strip up front, so
   // it's obvious from the start that one program has to handle all of them
   mgState.cases=mgCases(proj);mgState.ci=0;mgState.results=[];mgState.failAt=-1;mgState.costs=[];
+  // A single-board level never calls mgApplyCase, so its expected answer was
+  // never picked up and an "answer" goal could not be won at all — it always
+  // reported "this level is missing its expected answer". Seed it here.
+  mgState.caseExpect=proj.expect;
   if(mgState.cases.length>1)mgApplyCase(mgState.cases[0]);
   mgCaseStrip();mgVarsUI();
   $("mgCost").innerHTML="";
@@ -1095,7 +1106,13 @@ function mgApplyCase(c){
   // (mgClearTile/mgSetSize/mgEditStage all reassign), so holding references went stale.
   if(!st.caseBase)st.caseBase=JSON.parse(JSON.stringify(
     {initial:p.initial,start:p.start,cells:p.cells,tiles:p.tiles,gw:p.gw,gh:p.gh,goal:p.goal||null}));
-  const b=st.caseBase, pick=k=>JSON.parse(JSON.stringify((c&&c[k])?c[k]:b[k]));
+  // A level need not define every field (a counting level has no tiles, a
+  // reach level has no cells). JSON.stringify(undefined) is undefined, and
+  // JSON.parse(undefined) throws — so entering such a level crashed outright.
+  const b=st.caseBase, pick=k=>{
+    const v=(c&&c[k])?c[k]:b[k];
+    return v===undefined?undefined:JSON.parse(JSON.stringify(v));
+  };
   p.initial=pick("initial");p.start=pick("start");p.cells=pick("cells");p.tiles=pick("tiles");
   // a case may also resize the board and move the goal — that's how "escape ANY maze"
   // can hand the same program four mazes of different shapes
