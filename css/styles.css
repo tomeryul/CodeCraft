@@ -1151,16 +1151,40 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 
 /* ---- 1. the top dock is ONE row. The market handle joins the status
      tray instead of forcing a second row under it. ---- */
-/* The top bar is a COLUMN on purpose (see the note above #topbar further up):
-   the market panel anchors below BOTH rows, and forcing the handle onto the
-   status row would slide it under #tbBtns — which is absolutely positioned, so
-   the flex row cannot see it — the moment an order adds a shape and a clock.
-   So the structure stays; what changes is that the two rows read as ONE dock
-   instead of two pills that happen to be near each other. */
-#topbar{gap:5px;}
-#topbar #ticker{margin-top:0;}
-#topbar #ticker .tk-btn{padding:6px 12px;}
+/* ---- 1. the top dock is ONE row ----
+   It was two stacked pills: resources, then the market handle underneath.
+   #topbar is a column and #tbBtns is absolutely positioned inside it, so the
+   flex row cannot see the buttons — which is why an inline handle used to
+   slide under them once an order added a shape and a clock. The fix is not to
+   keep them stacked, it is to let the handle TRUNCATE: it is capped short of
+   the button tray and ellipsises, so it can never push into it however long
+   the order text gets. The market panel is anchored to #topbar (top:100%), not
+   to the handle, so it still opens below the bar. */
+#topbar{flex-direction:row;align-items:flex-start;flex-wrap:nowrap;gap:7px;}
+/* The resources must never shrink below their own content — letting them do it
+   clipped "⚡100" down to "⚡". The HANDLE is the flexible one: it truncates on
+   purpose, so it is what gives up width when the screen is narrow. */
+#topbar #stats{order:0;flex:0 0 auto;}
+#topbar #ticker{order:1;flex:0 1 auto;min-width:0;margin-top:0;overflow:hidden;}
+#topbar #ticker .tk-btn{max-width:100%;padding:6px 11px;gap:5px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;}
+#topbar #ticker .tk-btn > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#topbar #ticker .tk-btn .tk-ic,#topbar #ticker .tk-btn .tk-car{flex:0 0 auto;}
 #stats .chip{white-space:nowrap;}
+
+/* Four chips on one line is the point of it being one bar — but only where they
+   fit. Below 360px they do not, and forcing nowrap there clipped the energy chip
+   instead of wrapping it as it used to. */
+@media (min-width: 360px){ #topbar #stats{flex-wrap:nowrap;} }
+
+/* Below ~360px (iPhone SE and friends) the resources and the handle genuinely
+   do not both fit beside the tool tray — measured, the energy chip loses about
+   16px and clips. There the handle drops back to its own row rather than
+   cutting a number in half. One row where there is room; two where there is not. */
+@media (max-width: 359px){
+  #topbar{flex-wrap:wrap;}
+  #topbar #ticker{flex:0 0 100%;margin-top:5px;}
+}
 
 /* ---- 2. the right dock hangs below the status bar, so the two never
      share a line and the tools always sit at the same place. ---- */
