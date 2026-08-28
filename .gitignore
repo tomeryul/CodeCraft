@@ -9,3 +9,8 @@ www/
 # Generated icon masters (scripts/make-icons.js) and its scratch page.
 build/
 .icon-render.html
+
+# The seeded design canvas: ~2.5MB of generated editor payload, rebuilt from
+# the .dc.html sources beside it. The sources are the thing worth keeping.
+.design/*.html
+!.design/*.dc.html
