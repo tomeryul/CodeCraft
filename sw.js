@@ -1,4 +1,4 @@
-const CACHE = "codecraft-v106";
+const CACHE = "codecraft-v107";
 const ASSETS = [
   "./",
   "./index.html",
@@ -8,6 +8,7 @@ const ASSETS = [
   "./icon-512.png",
   "./apple-touch-icon.png",
   "./css/styles.css",
+  "./css/codecraft-v4.css",
   "./fonts/fredoka-latin.woff2",
   "./fonts/fredoka-latin-ext.woff2",
   "./fonts/fredoka-hebrew.woff2",

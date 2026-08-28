@@ -1,0 +1,112 @@
+/* =====================================================================
+   CodeCraft v4 — the one action bar
+   ---------------------------------------------------------------------
+   index.html moved Run/Stop out of the editor header and Reset/Step out
+   of the board tab into a single #actionBar at the foot of the sheet.
+   This styles that bar, to the rule written in the markup itself:
+
+     "ONE action bar, bottom of the sheet, every mode. Run/Stop is the
+      only primary and never moves; RESET and STEP appear for challenges
+      only."
+
+   Nothing here is a new colour or a new size: .go and .halt keep the
+   greens and reds they had inside .ed-btns, and the secondary buttons
+   keep the .ibtn look from the board tab. It is the same set of controls
+   in one place instead of two.
+   ===================================================================== */
+
+/* The sheet is a flex column, so the bar is simply its last row: it never
+   scrolls with the tab body and never moves between modes. */
+#actionBar{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:9px 12px calc(9px + var(--sab));
+  margin-top:2px;
+  border-top:1px solid var(--hair);
+  background:var(--glass);
+  backdrop-filter:blur(16px);
+}
+
+/* ---- secondary: reset and step ---- */
+#actionBar .ibtn{
+  flex:0 0 auto;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:1px;
+  min-width:52px;
+  height:46px;
+  padding:0 10px;
+  border:none;
+  border-radius:13px;
+  background:var(--panel3);
+  color:var(--ink);
+  font-size:15px;
+  font-weight:700;
+  border-bottom:3px solid rgba(0,0,0,.3);
+  transition:transform .08s,border-bottom-width .08s;
+}
+#actionBar .ibtn:active{transform:translateY(2px);border-bottom-width:1px;}
+#actionBar .ibtn:disabled{opacity:.4;}
+/* the caption under the glyph — what makes these readable to a new player
+   instead of two unlabelled arrows */
+#actionBar .ibtn i{
+  font-style:normal;
+  font-size:8.5px;
+  font-weight:800;
+  letter-spacing:.06em;
+  color:var(--ink2);
+  line-height:1;
+}
+
+/* ---- primary: run, and stop while it runs ---- */
+#actionBar .go,
+#actionBar .halt{
+  flex:1 1 auto;
+  height:52px;
+  border:none;
+  border-radius:999px;
+  font-size:22px;
+  font-weight:900;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:transform .1s,border-bottom-width .1s;
+}
+#actionBar .go{
+  background:linear-gradient(180deg,#7fe28f,#37c85c);
+  color:var(--green-text);
+  border-bottom:4px solid var(--green-deep);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 6px 18px rgba(55,200,92,.4);
+}
+#actionBar .halt{
+  flex:0 0 auto;
+  width:58px;
+  background:linear-gradient(180deg,#cf4a60,#b53a4d);
+  color:#fff;
+  border-bottom:4px solid #822435;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25);
+}
+#actionBar .go:active,
+#actionBar .halt:active{transform:translateY(2px);border-bottom-width:2px;}
+
+/* ---- "RESET and STEP appear for challenges only" ----
+   js/game/challenges.js adds .mg while a challenge is open. Out in the
+   world there is nothing to reset and nothing to step through, so the bar
+   is just Run and Stop. */
+#actionBar #mgResetBtn,
+#actionBar #mgStepBtn{display:none;}
+#actionBar.mg #mgResetBtn,
+#actionBar.mg #mgStepBtn{display:flex;}
+
+/* The board tab keeps Speed and Exit; Reset and Step have left it, so what
+   remains is the title, the budget and the two controls that are about THIS
+   challenge rather than about running it. */
+.mg-top #mgSpeedBtn{margin-left:auto;}
+
+/* mgBrickStp is now a direct child of #mgCreatorBar rather than of .cb-act,
+   so it needs its own spacing instead of inheriting the row's. */
+#mgCreatorBar > #mgBrickStp{margin:0 0 6px;}

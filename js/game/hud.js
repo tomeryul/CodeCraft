@@ -18,6 +18,11 @@ function updateFab(){
   const r=R(), f=$("fabRun");
   if(r.running){f.textContent="⏹";f.classList.add("running");}
   else{f.textContent="▶";f.classList.remove("running");}
+  // RESET and STEP live in the shared #actionBar and only mean anything inside
+  // a challenge. mgEnter/mgExit set this immediately; this line just keeps it
+  // honest afterwards, so no other path can leave two dead buttons in the world.
+  const bar=$("actionBar");
+  if(bar)bar.classList.toggle("mg",!!mgState);
 }
 $("fabRun").addEventListener("click",()=>{
   if(mgState){mgState.running?mgStop():mgRun();return;}

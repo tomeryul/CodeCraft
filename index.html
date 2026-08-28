@@ -15,6 +15,7 @@
 <meta name="description" content="CodeCraft — an open-world game where kids learn programming by automating robots, building factories and shaping a living world.">
 <title>CodeCraft — Program Your World</title>
 <link rel="stylesheet" href="./css/styles.css">
+<link rel="stylesheet" href="./css/codecraft-v4.css">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -56,8 +57,6 @@
       </button>
       <button id="undoBtn" title="Undo">↺</button>
       <button id="redoBtn" title="Redo">↻</button>
-      <button class="go" id="runBtn" title="Run">▶</button>
-      <button class="halt" id="stopBtn" title="Stop">⏹</button>
       <button id="edClose" title="Close">✕</button>
     </div>
   </div>
@@ -69,14 +68,12 @@
   <div class="tabbody" id="boardTab" style="display:none">
     <div id="mgPanel">
       <div class="mg-top"><b id="mgTitle"></b><span id="mgCount"></span><span class="spacer"></span>
-        <button id="mgStepBtn" class="ibtn" title="Run one action at a time">⏭</button>
         <button id="mgSpeedBtn" class="ibtn wide" title="Playback speed">1×</button>
-        <button id="mgResetBtn" class="ibtn" title="Reset the board">↺</button>
         <button id="mgExitBtn" class="ibtn" title="Leave challenge">✕</button></div>
       <div id="mgCreatorBar">
         <div class="cb-row tools" id="mgTools"></div>
+        <span class="stp" id="mgBrickStp"><span class="clab">🔢</span><button id="mgBrickDec">−</button><span id="mgBrickN" class="num"></span><button id="mgBrickInc">＋</button></span>
         <div class="cb-row cb-act">
-          <span class="stp" id="mgBrickStp"><span class="clab">🔢</span><button id="mgBrickDec">−</button><span id="mgBrickN" class="num"></span><button id="mgBrickInc">＋</button></span>
           <span class="spacer"></span>
           <button id="mgSetup" class="ibtn" title="Level setup">⚙️</button>
           <button id="mgSave" class="ibtn" title="Save to My Challenges">💾</button>
@@ -124,6 +121,14 @@
   <div class="tabbody" id="pyTab" style="display:none">
     <pre id="pyCode"></pre>
     <div class="pynote">🐍 This is your block program written in Python — the same language real engineers use! Your blocks and this code always match.</div>
+  </div>
+  <!-- ONE action bar, bottom of the sheet, every mode. Run/Stop is the only
+       primary and never moves; RESET and STEP appear for challenges only. -->
+  <div id="actionBar">
+    <button class="ibtn" id="mgResetBtn" title="Reset the board">↺<i>RESET</i></button>
+    <button class="ibtn" id="mgStepBtn" title="Run one action at a time">⏭<i>STEP</i></button>
+    <button class="go" id="runBtn" title="Run">▶</button>
+    <button class="halt" id="stopBtn" title="Stop">⏹</button>
   </div>
 </div>
 

@@ -1029,6 +1029,7 @@ function mgEnter(proj0){
   tutSet(0); // dismiss the onboarding coach — it doesn't belong over a challenge
   $("editor").classList.add("open","max");
   $("boardTabBtn").style.display="";
+  $("actionBar").classList.add("mg");   // RESET/STEP are challenge-only
   $("mgTitle").textContent=proj.em+" "+proj.name;
   $("mgGoal").textContent=proj.desc+(proj.question?"  ❓ "+proj.question:"");
   // Academy stages carry their own teaching card (what each new block does,
@@ -1061,6 +1062,7 @@ function mgExit(reopen){
   const wasMax=mgState.prevMax;
   mgState=null;mgRobot=null;
   $("boardTabBtn").style.display="none";
+  $("actionBar").classList.remove("mg");
   $("mgCreatorBar").classList.remove("on");
   setTab("blocks");
   if(!wasMax)$("editor").classList.remove("max");
