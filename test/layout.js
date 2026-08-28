@@ -121,6 +121,27 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     ck(`${W}x${H} at .max the action bar is still docked`,
        Math.abs(mx.barBottom-mx.sheetBottom)<2 && mx.visible, mx);
 
+    // ---------------------------------------------- the home indicator, once
+    // The desktop engine reports env(safe-area-inset-bottom) as 0, so the
+    // double-count is invisible here unless a real inset is simulated.
+    await pg.addStyleTag({content:':root{--sab:34px !important;}'});
+    await pg.evaluate(()=>{ $('editor').classList.remove('max'); });
+    await pg.waitForTimeout(200);
+    const sab = await pg.evaluate(()=>{
+      const e=$('editor').getBoundingClientRect(), b=$('actionBar').getBoundingClientRect(),
+            r=$('runBtn').getBoundingClientRect();
+      return { belowRun:Math.round(e.bottom-r.bottom),
+               barToSheet:Math.round(e.bottom-b.bottom),
+               sheetPad:getComputedStyle($('editor')).paddingBottom };
+    });
+    // 34 indicator + 12 padding. 80 means .sheet and #actionBar both added it.
+    ck(`${W}x${H} safe area is reserved once, not twice`,
+       sab.belowRun===46 && sab.barToSheet===0, sab);
+    await pg.evaluate(()=>{
+      [...document.querySelectorAll('style')].forEach(s=>{
+        if(s.textContent.includes('--sab:34px')) s.remove(); });
+    });
+
     // ---------------------------------------------- creator tool tray
     const cr = await pg.evaluate(()=>{
       if(mgState) mgExit(false);

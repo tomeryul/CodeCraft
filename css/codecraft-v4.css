@@ -81,8 +81,11 @@
 #actionBar #stopBtn{display:none;}
 #editor.running #actionBar #runBtn{display:none;}
 #editor.running #actionBar #stopBtn{display:flex;}
-/* the sheet needs the height back that the bar takes */
-#editor{height:56vh;}
+/* the sheet needs the height back that the bar takes.
+   padding-bottom is zeroed because .sheet already adds var(--sab) and
+   #actionBar adds it again — on a device with a home indicator that stacked
+   to 80px of dead space under Run. The bar clears the indicator on its own. */
+#editor{height:56vh;padding-bottom:0;}
 #editor.max{height:94vh;max-height:94vh;}
 
 /* ---------------------------------------------------------------------
