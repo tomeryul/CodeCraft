@@ -1,112 +1,143 @@
 /* =====================================================================
-   CodeCraft v4 — the one action bar
-   ---------------------------------------------------------------------
-   index.html moved Run/Stop out of the editor header and Reset/Step out
-   of the board tab into a single #actionBar at the foot of the sheet.
-   This styles that bar, to the rule written in the markup itself:
+   CodeCraft — v4 layout pass
+   Linked AFTER css/styles.css. It changes WHERE controls live, not what
+   they look like: every colour, radius, bevel and shadow below is a token
+   that already exists in styles.css.
 
-     "ONE action bar, bottom of the sheet, every mode. Run/Stop is the
-      only primary and never moves; RESET and STEP appear for challenges
-      only."
+   Three rules:
+     1. Status reads at the top. Tools sit top-right. Everything you press
+        lives in one bar at the bottom.
+     2. Green means Run, and there is exactly one green button per screen.
+        Amber means build / progress. Everything else is glass.
+     3. Nothing tappable is smaller than 40px, and nothing tappable sits
+        above 640px on a 390x844 screen.
 
-   Nothing here is a new colour or a new size: .go and .halt keep the
-   greens and reds they had inside .ed-btns, and the secondary buttons
-   keep the .ibtn look from the board tab. It is the same set of controls
-   in one place instead of two.
+   Companion DOM changes (index.html + 4 JS lines) are listed in
+   handoff/README.md.
    ===================================================================== */
 
-/* The sheet is a flex column, so the bar is simply its last row: it never
-   scrolls with the tab body and never moves between modes. */
-#actionBar{
-  flex:0 0 auto;
-  display:flex;
-  align-items:center;
-  gap:8px;
-  padding:9px 12px calc(9px + var(--sab));
-  margin-top:2px;
-  border-top:1px solid var(--hair);
-  background:var(--glass);
-  backdrop-filter:blur(16px);
-}
+/* ---------------------------------------------------------------------
+   A. World: the run button is a labelled pill, not a mystery circle
+   The glyph is swapped to an SVG by js/ui-icons.js; ::after adds the word.
+   ------------------------------------------------------------------ */
+#fabRun{width:auto;min-width:64px;height:56px;padding:0 22px;border-radius:999px;
+  display:flex;align-items:center;justify-content:center;gap:9px;font-size:17px;font-weight:700;}
+#fabRun::after{content:"Run";font-family:inherit;font-weight:700;font-size:17px;}
+#fabRun.running::after{content:"Stop";}
+#fabRun .ui-emoji{width:21px;height:21px;}
+#bottombar{align-items:center;gap:10px;}
+#bottombar #codeBtn,#bottombar #buildBtn{height:56px;}
 
-/* ---- secondary: reset and step ---- */
-#actionBar .ibtn{
-  flex:0 0 auto;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:1px;
-  min-width:52px;
-  height:46px;
-  padding:0 10px;
-  border:none;
-  border-radius:13px;
-  background:var(--panel3);
-  color:var(--ink);
-  font-size:15px;
-  font-weight:700;
-  border-bottom:3px solid rgba(0,0,0,.3);
-  transition:transform .08s,border-bottom-width .08s;
-}
-#actionBar .ibtn:active{transform:translateY(2px);border-bottom-width:1px;}
-#actionBar .ibtn:disabled{opacity:.4;}
-/* the caption under the glyph — what makes these readable to a new player
-   instead of two unlabelled arrows */
-#actionBar .ibtn i{
-  font-style:normal;
-  font-size:8.5px;
-  font-weight:800;
-  letter-spacing:.06em;
-  color:var(--ink2);
-  line-height:1;
-}
+/* ---------------------------------------------------------------------
+   B. Top row: three values, four tools — they have to fit in 390px
+   Four chips plus four tools wrap, and the tool tray drops underneath the
+   status bar. Energy is the one value that only matters when it is
+   spendable, so it appears below full only (hud.js toggles .low).
+   ------------------------------------------------------------------ */
+#stats #energyChip{display:none;}
+#stats #energyChip.low{display:flex;opacity:1;}
+#stats .chip{padding:5px 11px;}
+#stats #lvlChip{padding-bottom:11px;}
+#stats #xpBar{left:11px;right:11px;}
+#topbar #tbBtns .iconbtn{width:38px;height:38px;}
 
-/* ---- primary: run, and stop while it runs ---- */
-#actionBar .go,
-#actionBar .halt{
-  flex:1 1 auto;
-  height:52px;
-  border:none;
-  border-radius:999px;
-  font-size:22px;
-  font-weight:900;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  transition:transform .1s,border-bottom-width .1s;
-}
-#actionBar .go{
-  background:linear-gradient(180deg,#7fe28f,#37c85c);
-  color:var(--green-text);
-  border-bottom:4px solid var(--green-deep);
-  box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 6px 18px rgba(55,200,92,.4);
-}
-#actionBar .halt{
-  flex:0 0 auto;
-  width:58px;
-  background:linear-gradient(180deg,#cf4a60,#b53a4d);
-  color:#fff;
-  border-bottom:4px solid #822435;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.25);
-}
-#actionBar .go:active,
-#actionBar .halt:active{transform:translateY(2px);border-bottom-width:2px;}
+/* ---------------------------------------------------------------------
+   C. One bottom action bar, in every mode
+   Run / Stop is the only primary and it never moves, so "make it stop" is
+   always the same tap in the same place. Reset and Step join it for
+   challenges (#editor.mg). Leaving and speed stay up in the header, out of
+   thumb range, where they cannot be hit by accident mid-run.
+   ------------------------------------------------------------------ */
+#actionBar{flex:0 0 auto;display:flex;align-items:center;gap:9px;
+  padding:11px 12px calc(12px + var(--sab));
+  border-top:1px solid var(--hair);background:rgba(26,19,50,.86);backdrop-filter:blur(16px);}
+#actionBar .ibtn{flex:0 0 auto;width:52px;height:52px;padding:0;border:none;border-radius:15px;
+  background:var(--glass-hi);color:var(--ink2);box-shadow:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  font-family:inherit;font-size:9px;font-weight:800;letter-spacing:.03em;
+  transition:transform .08s,background .12s;}
+#actionBar .ibtn i{font-style:normal;}
+#actionBar .ibtn .ui-emoji{width:20px;height:20px;}
+#actionBar .ibtn:active{transform:scale(.94);background:var(--glass-on);border-bottom-width:0;}
+/* reset + step are challenge controls: hidden in the plain world editor */
+#actionBar #mgResetBtn,#actionBar #mgStepBtn{display:none;}
+#editor.mg #actionBar #mgResetBtn,#editor.mg #actionBar #mgStepBtn{display:flex;}
 
-/* ---- "RESET and STEP appear for challenges only" ----
-   js/game/challenges.js adds .mg while a challenge is open. Out in the
-   world there is nothing to reset and nothing to step through, so the bar
-   is just Run and Stop. */
-#actionBar #mgResetBtn,
-#actionBar #mgStepBtn{display:none;}
-#actionBar.mg #mgResetBtn,
-#actionBar.mg #mgStepBtn{display:flex;}
+#actionBar #runBtn,#actionBar #stopBtn{flex:1 1 auto;width:auto;height:58px;padding:0 20px;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  border:none;border-radius:999px;font-family:inherit;font-size:18px;font-weight:700;
+  transition:transform .1s,border-bottom-width .1s;}
+#actionBar #runBtn{background:linear-gradient(180deg,#7fe28f,#37c85c);color:var(--green-text);
+  border-bottom:5px solid var(--green-deep);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 8px 24px rgba(55,200,92,.4);}
+#actionBar #stopBtn{background:linear-gradient(180deg,#ff7d90,#e04a5f);color:#fff;
+  border-bottom:5px solid #a02535;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.3), 0 8px 24px rgba(255,93,115,.4);}
+#actionBar #runBtn::after{content:"Run";}
+#actionBar #stopBtn::after{content:"Stop";}
+#actionBar #runBtn .ui-emoji,#actionBar #stopBtn .ui-emoji{width:22px;height:22px;}
+#actionBar #runBtn:active,#actionBar #stopBtn:active{transform:translateY(2px);border-bottom-width:2px;}
+/* one primary at a time: Run flips to Stop in place (hud.js toggles .running) */
+#actionBar #stopBtn{display:none;}
+#editor.running #actionBar #runBtn{display:none;}
+#editor.running #actionBar #stopBtn{display:flex;}
+/* the sheet needs the height back that the bar takes */
+#editor{height:56vh;}
+#editor.max{height:94vh;max-height:94vh;}
 
-/* The board tab keeps Speed and Exit; Reset and Step have left it, so what
-   remains is the title, the budget and the two controls that are about THIS
-   challenge rather than about running it. */
-.mg-top #mgSpeedBtn{margin-left:auto;}
+/* ---------------------------------------------------------------------
+   D. Editor header: only what you press between runs
+   Run and Stop have left this tray; what stays is expand, undo, redo,
+   close — four 32px glass squares.
+   ------------------------------------------------------------------ */
+.ed-head{padding:4px 12px 2px;}
+.ed-btns .go,.ed-btns .halt{display:none;}   /* safety net if the DOM move is skipped */
 
-/* mgBrickStp is now a direct child of #mgCreatorBar rather than of .cb-act,
-   so it needs its own spacing instead of inheriting the row's. */
-#mgCreatorBar > #mgBrickStp{margin:0 0 6px;}
+/* ---------------------------------------------------------------------
+   E. Minigame header: one row instead of two stacked bars
+   ------------------------------------------------------------------ */
+#mgPanel{background:none;padding:0;margin:0 0 8px;}
+.mg-top{gap:10px;padding:0 0 2px;}
+.mg-top b{font-size:16.5px;font-weight:700;}
+.mg-top #mgCount{background:none;padding:0;font-size:11.5px;font-weight:600;color:var(--ink2);}
+.mg-top .ibtn{width:40px;height:40px;border-radius:13px;background:var(--glass-hi);
+  border:none;box-shadow:none;color:var(--ink2);}
+.mg-top .ibtn:active{transform:scale(.94);background:var(--glass-on);border-bottom-width:0;}
+.mg-top .ibtn.wide{width:auto;min-width:44px;padding:0 12px;font-size:13.5px;font-weight:800;}
+/* the goal leads the board — it is the first thing a player has to read */
+#mgGoal{margin:2px 0 10px;font-size:13px;line-height:1.5;color:#e2dbf5;}
+#mgGoal b{color:var(--accent2);}
+#mgCanvas{border-radius:16px;border:1px solid var(--hair);}
+#mgBoardHint{margin-top:9px;font-size:12px;color:var(--ink2);}
+#mgCases{gap:6px;margin:0 0 9px;}
+#mgVars{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 0;}
+
+/* ---------------------------------------------------------------------
+   F. Creator: the tool tray docks to the bottom of the board
+   position:sticky keeps tools in the thumb while #boardTab scrolls, so the
+   board is never buried under four stacked bars. Rare controls stay behind
+   Setup; Publish is amber, because green is reserved for Run.
+   ------------------------------------------------------------------ */
+#mgCreatorBar{gap:9px;margin-top:9px;}
+#mgCreatorBar .cb-row.tools{position:sticky;bottom:0;z-index:3;gap:6px;padding:5px;
+  border-radius:16px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;
+  background:rgba(26,19,50,.86);backdrop-filter:blur(16px);border:1px solid var(--hair);}
+#mgCreatorBar .cb-row.tools::-webkit-scrollbar{display:none;}
+#mgCreatorBar .tool{width:40px;height:40px;border-radius:12px;}
+#mgCreatorBar .tool.on{background:rgba(255,184,48,.2);border-bottom:none;
+  box-shadow:inset 0 0 0 1.5px rgba(255,214,107,.7);}
+#mgBrickStp{position:sticky;bottom:0;z-index:3;align-self:flex-end;
+  background:rgba(26,19,50,.86);backdrop-filter:blur(12px);border:1px solid var(--hair);}
+#mgCreatorBar .cb-act{gap:8px;}
+#mgCreatorBar .cb-act #mgPublish{background:linear-gradient(180deg,var(--accent2),var(--accent));
+  color:var(--accent-text);border-bottom-color:#8a5709;}
+#mgCreatorBar .cb-act #mgAddStage{background:var(--glass-hi);color:var(--ink);border-bottom:none;}
+#mgLevels{gap:6px;}
+
+/* ---------------------------------------------------------------------
+   G. Sheets: one header, one close button, always in the same place
+   ------------------------------------------------------------------ */
+.m-head{gap:12px;padding:6px 16px 12px;}
+.m-head h3{font-size:16.5px;}
+.m-head p{font-size:11.5px;}
+#tabs button.on{background:var(--glass-on);}

@@ -12,17 +12,17 @@ function updateHud(){
   $("bagEl").textContent=bagCount(r)+"/"+r.cap+inv;
   const en=Math.round(r.energy==null?100:r.energy);
   $("energyEl").textContent=(r.tired?"😴":"⚡")+en;
-  $("energyChip").style.opacity=en<100?"1":".7";
+  // four status chips + four tools do not fit across 390px — energy shows
+  // only while it is spendable
+  $("energyChip").classList.toggle("low",en<100);
 }
 function updateFab(){
   const r=R(), f=$("fabRun");
   if(r.running){f.textContent="⏹";f.classList.add("running");}
   else{f.textContent="▶";f.classList.remove("running");}
-  // RESET and STEP live in the shared #actionBar and only mean anything inside
-  // a challenge. mgEnter/mgExit set this immediately; this line just keeps it
-  // honest afterwards, so no other path can leave two dead buttons in the world.
-  const bar=$("actionBar");
-  if(bar)bar.classList.toggle("mg",!!mgState);
+  // the bottom action bar shows exactly one primary: Run, or Stop while running
+  const live=(typeof mgState!=="undefined"&&mgState)?!!mgState.running:!!r.running;
+  $("editor").classList.toggle("running",live);
 }
 $("fabRun").addEventListener("click",()=>{
   if(mgState){mgState.running?mgStop():mgRun();return;}
