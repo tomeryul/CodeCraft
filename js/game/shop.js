@@ -54,8 +54,25 @@ function renderShop(){
   const snd=document.createElement("div");snd.className="shopitem";
   snd.innerHTML='<div class="em">'+(muted?"🔇":"🔊")+'</div><div class="tx"><b>Sound</b><small>Blips, dings and celebrations.</small></div>';
   const sb=document.createElement("button");sb.textContent=muted?"Turn on":"Turn off";
-  sb.addEventListener("click",()=>{muted=!muted;saveSoon();renderShop();});
+  sb.addEventListener("click",()=>{
+    muted=!muted;
+    if(muted&&typeof musicStop==="function")musicStop();
+    else if(!muted&&!musicOff&&typeof musicStart==="function")musicStart();
+    saveSoon();renderShop();});
   snd.appendChild(sb);el.appendChild(snd);
+  /* Music is its own switch. "Sound off" silences everything; plenty of
+     players want the blips that tell them the robot did something and not
+     a loop underneath them. */
+  const mus=document.createElement("div");mus.className="shopitem";
+  mus.innerHTML='<div class="em">'+(musicOff?"🔇":"🎵")+'</div>'+
+    '<div class="tx"><b>Music</b><small>A theme for the world, another for challenges.</small></div>';
+  const mb=document.createElement("button");mb.textContent=musicOff?"Turn on":"Turn off";
+  mb.addEventListener("click",()=>{
+    musicOff=!musicOff;
+    if(musicOff){if(typeof musicStop==="function")musicStop();}
+    else if(!muted&&typeof musicStart==="function")musicStart();
+    saveSoon();renderShop();});
+  mus.appendChild(mb);el.appendChild(mus);
   /* Signing and safety sit next to the sound toggle, because a child who wants
      to change what other players see about them should not have to go looking
      for it — and undoing a block has to be as easy as making one. */
