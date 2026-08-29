@@ -1,25 +1,30 @@
 "use strict";
 /* ---------------- HUD ---------------- */
+/* updateHud runs on every world tick, and these strings carry emoji that
+   ui-icons.js swaps for inline SVG. Assigning textContent unconditionally
+   replaced the text node 60x a second, so the observer rebuilt every chip
+   icon each frame. Write only when the string actually changed. */
+function setTxt(el,s){s=String(s);if(el.textContent!==s)el.textContent=s;}
 function updateHud(){
-  $("coinsEl").textContent=coins;
-  $("lvlEl").textContent=player.level;
+  setTxt($("coinsEl"),coins);
+  setTxt($("lvlEl"),player.level);
   $("xpFill").style.width=Math.min(100,Math.round(player.xp/xpNeed(player.level)*100))+"%";
   const r=R();
   const parts=Object.keys(r.inv).filter(res=>r.inv[res]>0).sort((a,b)=>r.inv[b]-r.inv[a]);
   let inv="";
   parts.slice(0,2).forEach(res=>{inv+=" "+RES[res].em+r.inv[res];});
   if(parts.length>2)inv+=" +";
-  $("bagEl").textContent=bagCount(r)+"/"+r.cap+inv;
+  setTxt($("bagEl"),bagCount(r)+"/"+r.cap+inv);
   const en=Math.round(r.energy==null?100:r.energy);
-  $("energyEl").textContent=(r.tired?"😴":"⚡")+en;
+  setTxt($("energyEl"),(r.tired?"😴":"⚡")+en);
   // four status chips + four tools do not fit across 390px — energy shows
   // only while it is spendable
   $("energyChip").classList.toggle("low",en<100);
 }
 function updateFab(){
   const r=R(), f=$("fabRun");
-  if(r.running){f.textContent="⏹";f.classList.add("running");}
-  else{f.textContent="▶";f.classList.remove("running");}
+  if(r.running){setTxt(f,"⏹");f.classList.add("running");}
+  else{setTxt(f,"▶");f.classList.remove("running");}
   // the bottom action bar shows exactly one primary: Run, or Stop while running
   const live=(typeof mgState!=="undefined"&&mgState)?!!mgState.running:!!r.running;
   $("editor").classList.toggle("running",live);

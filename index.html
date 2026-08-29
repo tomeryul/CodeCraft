@@ -27,9 +27,15 @@
     <div class="chip" id="bagChip">🎒 <span id="bagEl">0/8</span></div>
     <div class="chip" id="energyChip"><span id="energyEl">⚡100</span></div>
   </div>
+  <!-- Only the two controls that act on THIS screen. Quests and the Shop are
+       destinations, so they moved into the ☰ menu with the other eleven.
+       Both buttons stay in the DOM, hidden: boot.js, shop.js and
+       engagement.js each address them by id, and engagement.js puts the
+       "reward waiting" badge on #questBtn — hub.js mirrors that badge onto
+       the menu button, so the signal still reaches the player. -->
   <div id="tbBtns">
-    <button class="iconbtn" id="questBtn" title="Quests">📜</button>
-    <button class="iconbtn" id="shopBtn" title="Shop">🛒</button>
+    <button class="iconbtn" id="questBtn" title="Quests" hidden>📜</button>
+    <button class="iconbtn" id="shopBtn" title="Shop" hidden>🛒</button>
     <button class="iconbtn" id="mentorBtn" title="AI Mentor">💡</button>
     <button class="iconbtn" id="centerBtn" title="Find my robot">🎯</button>
   </div>
@@ -39,6 +45,9 @@
 <div id="journey"></div>
 <div id="buildBar"></div>
 <div id="bottombar">
+  <button id="hubBtn" title="Menu — everything in the game" aria-label="Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
   <button id="codeBtn">🧩 Code</button>
   <button id="buildBtn">🔨 Build</button>
   <div class="spacer"></div>
@@ -160,12 +169,30 @@
   <div id="statsBox"></div>
 </div>
 
-<!-- ============ BUILD PROJECTS ============ -->
+<!-- ============ MENU / HUB ============
+     One door to every destination, grouped. The tiles are built in
+     js/game/hub.js so the counts stay live. -->
+<div class="sheet" id="hub">
+  <div class="grab"></div>
+  <div class="m-head">
+    <div class="face">🧭</div>
+    <div><h3>Everything in the game</h3><p>Pick where to go. Your world keeps running.</p></div>
+    <button class="iconbtn x" id="hubClose">✕</button>
+  </div>
+  <div id="hubBody"></div>
+</div>
+
+<!-- ============ ONE DESTINATION AT A TIME ============
+     Was a single scroll holding Academy, Puzzle Chapters, Build Projects,
+     Tower Mode (3D), My Challenges and Community. Same markup, but the hub
+     now shows one band at a time and retitles the header to match. -->
 <div class="sheet" id="projects">
   <div class="grab"></div>
   <div class="m-head">
-    <div class="face">🏗️</div>
-    <div><h3>Build Projects</h3><p>Harder coding challenges — finished builds appear in your world!</p></div>
+    <button class="iconbtn back" id="projBack" title="Back to the menu" aria-label="Back to the menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <div><h3 id="projTitle">Build Projects</h3><p id="projSub">Harder coding challenges — finished builds appear in your world!</p></div>
     <button class="iconbtn x" id="projClose">✕</button>
   </div>
   <div id="authBox"></div>
@@ -279,9 +306,11 @@
   <div class="bot"><div class="mascot"><i class="ant"></i><i class="antlight"></i><div class="mbody"><span class="eye"><i></i></span><span class="eye"><i></i></span></div><div class="mshadow"></div></div></div>
   <h1>CodeCraft</h1>
   <div class="tag">A living open world where <b>everything runs on your code</b>.<br>Program robots. Automate everything. Build your empire.</div>
-  <div id="splashAuth"></div>
+  <!-- Play first. Signing in is optional and saves your world to an account,
+       so it sits BELOW the button, not between the pitch and the game. -->
   <button id="playBtn">▶ Play</button>
   <div id="splashStatus"></div>
+  <div id="splashAuth"></div>
   <div class="feats"><span>🌍 Open world</span><span>🧩 Block coding</span><span>🐍 Real Python</span><span>⚙️ Automation</span><span>🦉 AI mentor</span></div>
 </div>
 
@@ -321,6 +350,7 @@
 <script src="./js/game/moderation.js"></script>
 <script src="./js/game/orders.js"></script>
 <script src="./js/game/journey.js"></script>
+<script src="./js/game/hub.js"></script>
 <script src="./js/game/agegate.js"></script>
 <script src="./js/game/account.js"></script>
 <script src="./js/game/save.js"></script>

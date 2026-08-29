@@ -23,7 +23,7 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
   const b = await chromium.launch({ executablePath: CHROME });
   const errs=[], bad=[];
 
-  for (const [W,H] of [[390,844],[360,780]]) {
+  for (const [W,H] of [[390,844],[360,780],[320,700]]) {
     const pg = await b.newPage({ viewport:{width:W,height:H}, deviceScaleFactor:2 });
     pg.on('pageerror', e=>errs.push(String(e)));
     pg.on('response', r=>{ if(r.status()>=400) bad.push(r.status()+' '+r.url().split('/').pop()); });
@@ -66,6 +66,25 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     ck(`${W}x${H} world: the run button is a labelled pill`,
        world.fabH>=52 && /Run/.test(world.fabLabel||''), world);
     ck(`${W}x${H} energy chip hidden while full`, world.energyShown===false, world);
+
+    // ---------------------------------------------- the bottom row fits
+    /* The menu button costs this row 48px. At 320 (SE) that pushed Run past
+       the bar and 25px of it off the screen, and at 360 it collapsed to its
+       min-width. Run is the primary and the one control here that has to
+       keep its word, so the room comes out of the paddings. */
+    const bar = await pg.evaluate(()=>{
+      const ids=['hubBtn','codeBtn','buildBtn','fabRun'];
+      const bb=$('bottombar').getBoundingClientRect();
+      return { fits:ids.every(n=>$(n).getBoundingClientRect().right<=bb.right+.5),
+               tap:ids.every(n=>{const r=$(n).getBoundingClientRect();
+                                 return r.height>=40&&r.width>=40;}),
+               noClip:ids.every(n=>$(n).scrollWidth<=Math.round($(n).getBoundingClientRect().width)+1),
+               labels:[$('codeBtn').textContent.trim(),$('buildBtn').textContent.trim(),
+                       getComputedStyle($('fabRun'),'::after').content] };
+    });
+    ck(`${W}x${H} the whole bottom row fits, labels intact`,
+       bar.fits && bar.tap && bar.noClip &&
+       bar.labels[0]==='Code' && bar.labels[1]==='Build' && /Run/.test(bar.labels[2]), bar);
 
     // ---------------------------------------------- world editor: Run only
     const wed = await pg.evaluate(()=>{

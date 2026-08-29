@@ -137,6 +137,10 @@ const ICONS={/* ---- v3: the last of the UI emoji ---- */
 "🔊":W('<path d="M4 9.6 v4.8 h3.4 L12 18.8 V5.2 L7.4 9.6 Z" fill="'+CC+'"/><path d="M15 9.2 a4.4 4.4 0 0 1 0 5.6 M17.6 6.6 a8 8 0 0 1 0 10.8" '+ST+' stroke-width="2"/>'),
 "🔇":W('<path d="M4 9.6 v4.8 h3.4 L12 18.8 V5.2 L7.4 9.6 Z" fill="'+CC+'"/><path d="M15.4 9.6 L20.2 14.4 M20.2 9.6 L15.4 14.4" '+ST+' stroke-width="2.2"/>'),
 "💾":W('<path d="M4.8 6.4 a1.6 1.6 0 0 1 1.6-1.6 H16 l3.2 3.2 V17.6 a1.6 1.6 0 0 1 -1.6 1.6 H6.4 a1.6 1.6 0 0 1 -1.6-1.6 Z" fill="#5ab8ff"/><rect x="8" y="12.6" width="8" height="6.6" rx="1" fill="#fff"/><rect x="8.8" y="4.8" width="6" height="4" rx="1" fill="#fff"/>'),
+/* ---- the hub: account, and the save actions that moved out of the shop ---- */
+"👤":W('<circle cx="12" cy="8.2" r="3.9" fill="#cfd4e0"/><path d="M4.6 20.4 a7.4 7.4 0 0 1 14.8 0 Z" fill="#aab2c4"/>'),
+"📤":W('<path d="M4.4 13.6 h4.2 l1.1 2.2 h4.6 l1.1-2.2 h4.2 V19 a1.6 1.6 0 0 1 -1.6 1.6 H6 A1.6 1.6 0 0 1 4.4 19 Z" fill="#cfd4e0"/><path d="M12 11.4 V3.4 M8.4 7 L12 3.4 L15.6 7" stroke="#54d66a" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'),
+"📥":W('<path d="M4.4 13.6 h4.2 l1.1 2.2 h4.6 l1.1-2.2 h4.2 V19 a1.6 1.6 0 0 1 -1.6 1.6 H6 A1.6 1.6 0 0 1 4.4 19 Z" fill="#cfd4e0"/><path d="M12 3.4 V11.4 M8.4 7.8 L12 11.4 L15.6 7.8" stroke="#5ab8ff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'),
 "🏅":W('<path d="M9 2.8 h6 l-1.9 5 h-2.2 Z" fill="#ff5d73"/><circle cx="12" cy="14.2" r="6.2" fill="#ffd66b" stroke="#e8b23e" stroke-width="1.4"/><path d="M12 10.8 l1.1 2.1 2.3.3 -1.7 1.6 .4 2.3 -2.1-1.1 -2.1 1.1 .4-2.3 -1.7-1.6 2.3-.3 Z" fill="#e8b23e"/>'),
 "✅":W('<circle cx="12" cy="12" r="9" fill="#54d66a"/><path d="M7.6 12.4 L10.8 15.6 L16.6 8.8" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'),
 "🔒":W('<rect x="5.8" y="10.4" width="12.4" height="9.4" rx="2.6" fill="#ffb830"/><path d="M8.4 10.4 V8 a3.6 3.6 0 0 1 7.2 0 v2.4" stroke="#b8bec9" stroke-width="2.4" fill="none"/><circle cx="12" cy="14.6" r="1.5" fill="#8a5a1a"/>'),
