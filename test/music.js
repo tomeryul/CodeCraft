@@ -103,13 +103,26 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     const ok=[0,2,4,5,7,9,11], bad=[];          // C D E F G A B
     for(const [name,T] of Object.entries(CC_MUSIC.tracks)){
       const notes=[];
-      for(const p of T.prog){ notes.push(p.r); p.c.forEach(n=>notes.push(n)); }
-      for(const m of T.mel) notes.push(m[1]);
+      for(const ch of T.prog) ch.forEach(n=>notes.push(n));
+      for(const row of T.mel) row.forEach(n=>{ if(n!=null) notes.push(n); });
       for(const n of notes) if(ok.indexOf(((n%12)+12)%12)<0) bad.push(name+':'+n);
     }
     return bad;
   });
   ck('every note in both themes is in key', outOfKey.length===0, outOfKey);
+
+  const shape = await pg.evaluate(()=>{
+    const bad=[];
+    for(const [name,T] of Object.entries(CC_MUSIC.tracks)){
+      if(T.prog.length*T.barsPerChord!==T.bars) bad.push(name+': prog covers '+
+        (T.prog.length*T.barsPerChord)+' bars, loop is '+T.bars);
+      if(T.mel.length!==T.bars) bad.push(name+': '+T.mel.length+' melody bars, loop is '+T.bars);
+      T.mel.forEach((r,i)=>{ if(r.length!==8) bad.push(name+' bar '+(i+1)+': '+r.length+' slots'); });
+      T.prog.forEach((c,i)=>{ if(c.length!==3) bad.push(name+' chord '+(i+1)+': '+c.length+' notes'); });
+    }
+    return bad;
+  });
+  ck('chords, melody and loop length all agree', shape.length===0, shape);
 
   // ---------------------------------------------- the setting persists
   const saved = await pg.evaluate(()=>{

@@ -25,43 +25,48 @@
 if(window.__music)return; window.__music=1;
 
 /* ---------------- the two themes ----------------
-   MIDI numbers. 60 is middle C. Chords are [root, third, fifth] and the
-   arp walks them; `mel` is [step, note, beats] on a 16th-note grid where a
-   bar is 16 steps.
+   MIDI numbers. 60 is middle C. A chord is [root, third, fifth] and the
+   arp walks it; `mel` holds one row per bar and eight eighth-note slots
+   per row, null for a rest — laid out so a tune can be read down the page
+   rather than decoded from step offsets.
 
    World is C major and Focus is A minor — relative keys, the same seven
-   notes, so a crossfade between them never lands on a wrong note. */
+   notes, so a crossfade between them can never land on a wrong note. */
+const _=null;
 const TRACKS={
+  /* Chosen from the audition page. The theme before this one ran at 82 BPM
+     with ten melody notes across eight bars and no percussion at all, which
+     is why it read as slow: not the tempo alone, but a tune that spent half
+     its length resting over nothing keeping time. */
   world:{
-    bpm:82, bars:8, hat:false,
-    /* I - V - vi - IV, two bars each. The friendliest progression there
-       is, and the reason the world theme can loop for an hour. */
-    prog:[{r:48,c:[48,52,55]},{r:43,c:[43,47,50]},
-          {r:45,c:[45,48,52]},{r:41,c:[41,45,48]}],
-    barsPerChord:2,
-    arpEvery:2,                 // eighth notes
-    arpSteps:[0,1,2,3,2,1,0,1],
-    bassSteps:[0,8], bassLen:2.2,
-    mel:[[0,64,1.5],[8,67,1.5],
-         [32,74,1],[38,71,.75],[44,67,1.5],
-         [64,72,1.5],[72,69,2],
-         [96,69,1],[102,72,1],[108,74,2]]
+    bpm:116, bars:8, barsPerChord:1, lead:"triangle", leadGain:.085,
+    /* C G Am F | C G F G — one bar each, so the harmony moves at walking
+       pace instead of sitting on a chord for two bars at a time. */
+    prog:[[48,52,55],[43,47,50],[45,48,52],[41,45,48],
+          [48,52,55],[43,47,50],[41,45,48],[43,47,50]],
+    bass:{steps:[0,6,8,14],len:.5,gain:.13,wave:"sine"},
+    arp:{every:2,pat:[0,2,1,3,2,1,2,0],gain:.04},
+    drums:{kick:[0,8],snare:[4,12],hat:[0,2,4,6,8,10,12,14]},
+    mel:[[67,69,72,_,74,_,72,_],[71,_,74,_,71,69,67,_],
+         [69,72,76,_,74,_,72,_],[72,69,65,_,69,_,_,_],
+         [67,69,72,76,79,_,76,_],[74,_,71,_,74,76,74,_],
+         [72,69,65,69,72,_,_,_],[67,71,74,_,79,_,_,_]]
   },
   focus:{
-    bpm:104, bars:4, hat:true,
-    /* i - VI - III - VII, one bar each: the same four chords as the world
-       theme read from its relative minor, moving twice as fast. */
-    prog:[{r:45,c:[45,48,52]},{r:41,c:[41,45,48]},
-          {r:48,c:[48,52,55]},{r:43,c:[43,47,50]}],
-    barsPerChord:1,
-    arpEvery:1,                 // sixteenths — this is the "get on with it"
-    arpSteps:[0,1,2,1,2,3,2,1,0,1,2,1,2,3,2,1],
-    bassSteps:[0,2,4,6,8,10,12,14], bassLen:.42,
-    mel:[[0,69,.75],[6,72,.75],[32,67,.75],[38,72,1.5]]
+    bpm:104, bars:4, barsPerChord:1, lead:"triangle", leadGain:.075,
+    /* i - VI - III - VII: the world theme's four chords read from its
+       relative minor. Kept as it was — a challenge wants a pulse to work
+       against, not a tune to follow. */
+    prog:[[45,48,52],[41,45,48],[48,52,55],[43,47,50]],
+    bass:{steps:[0,2,4,6,8,10,12,14],len:.42,gain:.12,wave:"sine"},
+    arp:{every:1,pat:[0,1,2,1,2,3,2,1,0,1,2,1,2,3,2,1],gain:.045},
+    drums:{kick:[],snare:[],hat:[2,6,10,14]},
+    mel:[[69,_,_,72,_,_,_,_],[_,_,_,_,_,_,_,_],
+         [67,_,_,72,_,_,_,_],[_,_,_,_,_,_,_,_]]
   }
 };
 
-const VOL=0.46;               // master ceiling; sfx peaks at .08 per blip
+const VOL=0.44;                 // master ceiling; sfx peaks at .08 per blip
 const LOOKAHEAD=0.30;           // seconds of notes scheduled in advance
 const TICK=110;                 // ms between scheduler wake-ups
 
@@ -88,13 +93,13 @@ function build(a0){
   A=a;
   mGain=a.createGain(); mGain.gain.value=0; mGain.connect(a.destination);
   const lp=a.createBiquadFilter();
-  lp.type="lowpass"; lp.frequency.value=2600; lp.Q.value=.6;
+  lp.type="lowpass"; lp.frequency.value=4200; lp.Q.value=.5;
   lp.connect(mGain);
   bus=a.createGain(); bus.gain.value=1; bus.connect(lp);
   /* One short delay, fed only by the arp. It is the difference between
      "four oscillators" and "a room". */
   const d=a.createDelay(1), fb=a.createGain();
-  d.delayTime.value=.3; fb.gain.value=.26;
+  d.delayTime.value=.26; fb.gain.value=.24;
   d.connect(fb); fb.connect(d); d.connect(bus);
   echo=a.createGain(); echo.gain.value=.5; echo.connect(d);
   // one second of white noise, reused for every hat
@@ -116,16 +121,32 @@ function tone(f,t,dur,gain,type,send){
   o.start(t); o.stop(t+dur+.06);
   scheduled++;
 }
-function hat(t){
+/* Percussion. A pitch sweep is a kick and filtered noise is everything
+   else — the whole drum kit is these two functions. */
+function kick(t){
+  const a=A;
+  const o=a.createOscillator(),g=a.createGain();
+  o.type="sine";
+  o.frequency.setValueAtTime(132,t);
+  o.frequency.exponentialRampToValueAtTime(46,t+.11);
+  g.gain.setValueAtTime(.24,t);
+  g.gain.exponentialRampToValueAtTime(.0001,t+.24);
+  o.connect(g); g.connect(bus); o.start(t); o.stop(t+.28);
+  scheduled++;
+}
+function burst(t,dur,type,freq,gain){
   const a=A;
   const s=a.createBufferSource(); s.buffer=noise;
-  const hp=a.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=7000;
+  const f=a.createBiquadFilter(); f.type=type; f.frequency.value=freq;
   const g=a.createGain();
-  g.gain.setValueAtTime(.028,t);
-  g.gain.exponentialRampToValueAtTime(.0001,t+.045);
-  s.connect(hp); hp.connect(g); g.connect(bus);
-  s.start(t); s.stop(t+.06);
+  g.gain.setValueAtTime(gain,t);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  s.connect(f); f.connect(g); g.connect(bus);
+  s.start(t); s.stop(t+dur+.02);
+  scheduled++;
 }
+const snare=t=>burst(t,.13,"bandpass",1900,.145);
+const hat  =t=>burst(t,.04,"highpass",7600,.045);
 
 /* One 16th note of the loop. Everything is derived from `step`, so the
    loop has no state to drift out of sync. */
@@ -133,18 +154,23 @@ function play1(i,t){
   const T=track, bar=Math.floor(i/16), inBar=i%16;
   const ch=T.prog[Math.floor(bar/T.barsPerChord)%T.prog.length];
 
-  if(T.bassSteps.indexOf(inBar)>=0)
-    tone(midi(ch.r-12),t,T.bassLen*beat(),.12,"sine",false);
+  if(T.bass.steps.indexOf(inBar)>=0)
+    tone(midi(ch[0]-12),t,T.bass.len*beat(),T.bass.gain,T.bass.wave,false);
 
-  if(i%T.arpEvery===0){
-    const idx=T.arpSteps[(i/T.arpEvery)%T.arpSteps.length];
-    const tones=[ch.c[0],ch.c[1],ch.c[2],ch.c[0]+12];
-    tone(midi(tones[idx]+12),t,beat()*.9,.045,"triangle",true);
+  if(i%T.arp.every===0){
+    const idx=T.arp.pat[(i/T.arp.every)%T.arp.pat.length];
+    const tones=[ch[0],ch[1],ch[2],ch[0]+12];
+    tone(midi(tones[idx]+12),t,beat()*.9,T.arp.gain,"triangle",true);
   }
-  if(T.hat&&inBar%4===2)hat(t);
 
-  for(const m of T.mel)
-    if(m[0]===i)tone(midi(m[1]),t,m[2]*beat(),.075,"triangle",true);
+  if(T.drums.kick.indexOf(inBar)>=0)kick(t);
+  if(T.drums.snare.indexOf(inBar)>=0)snare(t);
+  if(T.drums.hat.indexOf(inBar)>=0)hat(t);
+
+  if(inBar%2===0){
+    const row=T.mel[bar%T.mel.length], n=row?row[inBar/2]:null;
+    if(n)tone(midi(n),t,beat()*.85,T.leadGain,T.lead,true);
+  }
 }
 const beat=()=>60/track.bpm;
 const stepDur=()=>beat()/4;
