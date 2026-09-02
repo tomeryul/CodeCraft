@@ -263,5 +263,21 @@ if(typeof updateQuestBadge==="function"){
   };
 }
 
+/* Leaving a challenge reopened #projects directly — no band filter, no
+   title — so going into Academy and coming back out landed you in the
+   whole seven-section scroll this change exists to remove, still headed
+   "Academy". Route the reopen through the page you actually came from.
+   mgExit is a function declaration, so reassigning it here rebinds it for
+   challenges.js's own internal calls too. */
+if(typeof mgExit==="function"){
+  const _mgExit=window.mgExit;
+  window.mgExit=function(reopen){
+    const r=_mgExit.apply(this,arguments);
+    if(reopen!==false&&$("projects").classList.contains("open"))
+      hubPage(hubCur||"academy");
+    return r;
+  };
+}
+
 window.hubOpen=hubOpen; window.hubClose=hubClose; window.hubPage=hubPage;
 })();

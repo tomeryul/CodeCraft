@@ -56,7 +56,6 @@
 
 <!-- ============ CODE EDITOR ============ -->
 <div class="sheet" id="editor">
-  <div class="grab"></div>
   <div class="ed-head">
     <div id="robotChips"></div>
     <div class="ed-btns">
@@ -76,9 +75,9 @@
   </div>
   <div class="tabbody" id="boardTab" style="display:none">
     <div id="mgPanel">
-      <div class="mg-top"><b id="mgTitle"></b><span id="mgCount"></span><span class="spacer"></span>
-        <button id="mgSpeedBtn" class="ibtn wide" title="Playback speed">1×</button>
-        <button id="mgExitBtn" class="ibtn" title="Leave challenge">✕</button></div>
+      <div class="mg-top"><button id="mgExitBtn" class="ibtn" title="Back to the list">✕</button>
+        <b id="mgTitle"></b><span id="mgCount"></span><span class="spacer"></span>
+        <button id="mgSpeedBtn" class="ibtn wide" title="Playback speed">1×</button></div>
       <div id="mgCreatorBar">
         <div class="cb-row tools" id="mgTools"></div>
         <span class="stp" id="mgBrickStp"><span class="clab">🔢</span><button id="mgBrickDec">−</button><span id="mgBrickN" class="num"></span><button id="mgBrickInc">＋</button></span>
@@ -143,7 +142,6 @@
 
 <!-- ============ AI MENTOR ============ -->
 <div class="sheet" id="mentor">
-  <div class="grab"></div>
   <div class="m-head">
     <div class="face">🦉</div>
     <div><h3>Byte — your AI mentor</h3><p>Ask me anything about coding or your robots!</p></div>
@@ -159,7 +157,6 @@
 
 <!-- ============ QUESTS ============ -->
 <div class="sheet" id="quests">
-  <div class="grab"></div>
   <div class="m-head">
     <div class="face">📜</div>
     <div><h3>Quests &amp; Progress</h3><p>Finish goals, claim rewards, level up!</p></div>
@@ -173,7 +170,6 @@
      One door to every destination, grouped. The tiles are built in
      js/game/hub.js so the counts stay live. -->
 <div class="sheet" id="hub">
-  <div class="grab"></div>
   <div class="m-head">
     <div class="face">🧭</div>
     <div><h3>Everything in the game</h3><p>Pick where to go. Your world keeps running.</p></div>
@@ -187,7 +183,6 @@
      Tower Mode (3D), My Challenges and Community. Same markup, but the hub
      now shows one band at a time and retitles the header to match. -->
 <div class="sheet" id="projects">
-  <div class="grab"></div>
   <div class="m-head">
     <button class="iconbtn back" id="projBack" title="Back to the menu" aria-label="Back to the menu">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
@@ -201,7 +196,6 @@
 
 <!-- ============ DESIGN GUIDE ============ -->
 <div class="sheet" id="guide">
-  <div class="grab"></div>
   <div class="m-head">
     <div class="face">📘</div>
     <div><h3>Design a great challenge</h3><p>Six rules, then five boards to start from.</p></div>
@@ -212,7 +206,6 @@
 
 <!-- ============ MY FUNCTIONS ============ -->
 <div class="sheet" id="funcLib">
-  <div class="grab"></div>
   <div class="m-head">
     <div class="face">📚</div>
     <div><h3>My Functions</h3><p>Save a function once — use it in every world and minigame.</p></div>
@@ -223,7 +216,6 @@
 
 <!-- ============ MARKET ORDERS ============ -->
 <div class="sheet" id="orders">
-  <div class="grab"></div>
   <div class="m-head">
     <div class="face">📋</div>
     <div><h3>Market Orders</h3><p>A job on a clock. Deliver it before time runs out.</p></div>
@@ -234,7 +226,6 @@
 
 <!-- ============ REPORT ============ -->
 <div class="sheet" id="report">
-  <div class="grab"></div>
   <div class="m-head">
     <div class="face">🚩</div>
     <div><h3>Report a challenge</h3><p id="repTitle"></p></div>
@@ -258,7 +249,6 @@
 
 <!-- ============ DELETE ACCOUNT (App Store 5.1.1(v)) ============ -->
 <div class="sheet" id="delacc">
-  <div class="grab"></div>
   <div class="m-head">
     <div class="face">🗑</div>
     <div><h3>Delete your account</h3><p id="delWho"></p></div>
@@ -352,6 +342,7 @@
 <script src="./js/game/music.js"></script>
 <script src="./js/game/journey.js"></script>
 <script src="./js/game/hub.js"></script>
+<script src="./js/game/nav.js"></script>
 <script src="./js/game/agegate.js"></script>
 <script src="./js/game/account.js"></script>
 <script src="./js/game/save.js"></script>

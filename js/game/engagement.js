@@ -65,7 +65,8 @@ function renderQuests(){
   pb.innerHTML='<span class="pb-em">🏗️</span><span class="pb-tx"><b>Build Projects</b><small>Coding challenges: Big House, Car, Theme Park…</small></span><span class="pb-go">▶</span>';
   pb.addEventListener("click",()=>{
     $("quests").classList.remove("open");
-    renderProjects();$("projects").classList.add("open");
+    if(typeof hubPage==="function")hubPage("builds");
+    else{renderProjects();$("projects").classList.add("open");}
   });
   el.appendChild(pb);
   // skills grid

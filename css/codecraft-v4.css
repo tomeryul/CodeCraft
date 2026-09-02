@@ -100,6 +100,10 @@
    close — four 32px glass squares.
    ------------------------------------------------------------------ */
 .ed-head{padding:4px 12px 2px;}
+/* these were 32px glass squares, under the 40px everything else keeps.
+   Exit lives here, so it is not a tool you can afford to miss. */
+.ed-btns button{width:40px;height:40px;}
+.ed-btns button svg{width:19px;height:19px;}
 .ed-btns .go,.ed-btns .halt{display:none;}   /* safety net if the DOM move is skipped */
 
 /* ---------------------------------------------------------------------
@@ -193,7 +197,6 @@
 /* I2. Every other surface in the v3 language sits on a hairline; the sheet
    was the one that didn't, so its top edge died into the scrim. */
 .sheet{border-top:1px solid var(--hair);}
-.sheet .grab{background:rgba(255,255,255,.34);}
 
 /* I3. Keyboard focus was invisible everywhere. One ring, accent, on the
    controls that take it — visible to keyboard users, absent for taps. */
@@ -304,10 +307,16 @@ h4.hub-sec:first-child{margin-top:2px;}
 .ht-n{margin-left:auto;font-size:11.5px;font-weight:800;font-style:normal;
   color:var(--accent);font-variant-numeric:tabular-nums;}
 
-/* J5. The destination header gets a back button to the menu. `.m-head`'s
-   own `.face` is gone on this sheet — the title says where you are. */
+/* J5. Back on the left, Exit on the right, on every header. The two were
+   the same ✕ glyph in the same corner before, doing different things.
+   Exit is navigation now, not a dismiss, so it gets the 40px the rest of
+   the UI keeps instead of the 36px it had as a corner affordance. */
+.m-head .x,.iconbtn.x{width:40px;height:40px;flex:0 0 auto;}
 .m-head .iconbtn.back{flex:0 0 auto;align-self:center;}
 .m-head .iconbtn.back svg{width:20px;height:20px;}
+.mg-top .ibtn.back svg{width:19px;height:19px;}
+/* nothing sits behind the world editor, so it offers no way back */
+#editor:not(.mg) #mgExitBtn{display:none;}
 
 @media (max-width:359px){
   .hub-grid{grid-template-columns:1fr;}

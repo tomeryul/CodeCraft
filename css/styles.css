@@ -118,7 +118,6 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   box-shadow:0 -10px 40px rgba(0,0,0,.5);transform:translateY(105%);transition:transform .28s cubic-bezier(.32,.9,.35,1);
   display:flex;flex-direction:column;max-height:78vh;padding-bottom:var(--sab);}
 .sheet.open{transform:translateY(0);}
-.sheet .grab{width:44px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);margin:8px auto 2px;flex:0 0 auto;}
 
 /* ---------- editor ---------- */
 #editor{height:48vh;transition:transform .28s cubic-bezier(.32,.9,.35,1),height .26s cubic-bezier(.32,.9,.35,1);}
@@ -530,7 +529,6 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   #editor{left:auto;right:0;top:0;bottom:0;width:430px;max-height:none;height:auto;border-radius:22px 0 0 22px;transform:translateX(105%);}
   #editor.max{width:min(720px,82vw);height:auto;max-height:none;}
   #editor.open{transform:translateX(0);}
-  #editor .grab{display:none;}
   /* desktop keeps the same half-and-half split via flex */
   #mentor{left:auto;width:430px;border-radius:22px 22px 0 0;margin-right:0;}
 }
