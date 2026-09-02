@@ -55,7 +55,7 @@ async function toWorld(pg){
   }
 
   // ------------------------------------------------ both buttons, every page
-  const sheets=['mentor','quests','projects','guide','funcLib','orders','report'];
+  const sheets=['mentor','quests','projects','guide','funcLib','orders','report','settings'];
   const btns = await pg.evaluate(ids=>ids.map(id=>{
     const s=document.getElementById(id);
     const h=s&&s.querySelector('.m-head');

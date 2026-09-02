@@ -69,6 +69,7 @@ const GROUPS=[
   ]},
   {name:"Your world",tiles:[
     {em:"🛒",name:"Shop",tag:"robots & upgrades",go:()=>{hubClose();openShop();}},
+    {em:"⚙️",name:"Settings",tag:"sound & world",go:()=>{hubClose();openSettings();}},
     {em:"📋",name:"Market Orders",tag:"on a clock",go:()=>{hubClose();ordersOpen();}},
     {em:"📜",name:"Quests",tag:"progress",go:()=>{hubClose();
       if(has("renderQuests"))renderQuests();$("quests").classList.add("open");}},

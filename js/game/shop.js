@@ -50,67 +50,9 @@ function renderShop(){
     const bt=document.createElement("button");bt.textContent="🔒"+h.lvl;bt.disabled=true;hwrap.appendChild(bt);
   });
   st.appendChild(hwrap);el.appendChild(st);
-  // sound toggle
-  const snd=document.createElement("div");snd.className="shopitem";
-  snd.innerHTML='<div class="em">'+(muted?"🔇":"🔊")+'</div><div class="tx"><b>Sound</b><small>Blips, dings and celebrations.</small></div>';
-  const sb=document.createElement("button");sb.textContent=muted?"Turn on":"Turn off";
-  sb.addEventListener("click",()=>{
-    muted=!muted;
-    if(muted&&typeof musicStop==="function")musicStop();
-    else if(!muted&&!musicOff&&typeof musicStart==="function")musicStart();
-    saveSoon();renderShop();});
-  snd.appendChild(sb);el.appendChild(snd);
-  /* Music is its own switch. "Sound off" silences everything; plenty of
-     players want the blips that tell them the robot did something and not
-     a loop underneath them. */
-  const mus=document.createElement("div");mus.className="shopitem";
-  mus.innerHTML='<div class="em">'+(musicOff?"🔇":"🎵")+'</div>'+
-    '<div class="tx"><b>Music</b><small>A theme for the world, another for challenges.</small></div>';
-  const mb=document.createElement("button");mb.textContent=musicOff?"Turn on":"Turn off";
-  mb.addEventListener("click",()=>{
-    musicOff=!musicOff;
-    if(musicOff){if(typeof musicStop==="function")musicStop();}
-    else if(!muted&&typeof musicStart==="function")musicStart();
-    saveSoon();renderShop();});
-  mus.appendChild(mb);el.appendChild(mus);
-  /* Signing and safety sit next to the sound toggle, because a child who wants
-     to change what other players see about them should not have to go looking
-     for it — and undoing a block has to be as easy as making one. */
-  const modRow=(em,title,sub,btn,fn)=>{
-    const d=document.createElement("div");d.className="shopitem";
-    d.innerHTML='<div class="em">'+em+'</div><div class="tx"><b>'+title+'</b><small>'+sub+'</small></div>';
-    const b=document.createElement("button");b.textContent=btn;
-    b.addEventListener("click",()=>{fn();renderShop();});
-    d.appendChild(b);el.appendChild(d);
-  };
-  if(typeof nickOf==="function")
-    modRow("\u270F\uFE0F","Your name: "+esc(nickOf()),
-      "What other players see on challenges you publish.","Change",()=>askNick(true));
-  if(typeof unblockAll==="function"){
-    const nb=(player.blocked||[]).length;
-    modRow("\u{1F6AB}","Hidden players: "+nb,
-      nb?"Their challenges are hidden from you.":"You haven't hidden anyone.",
-      nb?"Show all":"—", ()=>{ if(nb)unblockAll(); });
-  }
-  const ex=document.createElement("div");ex.className="shopitem";
-  ex.innerHTML='<div class="em">💾</div><div class="tx"><b>Backup World</b><small>Export your world to a file, or restore a backup.</small></div>';
-  const eb=document.createElement("button");eb.textContent="Export";
-  eb.addEventListener("click",()=>{
-    saveNow();
-    const blob=new Blob([localStorage.getItem(SAVE_KEY)],{type:"application/json"});
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(blob);a.download="codecraft-world.json";a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href),2000);
-    toast("💾 World exported!");
-  });
-  const ib=document.createElement("button");ib.textContent="Import";ib.style.marginLeft="6px";
-  ib.addEventListener("click",()=>$("importFile").click());
-  ex.appendChild(eb);ex.appendChild(ib);el.appendChild(ex);
-  const rd=document.createElement("div");rd.className="shopitem";
-  rd.innerHTML='<div class="em">🌍</div><div class="tx"><b>New World</b><small>Erase everything and generate a fresh world.</small></div>';
-  const rb=document.createElement("button");rb.textContent="Reset";rb.className="danger";
-  rb.addEventListener("click",()=>{if(confirm("Really erase your world, robots and coins?")){localStorage.removeItem(SAVE_KEY);location.reload();}});
-  rd.appendChild(rb);el.appendChild(rd);
+  /* Sound, Music, your name, hiding players and New World moved to
+     Settings; Export and Import to the Account & save page. None of them
+     cost coins, and none of them belonged under "buy a robot". */
 }
 $("importFile").addEventListener("change",e=>{
   const f=e.target.files[0];if(!f)return;
