@@ -115,6 +115,59 @@ async function boot(pg,he){
   ck('the language is saved like sound and music',
      saved.inSave==='he' && saved.live==='he', saved);
 
+  // ------------------------------------------------ the coverage itself
+  /* The sentences the game builds by concatenation — "Level 3 complete!",
+     "Robot 2 sold 4 wood" — never arrive as a fixed string, so a
+     whole-string table cannot hold them. They go through patterns instead:
+     the numbers and names come back untranslated INSIDE Hebrew wording. */
+  const probe = await pg.evaluate(async list => {
+    const host=document.createElement('div');
+    host.id='__probe'; host.style.position='absolute'; host.style.left='-9999px';
+    for(const s of list){ const sp=document.createElement('span'); sp.textContent=s;
+      host.appendChild(sp); }
+    document.body.appendChild(host);
+    /* the swap runs from a MutationObserver, so it lands a microtask later */
+    await new Promise(r=>setTimeout(r,250));
+    return [...document.querySelectorAll('#__probe > span')].map(s=>s.textContent);
+  }, ['🎉 Big House built! +40 🪙',
+      '✅ Level 2 complete! Next: Level 3/5',
+      '🚫 Too many blocks (14/8) — squeeze more into loops! 🔁',
+      '🤖 Rex joined your team!',
+      'This sentence is in no dictionary at all.']);
+  ck('a built sentence is translated around its number',
+     HEB.test(probe[0]) && /40/.test(probe[0]) && /Big House/.test(probe[0]), probe[0]);
+  ck('both numbers survive a two-number pattern',
+     HEB.test(probe[1]) && /2/.test(probe[1]) && /3\/5/.test(probe[1]), probe[1]);
+  ck('a pattern keeps the budget it was given',
+     HEB.test(probe[2]) && /14\/8/.test(probe[2]), probe[2]);
+  ck("a robot's name is carried through untranslated",
+     HEB.test(probe[3]) && /Rex/.test(probe[3]), probe[3]);
+  ck('a string in no table is left exactly as it was',
+     probe[4]==='This sentence is in no dictionary at all.', probe[4]);
+
+  /* ui-icons.js lifts every emoji into its own span, so a sentence with an
+     emoji in the MIDDLE reaches the dictionary as several nodes and no one
+     of them matches. Whichever observer ran first, the sentence has to come
+     out Hebrew. */
+  const mid = await pg.evaluate(async () => {
+    const host=document.createElement('div'); host.id='__mid';
+    host.style.position='absolute'; host.style.left='-9999px';
+    const sp=document.createElement('span'); sp.textContent='Collect 5 ⛓️ iron';
+    host.appendChild(sp); document.body.appendChild(host);
+    await new Promise(r=>setTimeout(r,250));
+    return { text:sp.textContent, icons:sp.querySelectorAll('.ui-emoji').length };
+  });
+  ck('an emoji in mid-sentence does not block the translation',
+     HEB.test(mid.text) && !/Collect|iron/.test(mid.text), mid);
+  ck('and the emoji is still drawn as an icon afterwards', mid.icons>0, mid);
+
+  /* An <input> holds the player's own text, so its contents are never
+     touched — but its placeholder is ours. */
+  const ph = await pg.evaluate(()=>{
+    const e=document.querySelector('#mentor input[placeholder],#mentorInput');
+    return e?e.getAttribute('placeholder'):null; });
+  ck("a placeholder inside an input is translated", ph!==null && HEB.test(ph), ph);
+
   // ------------------------------------------------ English still works
   const pg2 = await b.newPage({ viewport:{width:390,height:844} });
   const errs2=[]; pg2.on('pageerror',e=>errs2.push(String(e)));

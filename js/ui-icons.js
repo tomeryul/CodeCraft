@@ -223,6 +223,9 @@ function processText(tn){
     if(!svg)continue;
     if(m.index>last)frag.appendChild(document.createTextNode(s.slice(last,m.index)));
     const sp=document.createElement('span');sp.className='ui-emoji';sp.innerHTML=svg;
+    /* keep the character we replaced: js/game/i18n.js reassembles the
+       original sentence from it when an emoji sits mid-string. */
+    sp.setAttribute('data-e',m[1]);
     frag.appendChild(sp);
     last=m.index+m[1].length;
   }
