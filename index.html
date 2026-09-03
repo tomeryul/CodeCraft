@@ -264,6 +264,12 @@
   <div id="delMsg"></div>
 </div>
 
+<!-- One scrim for every sheet. It used to be a ::before on .sheet itself,
+     but a z-index:-1 child paints ABOVE its own stacking context's
+     background, so it dimmed each sheet by 52% instead of the world
+     behind it. -->
+<div id="scrim"></div>
+
 <!-- ============ SETTINGS ============
      Split out of the Shop. Nothing in here costs coins, and nothing the
      Shop sells is a setting — they only shared a sheet. -->

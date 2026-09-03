@@ -195,3 +195,31 @@
    The canvas has no CSS; the badge is drawn from the same SVG art the
    UI uses (CC_SPRITES), so a chop looks like a chop on every device.
    ------------------------------------------------------------------ */
+
+/* ---------------------------------------------------------------------
+   K. The editor above the tab bar
+   The tab bar reads well because it is a distinct, darker strip. What sat
+   above it did not: the sheet is --panel and #programWrap laid another
+   24% black over the middle of it, so the largest surface on the screen —
+   the place your program goes — was the darkest thing in the app and read
+   as a hole rather than a panel. Lift the sheet, and make that well a
+   light inset instead of a dark one, so the bar underneath stays the
+   anchor it already is.
+   ------------------------------------------------------------------ */
+#scrim{position:fixed;inset:0;z-index:38;pointer-events:none;
+  background:rgba(8,4,24,.52);opacity:0;transition:opacity .28s ease;}
+body:has(.sheet.open) #scrim{opacity:1;}
+
+#editor{background:#2c2257;}
+#editor #programWrap{background:rgba(255,255,255,.05);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05);}
+#editor #boardTab,#editor #blocksTab,#editor #pyTab{background:none;}
+/* the well the palette sits in, and the code pane, follow the same rule */
+#editor #pyTab pre{background:rgba(255,255,255,.04);}
+
+/* the glow around Run was a 24px bloom at 40% on a dark sheet, and it
+   spilled well past the pill. Keep the bevel, lose the halo. */
+#actionBar #runBtn{
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 4px 12px rgba(55,200,92,.26);}
+#actionBar #stopBtn{
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.3), 0 4px 12px rgba(255,93,115,.26);}

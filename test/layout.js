@@ -177,6 +177,29 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
         if(s.textContent.includes('--sab:34px')) s.remove(); });
     });
 
+    /* The scrim used to be a ::before on .sheet. A z-index:-1 child paints
+       above its own stacking context's background, so instead of dimming
+       the world it dimmed every sheet by 52% black — #241b45 rendering as
+       #150e2e, which is why the editor read as a dark hole. */
+    const scrim = await pg.evaluate(()=>{
+      $('editor').classList.add('open');
+      const ed=$('editor');
+      const before=getComputedStyle(ed,'::before');
+      const sc=$('scrim');
+      const alpha=c=>{const m=/rgba?\(([^)]+)\)/.exec(c);
+        if(!m)return 0; const p=m[1].split(',');
+        return p.length>3?parseFloat(p[3]):1;};
+      return { sheetPseudoPaints:alpha(before.backgroundColor)>0.02,
+               hasScrim:!!sc,
+               scrimShown:sc?+getComputedStyle(sc).opacity:0,
+               scrimZ:sc?+getComputedStyle(sc).zIndex:0,
+               sheetZ:+getComputedStyle(ed).zIndex,
+               scrimInSheet:!!(sc&&sc.closest('.sheet')) };
+    });
+    ck(`${W}x${H} the scrim dims the world, not the sheet`,
+       !scrim.sheetPseudoPaints && scrim.hasScrim && scrim.scrimShown>0.9 &&
+       !scrim.scrimInSheet && scrim.scrimZ<scrim.sheetZ, scrim);
+
     // ---------------------------------------------- creator tool tray
     const cr = await pg.evaluate(()=>{
       if(mgState) mgExit(false);

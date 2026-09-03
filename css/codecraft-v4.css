@@ -190,9 +190,11 @@
    something dark behind them or they read as mud over the canvas. The scrim
    is a pseudo-element on the sheet itself — no markup, no JS — and stays
    pointer-events:none, so what a tap on the world does is unchanged. */
-.sheet::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
-  background:rgba(8,4,24,.52);opacity:0;transition:opacity .28s ease;}
-.sheet.open::before{opacity:1;}
+/* The scrim moved to #scrim in index.html — see css/codecraft-v5.css.
+   As a ::before on .sheet it sat inside the sheet's own stacking context
+   (z-index:40 + position:fixed), where a z-index:-1 child paints above
+   that element's background rather than behind it. The result was every
+   sheet dimmed by 52% black: #241b45 rendering as #150e2e. */
 
 /* I2. Every other surface in the v3 language sits on a hairline; the sheet
    was the one that didn't, so its top edge died into the scrim. */
