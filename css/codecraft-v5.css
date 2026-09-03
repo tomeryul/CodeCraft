@@ -217,6 +217,13 @@
   background:rgba(8,4,24,.52);opacity:0;transition:opacity .28s ease;}
 body:has(.sheet.open) #scrim{opacity:1;}
 
+/* Every sheet is #241b45. The program well was the one surface inside the
+   editor still laying 20% black over it, so the middle of the screen sat
+   off the tone. A hairline keeps the scroll region defined without a fill
+   that changes the colour. The tab bar stays darker on purpose — it is the
+   anchor strip, and it reads correctly as one. */
+#editor #programWrap{background:none;border:1px solid var(--hair);}
+
 /* the glow around Run was a 24px bloom at 40% and spilled well past the
    pill. Keep the bevel, lose the halo. */
 #actionBar #runBtn{
