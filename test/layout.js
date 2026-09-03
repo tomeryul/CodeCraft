@@ -90,14 +90,20 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     const wed = await pg.evaluate(()=>{
       $('editor').classList.add('open'); setTab('blocks'); renderPalette(); updateFab();
       const v=n=>!!($(n)&&$(n).offsetParent);
-      const bar=$('actionBar').getBoundingClientRect(), sh=$('editor').getBoundingClientRect();
+      const bar=$('actionBar').getBoundingClientRect(),
+            tabs=$('tabs').getBoundingClientRect(),
+            sh=$('editor').getBoundingClientRect();
       return { run:v('runBtn'), stop:v('stopBtn'), reset:v('mgResetBtn'), step:v('mgStepBtn'),
-               barAtBottom:Math.abs(bar.bottom-sh.bottom)<2,
+               /* v5 put #tabs last, where an app's tab bar goes, so the run
+                  row is the row above it rather than the final one. */
+               barAboveTabs:Math.abs(tabs.top-bar.bottom)<2,
+               tabsLast:Math.abs(tabs.bottom-sh.bottom)<2,
                runH:Math.round($('runBtn').getBoundingClientRect().height) };
     });
     ck(`${W}x${H} world editor: Run only, no Reset/Step`,
        wed.run && !wed.stop && !wed.reset && !wed.step, wed);
-    ck(`${W}x${H} action bar is the last row of the sheet`, wed.barAtBottom, wed);
+    ck(`${W}x${H} the run row sits directly on the tab bar, which is last`,
+       wed.barAboveTabs && wed.tabsLast, wed);
     ck(`${W}x${H} Run is 58px`, wed.runH===58, wed);
 
     // ---------------------------------------------- challenge: all four
@@ -133,12 +139,15 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     await pg.evaluate(()=>{ $('editor').classList.add('open','max'); });
     await pg.waitForTimeout(450);
     const mx = await pg.evaluate(()=>{
-      const bar=$('actionBar').getBoundingClientRect(), sh=$('editor').getBoundingClientRect();
-      return { barBottom:Math.round(bar.bottom), sheetBottom:Math.round(sh.bottom),
-               visible:bar.top<innerHeight };
+      const bar=$('actionBar').getBoundingClientRect(),
+            tabs=$('tabs').getBoundingClientRect(),
+            sh=$('editor').getBoundingClientRect();
+      return { gap:Math.round(tabs.top-bar.bottom),
+               tabsToSheet:Math.round(sh.bottom-tabs.bottom),
+               visible:bar.top<innerHeight&&tabs.top<innerHeight };
     });
-    ck(`${W}x${H} at .max the action bar is still docked`,
-       Math.abs(mx.barBottom-mx.sheetBottom)<2 && mx.visible, mx);
+    ck(`${W}x${H} at .max both bottom rows are still docked`,
+       Math.abs(mx.gap)<2 && Math.abs(mx.tabsToSheet)<2 && mx.visible, mx);
 
     // ---------------------------------------------- the home indicator, once
     // The desktop engine reports env(safe-area-inset-bottom) as 0, so the
@@ -146,16 +155,23 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     await pg.addStyleTag({content:':root{--sab:34px !important;}'});
     await pg.evaluate(()=>{ $('editor').classList.remove('max'); });
     await pg.waitForTimeout(200);
+    /* Stated against whichever row is last, so a future reshuffle moves the
+       inset instead of silently losing it: exactly one row may reserve it,
+       and that row has to be the one against the bottom edge. */
     const sab = await pg.evaluate(()=>{
-      const e=$('editor').getBoundingClientRect(), b=$('actionBar').getBoundingClientRect(),
-            r=$('runBtn').getBoundingClientRect();
-      return { belowRun:Math.round(e.bottom-r.bottom),
-               barToSheet:Math.round(e.bottom-b.bottom),
-               sheetPad:getComputedStyle($('editor')).paddingBottom };
+      const ed=$('editor'), e=ed.getBoundingClientRect();
+      const rows=[...ed.children].filter(c=>c.getBoundingClientRect().height>0);
+      const last=rows[rows.length-1];
+      const pad=c=>parseFloat(getComputedStyle(c).paddingBottom)||0;
+      return { lastRow:last.id||last.className,
+               lastIsFlush:Math.abs(e.bottom-last.getBoundingClientRect().bottom)<2,
+               lastReserves:pad(last)>=34,
+               othersReserving:rows.slice(0,-1).filter(c=>pad(c)>=34).map(c=>c.id||c.className),
+               sheetPad:pad(ed) };
     });
-    // 34 indicator + 12 padding. 80 means .sheet and #actionBar both added it.
-    ck(`${W}x${H} safe area is reserved once, not twice`,
-       sab.belowRun===46 && sab.barToSheet===0, sab);
+    ck(`${W}x${H} the home indicator is reserved once, by the last row`,
+       sab.lastIsFlush && sab.lastReserves &&
+       sab.othersReserving.length===0 && sab.sheetPad<34, sab);
     await pg.evaluate(()=>{
       [...document.querySelectorAll('style')].forEach(s=>{
         if(s.textContent.includes('--sab:34px')) s.remove(); });

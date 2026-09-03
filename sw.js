@@ -1,4 +1,4 @@
-const CACHE = "codecraft-v114";
+const CACHE = "codecraft-v115";
 const ASSETS = [
   "./",
   "./index.html",
@@ -9,6 +9,7 @@ const ASSETS = [
   "./apple-touch-icon.png",
   "./css/styles.css",
   "./css/codecraft-v4.css",
+  "./css/codecraft-v5.css",
   "./fonts/fredoka-latin.woff2",
   "./fonts/fredoka-latin-ext.woff2",
   "./fonts/fredoka-hebrew.woff2",
@@ -17,6 +18,7 @@ const ASSETS = [
   "./js/ui-icons.js",
   "./js/game/blocks.js",
   "./js/game/boot.js",
+  "./js/game/v5-ui.js",
   "./js/game/build.js",
   "./js/game/decor-tiles.js",
   "./js/game/economy.js",

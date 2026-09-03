@@ -105,25 +105,39 @@ async function toWorld(pg){
   await pg.evaluate(()=>hubPage('academy')); await pg.waitForTimeout(400);
   await pg.evaluate(()=>academyEnter(0)); await pg.waitForTimeout(800);
   const inMg = await pg.evaluate(()=>{
-    const vis=e=>!!(e&&e.offsetParent);
+    /* v5 merged the challenge's own bar into the editor's one header, so
+       find the pair by role rather than by id — the rule is what matters,
+       not which element currently carries it. */
+    const ed=$('editor');
+    const vis=e=>!!(e&&e.offsetParent&&e.getBoundingClientRect().width>4&&
+                    getComputedStyle(e).visibility!=='hidden');
+    const all=[...ed.querySelectorAll('button')].filter(vis);
+    const back=all.find(e=>/back/i.test(e.getAttribute('aria-label')||''));
+    const exit=all.find(e=>/exit/i.test(e.getAttribute('aria-label')||''));
+    if(!back||!exit)return {back:!!back,exit:!!exit};
     const art=e=>{const p=e.querySelector('path,rect');
-                  return p?(p.getAttribute('d')||'rect'):'(text) '+e.textContent.trim();};
+                  return p?(p.getAttribute('d')||'rect'):(e.textContent||'').trim();};
     const r=e=>e.getBoundingClientRect();
-    return { back:vis($('mgExitBtn')), exit:vis($('edClose')),
-             backArt:art($('mgExitBtn')), exitArt:art($('edClose')),
-             backX:Math.round(r($('mgExitBtn')).left), exitX:Math.round(r($('edClose')).left),
-             backLabel:$('mgExitBtn').getAttribute('aria-label'),
-             exitLabel:$('edClose').getAttribute('aria-label'),
-             tap:[$('mgExitBtn'),$('edClose')].every(e=>{
-               const b=r(e); return b.width>=40&&b.height>=40; }),
+    return { back:true, exit:true, backId:back.id, exitId:exit.id,
+             backArt:art(back), exitArt:art(exit),
+             backX:Math.round(r(back).left), exitX:Math.round(r(exit).left),
+             sameRow:Math.abs(r(back).top-r(exit).top)<8,
+             tap:[back,exit].every(e=>{const b=r(e);return b.width>=40&&b.height>=40;}),
              mid:innerWidth/2 };
   });
   /* They used to be the same ✕ stacked in the same corner 88px apart.
-     Different drawing, opposite sides, and both big enough to hit. */
+     Different drawing, opposite ends of one header, both big enough. */
   ck('in a challenge Back and Exit are told apart by shape and by side',
      inMg.back && inMg.exit && inMg.backArt!==inMg.exitArt &&
-     inMg.backX<inMg.mid && inMg.exitX>inMg.mid &&
-     /Back/i.test(inMg.backLabel) && /Exit/i.test(inMg.exitLabel) && inMg.tap, inMg);
+     inMg.backX<inMg.mid && inMg.exitX>inMg.mid && inMg.sameRow && inMg.tap, inMg);
+
+  /* v5 gave every header the same three slots, but one nowrap line left
+     ~240px between two 40px buttons and four subtitles broke mid-word. */
+  const cut = await pg.evaluate(()=>[...document.querySelectorAll('.m-head p, .v5-head small')]
+    .filter(p=>p.textContent.trim())
+    .filter(p=>p.scrollWidth>p.clientWidth+1||p.scrollHeight>p.clientHeight+1)
+    .map(p=>{const s=p.closest('.sheet,#shop');return (s?s.id:'?')+': '+p.textContent.trim().slice(0,40);}));
+  ck('no header subtitle is cut off', cut.length===0, cut);
 
   const small = await pg.evaluate(()=>[...document.querySelectorAll(
       '.m-head .iconbtn, .ed-btns button, .mg-top .ibtn')]
@@ -135,7 +149,12 @@ async function toWorld(pg){
   await pg.evaluate(()=>navHome()); await pg.waitForTimeout(400);
   await pg.evaluate(()=>{ $('editor').classList.add('open'); }); await pg.waitForTimeout(400);
   ck('the world editor offers no Back, because nothing is behind it',
-     await pg.evaluate(()=>!$('mgExitBtn').offsetParent), null);
+     await pg.evaluate(()=>{
+       const ed=$('editor');
+       return ![...ed.querySelectorAll('button')].some(e=>
+         /back/i.test(e.getAttribute('aria-label')||'') &&
+         e.offsetParent && getComputedStyle(e).visibility!=='hidden');
+     }), null);
 
   console.log('  pageerrors:', errs.length?errs.slice(0,3):'none');
   ck('no uncaught exceptions', errs.length===0, errs.slice(0,3));

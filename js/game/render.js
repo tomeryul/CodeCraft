@@ -425,6 +425,33 @@ function draw(t){
     if(r.blocked){
       const sp=sprite(r.tired?"😴":"💢",r.tired?16:14);ctx.drawImage(sp,cx+s2*.35,cy-s2*.85,sp.lw,sp.lw);
     }
+    /* v5: the action badge — what the robot is doing, and what it is
+       doing it TO, drawn from the same SVG art as the UI (CC_SPRITES)
+       instead of the device's emoji font. */
+    if(atype){
+      const A={chop:"🪓",mine:"⛏️",scoop:"🪣",collect:"✋",drop:"⤵️",build:"🔨",pickUp:"✊"};
+      const ae=A[atype];
+      if(ae){
+        let te=null;
+        try{
+          const tx=r.x+DX[r.dir], ty=r.y+DY[r.dir];
+          const o=objects.get(key(tx,ty));
+          if(o)te=(o.type==="tree")?"🌳":(OBJ_EM[o.type]||null);
+          else if(terrain[key(tx,ty)]===T_WATER)te="💧";
+        }catch(_){}
+        const ic=16, pad=5, gap=te?4:0, w=pad*2+ic+(te?ic+gap:0), h=ic+pad*2;
+        const bx=cx-w/2, by=cy-s2*.95-38;
+        ctx.fillStyle="rgba(23,17,48,.86)";rr(ctx,bx,by,w,h,h/2);ctx.fill();
+        ctx.strokeStyle="rgba(255,255,255,.14)";ctx.lineWidth=1.5;
+        rr(ctx,bx,by,w,h,h/2);ctx.stroke();
+        const s1=sprite(ae,ic);
+        ctx.drawImage(s1,bx+pad+ic/2-s1.lw/2,by+h/2-s1.lw/2,s1.lw,s1.lw);
+        if(te){
+          const s3=sprite(te,ic);
+          ctx.drawImage(s3,bx+pad+ic+gap+ic/2-s3.lw/2,by+h/2-s3.lw/2,s3.lw,s3.lw);
+        }
+      }
+    }
     // energy bar under the robot when not full
     const en=r.energy==null?100:r.energy;
     if(en<100){
@@ -480,7 +507,17 @@ function draw(t){
     ctx.font='bold 15px "Fredoka",sans-serif';ctx.textAlign="center";
     ctx.fillStyle="#fff";ctx.strokeStyle="rgba(0,0,0,.55)";ctx.lineWidth=3;
     const px=(p.x+.5)*TILE, py=(p.y+.2)*TILE-age*26;
-    ctx.strokeText(p.txt,px,py);ctx.fillText(p.txt,px,py);
+    /* v5: the resource in a pop is drawn art, not an emoji glyph */
+    const mm=p.txt.match(/^(\S+?)\s*([+\-−]?\s*\d.*)$/);
+    if(mm&&window.CC_SPRITES&&CC_SPRITES.has(mm[1])){
+      const sp=sprite(mm[1],16), tw2=ctx.measureText(mm[2]).width;
+      ctx.drawImage(sp,px-tw2/2-sp.lw*.9,py-sp.lw/2,sp.lw,sp.lw);
+      ctx.textAlign="left";
+      ctx.strokeText(mm[2],px-tw2/2+3,py);ctx.fillText(mm[2],px-tw2/2+3,py);
+      ctx.textAlign="center";
+    }else{
+      ctx.strokeText(p.txt,px,py);ctx.fillText(p.txt,px,py);
+    }
     ctx.globalAlpha=1;
   }
   // screen-space: day tint + confetti

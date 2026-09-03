@@ -1,0 +1,197 @@
+/* =====================================================================
+   CodeCraft — v5: one language
+   Linked AFTER css/styles.css and css/codecraft-v4.css. Companion to
+   js/game/v5-ui.js, which moves the DOM nodes this file styles.
+
+   Four rules, and every value below already exists in styles.css:
+
+     1. ONE header per screen: ‹ Back left · title centred · ✕ Exit right.
+        Nothing else lives in a header — not the board's controls, not
+        the speed button, not a second close.
+     2. Flat glass everywhere. The toy bevel belongs to the ONE primary
+        on the screen: green = Run, amber = commit (Get / Claim /
+        Publish / Save).
+     3. Tabs are the last row of the screen, always. The run controls
+        (RESET · STEP · 1× · Run) sit in one row directly above them.
+     4. One card for every list row: 42px icon tile · name · meta ·
+        description · one action at the end.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. THE HEADER
+   ------------------------------------------------------------------ */
+.m-head,#editor .v5-head{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;flex:0 0 auto;
+  border-bottom:1px solid var(--hair);
+}
+/* the emoji tile made every header a different width and a different
+   height; the title is the identity now */
+.m-head .face{display:none;}
+.m-head>div:not(.face):not(.iconbtn),#editor .v5-head .v5-title{
+  flex:1;min-width:0;text-align:center;
+}
+.m-head h3,#editor .v5-head b{
+  margin:0;font-size:16.5px;font-weight:700;line-height:1.2;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;
+}
+.m-head p,#editor .v5-head small{
+  margin:2px 0 0;font-size:11.5px;font-weight:600;line-height:1.35;color:var(--ink2);
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;
+}
+/* One line left ~240px between two 40px buttons, and four of the eleven
+   subtitles did not fit — the Shop's broke mid-word at "automa…". Two
+   lines, still clamped, so a long one wraps instead of being cut and the
+   header keeps its three slots. */
+/* Back and Exit: same square, same size, same corner, on every screen */
+.m-head .iconbtn.back,.m-head .iconbtn.x,
+#editor .v5-head .iconbtn{
+  width:40px;height:40px;flex:0 0 auto;padding:0;margin:0;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:12px;background:var(--glass-hi);border:1px solid var(--hair);
+  border-bottom:1px solid var(--hair);box-shadow:none;color:var(--ink2);font-size:15px;
+  transition:transform .09s,background .12s;
+}
+.m-head .iconbtn.back:active,.m-head .iconbtn.x:active,
+#editor .v5-head .iconbtn:active{transform:scale(.93);background:var(--glass-on);}
+.m-head .iconbtn.back svg,#editor .v5-head .iconbtn svg{width:20px;height:20px;}
+/* the top of the tree has nothing behind it — keep the slot, drop the button */
+#hub .m-head .v5-gap{width:40px;height:40px;flex:0 0 auto;}
+
+/* the editor grows its own header; the old tray and the mg title bar go */
+#editor .ed-head{display:none;}
+#editor .mg-top{display:none;}
+/* robot chips are content, not chrome: v5-ui.js moves them into the Blocks tab */
+#blocksTab #robotChips{margin:0 0 7px;}
+
+/* ---------------------------------------------------------------------
+   2. BUTTONS — flat glass, one bevel
+   ------------------------------------------------------------------ */
+.shopitem button,#settingsList button,.authbtn,.rep-opt,.ord-go,
+#mgCreatorBar button,#mgCreatorBar .rowbtn,.qsec .secbtn,
+#selActions button,.ed-btns button,#chips button,.t3btn,.t3vbtn{
+  border-bottom-width:1px !important;
+  box-shadow:none !important;
+}
+.shopitem button,#settingsList button{
+  height:40px;padding:0 15px;border-radius:12px;
+  font-family:inherit;font-size:13px;font-weight:700;color:var(--ink);
+  background:var(--glass-hi);border:1px solid var(--hair);
+  transition:transform .08s,background .12s;
+}
+.shopitem button:active,#settingsList button:active{transform:scale(.96);background:var(--glass-on);}
+.shopitem button:disabled{opacity:.4;}
+/* amber = commit. The only bevel in a list. */
+.shopitem button.v5-buy{
+  color:var(--accent-text);background:linear-gradient(180deg,var(--accent2),var(--accent));
+  border:none;border-bottom:3px solid var(--accent-deep) !important;
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.45) !important;
+}
+.shopitem button.danger,#settingsList button.danger{
+  background:rgba(226,59,87,.14);border:1px solid rgba(226,59,87,.5);color:#ff8fa3;
+}
+.quest button{
+  border-bottom:4px solid var(--accent-deep) !important;
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.45) !important;
+  min-height:44px;border-radius:12px;
+}
+/* green is Run and nothing else: Publish and Add level are commits */
+#mgCreatorBar .cb-act #mgPublish{
+  background:linear-gradient(180deg,var(--accent2),var(--accent));
+  color:var(--accent-text);border:none;
+  border-bottom:3px solid var(--accent-deep) !important;
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.45) !important;
+}
+#mgCreatorBar .cb-act #mgSave,#mgCreatorBar .cb-act #mgAddStage{
+  background:var(--glass-hi);color:var(--ink);border:1px solid var(--hair);
+}
+
+/* ---------------------------------------------------------------------
+   3. TABS AT THE BOTTOM, RUN ROW ABOVE THEM
+   v5-ui.js moves #tabs to the end of #editor, after #actionBar.
+   ------------------------------------------------------------------ */
+#editor #tabs{
+  order:99;flex:0 0 auto;margin:0;gap:6px;
+  padding:8px 12px calc(14px + var(--sab));
+  border-radius:0;border:none;border-top:1px solid var(--hair);
+  background:rgba(26,19,50,.86);backdrop-filter:blur(16px);
+}
+#editor #tabs button{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:8px 0 7px;border-radius:14px;background:none;
+  font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--ink-dim);
+}
+#editor #tabs button .ui-emoji{width:19px;height:19px;vertical-align:0;}
+#editor #tabs button.on{background:var(--glass-on);color:var(--ink);}
+#editor #tabs #boardTabBtn{background:none;color:var(--ink-dim);}
+#editor #tabs #boardTabBtn.on{background:rgba(255,184,48,.2);color:var(--accent2);}
+/* the action row keeps its glass squares and gains the speed button */
+#actionBar{border-top:none;background:none;backdrop-filter:none;padding:11px 12px;}
+#actionBar #mgSpeedBtn{
+  flex:0 0 auto;width:52px;height:52px;padding:0;border:none;border-radius:15px;
+  background:var(--glass-hi);color:var(--ink2);box-shadow:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  font-family:inherit;font-size:14px;font-weight:800;
+}
+#editor:not(.mg) #actionBar #mgSpeedBtn{display:none;}
+#actionBar #mgSpeedBtn:active{transform:scale(.94);background:var(--glass-on);}
+
+/* ---------------------------------------------------------------------
+   4. THE SHOP IS A SHEET LIKE EVERY OTHER DESTINATION
+   ------------------------------------------------------------------ */
+#shopWrap{
+  position:fixed;inset:0;height:auto;z-index:45;padding:0;display:block;
+  background:rgba(8,4,24,.52);backdrop-filter:none;
+  opacity:0;pointer-events:none;transition:opacity .28s ease;
+}
+#shopWrap.open{display:block;opacity:1;pointer-events:auto;}
+#shop{
+  position:absolute;left:0;right:0;bottom:0;width:auto;max-width:none;
+  height:78vh;max-height:78vh;padding:0;overflow:hidden;
+  display:flex;flex-direction:column;
+  background:var(--panel);border:none;border-top:1px solid var(--hair);
+  border-radius:24px 24px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.5);
+  transform:translateY(105%);transition:transform .28s cubic-bezier(.32,.9,.35,1);
+}
+#shopWrap.open #shop{transform:translateY(0);animation:none;}
+/* the header the sheet grows, and the old title/footer it replaces */
+#shop h2,#shop .sub,#shop .closerow{display:none;}
+#shopItems{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:12px 14px calc(16px + var(--sab));}
+@media (min-width:920px){
+  #shop{left:auto;right:0;top:0;bottom:0;width:430px;height:auto;max-height:none;
+    border-radius:22px 0 0 22px;transform:translateX(105%);}
+  #shopWrap.open #shop{transform:translateX(0);}
+}
+
+/* ---------------------------------------------------------------------
+   5. ONE CARD
+   ------------------------------------------------------------------ */
+.shopitem{
+  display:flex;align-items:flex-start;gap:11px;padding:11px 12px;margin-bottom:8px;
+  background:var(--glass-hi);border:1px solid var(--hair);border-radius:16px;box-shadow:none;
+}
+.shopitem .em{
+  flex:0 0 auto;width:42px;height:42px;border-radius:12px;background:rgba(0,0,0,.26);
+  display:flex;align-items:center;justify-content:center;font-size:21px;
+}
+.shopitem .em .ui-emoji{width:25px;height:25px;vertical-align:0;}
+.shopitem .tx b{font-size:14.5px;font-weight:700;line-height:1.25;}
+.shopitem .tx small{font-size:12px;line-height:1.42;margin-top:5px;}
+.shopitem>button,.shopitem>div:last-child:not(.tx):not(.em){align-self:center;}
+
+/* the row v5-ui.js builds at the top of the Blocks tab: which robot,
+   and the three controls that act on the program */
+#blocksTab .v5-edrow{display:flex;align-items:center;gap:8px;margin:0 0 8px;}
+#blocksTab .v5-edrow #robotChips{flex:1;min-width:0;margin:0;}
+#blocksTab .v5-edrow .ed-btns{
+  display:flex;flex:0 0 auto;gap:3px;padding:3px;
+  border-radius:14px;background:rgba(0,0,0,.24);border:1px solid var(--hair);
+}
+
+/* ---------------------------------------------------------------------
+   6. THE WORLD'S ACTION BADGE (js/game/render.js — see PATCHES.md)
+   The canvas has no CSS; the badge is drawn from the same SVG art the
+   UI uses (CC_SPRITES), so a chop looks like a chop on every device.
+   ------------------------------------------------------------------ */
