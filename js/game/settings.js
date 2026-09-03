@@ -48,6 +48,17 @@ function renderSettings(){
       saveSoon(); renderSettings();
     });
 
+  /* Switching language reloads. Hebrew is applied by replacing the English
+     strings in place, and putting them back by reverse lookup would guess
+     wrong the first time a word maps both ways — so the clean state comes
+     from a fresh load. Nothing is lost: the choice is saved first. */
+  settingsRow(el,"🌐","Language","English · עברית",
+    lang==="he"?"English":"עברית",()=>{
+      lang=(lang==="he")?"en":"he";
+      saveNow();
+      location.reload();
+    });
+
   /* Naming and safety: a child who wants to change what other players see
      about them should not have to go looking for it, and undoing a block
      has to be as easy as making one. */

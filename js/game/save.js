@@ -6,7 +6,7 @@ const GROW_MS=20000;
 let saveOwner=null;
 // serialize the whole game into a plain object (used for both localStorage and the cloud)
 function buildSave(){
-  return {v:2,owner:(typeof sbUser!=="undefined"&&sbUser)?sbUser.uid:saveOwner,savedAt:Date.now(),seed,coins,stash,totals,unlocks,muted,musicOff,sheetFull,selRobot,tutDone:tut.done,player,skills,
+  return {v:2,owner:(typeof sbUser!=="undefined"&&sbUser)?sbUser.uid:saveOwner,savedAt:Date.now(),seed,coins,stash,totals,unlocks,muted,musicOff,sheetFull,lang,selRobot,tutDone:tut.done,player,skills,
     robots:robots.map(r=>({x:r.x,y:r.y,dir:r.dir,name:r.name,color:r.color,inv:r.inv,cap:r.cap,speed:r.speed,energy:r.energy,program:packProg(r),vars:r.vars,hat:r.hat})),
     objects:[...objects.entries()].map(([k2,o])=>{
       const c={...o};
@@ -57,6 +57,8 @@ function applySave(d){
        presses the control again, across sessions included */
     sheetFull=!!d.sheetFull;
     $("editor").classList.toggle("max",sheetFull);
+    lang=(d.lang==="he")?"he":"en";
+    if(typeof i18nApply==="function")i18nApply();
     tut.done=d.v===1?true:!!d.tutDone;
     player=Object.assign({xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{},myChallenges:[],academy:{},funcLib:[]},d.player||{});
     if(!player.academy)player.academy={};

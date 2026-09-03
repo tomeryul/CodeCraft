@@ -138,6 +138,7 @@ const ICONS={/* ---- v3: the last of the UI emoji ---- */
 "🔇":W('<path d="M4 9.6 v4.8 h3.4 L12 18.8 V5.2 L7.4 9.6 Z" fill="'+CC+'"/><path d="M15.4 9.6 L20.2 14.4 M20.2 9.6 L15.4 14.4" '+ST+' stroke-width="2.2"/>'),
 "💾":W('<path d="M4.8 6.4 a1.6 1.6 0 0 1 1.6-1.6 H16 l3.2 3.2 V17.6 a1.6 1.6 0 0 1 -1.6 1.6 H6.4 a1.6 1.6 0 0 1 -1.6-1.6 Z" fill="#5ab8ff"/><rect x="8" y="12.6" width="8" height="6.6" rx="1" fill="#fff"/><rect x="8.8" y="4.8" width="6" height="4" rx="1" fill="#fff"/>'),
 /* ---- the hub: account, and the save actions that moved out of the shop ---- */
+"🌐":W('<circle cx="12" cy="12" r="8.4" fill="#5ab8ff"/><path d="M3.6 12h16.8" stroke="#fff" stroke-width="1.5" opacity=".85"/><path d="M12 3.6 a12 12 0 0 1 0 16.8 a12 12 0 0 1 0-16.8" fill="none" stroke="#fff" stroke-width="1.5" opacity=".85"/><path d="M12 3.6 V20.4" stroke="#fff" stroke-width="1.5" opacity=".85"/>'),
 "🎵":W('<path d="M9.6 17.4 V6.2 l8.4-1.8 V15.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><ellipse cx="7.4" cy="17.6" rx="2.6" ry="2.2" fill="#54d66a"/><ellipse cx="15.8" cy="15.8" rx="2.6" ry="2.2" fill="#54d66a"/>'),
 "👤":W('<circle cx="12" cy="8.2" r="3.9" fill="#cfd4e0"/><path d="M4.6 20.4 a7.4 7.4 0 0 1 14.8 0 Z" fill="#aab2c4"/>'),
 "📤":W('<path d="M4.4 13.6 h4.2 l1.1 2.2 h4.6 l1.1-2.2 h4.2 V19 a1.6 1.6 0 0 1 -1.6 1.6 H6 A1.6 1.6 0 0 1 4.4 19 Z" fill="#cfd4e0"/><path d="M12 11.4 V3.4 M8.4 7 L12 3.4 L15.6 7" stroke="#54d66a" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'),

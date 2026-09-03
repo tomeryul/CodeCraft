@@ -278,3 +278,54 @@ body.sheets-full .m-head .iconbtn.size .ic-min{display:block;}
   box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 4px 12px rgba(55,200,92,.26);}
 #actionBar #stopBtn{
   box-shadow:inset 0 2px 0 rgba(255,255,255,.3), 0 4px 12px rgba(255,93,115,.26);}
+
+/* ---------------------------------------------------------------------
+   M. Hebrew — right to left
+   dir="rtl" on <html> flips the flex and grid rows for free, which is
+   most of the work. What must NOT flip is anything that is not prose:
+   the world canvas, the Python listing, and the block program, because
+   code reads left to right in Hebrew too and a mirrored program would
+   change what it looks like it does.
+   ------------------------------------------------------------------ */
+[dir="rtl"] #game,[dir="rtl"] #mgCanvas,
+[dir="rtl"] #pyTab,[dir="rtl"] #pyCode{direction:ltr;}
+/* Block programs mirror, the way Scratch does in Hebrew: the blocks are
+   the language here, and a Hebrew reader builds them right to left. */
+
+/* the XP bar fills from the leading edge, whichever side that is */
+[dir="rtl"] #stats #xpBar{transform:scaleX(-1);}
+
+/* chevrons point the way you are going, so Back mirrors */
+[dir="rtl"] .iconbtn.back svg{transform:scaleX(-1);}
+
+/* these were positioned with left/right, which dir does not move */
+[dir="rtl"] #topbar{flex-direction:row-reverse;}
+[dir="rtl"] .m-head p,[dir="rtl"] .m-head h3,
+[dir="rtl"] #editor .v5-head b,[dir="rtl"] #editor .v5-head small{text-align:center;}
+[dir="rtl"] .hub-tile,[dir="rtl"] .shopitem .tx{text-align:right;}
+[dir="rtl"] .hub-next .j-tx{text-align:right;}
+
+/* Hebrew has no capitals, so the uppercase labels lose nothing by
+   dropping the letter-spacing that was tuned for Latin caps */
+[dir="rtl"] .hub-sec,[dir="rtl"] .hub-nlab,[dir="rtl"] #editor #tabs button,
+[dir="rtl"] #actionBar .ibtn{letter-spacing:0;}
+
+/* Run and Stop are CSS ::after content, which no DOM observer can reach,
+   so their Hebrew lives here beside the English. */
+[dir="rtl"] #actionBar #runBtn::after{content:"הרצה";}
+[dir="rtl"] #actionBar #stopBtn::after{content:"עצור";}
+[dir="rtl"] #fabRun::after{content:"הרצה";}
+[dir="rtl"] #fabRun.running::after{content:"עצור";}
+
+/* Mixed Hebrew and English in one RTL page: unicode-bidi:plaintext gives
+   each run its own direction from its first strong character, which is what
+   dir="auto" does per element — without it an English sentence inside an
+   RTL block comes out with its full stop leading (".need to start"), and
+   "🪙/min 0" reorders into nonsense. Applied to the prose, never to the
+   code views, which are pinned ltr above. */
+[dir="rtl"] .chip,[dir="rtl"] .m-head h3,[dir="rtl"] .m-head p,
+[dir="rtl"] .hub-tile,[dir="rtl"] .hub-next .j-tx,[dir="rtl"] .hub-sec,
+[dir="rtl"] .shopitem .tx,[dir="rtl"] .pcard,[dir="rtl"] .toast,
+[dir="rtl"] #mgGoal,[dir="rtl"] #editor .v5-head,[dir="rtl"] .authnote,
+[dir="rtl"] #questList,[dir="rtl"] #guideBody,[dir="rtl"] #teachCard{
+  unicode-bidi:plaintext;}
