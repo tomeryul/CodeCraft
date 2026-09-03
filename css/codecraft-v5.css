@@ -197,28 +197,28 @@
    ------------------------------------------------------------------ */
 
 /* ---------------------------------------------------------------------
-   K. The editor above the tab bar
-   The tab bar reads well because it is a distinct, darker strip. What sat
-   above it did not: the sheet is --panel and #programWrap laid another
-   24% black over the middle of it, so the largest surface on the screen —
-   the place your program goes — was the darkest thing in the app and read
-   as a hole rather than a panel. Lift the sheet, and make that well a
-   light inset instead of a dark one, so the bar underneath stays the
-   anchor it already is.
+   K. The scrim, and the glow around Run
+   The sheet colour is NOT set here. The design file's surface is #241b45
+   — the --panel token .sheet already uses — and its program wells are
+   rgba(0,0,0,.26). An earlier version of this block lifted the sheet to
+   #2c2257 and turned the well into a light inset; both were wrong, and
+   both are gone. The sheet looked dark because of the scrim bug below,
+   not because of its colour.
    ------------------------------------------------------------------ */
+
+/* The scrim was a ::before on .sheet with z-index:-1. A negative-z child
+   paints above its own stacking context's BACKGROUND, and .sheet is
+   position:fixed with z-index:40, so it formed that context: every sheet
+   dimmed itself by 52% black while the world behind stayed lit.
+   #241b45 under rgba(8,4,24,.52) is #150e2e, which is the pixel a
+   screenshot of the sheet actually contained. One element, outside them
+   all, below them all. */
 #scrim{position:fixed;inset:0;z-index:38;pointer-events:none;
   background:rgba(8,4,24,.52);opacity:0;transition:opacity .28s ease;}
 body:has(.sheet.open) #scrim{opacity:1;}
 
-#editor{background:#2c2257;}
-#editor #programWrap{background:rgba(255,255,255,.05);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.05);}
-#editor #boardTab,#editor #blocksTab,#editor #pyTab{background:none;}
-/* the well the palette sits in, and the code pane, follow the same rule */
-#editor #pyTab pre{background:rgba(255,255,255,.04);}
-
-/* the glow around Run was a 24px bloom at 40% on a dark sheet, and it
-   spilled well past the pill. Keep the bevel, lose the halo. */
+/* the glow around Run was a 24px bloom at 40% and spilled well past the
+   pill. Keep the bevel, lose the halo. */
 #actionBar #runBtn{
   box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 4px 12px rgba(55,200,92,.26);}
 #actionBar #stopBtn{
