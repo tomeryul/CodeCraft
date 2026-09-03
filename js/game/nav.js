@@ -27,6 +27,12 @@ const has=n=>typeof window[n]==="function";
 
 const ICON_BACK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" '+
   'stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
+/* the same two glyphs #edMax uses, so shrink means one thing everywhere */
+const ICON_SIZE=
+  '<svg class="ic-max" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" '+
+  'stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>'+
+  '<svg class="ic-min" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" '+
+  'stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
 
 function closeAll(){
   SHEETS.forEach(id=>{const e=$(id); if(e)e.classList.remove("open");});
@@ -66,6 +72,21 @@ function fit(id){
     b.addEventListener("click",navBack);
     head.insertBefore(b,head.firstChild);
   }
+  /* Shrink, on every page, next to Back. It clicks #edMax rather than
+     setting a size itself: that keeps one source of truth, so the camera
+     offset in render.js and the size a challenge restores on exit all
+     stay in step with what the player last chose. */
+  if(!head.querySelector(".iconbtn.size")){
+    const b=document.createElement("button");
+    b.className="iconbtn size"; b.id=id+"Size";
+    b.title="Shrink or expand"; b.setAttribute("aria-label","Shrink or expand");
+    b.innerHTML=ICON_SIZE;
+    b.addEventListener("click",()=>{const m=$("edMax"); if(m)m.click();});
+    const back=head.querySelector(".iconbtn.back");
+    head.insertBefore(b,back?back.nextSibling:head.firstChild);
+  }
+  sheet.classList.add("sized");
+
   /* The ✕ each sheet already had closed only itself, which from a page
      three levels in left the ones behind it open. */
   const x=head.querySelector(".iconbtn.x");
@@ -76,8 +97,19 @@ function fit(id){
   }
 }
 
+/* #editor.max is the source of truth; body mirrors it so every other
+   sheet can size itself from the same state without knowing about the
+   editor. */
+function mirrorSize(){
+  document.body.classList.toggle("sheets-full",
+    $("editor").classList.contains("max"));
+}
+
 function wire(){
   SHEETS.forEach(fit);
+  mirrorSize();
+  new MutationObserver(mirrorSize).observe($("editor"),
+    {attributes:true,attributeFilter:["class"]});
 
   /* #projects came with its own back arrow from the menu work; give it
      the shared handler rather than a second button beside it. */

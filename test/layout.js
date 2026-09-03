@@ -227,6 +227,57 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     await pg.evaluate(()=>{ if(mgState)mgExit(false); });
     await pg.waitForTimeout(400);
 
+    /* Shrinking the code sheet then opening the menu used to hand you a
+       different height, so the two never agreed on how much of the world
+       stayed visible. One state now, mirrored onto body from #editor.max
+       so render.js's camera offset and the size a challenge restores stay
+       in step. */
+    const sizes = await pg.evaluate(async ()=>{
+      const ids=['mentor','quests','hub','projects','guide','funcLib','orders','settings'];
+      const measure=async()=>{
+        const o={};
+        for(const id of ids){
+          const e=$(id); e.classList.add('open');
+          await new Promise(r=>setTimeout(r,40));
+          o[id]=Math.round(e.getBoundingClientRect().height/innerHeight*100);
+          e.classList.remove('open');
+        }
+        o.editor=Math.round($('editor').getBoundingClientRect().height/innerHeight*100);
+        return o;
+      };
+      $('editor').classList.add('open');
+      if(!$('editor').classList.contains('max'))$('edMax').click();
+      await new Promise(r=>setTimeout(r,400));
+      const full=await measure();
+      $('edMax').click(); await new Promise(r=>setTimeout(r,400));
+      const half=await measure();
+      /* the control has to work from a page that is not the editor */
+      $('editor').classList.remove('open'); hubOpen();
+      await new Promise(r=>setTimeout(r,300));
+      /* guarded so a missing control fails this check instead of throwing
+         and taking the rest of the suite with it */
+      const sz=$('hubSize'); if(sz)sz.click();
+      await new Promise(r=>setTimeout(r,400));
+      const fromMenu={present:!!sz,
+                      hub:Math.round($('hub').getBoundingClientRect().height/innerHeight*100),
+                      editorMax:$('editor').classList.contains('max')};
+      hubClose();
+      const missing=ids.filter(id=>!$(id).querySelector('.m-head .iconbtn.size'));
+      return {full,half,fromMenu,missing};
+    });
+    const same=o=>Object.values(o).every(v=>v===Object.values(o)[0]);
+    ck(`${W}x${H} every page is the size the code page is`,
+       same(sizes.full) && same(sizes.half) &&
+       Object.values(sizes.full)[0]>Object.values(sizes.half)[0], sizes);
+    ck(`${W}x${H} every page carries the shrink control, and it works from any of them`,
+       sizes.missing.length===0 && sizes.fromMenu.present &&
+       sizes.fromMenu.hub>80 && sizes.fromMenu.editorMax,
+       {missing:sizes.missing,fromMenu:sizes.fromMenu});
+    /* the creator check below measures inside an open editor, which is the
+       state this block found and has to hand back */
+    await pg.evaluate(()=>{ $('editor').classList.add('open'); });
+    await pg.waitForTimeout(350);
+
     // ---------------------------------------------- creator tool tray
     const cr = await pg.evaluate(()=>{
       if(mgState) mgExit(false);

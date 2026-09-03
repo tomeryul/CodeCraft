@@ -148,7 +148,7 @@
 #shopWrap.open{display:block;opacity:1;pointer-events:auto;}
 #shop{
   position:absolute;left:0;right:0;bottom:0;width:auto;max-width:none;
-  height:78vh;max-height:78vh;padding:0;overflow:hidden;
+  padding:0;overflow:hidden;
   display:flex;flex-direction:column;
   background:var(--panel);border:none;border-top:1px solid var(--hair);
   border-radius:24px 24px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.5);
@@ -216,6 +216,54 @@
 #scrim{position:fixed;inset:0;z-index:38;pointer-events:none;
   background:rgba(8,4,24,.52);opacity:0;transition:opacity .28s ease;}
 body:has(.sheet.open) #scrim{opacity:1;}
+
+/* ---------------------------------------------------------------------
+   L. One size for every sheet
+   Shrinking the code sheet and then opening the menu used to hand you a
+   different height, so the two never agreed on how much of the world you
+   could see. #editor.max stays the single source of truth — render.js
+   offsets the camera by it and challenges.js restores it — and body
+   mirrors it, so every other sheet follows the size you last chose.
+   ------------------------------------------------------------------ */
+/* Each of these carries its own id-level height in styles.css — #mentor
+   and #quests 70vh, #projects 78vh, #guide 88vh — so a class selector
+   loses to every one of them. They are named here for that reason, not
+   for emphasis. */
+body:not(.sheets-full) #mentor.sized,
+body:not(.sheets-full) #quests.sized,
+body:not(.sheets-full) #hub.sized,
+body:not(.sheets-full) #projects.sized,
+body:not(.sheets-full) #guide.sized,
+body:not(.sheets-full) #funcLib.sized,
+body:not(.sheets-full) #orders.sized,
+body:not(.sheets-full) #report.sized,
+body:not(.sheets-full) #settings.sized,
+body:not(.sheets-full) #shop{height:56vh;max-height:56vh;}
+body.sheets-full #mentor.sized,
+body.sheets-full #quests.sized,
+body.sheets-full #hub.sized,
+body.sheets-full #projects.sized,
+body.sheets-full #guide.sized,
+body.sheets-full #funcLib.sized,
+body.sheets-full #orders.sized,
+body.sheets-full #report.sized,
+body.sheets-full #settings.sized,
+body.sheets-full #shop{height:94vh;max-height:94vh;}
+/* these three bodies never scrolled, which was survivable while the sheet
+   grew to fit them and is not once its height is fixed */
+#settingsList,#ordList,#funcList{flex:1 1 auto;min-height:0;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;}
+
+/* the size control mirrors #edMax's icon swap off the shared state */
+.m-head .iconbtn.size .ic-min{display:none;}
+#shop .m-head .iconbtn.size{flex:0 0 auto;}
+body.sheets-full .m-head .iconbtn.size .ic-max{display:none;}
+body.sheets-full .m-head .iconbtn.size .ic-min{display:block;}
+
+/* Nothing sits behind the world editor, so Back is not merely invisible
+   there — its slot goes too, and shrink becomes the leftmost control
+   instead of floating a gap away from the edge. */
+#editor:not(.mg) .v5-head .iconbtn.back{display:none;}
 
 /* Every sheet is #241b45. The program well was the one surface inside the
    editor still laying 20% black over it, so the middle of the screen sat

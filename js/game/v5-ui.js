@@ -42,7 +42,9 @@ function head(id){
   const back=h.querySelector(".iconbtn.back"), x=h.querySelector(".iconbtn.x");
   /* the menu is the top of the tree: keep the slot so the title stays
      centred, drop the button that would have nowhere to go */
-  if(!back&&!h.querySelector(".v5-gap")){
+  /* only pad the left slot when nothing occupies it — the size control
+     nav.js adds counts, or the gap would push it off the edge. */
+  if(!back&&!h.querySelector(".iconbtn.size")&&!h.querySelector(".v5-gap")){
     const g=document.createElement("span");g.className="v5-gap";
     h.insertBefore(g,h.firstChild);
   }
@@ -144,7 +146,17 @@ function shop(){
   x.title="Exit to the world";x.setAttribute("aria-label","Exit to the world");
   x.addEventListener("click",()=>{close();if(has("sfx"))sfx(430,.05);});
 
-  h.appendChild(back);h.appendChild(t);h.appendChild(x);
+  const sz=document.createElement("button");
+  sz.className="iconbtn size";
+  sz.title="Shrink or expand"; sz.setAttribute("aria-label","Shrink or expand");
+  sz.innerHTML=
+    '<svg class="ic-max" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" '+
+    'stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>'+
+    '<svg class="ic-min" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" '+
+    'stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
+  sz.addEventListener("click",()=>{const m=$("edMax"); if(m)m.click();});
+
+  h.appendChild(back);h.appendChild(sz);h.appendChild(t);h.appendChild(x);
   sh.insertBefore(h,sh.firstChild);
 
   /* one bevel per screen, and in a list of prices it is the price you

@@ -119,7 +119,10 @@ $("edMax").addEventListener("click",()=>{
   const on=$("editor").classList.toggle("max");
   $("edMax").title=on?"Shrink editor":"Expand editor";
   sfx(on?620:460,.05);
-  if(on&&!mentorFlags.dblTap){mentorFlags.dblTap=true;toast("💡 Tip: in full-screen mode, double-tap a block to delete it!");}
+  /* Every sheet's size control routes through this button now, so the tip
+     has to check that the thing it describes is actually on screen. */
+  if(on&&$("editor").classList.contains("open")&&!mentorFlags.dblTap){
+    mentorFlags.dblTap=true;toast("💡 Tip: in full-screen mode, double-tap a block to delete it!");}
 });
 $("centerBtn").addEventListener("click",()=>{follow=true;toast("🎯 Following "+R().name);});
 document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{

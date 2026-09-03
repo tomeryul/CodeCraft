@@ -252,7 +252,6 @@ button:focus-visible,input:focus-visible,.blk:focus-visible{outline:2px solid va
   #fabRun::after{font-size:16px;}
 }
 
-#hub{height:78vh;}
 #hubBody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
   padding:2px 16px calc(18px + var(--sab));}
 
