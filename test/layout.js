@@ -200,6 +200,33 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
        !scrim.sheetPseudoPaints && scrim.hasScrim && scrim.scrimShown>0.9 &&
        !scrim.scrimInSheet && scrim.scrimZ<scrim.sheetZ, scrim);
 
+    /* Shrink/expand resizes the screen, so it is chrome. It used to sit in
+       the Blocks tab's tool row, and a challenge opens maximised on the
+       Board tab — where that row is not rendered — so from the first
+       screen you land on there was no way to shrink the sheet at all. */
+    const mini = await pg.evaluate(async ()=>{
+      const ed=$('editor'), m=$('edMax');
+      const vis=e=>!!(e&&e.offsetParent);
+      const top=()=>Math.round(ed.getBoundingClientRect().top/innerHeight*100);
+      academyEnter(0);
+      await new Promise(r=>setTimeout(r,600));
+      const onBoard={tab:'board', inHeader:!!m.closest('.v5-head'), shown:vis(m), top:top()};
+      m.click(); await new Promise(r=>setTimeout(r,450));
+      const shrunk=top();
+      m.click(); await new Promise(r=>setTimeout(r,450));
+      const restored=top();
+      setTab('blocks'); renderPalette();
+      await new Promise(r=>setTimeout(r,300));
+      return { onBoard, shrunk, restored, shownOnBlocks:vis(m),
+               size:(()=>{const r=m.getBoundingClientRect();
+                         return r.width>=40&&r.height>=40;})() };
+    });
+    ck(`${W}x${H} the shrink control is in the header and works from any tab`,
+       mini.onBoard.inHeader && mini.onBoard.shown && mini.shownOnBlocks && mini.size &&
+       mini.onBoard.top<15 && mini.shrunk>38 && mini.shrunk<55 && mini.restored<15, mini);
+    await pg.evaluate(()=>{ if(mgState)mgExit(false); });
+    await pg.waitForTimeout(400);
+
     // ---------------------------------------------- creator tool tray
     const cr = await pg.evaluate(()=>{
       if(mgState) mgExit(false);

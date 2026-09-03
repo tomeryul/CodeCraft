@@ -63,6 +63,14 @@ function editor(){
   back.addEventListener("click",()=>{ if(has("navBack"))navBack(); });
   hd.appendChild(back);
 
+  /* Shrink/expand is chrome — it resizes the SCREEN, not the program — so
+     it belongs beside Back rather than in the Blocks tab's tool row. A
+     challenge opens maximised on the Board tab, where that row is not
+     rendered at all, so there was no way to shrink the sheet from the
+     first screen you land on. */
+  const mx=$("edMax");
+  if(mx){mx.classList.add("iconbtn");hd.appendChild(mx);}
+
   const t=document.createElement("div");t.className="v5-title";
   t.innerHTML='<b id="v5EdTitle"></b><small id="v5EdSub"></small>';
   hd.appendChild(t);
