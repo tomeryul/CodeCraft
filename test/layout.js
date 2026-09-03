@@ -210,20 +210,24 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
       const top=()=>Math.round(ed.getBoundingClientRect().top/innerHeight*100);
       academyEnter(0);
       await new Promise(r=>setTimeout(r,600));
-      const onBoard={tab:'board', inHeader:!!m.closest('.v5-head'), shown:vis(m), top:top()};
+      /* it no longer matters which size a challenge opens at — that follows
+         the player's preference now — only that the control is reachable
+         from the Board tab and moves between the two sizes. */
+      const onBoard={inHeader:!!m.closest('.v5-head'), shown:vis(m), start:top()};
       m.click(); await new Promise(r=>setTimeout(r,450));
-      const shrunk=top();
+      const other=top();
       m.click(); await new Promise(r=>setTimeout(r,450));
-      const restored=top();
+      const back=top();
       setTab('blocks'); renderPalette();
       await new Promise(r=>setTimeout(r,300));
-      return { onBoard, shrunk, restored, shownOnBlocks:vis(m),
+      return { onBoard, other, back, shownOnBlocks:vis(m),
                size:(()=>{const r=m.getBoundingClientRect();
                          return r.width>=40&&r.height>=40;})() };
     });
+    const sizes2=[mini.onBoard.start,mini.other].sort((a,b)=>a-b);
     ck(`${W}x${H} the shrink control is in the header and works from any tab`,
        mini.onBoard.inHeader && mini.onBoard.shown && mini.shownOnBlocks && mini.size &&
-       mini.onBoard.top<15 && mini.shrunk>38 && mini.shrunk<55 && mini.restored<15, mini);
+       sizes2[0]<15 && sizes2[1]>38 && sizes2[1]<55 && mini.back===mini.onBoard.start, mini);
     await pg.evaluate(()=>{ if(mgState)mgExit(false); });
     await pg.waitForTimeout(400);
 
@@ -275,6 +279,52 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
        {missing:sizes.missing,fromMenu:sizes.fromMenu});
     /* the creator check below measures inside an open editor, which is the
        state this block found and has to hand back */
+    await pg.evaluate(()=>{ $('editor').classList.add('open'); });
+    await pg.waitForTimeout(350);
+
+    /* The size is a preference, not a mode a screen may set. Opening a
+       challenge forced full, leaving restored whatever it had been, and
+       Exit cleared it — so the choice reset every time you went in and out
+       of code. Only the control may change it now. */
+    const holds = await pg.evaluate(async ()=>{
+      const wait=ms=>new Promise(r=>setTimeout(r,ms));
+      const now=()=>$('editor').classList.contains('max');
+      const out={};
+      for(const want of [false,true]){
+        $('editor').classList.add('open'); await wait(200);
+        if(now()!==want){$('edMax').click(); await wait(350);}
+        out[want?'full':'half']={chose:now()};
+        academyEnter(0); await wait(700);
+        out[want?'full':'half'].inLesson=now();
+        mgExit(true); await wait(600);
+        out[want?'full':'half'].afterLesson=now();
+        navHome(); await wait(400);
+        out[want?'full':'half'].afterExit=now();
+      }
+      /* and it is saved, so it survives a reload the way sound does */
+      saveNow();
+      out.inSave=JSON.parse(localStorage.getItem(SAVE_KEY)).sheetFull;
+      return out;
+    });
+    ck(`${W}x${H} the chosen size survives going in and out of code`,
+       holds.half.chose===false && holds.half.inLesson===false &&
+       holds.half.afterLesson===false && holds.half.afterExit===false &&
+       holds.full.chose===true && holds.full.inLesson===true &&
+       holds.full.afterLesson===true && holds.full.afterExit===true &&
+       holds.inSave===true, holds);
+
+    /* every one of these controls is the same object; only the editor's was
+       in the design language's selector list, so the rest fell back to the
+       base .iconbtn and came out a different size and shape. */
+    const styled = await pg.evaluate(()=>{
+      const box=e=>{const c=getComputedStyle(e);
+        return [c.width,c.height,c.borderRadius,c.backgroundColor].join('|');};
+      const ref=box($('edMax'));
+      return [...document.querySelectorAll('.m-head .iconbtn.size')]
+        .filter(e=>box(e)!==ref)
+        .map(e=>(e.closest('.sheet,#shop')||{}).id+': '+box(e)+'  vs  '+ref);
+    });
+    ck(`${W}x${H} every shrink control is styled the same`, styled.length===0, styled);
     await pg.evaluate(()=>{ $('editor').classList.add('open'); });
     await pg.waitForTimeout(350);
 

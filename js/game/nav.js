@@ -43,7 +43,6 @@ function closeAll(){
 function navHome(){
   if(typeof mgState!=="undefined"&&mgState&&has("mgExit"))mgExit(false);
   closeAll();
-  $("editor").classList.remove("max");
   if(has("sfx"))sfx(430,.05);
 }
 

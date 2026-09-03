@@ -1024,10 +1024,14 @@ function mgEnter(proj0){
     applyProg(mgRobot,proj.preset);
   const rs={x:proj.start.x,y:proj.start.y,dir:proj.start.dir};mgSeed(rs,proj);
   mgState={proj,robot:rs,
-    steps:0,running:false,frames:null,timer:null,prevMax:$("editor").classList.contains("max")};
+    steps:0,running:false,frames:null,timer:null};
   $("projects").classList.remove("open");
   tutSet(0); // dismiss the onboarding coach — it doesn't belong over a challenge
-  $("editor").classList.add("open","max");
+  /* The size the player chose is a preference, not something a challenge
+     gets to set. Opening one used to force full screen and leaving used to
+     restore whatever it was before, so the choice reset every time you went
+     in and out of code. */
+  $("editor").classList.add("open");
   $("boardTabBtn").style.display="";
   $("editor").classList.add("mg");    // reveals RESET/STEP in the bottom action bar
   $("mgTitle").textContent=proj.em+" "+proj.name;
@@ -1059,13 +1063,11 @@ function mgExit(reopen){
   if(!mgState)return;
   mgStop();
   player.projPrograms[mgState.proj.id]=packProg(mgRobot);
-  const wasMax=mgState.prevMax;
   mgState=null;mgRobot=null;
   $("boardTabBtn").style.display="none";
   $("editor").classList.remove("mg");
   $("mgCreatorBar").classList.remove("on");
   setTab("blocks");
-  if(!wasMax)$("editor").classList.remove("max");
   selBlock=null;elseSel=null;
   renderPalette();updateChips();renderProgram();renderPy();updateUndoBtns();
   saveSoon();

@@ -169,7 +169,7 @@ function academySolved(proj){
 // leave the academy straight back to the open world (not the Projects sheet)
 function academyExitToWorld(){
   if(mgState)mgExit(false);
-  $("editor").classList.remove("open","max");
+  $("editor").classList.remove("open");
   setTab("blocks");
 }
 // a cohesive "🎓 Academy" section for the Projects sheet — uses the same compact

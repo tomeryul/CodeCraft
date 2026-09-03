@@ -44,7 +44,7 @@
    lines, still clamped, so a long one wraps instead of being cut and the
    header keeps its three slots. */
 /* Back and Exit: same square, same size, same corner, on every screen */
-.m-head .iconbtn.back,.m-head .iconbtn.x,
+.m-head .iconbtn.back,.m-head .iconbtn.size,.m-head .iconbtn.x,
 #editor .v5-head .iconbtn{
   width:40px;height:40px;flex:0 0 auto;padding:0;margin:0;
   display:flex;align-items:center;justify-content:center;
@@ -52,9 +52,10 @@
   border-bottom:1px solid var(--hair);box-shadow:none;color:var(--ink2);font-size:15px;
   transition:transform .09s,background .12s;
 }
-.m-head .iconbtn.back:active,.m-head .iconbtn.x:active,
+.m-head .iconbtn.back:active,.m-head .iconbtn.size:active,.m-head .iconbtn.x:active,
 #editor .v5-head .iconbtn:active{transform:scale(.93);background:var(--glass-on);}
-.m-head .iconbtn.back svg,#editor .v5-head .iconbtn svg{width:20px;height:20px;}
+.m-head .iconbtn.back svg,.m-head .iconbtn.size svg,
+#editor .v5-head .iconbtn svg{width:20px;height:20px;}
 /* the top of the tree has nothing behind it — keep the slot, drop the button */
 #hub .m-head .v5-gap{width:40px;height:40px;flex:0 0 auto;}
 
@@ -256,7 +257,6 @@ body.sheets-full #shop{height:94vh;max-height:94vh;}
 
 /* the size control mirrors #edMax's icon swap off the shared state */
 .m-head .iconbtn.size .ic-min{display:none;}
-#shop .m-head .iconbtn.size{flex:0 0 auto;}
 body.sheets-full .m-head .iconbtn.size .ic-max{display:none;}
 body.sheets-full .m-head .iconbtn.size .ic-min{display:block;}
 

@@ -117,6 +117,7 @@ $("edClose").addEventListener("click",()=>{
 });
 $("edMax").addEventListener("click",()=>{
   const on=$("editor").classList.toggle("max");
+  sheetFull=on; saveSoon();
   $("edMax").title=on?"Shrink editor":"Expand editor";
   sfx(on?620:460,.05);
   /* Every sheet's size control routes through this button now, so the tip

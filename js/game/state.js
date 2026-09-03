@@ -13,7 +13,7 @@ let unlocks={loops:false,logic:false,smart:false,team:false};
 let claims=new Map();   // tileKey -> {by: robotIndex, until: ms}
 let radio={};           // channel -> {x, y, by, n, at}
 let homePos={x:0,y:0}, marketPos={x:0,y:0};
-let selRobot=0, muted=false, musicOff=false, isNew=true;
+let selRobot=0, muted=false, musicOff=false, sheetFull=false, isNew=true;
 let tut={step:0,done:false}, pendingAway=null;
 let player={xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{}};
 const HATS=[{lvl:2,em:"⛑️"},{lvl:4,em:"🎩"},{lvl:6,em:"🎓"},{lvl:8,em:"🤠"},{lvl:10,em:"👑"},{lvl:12,em:"🥳"}];
