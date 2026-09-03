@@ -288,7 +288,10 @@ function draw(t){
     })();
     // body — toy bevel
     const grd=ctx.createLinearGradient(0,-s2/2,0,s2/2);
-    grd.addColorStop(0,window.CC_EXTRAS?CC_EXTRAS.lighten(r.color,.3):r.color);grd.addColorStop(1,r.color);
+    /* the colour reaches the canvas as well as the DOM, and an unparseable
+       one throws inside the draw loop */
+    const rc=safeColor(r.color);
+    grd.addColorStop(0,window.CC_EXTRAS?CC_EXTRAS.lighten(rc,.3):rc);grd.addColorStop(1,rc);
     ctx.fillStyle=grd;rr(ctx,-s2/2,-s2/2,s2,s2,11);ctx.fill();
     ctx.save();rr(ctx,-s2/2,-s2/2,s2,s2,11);ctx.clip();
     ctx.fillStyle="rgba(0,0,0,.25)";ctx.fillRect(-s2/2,s2/2-6,s2,6);

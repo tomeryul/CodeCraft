@@ -17,9 +17,9 @@ function renderShop(){
   const items=[
     {em:"🤖",b:"New Robot — 100 🪙",s:"More robots = more automation! It spawns at your home base.",
      can:coins>=100,fn(){coins-=100;const nr=makeRobot(homePos.x,homePos.y+1);robots.push(nr);selRobot=robots.length-1;toast("🤖 "+nr.name+" joined your team!");checkUnlocks();}},
-    {em:"🎒",b:"Bigger Bag +4 — 60 🪙",s:r.name+" carries "+r.cap+" now. Fewer trips home!",
+    {em:"🎒",b:"Bigger Bag +4 — 60 🪙",s:esc(r.name)+" carries "+r.cap+" now. Fewer trips home!",
      can:coins>=60,fn(){coins-=60;r.cap+=4;toast("🎒 "+r.name+" bag upgraded to "+r.cap+"!");}},
-    {em:"⚡",b:"Speed Boost — 80 🪙",s:r.name+" runs code 25% faster. (x"+r.speed.toFixed(2)+" now, max x2)",
+    {em:"⚡",b:"Speed Boost — 80 🪙",s:esc(r.name)+" runs code 25% faster. (x"+r.speed.toFixed(2)+" now, max x2)",
      can:coins>=80&&r.speed<2,fn(){coins-=80;r.speed=Math.min(2,r.speed*1.25);toast("⚡ "+r.name+" is faster!");}},
     {em:"🏦",b:"Sell the Bank — +"+stashSum+" 🪙",s:"Bank: "+RES.wood.em+stash.wood+" "+RES.stone.em+stash.stone+" "+RES.iron.em+stash.iron+" "+RES.crystal.em+stash.crystal+(stash.water?" "+RES.water.em+stash.water:"")+" — or keep it and let robots 🔨 Build from it!",
      can:stashSum>0,fn(){coins+=stashSum;totals.earned+=stashSum;stash={wood:0,stone:0,iron:0,crystal:0,water:0};toast("💰 Bank sold for "+stashSum+" 🪙");sfx(880,.1);checkUnlocks();}},
@@ -35,7 +35,7 @@ function renderShop(){
   // robot style (hats unlocked by level)
   const owned=HATS.filter(h=>h.lvl<=player.level);
   const st=document.createElement("div");st.className="shopitem";
-  st.innerHTML='<div class="em">🎩</div><div class="tx"><b>Style — '+R().name+'</b><small>'+(owned.length?"Tap a hat to wear it!":"Hats unlock as you level up ⭐ (first at level 2)")+'</small></div>';
+  st.innerHTML='<div class="em">🎩</div><div class="tx"><b>Style — '+esc(R().name)+'</b><small>'+(owned.length?"Tap a hat to wear it!":"Hats unlock as you level up ⭐ (first at level 2)")+'</small></div>';
   const hwrap=document.createElement("div");
   hwrap.style.cssText="display:flex;gap:5px;flex-wrap:wrap;max-width:130px;justify-content:flex-end";
   const mkHat=(label,val)=>{
@@ -59,9 +59,13 @@ $("importFile").addEventListener("change",e=>{
   const rd=new FileReader();
   rd.onload=()=>{
     try{
-      const d=JSON.parse(rd.result);
+      /* JSON.parse keeps a literal "__proto__" as an own property, and the
+         loader hands these objects to Object.assign, whose [[Set]] would run
+         the prototype setter. Drop those keys before anything touches them. */
+      const d=JSON.parse(rd.result,(k,v)=>
+        (k==="__proto__"||k==="constructor"||k==="prototype")?undefined:v);
       if(d.v!==1&&d.v!==2)throw 0;
-      localStorage.setItem(SAVE_KEY,rd.result);
+      localStorage.setItem(SAVE_KEY,JSON.stringify(d));
       location.reload();
     }catch(_){toast("⚠️ That file isn't a CodeCraft world.");}
   };

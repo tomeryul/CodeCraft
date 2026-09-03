@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <!-- The page ships zero inline scripts and zero inline handlers, so
+       script-src can stay strict: an injected <img onerror> or a
+       <script> smuggled through innerHTML simply does not run. GitHub
+       Pages cannot send headers, hence the meta form.
+       style-src needs 'unsafe-inline' because the game builds style
+       attributes through innerHTML; those values are escaped and
+       colour-validated at the source instead. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self' data:; connect-src 'self' https://tqeswkurpznpwefbdoig.supabase.co; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#3b2f63">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <!-- full-bleed under the iOS status bar; the paint layers are IN-FLOW (not

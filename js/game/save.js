@@ -73,8 +73,12 @@ function applySave(d){
     skills=freshSkills();
     if(d.skills)for(const k in skills)if(d.skills[k])skills[k]=d.skills[k];
     robots=d.robots.map(rd=>{
-      const r=makeRobot(rd.x,rd.y,rd.name);
-      Object.assign(r,{dir:rd.dir,color:rd.color,cap:rd.cap,speed:rd.speed,vars:rd.vars||{},hat:rd.hat||null,
+      /* A save can arrive from a file someone else wrote, and the name and
+         colour are both rendered. They are cleaned here, where untrusted
+         data enters the game, as well as escaped where it is drawn. */
+      const r=makeRobot(rd.x,rd.y,safeText(rd.name,24));
+      Object.assign(r,{dir:rd.dir,color:safeColor(rd.color),cap:rd.cap,speed:rd.speed,
+        vars:rd.vars||{},hat:rd.hat||null,
         inv:Object.assign({wood:0,stone:0,iron:0,crystal:0,water:0},rd.inv),
         energy:rd.energy==null?100:rd.energy});
       applyProg(r,rd.program); // an array (old saves) or {main,routines} — both load

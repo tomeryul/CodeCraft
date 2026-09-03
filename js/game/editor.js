@@ -186,7 +186,7 @@ function renderProgram(){
   root.innerHTML="";
   if(!curList().length){
     root.innerHTML=edTarget==="main"
-      ? '<div class="empty">🧩 Tap blocks below to program <b>'+r.name+'</b>!<br>Try: <b>🚶 Walk To 🌳</b> → <b>🪓 Chop</b> → <b>🚶 Walk To 🏪</b> → <b>⤵️ Drop</b>.</div>'
+      ? '<div class="empty">🧩 Tap blocks below to program <b>'+esc(r.name)+'</b>!<br>Try: <b>🚶 Walk To 🌳</b> → <b>🪓 Chop</b> → <b>🚶 Walk To 🏪</b> → <b>⤵️ Drop</b>.</div>'
       : '<div class="empty">🔧 Routine <b>'+edTarget+'</b> is empty.<br>Put the steps you repeat in here, then 🔧 Call it from your main program.</div>';
   }else renderList(curList(),root);
   updateSelUI();
