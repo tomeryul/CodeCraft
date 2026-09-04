@@ -326,9 +326,9 @@ html.he #fabRun.running::after{content:"עצור";}
    the program — header, robot chips, undo/redo, routine tabs, variable
    watch — and the run bar below it keep their height whatever the sheet
    does, so on a phone the part being edited stayed small even full-screen.
-   Focus drops all of them: the program and the palette get the whole
-   screen, and the button that turns it on stays exactly where it was so
-   the way back is where you last pressed.
+   Focus drops the rows that are not the program: the program and the
+   palette get what is left, and every header control stays exactly where it
+   was, so the way back is where you last pressed.
    ------------------------------------------------------------------ */
 #edFocus .ic-foff{display:none;}
 #editor.focused #edFocus .ic-fon{display:none;}
@@ -342,9 +342,17 @@ html.he #fabRun.running::after{content:"עצור";}
 #editor.focused{
   height:min(94vh,calc(100dvh - var(--sat) - 10px));
   max-height:min(94vh,calc(100dvh - var(--sat) - 10px));}
-/* the header keeps only its one button, and stops taking a header's room */
-#editor.focused .v5-head{padding:4px 8px;border-bottom:0;justify-content:flex-end;}
-#editor.focused .v5-head>*:not(#edFocus){display:none;}
+/* The header is left exactly as it is. Hiding all of it but the one button
+   pushed that button from the left of the row to the right — it changed
+   sides the moment the mode turned on, which is the one thing a control you
+   are about to press again must never do — and it took Back, shrink and
+   exit away with it, on the screen where the sheet is at its largest and
+   those are most wanted. Sixty-one pixels of header is a cheap price for
+   every control staying where the hand already went.
+
+   What focus drops is the rows that are not the program: the robot chips
+   with undo/redo, the routine tabs, the variable watch, the tab bar and the
+   run row. */
 #editor.focused #blocksTab .v5-edrow,
 #editor.focused #routineTabs,
 #editor.focused #varWatch,
