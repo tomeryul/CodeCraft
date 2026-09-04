@@ -120,6 +120,8 @@
 /* the goal leads the board — it is the first thing a player has to read */
 #mgGoal{margin:2px 0 10px;font-size:13px;line-height:1.5;color:#e2dbf5;}
 #mgGoal b{color:var(--accent2);}
+/* the level question, now its own node so it can be translated on its own */
+#mgGoal .mg-q{margin-inline-start:8px;color:var(--accent2);}
 #mgCanvas{border-radius:16px;border:1px solid var(--hair);}
 #mgBoardHint{margin-top:9px;font-size:12px;color:var(--ink2);}
 #mgCases{gap:6px;margin:0 0 9px;}

@@ -651,6 +651,14 @@ const HE={
 "publish challenges & sync progress":"לפרסם אתגרים ולסנכרן התקדמות",
 "Six quick lessons take you from your first Move to loops & conditions — then four more teach variables, functions and algorithms.":
   "שישה שיעורים קצרים לוקחים אותך מהזוז הראשון ללולאות ותנאים — ואז עוד ארבעה מלמדים משתנים, פונקציות ואלגוריתמים.",
+/* ---- academy names ---- */
+"Turn & Go":"לפנות וללכת",
+"Function (A)":"פונקציה (A)",
+"Algorithm":"אלגוריתם",
+"blank":"ריק",
+/* ---- audit leftovers ---- */
+"Hide":"הסתר",
+"Zigzag":"זיגזג",
 };
 
 /* ui-icons.js also rewrites text nodes: it lifts each emoji into its own
@@ -664,8 +672,15 @@ const HE={
    leading or trailing emoji and spacing are kept from the node itself and
    put back around the Hebrew, whether ui-icons has run yet or not. */
 const STRIP=/[\p{Extended_Pictographic}\uFE0F\u200D\u20E3]/gu;
-const EDGE=/^[\s\p{Extended_Pictographic}\uFE0F\u200D\u20E3]*|[\s\p{Extended_Pictographic}\uFE0F\u200D\u20E3]*$/gu;
-const norm=s=>s.replace(STRIP,"").replace(/\s+/g," ").trim();
+/* The em-dash counts as decoration too. A lesson row is built as
+   "<b>Move</b> — One step forward…", so the sentence reaches us as a text
+   node that begins "— One step forward…" and missed a dictionary keyed on
+   the sentence alone. Leading and trailing separators are stripped for the
+   lookup and put back around the Hebrew, exactly like the emoji. */
+const MARK="\\s\\u2013\\u2014\\u00b7:\\u2022\\u25cb\\u2713\\u2717";   // dashes, bullets, and the \u25CB \u2713 \u2717 a test row is prefixed with
+const EDGE=new RegExp("^["+MARK+"\\p{Extended_Pictographic}\\uFE0F\\u200D\\u20E3]*|["+
+  MARK+"\\p{Extended_Pictographic}\\uFE0F\\u200D\\u20E3]*$","gu");
+const norm=s=>s.replace(STRIP,"").replace(/\s+/g," ").replace(EDGE,"").trim();
 
 /* Readouts carrying a live number cannot match as whole strings; their
    skeleton can. Digits become {n}, are looked up, and go back in order.
@@ -1110,6 +1125,9 @@ const HE_RAW={
   "🎉 אתה מתכנת עכשיו! תאסוף 🌳, תמכור ב-🏪, ותפתח כוחות חדשים!",
 "👋 Your robot only moves when you":"👋 הרובוט שלך זז רק כשאתה",
 "🚀 Press the green":"🚀 תלחץ על הירוק",
+/* ---- academy ---- */
+"The blocks inside 🔧 A are counted ONCE, however many times you call it. That's the whole point of a function.":
+  "הבלוקים שבתוך 🔧 A נספרים פעם אחת, כמה פעמים שלא תקרא לה. זו כל הנקודה של פונקציה.",
 };
 
 /* Sentences the game builds by concatenation — "Level 3 complete!",
@@ -1305,6 +1323,8 @@ const HE_T={
 /* ---- walkthrough leftovers ---- */
 "easier after {s}":"קל יותר אחרי {1}",
 "{s} — Lesson {n} (advanced)":"{1} — שיעור {2} (מתקדם)",
+/* ---- audit leftovers ---- */
+"start {n},{n}":"התחלה {1},{2}",
 };
 
 /* ---- pattern index ----
@@ -1390,31 +1410,37 @@ function tr(s,el){
 /* ui-icons.js lifts every emoji out of the text into its own span, so
    "Collect 5 ⛓️ iron" reaches us as three nodes and no single one of them
    matches the dictionary. Whichever observer ran first, the sentence is
-   still recoverable: each span remembers the character it replaced. Put it
-   back together, look THAT up, and if it hits, write the Hebrew as one text
-   node — ui-icons sees the change and lifts its emoji again.
+   still recoverable: each span remembers the character it replaced.
 
-   Deliberately narrow: only an element that actually holds a lifted emoji,
-   only its own direct children, and only when nothing else is nested in it.
-   Anything wider would flatten real markup to reach a translation. */
-function joined(el){
-  const kids=el.childNodes;
-  if(kids.length<2||kids.length>10)return false;
-  let str="",lifted=false;
-  for(const k of kids){
-    if(k.nodeType===3){str+=k.nodeValue;continue;}
-    if(k.nodeType===1&&k.classList&&k.classList.contains("ui-emoji")){
-      const e=k.getAttribute("data-e");
-      if(e===null)return false;
-      str+=e;lifted=true;continue;
-    }
-    return false;
+   Only the unbroken RUN of text nodes and lifted emoji is put back
+   together, never the whole element — a lesson row is
+   "<b>Chop</b> — Cuts down the <emoji> tree…", and flattening it to reach
+   the sentence would take the bold name with it. The run is looked up as
+   one string and, on a hit, collapses to a single text node; ui-icons sees
+   that change and lifts its emoji again. */
+function runs(el){
+  let run=[],hit=false;
+  const flush=()=>{
+    const r=run; run=[];
+    if(r.length<2)return;
+    let str="";
+    for(const k of r)str+=(k.nodeType===3)?k.nodeValue:k.getAttribute("data-e");
+    if(!str.trim()||str.length>400)return;
+    const out=tr(str,el);
+    if(out===null)return;
+    const p=r[0].parentNode; if(!p)return;
+    p.replaceChild(document.createTextNode(out),r[0]);
+    for(let i=1;i<r.length;i++)if(r[i].parentNode)r[i].parentNode.removeChild(r[i]);
+    hit=true;
+  };
+  for(const k of [...el.childNodes]){
+    if(k.nodeType===3){run.push(k);continue;}
+    if(k.nodeType===1&&k.classList&&k.classList.contains("ui-emoji")&&
+       k.getAttribute("data-e")!==null){run.push(k);continue;}
+    flush();
   }
-  if(!lifted||str.length>400)return false;
-  const out=tr(str,el);
-  if(out===null)return false;
-  el.textContent=out;
-  return true;
+  flush();
+  return hit;
 }
 function walk(node){
   if(node.nodeType===3){
@@ -1435,7 +1461,7 @@ function walk(node){
     if(v){const out=tr(v,node); if(out!==null)node.setAttribute(a,out);}
   }
   if(SKIP.has(node.nodeName))return;
-  if(joined(node))return;
+  runs(node);
   for(let c=node.firstChild;c;c=c.nextSibling)walk(c);
 }
 
@@ -1449,6 +1475,16 @@ function on(){
     for(const m of ms){
       if(m.type==="characterData")walk(m.target);
       else for(const n of m.addedNodes)walk(n);
+      /* The reassembly in runs() only ever ran on an element that arrived
+         whole. In the game the common shape is the opposite: an element that
+         is already on the page has its textContent replaced, ui-icons.js
+         lifts the emoji out of it, and what reaches this observer is a
+         handful of loose text nodes and spans — no element to reassemble.
+         Offer the parent as well, so a sentence split around its emoji is
+         still recognised. */
+      const t=m.target;
+      if(t&&t.nodeType===1&&!SKIP.has(t.nodeName)&&!(t.closest&&t.closest(SKIP_IN)))
+        runs(t);
     }
   });
   mo.observe(document.body,{childList:true,subtree:true,characterData:true});

@@ -161,6 +161,58 @@ async function boot(pg,he){
      HEB.test(mid.text) && !/Collect|iron/.test(mid.text), mid);
   ck('and the emoji is still drawn as an icon afterwards', mid.icons>0, mid);
 
+  /* The probe above appends a whole element, which is the easy case. The
+     game's own path is the opposite: an element already on the page has its
+     textContent replaced, ui-icons.js lifts the emoji out of it, and what
+     reaches the observer is loose text nodes and spans with no element to
+     reassemble. That is how every lesson goal is written. */
+  const inPlace = await pg.evaluate(async () => {
+    const host=document.createElement('div'); host.id='__inplace';
+    host.style.position='absolute'; host.style.left='-9999px';
+    document.body.appendChild(host);
+    await new Promise(r=>setTimeout(r,60));
+    host.textContent='Walk up to the 🌳 tree and use 🪓 Chop to clear it'+
+      ' — exactly how your robots gather wood out in the world.';
+    await new Promise(r=>setTimeout(r,300));
+    return host.textContent;
+  });
+  ck('a sentence written into an element already on the page is translated',
+     HEB.test(inPlace) && !/Walk up|Chop to clear/.test(inPlace), inPlace);
+
+  /* A lesson row is "<b>Move</b> — One step forward…", so the sentence
+     arrives with a leading em-dash and a <b> beside it. The dash is edge
+     decoration; the <b> is real markup and has to survive. */
+  const dash = await pg.evaluate(async () => {
+    const host=document.createElement('div'); host.id='__dash';
+    host.style.position='absolute'; host.style.left='-9999px';
+    document.body.appendChild(host);
+    await new Promise(r=>setTimeout(r,60));
+    host.innerHTML='<span><b>Move</b> — One step forward, in whatever'+
+      ' direction the robot is already facing.</span>';
+    await new Promise(r=>setTimeout(r,300));
+    return { text:host.textContent, bold:host.querySelector('b')?host.querySelector('b').textContent:null };
+  });
+  ck('a sentence after an em-dash still matches the dictionary',
+     HEB.test(dash.text) && /—/.test(dash.text) && !/One step forward/.test(dash.text), dash);
+  ck('and the bold block name beside it is not flattened away',
+     dash.bold!==null && dash.bold.length>0, dash);
+
+  /* The goal line and the level's question are two nodes, not one joined
+     string — a joined string exists nowhere in the source and so could
+     never match. */
+  const goal = await pg.evaluate(async () => {
+    if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+    academyEnter(7);
+    await new Promise(r=>setTimeout(r,700));
+    const g=document.getElementById('mgGoal');
+    return { nodes:g.childNodes.length, text:g.textContent,
+             q:g.querySelector('.mg-q')?g.querySelector('.mg-q').textContent:null };
+  });
+  ck('a lesson goal and its question are translated separately',
+     goal.nodes>1 && HEB.test(goal.text) && goal.q!==null && HEB.test(goal.q), goal);
+  ck('nothing English is left in the goal line',
+     !/[A-Za-z]{3}/.test(goal.text), goal.text);
+
   /* An <input> holds the player's own text, so its contents are never
      touched — but its placeholder is ours. */
   const ph = await pg.evaluate(()=>{

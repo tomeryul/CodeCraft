@@ -1035,7 +1035,21 @@ function mgEnter(proj0){
   $("boardTabBtn").style.display="";
   $("editor").classList.add("mg");    // reveals RESET/STEP in the bottom action bar
   $("mgTitle").textContent=proj.em+" "+proj.name;
-  $("mgGoal").textContent=proj.desc+(proj.question?"  ❓ "+proj.question:"");
+  /* Two nodes, not one string. Joining the goal to its question made a
+     sentence that exists nowhere in the source, so the Hebrew dictionary —
+     which matches whole strings — could never hit either half. Built as
+     text nodes so a published challenge's own words still cannot inject
+     markup. */
+  (function(){
+    const g=$("mgGoal"); g.textContent="";
+    g.appendChild(document.createTextNode(proj.desc||""));
+    if(proj.question){
+      const q=document.createElement("span");
+      q.className="mg-q";
+      q.textContent="❓ "+proj.question;
+      g.appendChild(q);
+    }
+  })();
   // Academy stages carry their own teaching card (what each new block does,
   // and the steps to take). Everything else clears it.
   if(typeof renderLessonCard==="function"){
