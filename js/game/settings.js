@@ -54,8 +54,10 @@ function renderSettings(){
      from a fresh load. Nothing is lost: the choice is saved first. */
   settingsRow(el,"🌐","Language","English · עברית",
     lang==="he"?"English":"עברית",()=>{
-      lang=(lang==="he")?"en":"he";
-      saveNow();
+      /* langSet writes the device's own key. It used to set the variable and
+         call saveNow(), which put the choice inside the world save — where
+         the next save to be loaded could overwrite it. */
+      langSet(lang==="he"?"en":"he");
       location.reload();
     });
 

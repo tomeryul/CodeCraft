@@ -3,7 +3,7 @@
 /* Bumped with sw.js on every deploy, and shown at the bottom of Settings.
    A player reporting "this change is not there" and a build number in the
    same screenshot answers, in one look, whether they are even running it. */
-const CC_BUILD="v127";
+const CC_BUILD="v128";
 const W=80, H=80, TILE=48;
 const DX=[0,1,0,-1], DY=[-1,0,1,0];
 const T_WATER=0,T_SAND=1,T_GRASS=2,T_ROCKY=3;
@@ -19,3 +19,9 @@ const RADIO_MS=45000;   // how long a 📡 Broadcast stays on the noticeboard
 const RADIO_CH=["tree","rock","iron","crystal","help"];
 const RADIO_EM={tree:"🌳",rock:"🪨",iron:"⛓️",crystal:"💎",help:"🆘"};
 const SAVE_KEY="codecraft_save_v1";
+/* Language is a property of the person holding the phone, not of the world,
+   so it lives beside the save rather than inside it. It used to be a field
+   in the save, which meant any save that predated the feature — a cloud
+   save written on another device, or before Hebrew existed — read as
+   English and turned the player's own choice off mid-session. */
+const LANG_KEY="codecraft_lang";

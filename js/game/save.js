@@ -40,6 +40,21 @@ function scheduleCloud(data){
   cloudT=setTimeout(()=>{cloudSave(data||buildSave()).catch(()=>{});},4000);
 }
 // rebuild live game state from a save object (localStorage OR cloud). Returns true on success.
+/* ---- language: a device preference, stored beside the save ---- */
+function langStored(){
+  try{ return localStorage.getItem(LANG_KEY); }catch(_){ return null; }
+}
+function langSet(v){
+  lang=(v==="he")?"he":"en";
+  try{ localStorage.setItem(LANG_KEY,lang); }catch(_){}
+  if(typeof i18nApply==="function")i18nApply();
+}
+function langInit(){
+  const v=langStored();
+  if(v)langSet(v);
+}
+langInit();
+
 function applySave(d){
   // a different save is a different starting point: record where THIS
   // player already is without celebrating steps they finished days ago
@@ -57,8 +72,15 @@ function applySave(d){
        presses the control again, across sessions included */
     sheetFull=!!d.sheetFull;
     $("editor").classList.toggle("max",sheetFull);
-    lang=(d.lang==="he")?"he":"en";
-    if(typeof i18nApply==="function")i18nApply();
+    /* Not from the save. Loading one used to set the language from its lang
+       field, so signing in — which hands this function the cloud save —
+       turned Hebrew off for anyone whose cloud save was written before the
+       feature existed or on a device set to English. The text already on
+       screen stayed Hebrew (it was replaced in place) while everything
+       drawn afterwards came out English, which is exactly the half-and-half
+       screen this looked like. A save carrying a language it wrote earlier
+       is honoured only when the device has no choice of its own yet. */
+    if(!langStored()&&d.lang)langSet(d.lang);
     tut.done=d.v===1?true:!!d.tutDone;
     player=Object.assign({xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{},myChallenges:[],academy:{},funcLib:[]},d.player||{});
     if(!player.academy)player.academy={};

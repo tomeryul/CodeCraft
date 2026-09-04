@@ -15,7 +15,10 @@ const HEB=/[֐-׿]/;
 
 async function boot(pg,he){
   await pg.goto('file://'+ROOT+'/index.html'); await pg.waitForTimeout(1100);
-  if(he) await pg.evaluate(()=>{ lang="he"; i18nApply(); });
+  /* the way the settings row does it: langSet writes the device's own key,
+     which is what stops a later save from overriding the choice */
+  if(he) await pg.evaluate(()=>{
+    if(typeof langSet==="function")langSet("he"); else { lang="he"; i18nApply(); } });
   await pg.evaluate(()=>{ ageSet(true); document.getElementById('agegate').classList.remove('open'); });
   await pg.click('#playBtn').catch(()=>{}); await pg.waitForTimeout(1500);
   await pg.evaluate(()=>{ const c=document.querySelector('#ccCele .cc-cta'); if(c)c.click(); });
@@ -109,11 +112,10 @@ async function boot(pg,he){
   // ------------------------------------------------ the setting persists
   const saved = await pg.evaluate(()=>{
     saveNow();
-    const j=JSON.parse(localStorage.getItem(SAVE_KEY));
-    return { inSave:j.lang, live:lang };
+    return { onDevice:localStorage.getItem(LANG_KEY), live:lang };
   });
-  ck('the language is saved like sound and music',
-     saved.inSave==='he' && saved.live==='he', saved);
+  ck('the language is remembered on the device, not in the world save',
+     saved.onDevice==='he' && saved.live==='he', saved);
 
   // ------------------------------------------------ the coverage itself
   /* The sentences the game builds by concatenation — "Level 3 complete!",
@@ -219,6 +221,40 @@ async function boot(pg,he){
     const e=document.querySelector('#mentor input[placeholder],#mentorInput');
     return e?e.getAttribute('placeholder'):null; });
   ck("a placeholder inside an input is translated", ph!==null && HEB.test(ph), ph);
+
+  // ------------------------------------------------ nothing may turn it off
+  /* The language used to be a field inside the world save, and applySave()
+     set it from whatever save it was handed. Signing in hands that function
+     the cloud save, so an account whose save was written before Hebrew
+     existed — or on a device set to English — turned the choice off in the
+     middle of a session. The text already on screen stayed Hebrew, because
+     it had been replaced in place, and everything drawn afterwards came out
+     English. It is a device preference now, stored beside the save. */
+  const foreign = await pg.evaluate(async () => {
+    const s = buildSave();
+    delete s.lang;             // a save from before the feature existed
+    applySave(s);
+    await new Promise(r => setTimeout(r, 300));
+    document.getElementById('editor').classList.add('open');
+    setTab('blocks'); renderPalette();
+    await new Promise(r => setTimeout(r, 400));
+    const p = document.getElementById('palette');
+    return { lang: lang, dir: document.documentElement.getAttribute('dir') || '(none)',
+             palette: p ? p.innerText.replace(/\s+/g, ' ').slice(0, 80) : '' };
+  });
+  ck('a save carrying no language cannot turn Hebrew off',
+     foreign.lang === 'he' && foreign.dir === 'rtl', foreign);
+  ck('and what is drawn after such a save is still Hebrew',
+     HEB.test(foreign.palette) && !/BASICS|Walk To/.test(foreign.palette), foreign.palette);
+
+  /* An English save must not flip a device that chose Hebrew either. */
+  const enSave = await pg.evaluate(async () => {
+    const s = buildSave(); s.lang = 'en';
+    applySave(s);
+    await new Promise(r => setTimeout(r, 250));
+    return lang;
+  });
+  ck('nor may a save that says English', enSave === 'he', enSave);
 
   // ------------------------------------------------ English still works
   const pg2 = await b.newPage({ viewport:{width:390,height:844} });
