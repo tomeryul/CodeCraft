@@ -36,6 +36,12 @@
   --c-team:#4f8a3d;  --c-team-d:#31601f;
   --bevel-hi:inset 0 1.5px 0 rgba(255,255,255,.22);
   --radius:16px; --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
+  /* One height for every sheet at full size. It used to be a bare 94vh in
+     four places, and focus mode capped itself against the safe area as well
+     — so maximise and focus landed a dozen pixels apart on a notched phone
+     and you could see the sheet twitch between them. Whichever is smaller
+     wins, everywhere. */
+  --sheet-full:min(94vh,calc(100dvh - var(--sat) - 10px));
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 /* NO height:100%/overflow:hidden here: on iOS standalone (black-translucent)
@@ -121,7 +127,7 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 
 /* ---------- editor ---------- */
 #editor{height:48vh;transition:transform .28s cubic-bezier(.32,.9,.35,1),height .26s cubic-bezier(.32,.9,.35,1);}
-#editor.max{height:94vh;max-height:94vh;}
+#editor.max{height:var(--sheet-full);max-height:var(--sheet-full);}
 #edMax svg{width:17px;height:17px;display:block;}
 #edMax .ic-min{display:none;}
 #editor.max #edMax .ic-max{display:none;}

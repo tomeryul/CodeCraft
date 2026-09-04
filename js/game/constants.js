@@ -3,7 +3,7 @@
 /* Bumped with sw.js on every deploy, and shown at the bottom of Settings.
    A player reporting "this change is not there" and a build number in the
    same screenshot answers, in one look, whether they are even running it. */
-const CC_BUILD="v133";
+const CC_BUILD="v134";
 const W=80, H=80, TILE=48;
 const DX=[0,1,0,-1], DY=[-1,0,1,0];
 const T_WATER=0,T_SAND=1,T_GRASS=2,T_ROCKY=3;

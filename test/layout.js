@@ -365,6 +365,49 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     ck(`${W}x${H} nothing pinned to a screen edge carries a backdrop-filter`,
        glass.length === 0, glass);
 
+    // ---------------------------------------------- one full-size height
+    /* Maximise, focus and every other full-size sheet are one height. It was
+       a bare 94vh in four places while focus alone also capped itself
+       against the safe area, so on a notched phone the two landed a dozen
+       pixels apart and the sheet visibly twitched between them. The inset is
+       simulated: a desktop Chromium reports none. */
+    const heights = await pg.evaluate(async () => {
+      const root = document.documentElement, was = root.style.getPropertyValue('--sat');
+      const h = s => { const e = document.querySelector(s);
+        return e ? Math.round(e.getBoundingClientRect().height) : null; };
+      const ed = $('editor'), out = {};
+      for (const inset of [0, 62]) {
+        root.style.setProperty('--sat', inset + 'px');
+        ed.className = 'sheet open'; setTab('blocks'); renderPalette();
+        await new Promise(r => setTimeout(r, 300));
+        ed.classList.add('max');
+        await new Promise(r => setTimeout(r, 350));
+        const max = h('#editor');
+        ed.classList.remove('max'); ed.classList.add('focused');
+        await new Promise(r => setTimeout(r, 350));
+        const focused = h('#editor');
+        /* nav.js mirrors #editor.max onto body.sheets-full, so the editor
+           stays maximised while another sheet is measured */
+        ed.classList.remove('focused'); ed.classList.add('max');
+        document.body.classList.add('sheets-full');
+        $('shop').classList.add('open');
+        await new Promise(r => setTimeout(r, 350));
+        const shop = h('#shop');
+        $('shop').classList.remove('open'); ed.classList.remove('max');
+        out[inset] = { max, focused, shop };
+      }
+      root.style.setProperty('--sat', was);
+      ed.className = 'sheet';
+      await new Promise(r => setTimeout(r, 300));
+      return out;
+    });
+    await pg.waitForTimeout(300);
+    const oneHeight = o => o.max === o.focused && o.max === o.shop;
+    ck(`${W}x${H} maximise, focus and the other sheets are one height`,
+       oneHeight(heights[0]) && oneHeight(heights[62]), heights);
+    ck(`${W}x${H} and that height gets out of the safe area's way`,
+       heights[62].max < heights[0].max, heights);
+
     // ---------------------------------------------- focus: blocks only
     /* Making the sheet taller only ever bought a little room: the rows above
        the program and the run bar below it keep their height whatever the

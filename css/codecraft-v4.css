@@ -87,7 +87,7 @@
    and squash the panel to 56% of the viewport. */
 @media (max-width:919px){
   #editor{height:56vh;}
-  #editor.max{height:94vh;max-height:94vh;}
+  #editor.max{height:var(--sheet-full);max-height:var(--sheet-full);}
 }
 /* .sheet pads itself by var(--sab) and #actionBar pads by calc(12px + sab)
    on top of it, so on a phone with a home indicator the two stacked into
