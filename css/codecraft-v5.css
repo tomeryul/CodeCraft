@@ -347,3 +347,33 @@ html.he #fabRun.running::after{content:"עצור";}
    split the two share when the rest of the screen is competing for room */
 #editor.focused #programWrap{flex:1 1 60%;}
 #editor.focused #palette{flex:1 1 40%;}
+
+/* ---------------------------------------------------------------------
+   O. iOS 26 — no glass on anything pinned to a screen edge
+   Safari 26 samples position:fixed elements near the top and bottom of the
+   viewport and folds their backdrop-filter into the system's own Liquid
+   Glass, then paints that across the FULL WIDTH of the edge. The result is
+   a blurred, darkened band over the world where the HUD floats — it is not
+   the status bar, it is the union of the fixed HUD boxes, stretched.
+
+   Measured against a report: the band ended 140px down, and #ticker's last
+   chip ends at safe-area-top + 58 + 22 = 142px. That is the tell.
+
+   Nothing here is a design change. Every one of these already paints an
+   80-97% opaque background, so the blur behind them was doing almost no
+   work; dropping it removes what iOS samples and leaves the HUD looking
+   as it did. Sheets keep theirs — they cover the screen, so they are not
+   an edge the system reads through.
+   ------------------------------------------------------------------ */
+#topbar,#topbar *,#ticker,#ticker *,
+#bottombar,#bottombar *,#buildBar,#buildBar *,
+#toasts,#toasts *,#coach,#coach *,#journey,#journey *,
+#objMenu,#objMenu *,#fabRun{
+  -webkit-backdrop-filter:none !important;backdrop-filter:none !important;}
+
+/* The blur was also doing a little legibility work behind the HUD, where a
+   bright green world shows through 20% of a pill. Redefining the token for
+   this layer only pays that back without touching the sheets. */
+#topbar,#ticker,#bottombar,#buildBar,#toasts,#coach,#journey,#objMenu{
+  --glass:rgba(26,19,50,.92);}
+#ticker .tk{background:rgba(23,17,48,.92);}

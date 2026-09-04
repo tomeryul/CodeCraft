@@ -340,6 +340,31 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     });
     ck(`${W}x${H} creator tool tray is sticky`, cr.sticky==='sticky'&&cr.inView, cr);
 
+    // ---------------------------------------------- iOS 26 edge glass
+    /* Safari 26 samples position:fixed elements near the top and bottom of
+       the viewport, folds their backdrop-filter into the system's own Liquid
+       Glass, and paints the result across the whole width of that edge — a
+       blurred band over the world where the HUD floats. Nothing pinned to an
+       edge may carry one. Sheets are exempt: they cover the screen, so there
+       is no edge being read through. */
+    const glass = await pg.evaluate(() => {
+      const EDGE = 90, bad = [];
+      for (const e of document.querySelectorAll('body *')) {
+        const cs = getComputedStyle(e);
+        const bf = cs.backdropFilter || cs.webkitBackdropFilter;
+        if (!bf || bf === 'none') continue;
+        const r = e.getBoundingClientRect();
+        if (r.width < 1 || r.height < 1) continue;
+        if (r.bottom <= 0 || r.top >= innerHeight) continue;      // parked off-screen
+        if (e.closest('.sheet')) continue;
+        if (r.top < EDGE || r.bottom > innerHeight - EDGE)
+          bad.push((e.id || e.className || e.tagName) + ' ' + bf);
+      }
+      return bad;
+    });
+    ck(`${W}x${H} nothing pinned to a screen edge carries a backdrop-filter`,
+       glass.length === 0, glass);
+
     // ---------------------------------------------- focus: blocks only
     /* Making the sheet taller only ever bought a little room: the rows above
        the program and the run bar below it keep their height whatever the
