@@ -1450,6 +1450,7 @@ function mgCond(st,c){
     const v=Number(mgRobot.vars[c.var])||0, w=condRhs(mgRobot,c);
     return c.op===">"?v>w:c.op==="<"?v<w:c.op==="!="?v!==w:v===w;
   }
+  if(condNeg(c))return !mgCond(st,condBase(c));
   const rb=st.robot, ax=rb.x+DX[rb.dir], ay=rb.y+DY[rb.dir];
   const ka=ax+"_"+ay, kh=rb.x+"_"+rb.y, T=window.CC_TILES;
   switch(c){

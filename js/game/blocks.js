@@ -6,6 +6,24 @@ const COND_LBL={treeAhead:"tree ahead 🌳",rockAhead:"rock ahead 🪨",ironAhea
   // challenge-board sensors (see CHALLENGE_CONDS in challenges.js)
   wallAhead:"wall ahead 🧱",pitAhead:"pit ahead 🕳️",brickHere:"block under me 🟧",onTarget:"on a target 🎯",holding:"carrying a block ✊",
   doorAhead:"locked door ahead 🚪",keyAhead:"key ahead 🔑",gateAhead:"closed gate ahead 🚧",onPlate:"on a plate 🔘"};
+/* ---- negation ----
+   A sensor condition is a name; the same name with a "!" in front is that
+   sensor answered the other way round. Keeping it inside the string rather
+   than wrapping the condition in an object means every save ever written
+   still loads, every stored solution still runs, and negating costs no
+   block — "while NOT blocked" is one block, exactly like "while blocked".
+
+   It is worth having because half of what a program wants to say is
+   negative. "Keep going while the way is NOT blocked" is the shape of every
+   wall-follower; without it a child has to invert the whole program instead
+   of the one word they meant. */
+const condNeg  = c => typeof c==="string" && c.charAt(0)==="!";
+const condBase = c => condNeg(c) ? c.slice(1) : c;
+const condFlip = c => (typeof c!=="string") ? c : (condNeg(c) ? c.slice(1) : "!"+c);
+/* a save from someone else can carry a name this build has never heard of:
+   show the name rather than the word "undefined" */
+const condLbl  = c => COND_LBL[condBase(c)] || String(condBase(c));
+
 const BUILDS=["sapling","bridge","chest"];
 const BUILD_LBL={sapling:"🌱 sapling (1🪵)",bridge:"🌉 bridge (2🪨)",chest:"📦 chest (5🪵)"};
 // Everywhere 🚶 Walk To / 🧭 Face Nearest can send a robot. Water is TERRAIN, not

@@ -725,7 +725,11 @@ const HE_N={
 const SCOPED=[
   ["#playBtn",       {"Play":"שחק","Play offline":"שחק במצב לא מקוון"}],
   ["#actionBar",     {"Reset":"אפס"}],
-  [".hub-sec",       {"Play":"לשחק"}]
+  [".hub-sec",       {"Play":"לשחק"}],
+  /* Scoped to a block on purpose: "is" is two letters and could be a word in
+     anyone's challenge name or robot name. Inside a block it is the is/is-not
+     switch and nothing else. */
+  [".blk",           {"is":"כן","is not":"לא"}]
 ];
 
 /* Entries whose emoji sit INSIDE the sentence, not at its edges. The

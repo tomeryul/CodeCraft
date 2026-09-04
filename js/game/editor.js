@@ -234,7 +234,9 @@ function renderList(list,parent){
         else inner+='<button class="pbtn" data-p="cvdec">−</button><span class="num">'+condNum(b.cond)+'</span><button class="pbtn" data-p="cvinc">＋</button>';
         inner+='<button class="pbtn" data-p="cvkind">'+(isVar?"🔢":"📦")+'</button>';
       }
-      else inner+='<button class="pbtn" data-p="cond">'+COND_LBL[b.cond]+'</button>';
+      else inner+='<button class="pbtn neg'+(condNeg(b.cond)?" on":"")+'" data-p="cneg">'+
+        (condNeg(b.cond)?"is not":"is")+
+        '</button><button class="pbtn" data-p="cond">'+condLbl(b.cond)+'</button>';
     }
     if(b.t==="build")inner+='<button class="pbtn" data-p="build">'+BUILD_LBL[b.opt]+'</button>';
     if(b.t==="faceNearest"||b.t==="goNear"){
@@ -295,10 +297,16 @@ function renderList(list,parent){
         if(p==="cond"){
           // inside a challenge the sensor list is the board's, not the world's
           const L=(mgState&&typeof mgCondList==="function")?mgCondList():CONDS;
-          const ci=L.indexOf(b.cond); // -1 for a cond carried in from the other list
+          /* the list holds plain sensors, so cycle the sensor and put the
+             player's is/is-not back on the one they land on */
+          const neg=condNeg(b.cond), base=condBase(b.cond);
+          const ci=L.indexOf(base);  // -1 for a cond carried in from the other list
           if(ci===L.length-1&&(mgState||unlocks.vars))b.cond={var:"x",op:">",val:3}; // compare variables freely
-          else b.cond=L[(ci+1)%L.length];
+          else b.cond=(neg?"!":"")+L[(ci+1)%L.length];
         }
+        /* the comparison form has ≠ among its operators, so is/is-not is only
+           offered on the sensors, which had no way to say "not" at all */
+        if(p==="cneg")b.cond=condFlip(b.cond);
         if(p==="cvar")b.cond.var=promptName(b.cond.var);
         if(p==="cop"){
           // cycle > < = ≠, then fall back out to the sensor list

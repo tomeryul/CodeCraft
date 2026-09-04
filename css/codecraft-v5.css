@@ -394,3 +394,16 @@ html.he #fabRun.running::after{content:"עצור";}
 #topbar,#ticker,#bottombar,#buildBar,#toasts,#coach,#journey,#objMenu{
   --glass:rgba(26,19,50,.92);}
 #ticker .tk{background:rgba(23,17,48,.92);}
+
+/* ---------------------------------------------------------------------
+   P. is / is not
+   Half of what a program wants to say is negative — "keep going while the
+   way is NOT blocked" is the shape of every wall-follower — and the sensors
+   had no way to say it. The switch sits in front of the sensor it negates.
+   "is" is the quiet default; "not" is the state worth seeing from across a
+   program, so it is the one that carries colour.
+   ------------------------------------------------------------------ */
+.blk .pbtn.neg{min-width:52px;text-align:center;}
+.blk .pbtn.neg.on{
+  background:rgba(255,93,115,.3);
+  box-shadow:inset 0 0 0 1.5px rgba(255,93,115,.6);}

@@ -84,6 +84,7 @@ function pyCond(c){
   // the right side is a value: a number, or another variable
   if(c&&typeof c==="object")return c.var+" "+(OP_PY[c.op]||"==")+" "+
     ((c.val&&typeof c.val==="object")?pyVal(c.val):c.val);
+  if(condNeg(c))return "not "+pyCond(condBase(c));
   switch(c){
     case "treeAhead":return 'robot.sees("tree")';
     case "rockAhead":return 'robot.sees("rock")';

@@ -403,6 +403,76 @@ async function ev(expr) {
   await ev(`mgExit(false); document.getElementById('editor').classList.remove('open','max'); 'ok'`);
   check("Board tab hidden after leaving a challenge", await ev(`document.getElementById('boardTabBtn').style.display==='none'`) === true);
 
+  console.log("▶ ❗ is / is not: the switch in the block");
+  const negUi = await ev(`(()=>{
+    const out={};
+    unlocks.logic=true; unlocks.loops=true;
+    const r=R();
+    const w=newBlock('whileLoop'); w.cond='blocked'; w.body.push(newBlock('move'));
+    r.program=[w];
+    document.getElementById('editor').classList.add('open');
+    setTab('blocks'); renderProgram();
+    const blk=()=>document.querySelector('#programEl .blk');
+    /* A missing switch is the thing under test, so report it rather than
+       throwing: a TypeError here aborts the whole run and every check after
+       this point goes unreported. */
+    const btn=p=>{ const b=blk(); return b?b.querySelector('[data-p="'+p+'"]'):null; };
+    if(!btn('cneg')){
+      r.program=[]; renderProgram();
+      document.getElementById('editor').classList.remove('open');
+      return JSON.stringify({missing:true});
+    }
+    out.startLbl=btn('cneg').innerText.trim();
+    out.startOn=btn('cneg').classList.contains('on');
+    btn('cneg').click(); renderProgram();
+    out.afterCond=r.program[0].cond;
+    out.afterLbl=btn('cneg').innerText.trim();
+    out.afterOn=btn('cneg').classList.contains('on');
+    /* cycling the sensor must not quietly drop the player's "not" */
+    btn('cond').click(); renderProgram();
+    out.keptNeg=condNeg(r.program[0].cond) && condBase(r.program[0].cond)!=='blocked';
+    btn('cneg').click(); renderProgram();
+    out.backOff=!condNeg(r.program[0].cond);
+    r.program=[]; renderProgram();
+    document.getElementById('editor').classList.remove('open');
+    return JSON.stringify(out);
+  })()`);
+  const NU = JSON.parse(negUi);
+  check("the block shows an is/is-not switch in front of the sensor",
+    NU.startLbl === 'is' && NU.startOn === false, negUi);
+  check("tapping it negates the condition and colours the switch",
+    NU.afterCond === '!blocked' && NU.afterLbl === 'is not' && NU.afterOn === true, negUi);
+  check("cycling the sensor afterwards keeps the not", NU.keptNeg === true, negUi);
+  check("tapping again takes it off", NU.backOff === true, negUi);
+
+  console.log("▶ ❗ is / is not on a challenge board");
+  /* The board has its own sensors and its own interpreter, so it needs the
+     same answer the world got — a wall-follower is a challenge idea before
+     it is a world one. */
+  const mgNeg = await ev(`(()=>{
+    const out={};
+    mgEnter(PROJECTS[0]);
+    const rb=mgState.robot;
+    /* point the robot off the edge of the board: reliably blocked, whatever
+       the project's own layout happens to be */
+    rb.x=0; rb.y=0; rb.dir=3;                       // facing left, off the grid
+    out.offYes = mgCond(mgState,'blocked');
+    out.offNo  = mgCond(mgState,'!blocked');
+    rb.dir=1;                                       // facing back onto the board
+    out.onYes  = mgCond(mgState,'blocked');
+    out.onNo   = mgCond(mgState,'!blocked');
+    out.list   = mgCondList().every(c=>c.charAt(0)!=='!');   // the list is plain sensors
+    mgExit(false);
+    document.getElementById('editor').classList.remove('open','max');
+    return JSON.stringify(out);
+  })()`);
+  const MN = JSON.parse(mgNeg);
+  check("a challenge board negates its sensors too",
+    MN.offYes === true && MN.offNo === false &&
+    MN.onYes === false && MN.onNo === true, mgNeg);
+  check("the sensor list itself stays unnegated, so cycling is unaffected",
+    MN.list === true, mgNeg);
+
   console.log("▶ mini-game: numbered bricks + lift/drop sorting");
   const sortRes = await ev(`(()=>{
     mgEnter(PROJECTS.find(p=>p.id==='sort'));
@@ -808,6 +878,88 @@ async function ev(expr) {
   check("...and 'blocked 🚧' senses it, so programs can route around", SO.wallSensed === true && SO.pathRoutesAround === true, solid);
   check("paths, floors and doorways stay walkable", SO.pathWalkable === true && SO.doorWalkable === true, solid);
   check("the solid flag lives beside cost, not inside it", SO.costClean === true && SO.solidIds === 20, solid);
+
+  console.log("▶ ❗ is / is not: negating a sensor");
+  /* Half of what a program wants to say is negative — "keep going while the
+     way is NOT blocked" is the shape of every wall-follower — and the sensors
+     could only be asked the positive way. Negation lives inside the sensor
+     name as a leading "!", so it costs no block and every save ever written
+     still loads. */
+  const neg = await ev(`(()=>{
+    const out={};
+    /* same reason as the switch above: report the absence, do not throw it */
+    if(typeof condFlip!=="function")return JSON.stringify({missing:true});
+    objects=new Map();
+    const r=R(); r.x=homePos.x-4; r.y=homePos.y+5; r.rx=r.x; r.ry=r.y; r.dir=1; r.energy=100;
+    const at=(dx,dy)=>key(r.x+dx,r.y+dy);
+    terrain[at(1,0)]=T_GRASS;
+
+    // nothing in the way
+    out.clearYes = evalCond(r,'blocked');
+    out.clearNo  = evalCond(r,'!blocked');
+    // a wall in the way
+    objects.set(at(1,0),{type:'decor',deco:'wall',em:'🧱'});
+    out.wallYes = evalCond(r,'blocked');
+    out.wallNo  = evalCond(r,'!blocked');
+    objects=new Map();
+
+    // the helpers themselves
+    out.flipOn  = condFlip('blocked');
+    out.flipOff = condFlip('!blocked');
+    out.base    = condBase('!blocked');
+    out.isNeg   = condNeg('!blocked') && !condNeg('blocked');
+    // an unknown sensor from someone else's save shows its name, not "undefined"
+    out.strayLbl = condLbl('!nosuchsensor');
+    // and the label of a negated sensor is the sensor's own
+    out.lblSame = condLbl('!blocked')===condLbl('blocked');
+
+    // Python says it out loud
+    const w=newBlock('whileLoop'); w.cond='!blocked'; w.body.push(newBlock('move'));
+    out.py = toPy([w],'').trim();
+
+    // negating costs nothing: the same one block either way
+    const a=newBlock('if'); a.cond='blocked';
+    const b2=newBlock('if'); b2.cond='!blocked';
+    out.sameCost = countBlocks([a])===countBlocks([b2]);
+
+    // a save carries it through unchanged, and an old un-negated save still reads
+    const rr=R(); const keep=packProg(rr);
+    rr.program=[w]; const packed=JSON.parse(JSON.stringify(packProg(rr)));
+    rr.program=[]; applyProg(rr,packed);
+    out.roundTrip = rr.program[0].cond==='!blocked';
+    applyProg(rr,keep);
+    return JSON.stringify(out);
+  })()`);
+  const NG = JSON.parse(neg);
+  check("a sensor and its negation answer opposite, with the way clear",
+    NG.clearYes === false && NG.clearNo === true, neg);
+  check("...and with a wall in the way", NG.wallYes === true && NG.wallNo === false, neg);
+  check("the is/is-not switch flips one way and back",
+    NG.flipOn === '!blocked' && NG.flipOff === 'blocked' &&
+    NG.base === 'blocked' && NG.isNeg === true, neg);
+  check("a negated sensor keeps the sensor's own label",
+    NG.lblSame === true && NG.strayLbl === 'nosuchsensor', neg);
+  check("Python writes the negation out: while not robot.is_blocked()",
+    /^while not robot\.is_blocked\(\):/.test(NG.py), NG.py);
+  check("negating costs no extra block", NG.sameCost === true, neg);
+  check("a negated condition survives a save and load", NG.roundTrip === true, neg);
+
+  // the VM actually walks it: forward until something stops the robot
+  await ev(`(()=>{
+    objects=new Map();
+    const r=R(); r.x=homePos.x-6; r.y=homePos.y+7; r.rx=r.x; r.ry=r.y; r.dir=1; r.energy=100;
+    terrain[key(r.x+1,r.y)]=T_GRASS; terrain[key(r.x+2,r.y)]=T_GRASS;
+    terrain[key(r.x+3,r.y)]=T_GRASS;
+    objects.set(key(r.x+3,r.y),{type:'decor',deco:'wall',em:'🧱'});
+    const w=newBlock('whileLoop'); w.cond='!blocked'; w.body.push(newBlock('move'));
+    r.program=[w]; unlocks.loops=true; unlocks.logic=true; startRobot(r);
+    window.__negStart=r.x; return 'ok';
+  })()`);
+  await sleep(2600);
+  check("'while is not blocked → move' walks up to the wall and stops",
+    await ev("R().x - window.__negStart") === 2 && await ev("R().running") === false,
+    await ev("JSON.stringify([R().x, window.__negStart, R().running])"));
+  await ev(`objects=new Map(); R().program=[]; 'ok'`);
 
   console.log("▶ 📈 the living market: prices move, and the program can read them");
   const mkt = await ev(`(()=>{ try{
