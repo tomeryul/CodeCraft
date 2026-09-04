@@ -33,6 +33,12 @@ const $=id=>document.getElementById(id);
 const has=n=>typeof window[n]==="function";
 const ICON_BACK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" '+
   'stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
+/* arrows pushing outward = give the blocks the screen; pulling inward =
+   put the rest of the screen back */
+const SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" '+
+  'stroke-linecap="round" stroke-linejoin="round" class="';
+const ICON_FOCUS_ON=SVG+'ic-fon"><path d="M12 10V4M9 7l3-3 3 3M12 14v6M9 17l3 3 3-3"/></svg>';
+const ICON_FOCUS_OFF=SVG+'ic-foff"><path d="M12 4v6M9 7l3 3 3-3M12 20v-6M9 17l3-3 3 3"/></svg>';
 
 /* ---------- 1. the sheet headers ---------- */
 const SHEETS=["mentor","quests","hub","projects","guide","funcLib","orders","report","settings","delacc"];
@@ -72,6 +78,44 @@ function editor(){
      first screen you land on. */
   const mx=$("edMax");
   if(mx){mx.classList.add("iconbtn");hd.appendChild(mx);}
+
+  /* Focus: everything that is not the program or the palette goes away.
+     Making the sheet taller only ever bought a little room, because the
+     rows above the program — the header, the robot chips, undo/redo, the
+     routine tabs, the variable watch — and the run bar below it keep their
+     height whatever the sheet does, so the part you are actually editing
+     stayed small even full-screen. This drops all of them and gives the
+     blocks the whole screen. The button stays where it is so the way back
+     is in the place you pressed. */
+  const fc=document.createElement("button");
+  fc.className="iconbtn focus";fc.id="edFocus";
+  fc.title="Blocks only — hide everything else";
+  fc.setAttribute("aria-label","Blocks only");
+  fc.innerHTML=ICON_FOCUS_ON+ICON_FOCUS_OFF;
+  fc.addEventListener("click",()=>{
+    /* Focus is about the blocks, so it only means anything on that tab —
+       from the board or the Python listing it takes you there first
+       rather than hiding the screen you are looking at. */
+    if(has("setTab")&&$("blocksTab")&&$("blocksTab").style.display==="none")setTab("blocks");
+    const on=ed.classList.toggle("focused");
+    fc.title=on?"Show everything again":"Blocks only — hide everything else";
+    fc.setAttribute("aria-label",on?"Show everything again":"Blocks only");
+    if(has("renderProgram"))renderProgram();
+  });
+  hd.appendChild(fc);
+
+  /* Focus hides the header, the tabs and Run. Leaving it on when the editor
+     closes would drop the player back into a screen with no way out that
+     they did not choose, so it lasts as long as the editor is open. */
+  new MutationObserver(()=>{
+    /* Both halves of this condition matter. classList.remove() rewrites the
+       class attribute even when the token was not there, which is another
+       mutation, which calls this observer again — as a microtask, so it
+       never yields and the game freezes the moment the editor closes.
+       Checking for the class first means at most one more mutation. */
+    if(!ed.classList.contains("open")&&ed.classList.contains("focused"))
+      ed.classList.remove("focused");
+  }).observe(ed,{attributes:true,attributeFilter:["class"]});
 
   const t=document.createElement("div");t.className="v5-title";
   t.innerHTML='<b id="v5EdTitle"></b><small id="v5EdSub"></small>';

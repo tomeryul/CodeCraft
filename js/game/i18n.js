@@ -673,6 +673,10 @@ const HE={
 "Iron":"ברזל",
 "Crystal":"גביש",
 "Water":"מים",
+/* ---- focus mode ---- */
+"Blocks only — hide everything else":"בלוקים בלבד — להסתיר את כל השאר",
+"Show everything again":"להציג הכול שוב",
+"Blocks only":"בלוקים בלבד",
 };
 
 /* ui-icons.js also rewrites text nodes: it lifts each emoji into its own

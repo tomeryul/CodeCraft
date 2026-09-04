@@ -340,6 +340,63 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     });
     ck(`${W}x${H} creator tool tray is sticky`, cr.sticky==='sticky'&&cr.inView, cr);
 
+    // ---------------------------------------------- focus: blocks only
+    /* Making the sheet taller only ever bought a little room: the rows above
+       the program and the run bar below it keep their height whatever the
+       sheet does. Focus drops them, so the two things you edit with — the
+       program and the palette — get the screen. */
+    const focus = await pg.evaluate(async () => {
+      if (mgState) mgExit(false);
+      $('editor').classList.remove('focused');
+      $('editor').classList.add('open');
+      setTab('blocks'); renderPalette();
+      await new Promise(r => setTimeout(r, 400));
+      const h = s => { const e = document.querySelector(s); if (!e) return null;
+        const r = e.getBoundingClientRect(); return r.height < 1 ? 0 : Math.round(r.height); };
+      const snap = () => ({ program:h('#programWrap'), palette:h('#palette'),
+        tabs:h('#tabs'), bar:h('#actionBar'), row:h('#blocksTab .v5-edrow'),
+        btn:!!($('edFocus')||{}).offsetParent, vh:innerHeight });
+      const before = snap();
+      $('edFocus').click();
+      await new Promise(r => setTimeout(r, 450));
+      const on = snap();
+      $('edFocus').click();
+      await new Promise(r => setTimeout(r, 450));
+      const off = snap();
+      $('editor').classList.remove('open');
+      return { before, on, off };
+    });
+    await pg.waitForTimeout(400);
+    /* The promise is not a ratio — the sheet may already be large — it is
+       that the blocks end up with essentially the whole screen. */
+    const area = s => s.program + s.palette;
+    ck(`${W}x${H} focus gives the blocks the whole screen`,
+       area(focus.on) > focus.on.vh * 0.85 && area(focus.on) > area(focus.before),
+       { on:area(focus.on), before:area(focus.before), vh:focus.on.vh });
+    ck(`${W}x${H} focus keeps the program AND the palette`,
+       focus.on.program > 0 && focus.on.palette > 0, focus.on);
+    ck(`${W}x${H} focus hides the chrome around them`,
+       focus.on.tabs === 0 && focus.on.bar === 0 && focus.on.row === 0, focus.on);
+    ck(`${W}x${H} the way back stays on screen`, focus.on.btn, focus.on);
+    ck(`${W}x${H} pressing it again restores every row`,
+       JSON.stringify(focus.off) === JSON.stringify(focus.before), focus);
+
+    /* Focus hides Back, the tabs and Run, so leaving it on when the editor
+       closes would drop the player into a screen they did not choose. */
+    const sticky = await pg.evaluate(async () => {
+      $('editor').classList.add('open');
+      await new Promise(r => setTimeout(r, 250));
+      $('edFocus').click();
+      await new Promise(r => setTimeout(r, 250));
+      const during = $('editor').classList.contains('focused');
+      $('editor').classList.remove('open');
+      await new Promise(r => setTimeout(r, 250));
+      return { during, after: $('editor').classList.contains('focused') };
+    });
+    await pg.waitForTimeout(400);
+    ck(`${W}x${H} focus does not survive closing the editor`,
+       sticky.during && !sticky.after, sticky);
+
     await pg.close();
   }
 
