@@ -100,7 +100,10 @@ const HE={
 "Sound":"צליל","Blips, dings and celebrations.":"ציוצים, צלילים וחגיגות.",
 "Music":"מוזיקה",
 "A theme for the world, another for challenges.":"נעימה לעולם, ואחרת לאתגרים.",
-"Language":"שפה","English · עברית":"English · עברית",
+"Language":"שפה",
+/* "English · עברית" needs no entry: it is already in both languages, and a
+   string the dictionary does not know is left exactly as it is. As an entry
+   that translated to itself it was the trigger for the freeze above. */
 "Turn on":"הפעל","Turn off":"כבה","Change":"שנה","None":"אין",
 "New World":"עולם חדש",
 "Erase everything and generate a fresh world.":"למחוק הכול ולייצר עולם חדש.",
@@ -1483,7 +1486,7 @@ function runs(el){
     for(const k of r)str+=(k.nodeType===3)?k.nodeValue:k.getAttribute("data-e");
     if(!str.trim()||str.length>400)return;
     const out=tr(str,el);
-    if(out===null)return;
+    if(out===null||out===str)return;
     const p=r[0].parentNode; if(!p)return;
     p.replaceChild(document.createTextNode(out),r[0]);
     for(let i=1;i<r.length;i++)if(r[i].parentNode)r[i].parentNode.removeChild(r[i]);
@@ -1503,7 +1506,12 @@ function walk(node){
     const p=node.parentNode;
     if(!p||SKIP.has(p.nodeName)||p.closest&&p.closest(SKIP_IN))return;
     const out=tr(node.nodeValue,p);
-    if(out!==null)node.nodeValue=out;
+    /* Only when it actually differs. Assigning nodeValue the value it
+       already holds still queues a characterData record, which calls this
+       observer, which assigns it again — a microtask loop that never
+       yields, so the page freezes. Any entry that translates to itself was
+       enough to trigger it; the Language row's "English · עברית" did. */
+    if(out!==null&&out!==node.nodeValue)node.nodeValue=out;
     return;
   }
   if(node.nodeType!==1)return;
@@ -1514,7 +1522,7 @@ function walk(node){
      English. */
   for(const a of ["title","aria-label","placeholder"]){
     const v=node.getAttribute&&node.getAttribute(a);
-    if(v){const out=tr(v,node); if(out!==null)node.setAttribute(a,out);}
+    if(v){const out=tr(v,node); if(out!==null&&out!==v)node.setAttribute(a,out);}
   }
   if(SKIP.has(node.nodeName))return;
   runs(node);
@@ -1565,5 +1573,16 @@ function i18nApply(){ (typeof lang!=="undefined"&&lang==="he")?on():off(); }
 
 window.i18nApply=i18nApply;
 window.i18nOn=on; window.i18nOff=off;
-window.CC_I18N={size:Object.keys(HE).length, has:s=>!!HE[String(s).trim()]};
+/* selfMapped() is a guard, not a feature: an entry whose translation is the
+   string it translates makes walk() write a node the value it already has,
+   which queues a mutation, which calls walk() again. One such entry froze
+   the game. The write is guarded now; this reports them anyway, because an
+   entry that changes nothing is a mistake in its own right. */
+window.CC_I18N={size:Object.keys(HE).length, has:s=>!!HE[String(s).trim()],
+  selfMapped:()=>{
+    const out=[];
+    for(const t of [HE,HE_RAW,HE_T])
+      for(const k in t) if(t[k]===k)out.push(k);
+    return out;
+  }};
 })();

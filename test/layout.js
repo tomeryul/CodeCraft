@@ -406,6 +406,32 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     ck(`${W}x${H} pressing it again restores every row`,
        JSON.stringify(focus.off) === JSON.stringify(focus.before), focus);
 
+    /* Focus used to be 100vh. The sheet is anchored to the bottom, so that
+       started it at y=0 — behind the status bar, where iOS dims and the
+       button that turns focus off is hard to see and hard to press. The
+       inset is simulated: a desktop Chromium reports none. */
+    const clears = await pg.evaluate(async () => {
+      const root = document.documentElement, was = root.style.getPropertyValue('--sat');
+      const read = async inset => {
+        root.style.setProperty('--sat', inset + 'px');
+        $('editor').classList.add('open', 'focused');
+        await new Promise(r => setTimeout(r, 350));
+        const btn = $('edFocus').getBoundingClientRect();
+        const sheet = $('editor').getBoundingClientRect();
+        return { inset, btnTop: Math.round(btn.top), sheetH: Math.round(sheet.height) };
+      };
+      const flat = await read(0), notch = await read(62);
+      root.style.setProperty('--sat', was);
+      $('editor').classList.remove('focused', 'open');
+      await new Promise(r => setTimeout(r, 300));
+      return { flat, notch, vh: innerHeight };
+    });
+    await pg.waitForTimeout(300);
+    ck(`${W}x${H} focus keeps its button clear of the status bar`,
+       clears.notch.btnTop >= 62 && clears.flat.btnTop >= 0, clears);
+    ck(`${W}x${H} focus is no taller than the other full-size sheets`,
+       clears.flat.sheetH <= Math.round(clears.vh * 0.945), clears);
+
     /* Focus hides Back, the tabs and Run, so leaving it on when the editor
        closes would drop the player into a screen they did not choose. */
     const sticky = await pg.evaluate(async () => {

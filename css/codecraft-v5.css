@@ -334,7 +334,14 @@ html.he #fabRun.running::after{content:"עצור";}
 #editor.focused #edFocus .ic-fon{display:none;}
 #editor.focused #edFocus .ic-foff{display:block;}
 
-#editor.focused{height:100vh;max-height:100vh;}
+/* Not 100vh. The sheet is anchored to the bottom, so a full-viewport height
+   starts it at y=0 — behind the status bar, where iOS dims and the button
+   that turns focus OFF becomes hard to see and hard to hit. It is capped at
+   the same 94vh every other full-size sheet uses, and never allowed past the
+   safe area, whichever of the two is smaller. */
+#editor.focused{
+  height:min(94vh,calc(100dvh - var(--sat) - 10px));
+  max-height:min(94vh,calc(100dvh - var(--sat) - 10px));}
 /* the header keeps only its one button, and stops taking a header's room */
 #editor.focused .v5-head{padding:4px 8px;border-bottom:0;justify-content:flex-end;}
 #editor.focused .v5-head>*:not(#edFocus){display:none;}

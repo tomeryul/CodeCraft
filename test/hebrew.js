@@ -315,6 +315,33 @@ async function boot(pg,he){
   ck('headings keep the alignment they have in English',
      align==='left'||align==='center', align);
 
+  // ------------------------------------------------ opening a screen in Hebrew
+  /* An entry that translated to itself — the Language row's
+     "English · עברית" — made walk() assign a text node the value it already
+     held. That still queues a characterData record, which calls the
+     observer, which assigns it again: a microtask loop that never yields.
+     Opening Settings in Hebrew froze the game outright. */
+  const selfMapped = await pg.evaluate(() => window.CC_I18N.selfMapped());
+  ck('no entry translates to itself', selfMapped.length === 0, selfMapped);
+
+  const settingsOpen = await pg.evaluate(() => {
+    const t0 = performance.now();
+    openSettings();
+    return { ms: Math.round(performance.now() - t0),
+             rows: document.getElementById('settingsList').children.length };
+  });
+  await pg.waitForTimeout(400);
+  ck('Settings opens in Hebrew without hanging',
+     settingsOpen.rows > 3 && settingsOpen.ms < 2000, settingsOpen);
+  const settingsHe = await pg.evaluate(() => {
+    const el = document.getElementById('settingsList');
+    return { text: el.innerText.replace(/\s+/g, ' ').slice(0, 120),
+             heb: /[֐-׿]/.test(el.innerText) };
+  });
+  ck('and its rows are Hebrew', settingsHe.heb, settingsHe.text);
+  await pg.evaluate(() => document.getElementById('settings').classList.remove('open'));
+  await pg.waitForTimeout(300);
+
   // ------------------------------------------------ English still works
   const pg2 = await b.newPage({ viewport:{width:390,height:844} });
   const errs2=[]; pg2.on('pageerror',e=>errs2.push(String(e)));
