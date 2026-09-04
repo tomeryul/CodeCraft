@@ -1,4 +1,4 @@
-const CACHE = "codecraft-v135";
+const CACHE = "codecraft-v136";
 const ASSETS = [
   "./",
   "./index.html",
@@ -10,6 +10,7 @@ const ASSETS = [
   "./css/styles.css",
   "./css/codecraft-v4.css",
   "./css/codecraft-v5.css",
+  "./css/codecraft-v6.css",
   "./fonts/fredoka-latin.woff2",
   "./fonts/fredoka-latin-ext.woff2",
   "./fonts/fredoka-hebrew.woff2",

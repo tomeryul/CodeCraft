@@ -218,10 +218,22 @@ function shop(){
   }
 }
 
+/* ---------- 5. the market handle joins the status pill ---------- */
+/* #ticker is a sibling of #stats inside #topbar, so the corner held two
+   objects on two rows. It is the pill's last chip now. renderMarket()
+   rewrites #ticker.innerHTML on every tick but never replaces the element,
+   so moving it once at boot is enough; the display:none it sets while a
+   sheet is open still works from inside the pill. */
+function hud(){
+  const st=$("stats"), tk=$("ticker");
+  if(st&&tk&&tk.parentNode!==st)st.appendChild(tk);
+}
+
 function wire(){
   try{SHEETS.forEach(head);}catch(_){}
   try{editor();}catch(_){}
   try{shop();}catch(_){}
+  try{hud();}catch(_){}
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",wire);
 else wire();

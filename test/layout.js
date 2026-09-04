@@ -65,7 +65,13 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     ck(`${W}x${H} world: nothing tappable stranded in the play area`, world.mid.length===0, world.mid);
     ck(`${W}x${H} world: the run button is a labelled pill`,
        world.fabH>=52 && /Run/.test(world.fabLabel||''), world);
-    ck(`${W}x${H} energy chip hidden while full`, world.energyShown===false, world);
+    /* Energy used to be hidden whenever it was full, because four status chips
+       and four tools would not fit across 390px. The status cluster is one
+       42px pill now and the room is there, so a full battery is a number you
+       can see — except at 359px and under, where it folds back to showing
+       only when it is low enough to act on. */
+    ck(`${W}x${H} energy chip follows the width, not the battery`,
+       world.energyShown === (W>=384), world);
 
     // ---------------------------------------------- the bottom row fits
     /* The menu button costs this row 48px. At 320 (SE) that pushed Run past
@@ -339,6 +345,47 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
       return { sticky:st, inView:r?r.top<innerHeight:false };
     });
     ck(`${W}x${H} creator tool tray is sticky`, cr.sticky==='sticky'&&cr.inView, cr);
+
+    // ---------------------------------------------- the status pill is one line
+    /* The corner used to hold two objects on three rows, 105px of map. It is
+       one 42px pill now, market handle included. What is worth protecting is
+       the shape, not the pixel: one object, one row, and the handle inside
+       the pill rather than hanging off the end of it — which is exactly what
+       it did until #stats stopped reserving room for a tool column that
+       #topbar's own padding already reserves. */
+    const pill = await pg.evaluate(async () => {
+      if (typeof mgState !== 'undefined' && mgState) mgExit(false);
+      document.querySelectorAll('.sheet.open').forEach(x => x.classList.remove('open'));
+      coins = 1234; player.level = 7; R().energy = 100; updateHud();
+      market.order = { need:{wood:6}, got:{}, until: now + 94000, reward: 40, shape:'spread' };
+      if (typeof renderMarket === 'function') renderMarket();
+      await new Promise(r => setTimeout(r, 400));
+      const box = s => { const e = document.querySelector(s); if (!e) return null;
+        const r = e.getBoundingClientRect();
+        return { l: Math.round(r.left), r: Math.round(r.right), h: Math.round(r.height) }; };
+      const st = document.getElementById('stats');
+      const kids = [...st.children].filter(e => e.offsetParent);
+      const bx = kids.map(e => e.getBoundingClientRect());
+      return {
+        inPill: (document.getElementById('ticker') || {}).parentNode === st,
+        /* one row means every chip overlaps every other vertically; comparing
+           tops alone counts chips of different heights as separate rows */
+        oneRow: bx.every(a => bx.every(c => a.top < c.bottom && c.top < a.bottom)),
+        stats: box('#stats'), ticker: box('#ticker'),
+        handleH: (box('#ticker .tk-btn') || {}).h,
+        tools: box('#tbBtns'),
+        bag: (document.getElementById('bagEl') || {}).textContent
+      };
+    });
+    await pg.waitForTimeout(200);
+    ck(`${W}x${H} the status cluster is one object, one row`,
+       pill.inPill === true && pill.oneRow === true, pill);
+    ck(`${W}x${H} the pill is a single 42px line`, pill.stats.h === 42, pill.stats);
+    ck(`${W}x${H} the market handle sits inside the pill, clear of the tools`,
+       pill.ticker.r <= pill.stats.r + 1 && pill.ticker.r <= pill.tools.l, pill);
+    ck(`${W}x${H} the handle is still a tap target`, pill.handleH >= 32, pill);
+    ck(`${W}x${H} the bag chip is a count, not a changing-width preview`,
+       /^\d+\/\d+$/.test((pill.bag || '').trim()), pill.bag);
 
     // ---------------------------------------------- iOS 26 edge glass
     /* Safari 26 samples position:fixed elements near the top and bottom of

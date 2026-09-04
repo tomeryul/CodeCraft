@@ -1,0 +1,66 @@
+/* =====================================================================
+   CodeCraft — v6: the status cluster is ONE line
+   ---------------------------------------------------------------------
+   Linked AFTER css/codecraft-v5.css. Companion to the three JS edits in
+   hud.js, economy.js and v5-ui.js.
+
+   The corner held two objects and three stacked rows, 105px of map. Every
+   number here is one a player glances at, not one they read — so they can
+   sit on a single 42px line, and the map gets the rest back.
+
+   Nothing is repainted: every colour, radius and shadow below already
+   exists in styles.css, codecraft-v4.css or codecraft-v5.css. This layer
+   only changes where the cluster sits.
+
+   #stats deliberately gets no `position`: css/styles.css anchors the price
+   panel with `#topbar .tk-panel{position:absolute;top:100%;left:0}`, and a
+   positioned #stats would become the containing block and re-anchor the
+   panel to the pill instead of the bar.
+   ===================================================================== */
+
+/* ---- 1. one row, never two ---- */
+/* max-width was calc(100% - 52px), reserving room beside the pill for the
+   tool column back when they shared a row. #topbar already carries
+   padding-right:52px for exactly that, so the reservation was counted twice
+   — and now that the market handle lives inside the pill, those 52px are
+   the difference between the handle fitting and hanging out of the end. */
+#topbar #stats{flex-wrap:nowrap;gap:0;max-width:100%;}
+#stats .chip{padding:5px 8px;font-size:12.5px;gap:4px;}
+/* the hairline divider styles.css already draws — the 600px breakpoint
+   switched it off because the pill used to wrap; it does not any more */
+#stats .chip+.chip::before{display:block;}
+#stats #lvlChip{padding-bottom:11px;}
+#stats #xpBar{left:8px;right:8px;bottom:4px;height:4px;}
+/* energy is a value you act on, and the row now has room for it */
+#stats #energyChip{display:flex;}
+
+@media (max-width:600px){
+  #topbar #stats{flex-wrap:nowrap;border-radius:999px;gap:0;}
+  #stats .chip{padding:5px 8px;font-size:12.5px;}
+  #stats .chip+.chip::before{display:block;}
+}
+
+/* ---- 2. the market handle is the pill's last chip ---- */
+#topbar #stats #ticker{position:static;order:9;display:flex;flex:0 0 auto;margin:0;padding:0;}
+/* min-height, not more padding: 32px inside the pill's own 3px keeps the
+   handle a real tap target without making the pill taller than 42px */
+#stats #ticker .tk-btn{padding:5px 8px;gap:4px;font-size:12px;font-weight:800;
+  min-height:32px;border:none;box-shadow:none;border-radius:999px;
+  background:rgba(255,184,48,.16);color:var(--accent2);}
+#stats #ticker .tk-btn .tk-car{display:none;}   /* the caret costs 14px and says nothing */
+#stats #ticker .tk-btn .tk-shape{display:none;} /* order shape stays in the panel */
+#stats #ticker .tk-btn.q0 .tk-rate{display:none;} /* 🪙/min only once it is earning */
+
+/* ---- 3. narrow screens: energy folds back to alert-only ----
+   The handoff put this at 359px, measured on a 390px screen. Measured across
+   coin counts instead, the five chips need 278px with a fresh save and 303px
+   at 99,999 coins, and the row has W - 72px to give them (10px each side of
+   #topbar, 52px reserved for the tool column). So the real floor is 375px and
+   the fold has to sit above it, or the market handle hangs out of the end of
+   the pill the moment a player's coins reach four digits — which is what a
+   360px screen did. Energy is the chip that folds because it is the one worth
+   showing conditionally: a full battery is nothing to act on. */
+@media (max-width:383px){
+  #stats #energyChip{display:none;}
+  #stats #energyChip.low{display:flex;}
+}

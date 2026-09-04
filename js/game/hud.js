@@ -10,15 +10,14 @@ function updateHud(){
   setTxt($("lvlEl"),player.level);
   $("xpFill").style.width=Math.min(100,Math.round(player.xp/xpNeed(player.level)*100))+"%";
   const r=R();
-  const parts=Object.keys(r.inv).filter(res=>r.inv[res]>0).sort((a,b)=>r.inv[b]-r.inv[a]);
-  let inv="";
-  parts.slice(0,2).forEach(res=>{inv+=" "+RES[res].em+r.inv[res];});
-  if(parts.length>2)inv+=" +";
-  setTxt($("bagEl"),bagCount(r)+"/"+r.cap+inv);
+  // was: the top-2 inventory emoji appended here, so the chip's width changed
+  // on every collect and the row it sits in could not hold a fixed shape. The
+  // bag's contents live in the 🎒 sheet.
+  setTxt($("bagEl"),bagCount(r)+"/"+r.cap);
   const en=Math.round(r.energy==null?100:r.energy);
   setTxt($("energyEl"),(r.tired?"😴":"⚡")+en);
-  // four status chips + four tools do not fit across 390px — energy shows
-  // only while it is spendable
+  /* .low is still what the 359px-and-under rule keys on, where the row is
+     too narrow to carry energy unless it is worth acting on */
   $("energyChip").classList.toggle("low",en<100);
 }
 function updateFab(){
