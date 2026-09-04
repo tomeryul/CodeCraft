@@ -80,6 +80,21 @@ function renderSettings(){
         localStorage.removeItem(SAVE_KEY); location.reload();
       }
     },"danger");
+
+  /* The build actually running, and a way to force the newest one. A player
+     saying "that change is not here" and this number in the same screenshot
+     settles in one look whether their phone ever loaded it — an app resumed
+     from the home screen can sit on a build from days ago. */
+  const build=(typeof CC_BUILD!=="undefined")?CC_BUILD:"?";
+  settingsRow(el,"\u{1F4E6}","Version "+build,
+    "Tap Update to fetch the newest version of the game.","Update",()=>{
+      const done=()=>location.reload();
+      if(!("serviceWorker" in navigator))return done();
+      navigator.serviceWorker.getRegistrations()
+        .then(rs=>Promise.all(rs.map(r=>r.unregister())))
+        .then(()=>caches.keys().then(ks=>Promise.all(ks.map(k=>caches.delete(k)))))
+        .then(done).catch(done);
+    });
 }
 
 function openSettings(){ renderSettings(); $("settings").classList.add("open"); }

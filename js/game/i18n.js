@@ -659,6 +659,9 @@ const HE={
 /* ---- audit leftovers ---- */
 "Hide":"הסתר",
 "Zigzag":"זיגזג",
+/* ---- version row ---- */
+"Tap Update to fetch the newest version of the game.":
+  "לחץ על עדכן כדי להוריד את הגרסה החדשה ביותר של המשחק.",
 };
 
 /* ui-icons.js also rewrites text nodes: it lifts each emoji into its own
@@ -1325,6 +1328,8 @@ const HE_T={
 "{s} — Lesson {n} (advanced)":"{1} — שיעור {2} (מתקדם)",
 /* ---- audit leftovers ---- */
 "start {n},{n}":"התחלה {1},{2}",
+/* ---- version row ---- */
+"Version {s}":"גרסה {1}",
 };
 
 /* ---- pattern index ----
