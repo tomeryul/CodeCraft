@@ -662,6 +662,17 @@ const HE={
 /* ---- version row ---- */
 "Tap Update to fetch the newest version of the game.":
   "לחץ על עדכן כדי להוריד את הגרסה החדשה ביותר של המשחק.",
+/* ---- resource nouns ---- */
+"wood":"עץ",
+"stone":"אבן",
+"iron":"ברזל",
+"crystal":"גביש",
+"water":"מים",
+"Wood":"עץ",
+"Stone":"אבן",
+"Iron":"ברזל",
+"Crystal":"גביש",
+"Water":"מים",
 };
 
 /* ui-icons.js also rewrites text nodes: it lifts each emoji into its own
@@ -1340,14 +1351,21 @@ const TIDX=new Map();
 function compile(pat,val){
   const parts=pat.split(/(\{[ns]\})/);
   let rx="",kinds=[],anchorWord="";
-  for(const part of parts){
-    if(part==="{n}"){ rx+="(\\d+(?:[.,]\\d+)?)"; kinds.push("n"); }
-    else if(part==="{s}"){ rx+="(.{0,60}?)"; kinds.push("s"); }
-    else{
-      rx+=part.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
-      for(const w of part.match(/[A-Za-z][A-Za-z'-]+/g)||[])
-        if(w.length>anchorWord.length)anchorWord=w;
-    }
+  for(let i=0;i<parts.length;i++){
+    const part=parts[i];
+    if(part==="{n}"){ rx+="(\\d+(?:[.,]\\d+)?)"; kinds.push("n"); continue; }
+    if(part==="{s}"){ rx+="(.{0,60}?)"; kinds.push("s"); continue; }
+    /* A space next to a placeholder is optional. "📣 {s} RUSH!" is filled
+       with an emoji, and the emoji-free form of the pattern therefore has a
+       space with nothing on the other side of it — which the emoji-free
+       form of the live string does not, because trimming took it. Without
+       this the whole pattern misses by one character. */
+    let lit=part,pre="",post="";
+    if(i>0&&/^\s+/.test(lit)){ lit=lit.replace(/^\s+/,""); pre="\\s*"; }
+    if(i<parts.length-1&&/\s+$/.test(lit)){ lit=lit.replace(/\s+$/,""); post="\\s*"; }
+    rx+=pre+lit.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+post;
+    for(const w of lit.match(/[A-Za-z][A-Za-z'-]+/g)||[])
+      if(w.length>anchorWord.length)anchorWord=w;
   }
   if(!anchorWord)return;
   const e={re:new RegExp("^"+rx+"$"),val:val,kinds:kinds};
@@ -1355,7 +1373,24 @@ function compile(pat,val){
   if(!TIDX.has(key))TIDX.set(key,[]);
   TIDX.get(key).push(e);
 }
+/* A captured value is usually a name and passes through untouched, but not
+   always: "the market now wants ⛓️ iron most" captures the resource, and a
+   Hebrew sentence with an English noun dropped into the middle of it reads
+   worse than no translation at all. Each capture gets a whole-string lookup
+   of its own — never the patterns, so this cannot recurse — and anything
+   the dictionary does not know is left exactly as it arrived. */
+function trWord(c){
+  const core=norm(c);
+  if(!core)return c;
+  const raw=IDX_RAW[core];
+  if(raw)return raw;
+  const hit=IDX[core];
+  if(!hit)return c;
+  const e=c.match(EDGE)||["",""];
+  return (e[0]||"")+hit+(e[e.length-1]||"");
+}
 function fill(val,caps){
+  caps=caps.map(c=>c==null?c:trWord(c));
   let i=0;
   return val.replace(/\{(\d+)\}/g,(_,d)=>caps[+d-1]!==undefined?caps[+d-1]:"")
             .replace(/\{[ns]\}/g,()=>caps[i++]!==undefined?caps[i-1]:"");
@@ -1381,7 +1416,18 @@ const IDX={}, IDX_N={}, IDX_RAW={};
 for(const k in HE) IDX[norm(k)]=norm(HE[k]);
 for(const k in HE_RAW) IDX_RAW[norm(k)]=HE_RAW[k];
 for(const k in HE_N) IDX_N[norm(k).replace(NUM,"{n}")]=HE_N[k];
-for(const k in HE_T) compile(norm(k),HE_T[k]);
+/* Every pattern is filed twice: once as written, emoji and all, and once
+   emoji-free. The first is what matches a sentence that reached us intact,
+   and it keeps an emoji that landed INSIDE a captured value — the 💎 in
+   "📣 💎 RUSH!" is the resource, not decoration, and normalising it away
+   put an empty string into the Hebrew. The second is the fallback for a
+   sentence that lost its emoji on the way here. */
+const collapse=s=>String(s).replace(/\s+/g," ").trim();
+for(const k in HE_T){
+  const raw=collapse(k), bare=norm(k);
+  compile(raw,HE_T[k]);
+  if(bare!==raw)compile(bare,HE_T[k]);
+}
 
 /* ---------- the swap ---------- */
 function tr(s,el){
@@ -1408,8 +1454,9 @@ function tr(s,el){
   }
   /* A pattern value carries its own emoji, like HE_RAW, so it is used as
      written rather than wrapped in the node's own leading/trailing ones. */
-  const pat=trTemplate(core);
-  if(pat!==null)return pat;
+  const whole=collapse(s);
+  const pat=trTemplate(whole)||(whole===core?null:trTemplate(core));
+  if(pat!==null&&pat!==undefined)return pat;
   return null;
 }
 /* ui-icons.js lifts every emoji out of the text into its own span, so
@@ -1472,8 +1519,15 @@ function walk(node){
 
 let mo=null;
 function on(){
+  /* lang, and a class — but deliberately NOT dir="rtl". Flipping the page
+     moved every button to the other side, which is a bigger change than the
+     player asked for when they picked a language: controls they had learned
+     the position of swapped over, and every rule written with left/right had
+     to be mirrored to match. Hebrew words, same layout. What RTL was doing
+     for the text itself is done instead by unicode-bidi:plaintext in the
+     stylesheet, per paragraph, without moving anything. */
   document.documentElement.setAttribute("lang","he");
-  document.documentElement.setAttribute("dir","rtl");
+  document.documentElement.classList.add("he");
   walk(document.body);
   if(mo)return;
   mo=new MutationObserver(ms=>{
@@ -1499,7 +1553,8 @@ function on(){
    is a word that appears in both directions. */
 function off(){
   document.documentElement.setAttribute("lang","en");
-  document.documentElement.removeAttribute("dir");
+  document.documentElement.classList.remove("he");
+  document.documentElement.removeAttribute("dir");   // older builds set it
   if(mo){mo.disconnect();mo=null;}
 }
 function i18nApply(){ (typeof lang!=="undefined"&&lang==="he")?on():off(); }

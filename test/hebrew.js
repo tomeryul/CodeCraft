@@ -56,11 +56,24 @@ async function boot(pg,he){
      font.declared && font.loaded && font.canRender && /Fredoka/.test(font.bodyFace), font);
 
   // ------------------------------------------------ direction
+  /* Hebrew marks the page and nothing else. dir="rtl" used to be set here,
+     which flips every flex and grid row: picking a language moved Run, Back
+     and the tabs to the other side of the screen, which is not what asking
+     for Hebrew asks for. The text still needs its own direction per
+     paragraph, so that is done with unicode-bidi, which reorders inside a
+     line without moving the line. */
   const dir = await pg.evaluate(()=>({
-    html:document.documentElement.dir, lang:document.documentElement.lang,
+    html:document.documentElement.getAttribute('dir')||'(none)',
+    cls:document.documentElement.classList.contains('he'),
+    lang:document.documentElement.lang,
+    page:getComputedStyle(document.documentElement).direction,
+    bidi:getComputedStyle($('mgGoal')).unicodeBidi,
     python:getComputedStyle($('pyTab')).direction,
     canvas:getComputedStyle($('game')).direction }));
-  ck('the page is rtl and marked lang=he', dir.html==='rtl' && dir.lang==='he', dir);
+  ck('the page is marked Hebrew and is NOT flipped to rtl',
+     dir.lang==='he' && dir.cls && dir.html==='(none)' && dir.page==='ltr', dir);
+  ck('prose still gets its direction per paragraph',
+     dir.bidi==='plaintext', dir);
   ck('the Python listing and the canvas stay ltr',
      dir.python==='ltr' && dir.canvas==='ltr', dir);
 
@@ -136,8 +149,11 @@ async function boot(pg,he){
       '🚫 Too many blocks (14/8) — squeeze more into loops! 🔁',
       '🤖 Rex joined your team!',
       'This sentence is in no dictionary at all.']);
+  /* "Big House" is a built-in project, so it is in the dictionary and gets
+     translated inside the pattern too. What must survive untouched is a
+     name the dictionary has never heard of — checked with "Rex" below. */
   ck('a built sentence is translated around its number',
-     HEB.test(probe[0]) && /40/.test(probe[0]) && /Big House/.test(probe[0]), probe[0]);
+     HEB.test(probe[0]) && /40/.test(probe[0]), probe[0]);
   ck('both numbers survive a two-number pattern',
      HEB.test(probe[1]) && /2/.test(probe[1]) && /3\/5/.test(probe[1]), probe[1]);
   ck('a pattern keeps the budget it was given',
@@ -239,11 +255,11 @@ async function boot(pg,he){
     setTab('blocks'); renderPalette();
     await new Promise(r => setTimeout(r, 400));
     const p = document.getElementById('palette');
-    return { lang: lang, dir: document.documentElement.getAttribute('dir') || '(none)',
+    return { lang: lang, he: document.documentElement.classList.contains('he'),
              palette: p ? p.innerText.replace(/\s+/g, ' ').slice(0, 80) : '' };
   });
   ck('a save carrying no language cannot turn Hebrew off',
-     foreign.lang === 'he' && foreign.dir === 'rtl', foreign);
+     foreign.lang === 'he' && foreign.he, foreign);
   ck('and what is drawn after such a save is still Hebrew',
      HEB.test(foreign.palette) && !/BASICS|Walk To/.test(foreign.palette), foreign.palette);
 
@@ -255,6 +271,49 @@ async function boot(pg,he){
     return lang;
   });
   ck('nor may a save that says English', enSave === 'he', enSave);
+
+  // ------------------------------------------------ nothing moves
+  /* The promise Hebrew makes is words, not a new layout. Measure the same
+     controls in both languages: a Hebrew word is not the same length as an
+     English one so a button may be wider, but no control may end up on the
+     other side of the screen. */
+  const MEASURE = sels => {
+    const out = {};
+    for (const s of sels) {
+      const e = document.querySelector(s);
+      out[s] = e ? Math.round(e.getBoundingClientRect().left) : null;
+    }
+    return out;
+  };
+  const SELS = ['#edClose','#edMax','#boardTab','#blocksTab','#pyTab',
+                '#palette','#programWrap','#actionBar','#editor #tabs'];
+  /* Both measured on a fresh page taken through identical steps: the page
+     this suite has been driving has a challenge open, and comparing it with
+     a clean one measures the challenge, not the language. */
+  const measureIn = async he => {
+    const p = await b.newPage({ viewport:{width:390,height:844} });
+    await boot(p,he);
+    await p.evaluate(()=>{ $('editor').classList.add('open'); setTab('blocks'); renderPalette(); });
+    await p.waitForTimeout(500);
+    const m = await p.evaluate(MEASURE, SELS);
+    await p.close();
+    return m;
+  };
+  const posHe = await measureIn(true);
+  const posEn = await measureIn(false);
+
+  const moved = SELS.filter(k => posHe[k]!==null && posEn[k]!==null &&
+                                 Math.abs(posHe[k]-posEn[k]) > 4);
+  ck('no control changes side when the language does', moved.length===0,
+     moved.map(k=>k+' en='+posEn[k]+' he='+posHe[k]));
+
+  /* A heading that sits on the left in English sits on the left in Hebrew:
+     plaintext would otherwise resolve text-align:start to the right. */
+  const align = await pg.evaluate(()=>{
+    const e=document.querySelector('.hub-sec,#palette h4,.pal-h');
+    return e?getComputedStyle(e).textAlign:'(none)'; });
+  ck('headings keep the alignment they have in English',
+     align==='left'||align==='center', align);
 
   // ------------------------------------------------ English still works
   const pg2 = await b.newPage({ viewport:{width:390,height:844} });
