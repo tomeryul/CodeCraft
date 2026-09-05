@@ -11,6 +11,18 @@
    styles.css. What is new is the slot row.
    ===================================================================== */
 
+/* ---- the sheets scroll, and the size control works on them ----
+   Both of these bodies were laid out as plain flex children, so anything
+   past the sheet's own height was simply unreachable: the maker overflowed
+   its 78vh by 59px before Build mode existed and by far more with it, and
+   the Save button was what fell off the end. css/codecraft-v5.css already
+   carries the note for the last three bodies this happened to — "survivable
+   while the sheet grew to fit them and is not once its height is fixed" —
+   and these two are named in its size lists now, so it is fixed for them
+   too and the ⛶ in their header finally does something. */
+#styleBody,#makerBody{flex:1 1 0;min-height:0;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;padding:0 2px 10px;}
+
 /* ---- the live preview ---- */
 #styleBody .st-prev{display:flex;align-items:center;justify-content:center;
   margin:14px 0 2px;border-radius:18px;background:rgba(255,255,255,.04);
@@ -120,3 +132,42 @@
 #makerBody .mk-sm{flex:1;min-width:0;min-height:44px;border-radius:13px;border:none;
   font-family:inherit;font-size:13px;font-weight:700;background:transparent;color:var(--ink2);}
 #makerBody .mk-sm.on{background:var(--accent);color:#241b45;}
+
+/* =====================================================================
+   Build mode — boxes, and the HTML they mean
+   ===================================================================== */
+/* the boxes, in draw order: left is behind */
+#makerBody .mk-parts{display:flex;gap:7px;overflow-x:auto;padding:4px 0;margin:12px 0 0;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+#makerBody .mk-parts::-webkit-scrollbar{width:0;height:0;}
+#makerBody .mk-part{position:relative;flex:0 0 auto;width:46px;height:46px;padding:0;
+  display:flex;align-items:center;justify-content:center;border-radius:14px;
+  background:rgba(255,255,255,.06);border:2px solid transparent;font-family:inherit;}
+#makerBody .mk-part.on{border-color:var(--accent);background:rgba(255,184,48,.16);}
+#makerBody .mk-part .pd{width:20px;height:20px;border-radius:6px;}
+/* the ×2 is the whole component lesson in two characters: this look is
+   shared, and the stylesheet underneath shows one rule for both */
+#makerBody .mk-part .px2{position:absolute;right:3px;bottom:2px;font-size:10px;
+  font-weight:800;color:var(--accent2);}
+#makerBody .mk-part.add{border:1px dashed rgba(255,184,48,.55);}
+#makerBody .mk-part.add .pl{font-size:20px;font-weight:700;color:var(--accent2);line-height:1;}
+
+/* the four corner radii, named the way the class name names them */
+#makerBody .mk-shapes{display:flex;gap:6px;margin:10px 0 0;}
+#makerBody .mk-shape{flex:1;min-width:0;min-height:44px;border-radius:13px;border:none;
+  font-family:inherit;font-size:12.5px;font-weight:700;background:var(--panel2);color:var(--ink2);}
+#makerBody .mk-shape.on{background:var(--accent);color:#241b45;}
+
+#makerBody .mk-hint{margin:12px 2px 0;font-size:12.5px;line-height:1.5;color:var(--ink2);}
+
+/* the code the piece means */
+#makerBody .mk-code{margin:14px 0 0;}
+#makerBody #mkCode{margin:0;padding:12px;border-radius:14px;overflow-x:auto;
+  background:rgba(10,6,26,.5);border:1px solid var(--hair);
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.55;
+  color:#dfe3ec;white-space:pre;}
+/* a chip of the colour beside its hex: the fastest way to learn that
+   #5ab8ff IS the blue */
+#makerBody #mkCode .hexsw{display:inline-block;width:9px;height:9px;border-radius:3px;
+  margin-right:4px;vertical-align:-1px;border:1px solid rgba(255,255,255,.25);}
+#makerBody .pynote{margin:8px 2px 0;font-size:12px;line-height:1.5;color:var(--ink2);}

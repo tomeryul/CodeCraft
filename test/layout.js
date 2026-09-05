@@ -573,6 +573,34 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     ck(`${W}x${H} focus does not survive closing the editor`,
        sticky.during && !sticky.after, sticky);
 
+    /* Content past the bottom of a fixed-height sheet has to be reachable.
+       Both of these were laid out as plain flex children with no scroller,
+       so the maker overflowed its own height by 59px and the Save button
+       was what fell off the end. A sheet may not clip: whatever does not
+       fit belongs to a body that scrolls. */
+    const clipped = await pg.evaluate(async () => {
+      const out = [];
+      for (const [id, open] of [['style', () => styleOpen()], ['maker', () => makerOpen('hat', null)]]) {
+        if (typeof window[id === 'style' ? 'styleOpen' : 'makerOpen'] !== 'function') continue;
+        document.querySelectorAll('.sheet.open').forEach(x => x.classList.remove('open'));
+        player.level = 20; player.myWear = [];
+        open();
+        await new Promise(r => setTimeout(r, 300));
+        const sh = document.getElementById(id);
+        const body = document.getElementById(id + 'Body');
+        const scrolls = body && body.scrollHeight > body.clientHeight
+          ? getComputedStyle(body).overflowY !== 'visible' : true;
+        if (sh.scrollHeight > sh.clientHeight + 1 || !scrolls)
+          out.push(id + ' sheet=' + sh.scrollHeight + '/' + sh.clientHeight +
+                   ' body=' + (body ? body.scrollHeight + '/' + body.clientHeight : '?') +
+                   ' scrolls=' + scrolls);
+      }
+      document.querySelectorAll('.sheet.open').forEach(x => x.classList.remove('open'));
+      return out;
+    });
+    await pg.waitForTimeout(300);
+    ck(`${W}x${H} no sheet clips content it cannot scroll to`, clipped.length===0, clipped);
+
     await pg.close();
   }
 

@@ -2451,6 +2451,56 @@ async function ev(expr) {
   check("the blocky/smooth choice is saved with the piece",
     LOOK.sm === false && LOOK.name === 'Blocky one', JSON.stringify(LOOK));
 
+  /* Build mode: a piece made of boxes, and the HTML+CSS it means. The
+     promise is the same one the Python tab makes about blocks — the code is
+     not a picture of the piece, it IS the piece. */
+  const BUILT = JSON.parse(await ev(`(()=>{
+    if(typeof makerOpen!=='function'||!window.CC_CODE)return JSON.stringify({missing:true});
+    mgState=null; mgRobot=null; player.myWear=[]; player.level=20;
+    makerOpen('hat',null);
+    mkKind='parts'; mkParts=[]; renderMaker();
+    mkAddPart(); Object.assign(mkParts[mkSel],{x:8,y:60,w:84,h:15,r:40,c:1});
+    mkAddPart(); Object.assign(mkParts[mkSel],{x:30,y:36,w:13,h:13,r:50,c:0});
+    /* Copy is the component: the twin shares the class, so one rule paints
+       both and only their own style says where each stands */
+    const copy=[...document.querySelectorAll('#makerBody .mk-acts .mk-btn')]
+      .find(b=>b.textContent==='Copy');
+    if(copy)copy.click();
+    mkParts[mkSel].x=57;
+    const code=CC_CODE.code({name:'Cap',parts:mkParts},'hat');
+    const rules=(code.match(/^\\.[a-z]/gm)||[]).length;
+    const divs=(code.match(/<div class="gold-dot"/g)||[]).length;
+    mkName='Cap'; mkSave();
+    const snap=JSON.parse(JSON.stringify(buildSave()));
+    player.myWear=[]; robots[selRobot].hat=null; applySave(snap);
+    const p=player.myWear[0]||{};
+    const shot=w=>{const c=document.createElement('canvas');c.width=c.height=90;
+      const g=c.getContext('2d');drawBoardRobot(g,45,45,40,'E','#ffb830',false,0,w);
+      return g.getImageData(0,0,90,90).data.join(',');};
+    const paints=shot({hat:p.id})!==shot(null);
+    /* a hand-edited save cannot make a box the editor could not */
+    const dirty=JSON.parse(JSON.stringify(snap));
+    dirty.player.myWear=[{id:'my:z9',slot:'hat',name:'x',kind:'parts',
+      parts:[{cls:99,x:9e9,y:'nope',w:-4,h:5000,r:900,c:77}]}];
+    applySave(dirty);
+    const clamped=player.myWear[0].parts[0];
+    player.myWear=[]; robots[selRobot].hat=null; makerExit();
+    return JSON.stringify({rules, divs, kind:p.kind, n:(p.parts||[]).length,
+      worn:p.id?true:false, paints, clamped,
+      hasStyle:code.indexOf('<style>')>=0,
+      sharedHasNoLeft:/\\.gold-dot \\{[^}]*\\}/.test(code)&&!/\\.gold-dot \\{[^}]*left:/.test(code)});
+  })()`));
+  check("Build mode makes a piece out of boxes and saves it",
+    !BUILT.missing && BUILT.kind === 'parts' && BUILT.n === 3 && BUILT.paints === true, JSON.stringify(BUILT));
+  check("the piece comes out as HTML with a stylesheet",
+    BUILT.hasStyle === true && BUILT.rules === 3, JSON.stringify(BUILT));
+  check("two copies share one class, and only their positions differ",
+    BUILT.divs === 2 && BUILT.sharedHasNoLeft === true, JSON.stringify(BUILT));
+  check("a hand-edited parts save is clamped to what the editor can make",
+    BUILT.clamped && BUILT.clamped.cls === 13 && BUILT.clamped.x === 140 &&
+    BUILT.clamped.y === 10 && BUILT.clamped.w === 1 && BUILT.clamped.h === 160 &&
+    BUILT.clamped.r === 50 && BUILT.clamped.c === 15, JSON.stringify(BUILT.clamped));
+
   check("a foreign save's pieces are re-encoded, not trusted",
     Array.isArray(MADE.clean) && MADE.clean.length === 1 &&
     MADE.clean[0] === 'my:a1|img src=x onerror=|144|0', JSON.stringify(MADE.clean));

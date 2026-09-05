@@ -345,6 +345,63 @@ function paintSmooth(g,box,px){
   }
 }
 
+/* =====================================================================
+   Pieces built out of parts
+   ---------------------------------------------------------------------
+   The other way to make a piece, and the one that is really a programming
+   lesson: instead of painting cells, you stack boxes. Every part is a box
+   with a position, a size, a corner radius and a colour — which is exactly
+   what a <div> with a CSS rule is, so js/game/wear-code.js can print the
+   piece as real HTML and CSS that always matches what the robot wears.
+   The game already does this for behaviour: blocks on one tab, the Python
+   they mean on the next. This is the same promise for how a robot looks.
+
+   Numbers are percentages of the slot's own box, 0-100, because that is
+   what they become in the stylesheet: left, top, width, height and a
+   border-radius that goes round both axes at 50%.
+
+   `cls` is the group a part belongs to. Two parts in the same group share
+   one class — one rule, one look, two elements standing in different
+   places — which is a component, spelled the way CSS spells it.
+   ===================================================================== */
+const WEAR_NAME=["Gold","Sand","Amber","Coral","Cherry","Blush","Sky","Ocean",
+  "Leaf","Pine","Violet","Snow","Cloud","Stone","Cocoa","Ink"];
+const PART_MAX=14;
+/* the four radii the game offers, as CSS percentages — and they are exactly
+   the four words a box can be called, so the chip a child taps is the word
+   that ends up in the class name */
+const PART_RAD=[0,15,40,50];
+
+/* border-radius in percent is per-axis — 50% of the width across and 50%
+   of the height down — so a wide box rounds into an ellipse, not a
+   stadium. arcTo cannot do that; four elliptical arcs can. */
+function rrEl(g,x,y,w,h,rx,ry){
+  rx=Math.min(rx,w/2); ry=Math.min(ry,h/2);
+  const P=Math.PI;
+  g.beginPath();
+  g.moveTo(x+rx,y);
+  g.lineTo(x+w-rx,y);
+  g.ellipse(x+w-rx,y+ry,rx,ry,0,-P/2,0);
+  g.lineTo(x+w,y+h-ry);
+  g.ellipse(x+w-rx,y+h-ry,rx,ry,0,0,P/2);
+  g.lineTo(x+rx,y+h);
+  g.ellipse(x+rx,y+h-ry,rx,ry,0,P/2,P);
+  g.lineTo(x,y+ry);
+  g.ellipse(x+rx,y+ry,rx,ry,0,P,P*1.5);
+  g.closePath();
+}
+function paintParts(g,box,parts){
+  if(!Array.isArray(parts))return;
+  for(const pt of parts){
+    const w=box.w*pt.w/100, h=box.h*pt.h/100;
+    if(w<=0||h<=0)continue;
+    const x=box.x+box.w*pt.x/100, y=box.y+box.h*pt.y/100;
+    rrEl(g,x,y,w,h,w*pt.r/100,h*pt.r/100);
+    g.fillStyle=WEAR_PAL[pt.c]||WEAR_PAL[0];
+    g.fill();
+  }
+}
+
 /* Smoothing costs a few hundred path operations per colour, and the world
    redraws every robot sixty times a second — so a smoothed piece is baked
    once into a small canvas and blitted after that. It can be a bitmap
@@ -372,16 +429,23 @@ function bake(slot,px){
   return c;
 }
 function paintPiece(g,slot,p){
-  if(!p||typeof p.px!=="string")return;
-  if(!isSmooth(p)){ paintBlocks(g,WEAR_BOX[slot],p.px); return; }
+  if(!p)return;
   const b=WEAR_BOX[slot];
+  /* parts are already curves and already cheap — a handful of filled
+     rounded rects — so they are drawn straight, with no bake in the way */
+  if(p.kind==="parts"){ paintParts(g,b,p.parts); return; }
+  if(typeof p.px!=="string")return;
+  if(!isSmooth(p)){ paintBlocks(g,b,p.px); return; }
   g.drawImage(bake(slot,p.px),b.x,b.y,b.w,b.h);
 }
 
 window.CC_WEAR={
   outfits:outfits, backs:backs, shoes:shoes,
   pal:WEAR_PAL, key:WEAR_KEY, cells:WEAR_N, max:WEAR_MAX, prefix:WEAR_PRE, box:WEAR_BOX,
+  names:WEAR_NAME, rad:PART_RAD, partMax:PART_MAX,
   isCustom:isCustom,
+  /* the maker's build canvas draws the working parts straight */
+  parts(g,slot,list){const b=WEAR_BOX[slot]; if(b)paintParts(g,b,list);},
   /* body-local; the caller has already clipped to the body square */
   outfit(g,id,color){
     const p=customPiece(id); if(p)return paintPiece(g,"outfit",p);
@@ -439,8 +503,21 @@ window.CC_WEAR={
       }
       const name=(typeof safeText==="function")?safeText(p.name,18):String(p.name||"").slice(0,18);
       seen[p.id]=1;
+      if(p.kind==="parts"){
+        /* Every number is clamped to exactly the range the editor's own drag
+           can produce, so a hand-edited save can make an ugly piece but never
+           a broken one — and never one that paints outside its slot. */
+        const N=(v,lo,hi,d)=>{const n=Math.round(Number(v)); return isFinite(n)?Math.max(lo,Math.min(hi,n)):d;};
+        const parts=(Array.isArray(p.parts)?p.parts:[]).slice(0,PART_MAX).map(q=>({
+          cls:N(q&&q.cls,0,PART_MAX-1,0),
+          x:N(q&&q.x,-40,140,10), y:N(q&&q.y,-40,140,10),
+          w:N(q&&q.w,1,160,30),   h:N(q&&q.h,1,160,30),
+          r:N(q&&q.r,0,50,0),     c:N(q&&q.c,0,WEAR_PAL.length-1,0)
+        }));
+        out.push({id:p.id,slot:slot,name:name||"?",kind:"parts",parts:parts});
+      }
       /* sm is a look, not data: anything but an explicit false means curves */
-      out.push({id:p.id,slot:slot,name:name||"?",px:clean,sm:p.sm!==false});
+      else out.push({id:p.id,slot:slot,name:name||"?",px:clean,sm:p.sm!==false});
       if(out.length>=WEAR_MAX*3)break;
     }
     return out;

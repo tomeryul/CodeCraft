@@ -86,6 +86,24 @@ const HE={
 "Make a piece":"להכין אביזר",
 "Paint your own. It shows up in Style with the rest.":
   "תצייר משלך. זה מופיע בסטייל יחד עם כל השאר.",
+"Paint it, or build it out of boxes and read the HTML it means.":
+  "תצייר אותו, או תבנה אותו מקופסאות ותקרא את ה-HTML שהוא אומר.",
+/* build mode: boxes, and the code they mean */
+"Paint":"ציור","Build":"בנייה",
+"Box":"ריבוע","Tile":"אריח","Pill":"גלולה","Dot":"עיגול",
+"Front":"קדימה","Add a box":"להוסיף קופסה",
+"Add a box first!":"קודם תוסיף קופסה!",
+"That is as many boxes as one piece can hold.":
+  "זה מספר הקופסאות המקסימלי לאביזר אחד.",
+"Add a box to start. Drag it to move it, drag its corner to resize it.":
+  "תוסיף קופסה כדי להתחיל. תגרור אותה כדי להזיז, ותגרור את הפינה כדי לשנות גודל.",
+"This is your piece written in HTML and CSS — the language every web page is made of. Your boxes and this code always match.":
+  "זה האביזר שלך כתוב ב-HTML וב-CSS — השפה שכל אתר באינטרנט עשוי ממנה. הקופסאות שלך והקוד הזה תמיד תואמים.",
+/* the palette's colour names — they are also the words that end up in the
+   class names, so a child sees the swatch they tapped in the stylesheet */
+"Gold":"זהב","Sand":"חול","Amber":"ענבר","Coral":"אלמוג","Cherry":"דובדבן",
+"Blush":"ורוד","Sky":"שמיים","Ocean":"אוקיינוס","Leaf":"עלה","Pine":"אורן",
+"Violet":"סגול","Snow":"שלג","Cloud":"ענן","Stone":"אבן","Cocoa":"קקאו","Ink":"דיו",
 "Name it":"תן שם","Clear":"לנקות","Save":"לשמור","Delete":"למחוק",
 "Piece name":"שם האביזר",
 "Smooth":"חלק","Blocky":"מרובע",
