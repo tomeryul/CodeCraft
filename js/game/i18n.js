@@ -107,6 +107,16 @@ const HE={
 "Could not copy — select the code and copy it by hand.":
   "לא הצלחתי להעתיק — תסמן את הקוד ותעתיק ידנית.",
 "Class name":"שם ה-class",
+/* the component screen */
+"Component":"קונפוננטה",
+"One class, on its own — the robot still shows the rest.":
+  "class אחד, לבד — והרובוט עדיין מראה את כל השאר.",
+"Tap any value like this one to change it":"תלחץ על כל ערך כמו זה כדי לשנות אותו",
+"Done":"סיימתי",
+"One class, and every box that wears it. Change the rule and they all change; the code above is the whole component.":
+  "class אחד, וכל קופסה שלובשת אותו. תשנה את הכלל וכולן משתנות; הקוד למעלה הוא כל הקונפוננטה.",
+"This is your piece written in HTML and CSS — the language every web page is made of. Tap a class name to open that component on its own.":
+  "זה האביזר שלך כתוב ב-HTML וב-CSS — השפה שכל אתר באינטרנט עשוי ממנה. תלחץ על שם של class כדי לפתוח את הקונפוננטה הזאת לבד.",
 /* the CSS property names the editing strip echoes. They are the words in
    the stylesheet, so they stay as they are written there — a property is
    an identifier, not a sentence. */
@@ -1245,6 +1255,7 @@ const HE_T={
 "{s} built!":"{1} נבנה!",
 "{s} is live!":"{1} באוויר!",
 "{s} is yours!":"{1} שלך!",
+"Open {s} on its own":"לפתוח את {1} לבד",
 "{s} is updated!":"{1} עודכן!",
 "{s} steps":"{1} צעדים",
 "{s} — Level {n}/{n}":"{1} — שלב {2}/{3}",

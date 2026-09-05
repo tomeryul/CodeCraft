@@ -580,11 +580,17 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
        fit belongs to a body that scrolls. */
     const clipped = await pg.evaluate(async () => {
       const out = [];
-      for (const [id, open] of [['style', () => styleOpen()], ['maker', () => makerOpen('hat', null)]]) {
-        if (typeof window[id === 'style' ? 'styleOpen' : 'makerOpen'] !== 'function') continue;
+      const opens = {
+        style: () => styleOpen(),
+        maker: () => makerOpen('hat', null),
+        comp:  () => { makerOpen('hat', null); mkKind = 'parts'; mkParts = []; renderMaker();
+                       mkAddPart(); compOpen(mkParts[0].cls); }
+      };
+      for (const id of ['style', 'maker', 'comp']) {
+        if (typeof makerOpen !== 'function' || typeof compOpen !== 'function') continue;
         document.querySelectorAll('.sheet.open').forEach(x => x.classList.remove('open'));
         player.level = 20; player.myWear = [];
-        open();
+        opens[id]();
         await new Promise(r => setTimeout(r, 300));
         const sh = document.getElementById(id);
         const body = document.getElementById(id + 'Body');

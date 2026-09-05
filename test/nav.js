@@ -176,9 +176,31 @@ async function toWorld(pg){
     ck('Exit out of the paint sheet lands on the world',
        await pg.evaluate(()=>document.querySelectorAll('.sheet.open').length===0),
        await pg.evaluate(()=>[...document.querySelectorAll('.sheet.open')].map(s=>s.id)));
+
+    /* A component sits on top of the maker, which sits on Style: Back has to
+       walk that back one page at a time, and Exit still has to skip all of
+       it. Three deep is where a shared Back stops being obvious. */
+    await pg.evaluate(()=>{ player.myWear=[]; makerOpen('hat',null);
+      mkKind='parts'; mkParts=[]; renderMaker(); mkAddPart(); });
+    await pg.waitForTimeout(400);
+    await pg.evaluate(()=>compOpen(mkParts[0].cls));
+    await pg.waitForTimeout(400);
+    await pg.click('#compBack'); await pg.waitForTimeout(400);
+    ck('Back out of a component lands on the whole piece',
+       await pg.evaluate(()=>$('maker').classList.contains('open') &&
+         !$('comp').classList.contains('open') && mkFocus===null),
+       await pg.evaluate(()=>[...document.querySelectorAll('.sheet.open')].map(s=>s.id)));
+    await pg.evaluate(()=>compOpen(mkParts[0].cls));
+    await pg.waitForTimeout(400);
+    await pg.click('#compClose'); await pg.waitForTimeout(400);
+    ck('Exit out of a component lands on the world',
+       await pg.evaluate(()=>document.querySelectorAll('.sheet.open').length===0),
+       await pg.evaluate(()=>[...document.querySelectorAll('.sheet.open')].map(s=>s.id)));
   } else {
     ck('Back out of the paint sheet lands on Style, not the menu', false, 'makerOpen missing');
     ck('Exit out of the paint sheet lands on the world', false, 'makerOpen missing');
+    ck('Back out of a component lands on the whole piece', false, 'makerOpen missing');
+    ck('Exit out of a component lands on the world', false, 'makerOpen missing');
   }
 
   console.log('  pageerrors:', errs.length?errs.slice(0,3):'none');

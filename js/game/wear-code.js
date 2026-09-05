@@ -60,7 +60,11 @@ const C={com:"#8a7fb8",tag:"#ff9d6b",attr:"#5ab8ff",str:"#8ff0a0",
 /* One walk over the piece writes the plain source and the marked-up source
    together, so the two can never drift — the text a player copies out is
    character for character the text they have been tapping. */
-function build(piece,slot,live){
+/* `only` narrows the whole thing to one component: the elements that use
+   that class and the one rule that paints them, and nothing else. It is the
+   same walk and the same tokens — a component screen is not a second
+   renderer, it is this one with a filter. */
+function build(piece,slot,live,only){
   const parts=(piece&&piece.parts)||[];
   const root=slot||(piece&&piece.slot)||"outfit";
   let plain="", html="";
@@ -82,19 +86,29 @@ function build(piece,slot,live){
       :chip+'<span style="color:'+C.str+'">'+ESC(s)+'</span>';
   };
 
-  tok(C.com,"<!-- "+((piece&&piece.name)||"my piece")+" -->");raw("\n");
+  const names=classNames(parts), count={};
+  for(const p of parts)count[p.cls]=(count[p.cls]||0)+1;
+  const mine=p=>only==null||p.cls===only;
+
+  if(only!=null){
+    const n=count[only]||0;
+    tok(C.com,"<!-- ."+names[only]+" — "+(n===1?"one box":n+" boxes share this")+" -->");
+  }else tok(C.com,"<!-- "+((piece&&piece.name)||"my piece")+" -->");
+  raw("\n");
   if(!parts.length){
     tok(C.tag,"<div");raw(" ");tok(C.attr,"class");raw("=");tok(C.str,'"'+root+'"');tok(C.tag,">");
     raw("\n");tok(C.tag,"</div>");raw("\n");
     return {plain,html};
   }
-  const names=classNames(parts), count={};
-  for(const p of parts)count[p.cls]=(count[p.cls]||0)+1;
 
   /* ---- the elements ---- */
-  tok(C.tag,"<div");raw(" ");tok(C.attr,"class");raw("=");tok(C.str,'"'+root+'"');tok(C.tag,">");raw("\n");
+  const ind=only==null?"  ":"";
+  if(only==null){
+    tok(C.tag,"<div");raw(" ");tok(C.attr,"class");raw("=");tok(C.str,'"'+root+'"');tok(C.tag,">");raw("\n");
+  }
   parts.forEach((p,i)=>{
-    raw("  ");tok(C.tag,"<div");raw(" ");tok(C.attr,"class");raw("=");
+    if(!mine(p))return;
+    raw(ind);tok(C.tag,"<div");raw(" ");tok(C.attr,"class");raw("=");
     tok(C.str,'"'+names[p.cls]+'"');
     if(count[p.cls]>1){
       /* the component case: the look is in the rule, the place is here */
@@ -104,19 +118,23 @@ function build(piece,slot,live){
     }
     tok(C.tag,">");tok(C.tag,"</div>");raw("\n");
   });
-  tok(C.tag,"</div>");raw("\n\n");
+  if(only==null){tok(C.tag,"</div>");raw("\n");}
+  raw("\n");
 
   /* ---- the stylesheet ---- */
   tok(C.tag,"<style>");raw("\n");
-  tok(C.sel,"."+root);raw(" {\n  ");
-  tok(C.prop,"position");raw(": relative;\n  ");
-  tok(C.prop,"width");raw(": 100%;\n  ");
-  tok(C.prop,"height");raw(": 100%;\n}\n");
+  if(only==null){
+    tok(C.sel,"."+root);raw(" {\n  ");
+    tok(C.prop,"position");raw(": relative;\n  ");
+    tok(C.prop,"width");raw(": 100%;\n  ");
+    tok(C.prop,"height");raw(": 100%;\n}\n");
+  }
   const done={};
+  let firstRule=only!=null;   /* no root rule above it to be spaced away from */
   parts.forEach((p,i)=>{
-    if(done[p.cls])return; done[p.cls]=1;
+    if(!mine(p)||done[p.cls])return; done[p.cls]=1;
     const shared=count[p.cls]>1;
-    raw("\n");
+    if(firstRule)firstRule=false; else raw("\n");
     val(C.sel,"."+names[p.cls],{k:"name",g:p.cls});raw(" {\n  ");
     tok(C.prop,"position");raw(": absolute;\n  ");
     if(!shared){
@@ -134,8 +152,8 @@ function build(piece,slot,live){
   return {plain,html};
 }
 
-const wearCode=(piece,slot)=>build(piece,slot,false).plain;
-const wearCodeHtml=(piece,slot)=>build(piece,slot,true).html;
+const wearCode=(piece,slot,only)=>build(piece,slot,false,only).plain;
+const wearCodeHtml=(piece,slot,only)=>build(piece,slot,true,only).html;
 
 /* what each field may hold, and how far one tap moves it. The ranges are
    the ones the canvas drag itself produces, so the two ways of editing can

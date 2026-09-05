@@ -390,9 +390,15 @@ function rrEl(g,x,y,w,h,rx,ry){
   g.ellipse(x+rx,y+ry,rx,ry,0,P,P*1.5);
   g.closePath();
 }
-function paintParts(g,box,parts){
+/* `focus`, when it is a class id, dims every box that does not belong to
+   it — in place, so the stacking order a player built is still what they
+   see. It is how the component screen keeps the rest of the piece visible
+   without letting it compete. */
+function paintParts(g,box,parts,focus){
   if(!Array.isArray(parts))return;
+  const a0=g.globalAlpha;
   for(const pt of parts){
+    if(focus!=null)g.globalAlpha=a0*(pt.cls===focus?1:.25);
     const w=box.w*pt.w/100, h=box.h*pt.h/100;
     if(w<=0||h<=0)continue;
     const x=box.x+box.w*pt.x/100, y=box.y+box.h*pt.y/100;
@@ -405,6 +411,7 @@ function paintParts(g,box,parts){
     g.fill();
     if(a)g.restore();
   }
+  g.globalAlpha=a0;
 }
 
 /* Smoothing costs a few hundred path operations per colour, and the world
@@ -450,7 +457,7 @@ window.CC_WEAR={
   names:WEAR_NAME, rad:PART_RAD, partMax:PART_MAX,
   isCustom:isCustom,
   /* the maker's build canvas draws the working parts straight */
-  parts(g,slot,list){const b=WEAR_BOX[slot]; if(b)paintParts(g,b,list);},
+  parts(g,slot,list,focus){const b=WEAR_BOX[slot]; if(b)paintParts(g,b,list,focus);},
   /* body-local; the caller has already clipped to the body square */
   outfit(g,id,color){
     const p=customPiece(id); if(p)return paintPiece(g,"outfit",p);

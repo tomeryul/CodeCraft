@@ -2536,10 +2536,17 @@ async function ev(expr) {
     /* the two positions belong to the elements, not the rule */
     tok('x',null,1).click(); bump('-1');
     out.x=[mkParts[1].x,mkParts[2].x];
-    /* the class is the player's to name, and renaming it renames it in the
-       HTML at the same time, because there is only one name */
+    /* the code the piece means and the code on screen are one text */
+    out.plainMatchesShown=CC_CODE.code({name:'Cap',parts:mkParts},'hat')
+      .replace(/\\s+/g,' ')===document.getElementById('mkCode').textContent.replace(/\\s+/g,' ');
+    /* a class name is a way in: tapping it opens that component alone */
     tok('name',1).click();
-    const inp=document.querySelector('#mkIns .mk-insname');
+    out.compOpen=document.getElementById('comp').classList.contains('open')
+      && !document.getElementById('maker').classList.contains('open') && mkFocus===1;
+    out.compCode=document.getElementById('cpCode').textContent;
+    /* renaming it there renames it in the HTML at the same time, because
+       there is only one name */
+    const inp=document.getElementById('cpName');
     inp.value='stud'; inp.dispatchEvent(new Event('input'));
     const src=CC_CODE.code({name:'Cap',parts:mkParts},'hat');
     out.divs=(src.match(/class="stud"/g)||[]).length;
@@ -2548,9 +2555,32 @@ async function ev(expr) {
     out.junkName=CC_CODE.classNames(mkParts)[1];
     inp.value='!!!'; inp.dispatchEvent(new Event('input'));
     out.emptyName=CC_CODE.classNames(mkParts)[1];
-    /* the code the piece means and the code on screen are one text */
-    out.plainMatchesShown=CC_CODE.code({name:'Cap',parts:mkParts},'hat')
-      .replace(/\\s+/g,' ')===document.getElementById('mkCode').textContent.replace(/\\s+/g,' ');
+    /* the rest of the piece is still on the canvas behind it, and the robot
+       beside it still wears everything */
+    out.othersDrawn=(()=>{
+      /* two boxes that do not overlap: with a focus set, the one outside it
+         must still reach the canvas, and must not reach it at full strength */
+      const two=[{cls:0,x:5,y:5,w:30,h:30,r:0,a:0,c:0},
+                 {cls:1,x:60,y:60,w:30,h:30,r:0,a:0,c:6}];
+      /* parts paint in body units, so the box has to be mapped onto the
+         canvas the way both editing screens map it */
+      const bx=CC_WEAR.box.hat, k=80/bx.w;
+      const shot=f=>{const c=document.createElement('canvas');c.width=c.height=80;
+        const g=c.getContext('2d');
+        g.setTransform(k,0,0,k,-bx.x*k,-bx.y*k);
+        CC_WEAR.parts(g,'hat',two,f);
+        return g.getImageData(0,0,80,80).data;};
+      const plain=shot(null), focused=shot(1);
+      let ghost=0, same=0;
+      for(let i=3;i<plain.length;i+=4){
+        if(plain[i]>200&&focused[i]>0&&focused[i]<200)ghost++;
+        if(plain[i]>200&&focused[i]===plain[i])same++;
+      }
+      return ghost>50&&same>50;   /* one group dimmed, the other untouched */
+    })();
+    compClose();
+    out.backInMaker=document.getElementById('maker').classList.contains('open')
+      && !document.getElementById('comp').classList.contains('open') && mkFocus===null;
     /* rotation reaches the canvas */
     const shot=a=>{const c=document.createElement('canvas');c.width=c.height=80;
       const g=c.getContext('2d');
@@ -2571,8 +2601,20 @@ async function ev(expr) {
     Array.isArray(CODE.a) && CODE.a[0] === -15 && CODE.a[1] === -15, JSON.stringify(CODE));
   check("left belongs to the element, so only one copy moves",
     Array.isArray(CODE.x) && CODE.x[0] === 29 && CODE.x[1] !== 29, JSON.stringify(CODE));
+  check("a class name opens that component on its own screen",
+    CODE.compOpen === true, JSON.stringify(CODE));
+  /* only that class: its own elements and its own rule, and no other */
+  check("the component screen shows that component's code and no other",
+    typeof CODE.compCode === 'string' &&
+    CODE.compCode.indexOf('.gold-dot') >= 0 &&
+    CODE.compCode.indexOf('sand-pill') < 0 &&
+    CODE.compCode.indexOf('.hat {') < 0 &&
+    (CODE.compCode.match(/<div /g)||[]).length === 2, JSON.stringify(CODE.compCode));
+  check("the rest of the piece stays on the component screen's canvas, dimmed",
+    CODE.othersDrawn === true, JSON.stringify(CODE.othersDrawn));
   check("renaming the class renames it in the HTML too",
     CODE.divs === 2 && CODE.rules === 1, JSON.stringify(CODE));
+  check("Done goes back to the whole piece", CODE.backInMaker === true, JSON.stringify(CODE));
   /* whatever a child types, what reaches the stylesheet is an identifier —
      stripped down to one where it can be, and the derived name where it
      cannot. Nothing typed here can spell markup. */

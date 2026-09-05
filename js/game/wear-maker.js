@@ -27,6 +27,14 @@ let mkKind="grid", mkParts=[], mkSel=-1, mkDrag=null;
 /* which token in the code is being edited: {k, i} for the two values an
    element owns, {k, g} for the five the shared rule owns, null for none */
 let mkVal=null;
+/* Which component has the screen to itself, or null for the whole piece.
+   The two screens share every function below — the canvas, the drag, the
+   code, the editing strip — because a component screen is not a second
+   editor, it is this one with a filter. Only the ids differ, so that both
+   sheets can be in the DOM at once. */
+let mkFocus=null;
+const CID=()=>mkFocus!=null?"cp":"mk";
+const mkRender=()=>{ if(mkFocus!=null)renderComp(); else renderMaker(); };
 const PART_WORD=["Box","Tile","Pill","Dot"];
 
 function myWear(){ if(!player.myWear)player.myWear=[]; return player.myWear; }
@@ -74,7 +82,9 @@ function makerOpen(slot,id){
    screen on its way past. */
 function makerExit(){
   CC_WEAR.setDraft(null);
+  mkFocus=null; mkVal=null;
   $("maker").classList.remove("open");
+  $("comp").classList.remove("open");
 }
 function makerClose(){ makerExit(); styleOpen(); }
 
@@ -106,7 +116,7 @@ function mkGuide(g,W,H){
   g.restore();
 }
 function mkDraw(){
-  const c=$("mkCanvas"); if(!c)return;
+  const c=$(CID()+"Canvas"); if(!c)return;
   const W=Math.max(120,Math.round(c.clientWidth||264)), H=W;
   const d=Math.min(2,window.devicePixelRatio||1);
   if(c.width!==Math.round(W*d)){c.width=Math.round(W*d);c.height=Math.round(H*d);}
@@ -119,7 +129,7 @@ function mkDraw(){
   const b=CC_WEAR.box[mkSlot], n=CC_WEAR.cells, cw=W/n, k=W/b.w;
   g.save();
   g.setTransform(d*k,0,0,d*k,-b.x*k*d,-b.y*k*d);
-  if(mkKind==="parts")CC_WEAR.parts(g,mkSlot,mkParts);
+  if(mkKind==="parts")CC_WEAR.parts(g,mkSlot,mkParts,mkFocus);
   else CC_WEAR.grid(g,mkSlot,mkStr(),mkSm);
   g.restore();
   if(mkKind==="parts"){ mkHandles(g,W,H); return; }
@@ -147,7 +157,7 @@ function mkPlay(){
   if(mkRaf)return;
   const step=ts=>{
     mkRaf=0;
-    const sheet=$("maker"), cv=$("mkPrev");
+    const sheet=$(mkFocus!=null?"comp":"maker"), cv=$(CID()+"Prev");
     if(!sheet||!sheet.classList.contains("open")||!cv){CC_WEAR.setDraft(null);return;}
     CC_WEAR.setDraft(mkKind==="parts"
       ?{id:mkId,kind:"parts",parts:mkParts}
@@ -221,7 +231,7 @@ function renderMaker(){
     else{b.style.background=CC_WEAR.pal[i];b.setAttribute("aria-label",CC_WEAR.names[i]);}
     b.addEventListener("click",()=>{
       mkColor=i;
-      if(mkKind==="parts"&&i>=0&&mkParts[mkSel]){ mkGroup(p2=>{p2.c=i;}); renderMaker(); return; }
+      if(mkKind==="parts"&&i>=0&&mkParts[mkSel]){ mkGroup(p2=>{p2.c=i;}); mkRender(); return; }
       [...pal.children].forEach(n=>n.classList.remove("on"));b.classList.add("on");
     });
     pal.appendChild(b);
@@ -259,31 +269,7 @@ function renderMaker(){
   row.appendChild(nm);
   body.appendChild(row);
 
-  if(mkKind==="parts"){
-    /* The same promise the Python tab makes about blocks, made about boxes —
-       except every number here is a real declaration, so every number here
-       can be tapped. Dragging roughs it out; the code is where you say
-       exactly 42%. */
-    const cw=document.createElement("div");cw.className="mk-code";
-    const pre=document.createElement("pre");pre.className="mono";pre.id="mkCode";
-    body.appendChild(cw);
-    pre.addEventListener("click",e=>{
-      const b=e.target.closest(".val"); if(!b)return;
-      mkPick({k:b.dataset.k,
-        i:b.dataset.i!=null?+b.dataset.i:null,
-        g:b.dataset.g!=null?+b.dataset.g:null});
-    });
-    cw.appendChild(pre);
-    mkCodeRefresh();
-    cw.appendChild(mkInspector());
-    const note=document.createElement("div");note.className="pynote";
-    note.textContent="This is your piece written in HTML and CSS — the language every web page is made of. Tap any value to change it exactly.";
-    cw.appendChild(note);
-    const cp=document.createElement("button");cp.type="button";cp.className="mk-btn mk-copy";
-    cp.textContent="Copy code";
-    cp.addEventListener("click",mkCopy);
-    cw.appendChild(cp);
-  }
+  if(mkKind==="parts")body.appendChild(mkCodeBlock());
 
   const acts=document.createElement("div");acts.className="mk-acts";
   const save=document.createElement("button");save.type="button";save.className="mk-btn go";
@@ -320,7 +306,7 @@ function mkAddPart(){
   mkParts.push({cls:mkNewCls(),x:32,y:38,w:36,h:24,r:CC_WEAR.rad[1],a:0,
     c:mkColor<0?0:mkColor});
   mkSel=mkParts.length-1;
-  renderMaker();
+  mkRender();
   if(typeof sfx==="function")sfx(660,.04);
 }
 function mkBuildUI(body){
@@ -339,7 +325,12 @@ function mkBuildUI(body){
     b.innerHTML='<span class="pd" style="background:'+CC_WEAR.pal[p.c]+
       '"></span>'+(n>1?'<span class="px2">×'+n+'</span>':'');
     b.setAttribute("aria-label","."+cls[p.cls]);
-    b.addEventListener("click",()=>{ mkSel=i; renderMaker(); });
+    /* a second tap on the box you already have opens its component — the
+       same idiom the Style row uses for a piece you are already wearing */
+    b.addEventListener("click",()=>{
+      if(i===mkSel){ compOpen(p.cls); return; }
+      mkSel=i; renderMaker();
+    });
     chips.appendChild(b);
   });
   const add=document.createElement("button");add.type="button";add.className="mk-part add";
@@ -361,7 +352,7 @@ function mkBuildUI(body){
   CC_WEAR.rad.forEach((r,i)=>{
     const b=document.createElement("button");b.type="button";
     b.className="mk-shape"+(sel.r===r?" on":"");b.textContent=PART_WORD[i];
-    b.addEventListener("click",()=>{ mkGroup(p=>{p.r=r;}); renderMaker(); });
+    b.addEventListener("click",()=>{ mkGroup(p=>{p.r=r;}); mkRender(); });
     shp.appendChild(b);
   });
   body.appendChild(shp);
@@ -376,17 +367,23 @@ function mkBuildUI(body){
   btn("Copy","",()=>{
     if(mkParts.length>=CC_WEAR.partMax){ toast("That is as many boxes as one piece can hold."); return; }
     const c={...sel}; c.x=Math.max(-40,Math.min(140,c.x+Math.round(c.w*.6)));
-    mkParts.push(c); mkSel=mkParts.length-1; renderMaker();
+    mkParts.push(c); mkSel=mkParts.length-1; mkRender();
     if(typeof sfx==="function")sfx(720,.04);
   });
   btn("Front","",()=>{
-    const p=mkParts.splice(mkSel,1)[0]; mkParts.push(p); mkSel=mkParts.length-1; renderMaker();
+    const p=mkParts.splice(mkSel,1)[0]; mkParts.push(p); mkSel=mkParts.length-1; mkRender();
   });
   btn("Delete","danger",()=>{
-    mkParts.splice(mkSel,1); mkSel=Math.min(mkSel,mkParts.length-1); renderMaker();
+    mkParts.splice(mkSel,1); mkSel=Math.min(mkSel,mkParts.length-1); mkRender();
     if(typeof sfx==="function")sfx(360,.05);
   });
   body.appendChild(acts);
+
+  /* the way in that does not need to be discovered */
+  const open=document.createElement("button");open.type="button";open.className="mk-btn mk-open";
+  open.innerHTML='Open <b>.'+esc(CC_CODE.classNames(mkParts)[sel.cls]||"")+'</b> on its own';
+  open.addEventListener("click",()=>compOpen(sel.cls));
+  body.appendChild(open);
 }
 
 /* Drag inside the selected box to move it; drag its corner grip to resize.
@@ -400,6 +397,9 @@ function wireParts(c){
   const hit=q=>{
     for(let i=mkParts.length-1;i>=0;i--){
       const p=mkParts[i];
+      /* on a component screen the rest of the piece is there to look at,
+         not to grab: a stray tap on the hat must not pull the brim */
+      if(mkFocus!=null&&p.cls!==mkFocus)continue;
       if(q.x>=p.x&&q.y>=p.y&&q.x<=p.x+p.w&&q.y<=p.y+p.h)return i;
     }
     return -1;
@@ -417,10 +417,10 @@ function wireParts(c){
       }
     }
     const i=hit(q);
-    if(i<0){ if(mkSel!==-1){mkSel=-1;renderMaker();} mkDrag=null; return; }
+    if(i<0){ if(mkSel!==-1&&mkFocus==null){mkSel=-1;mkRender();} mkDrag=null; return; }
     const p=mkParts[i];
     mkDrag={mode:"move",ox:q.x-p.x,oy:q.y-p.y};
-    if(i!==mkSel){ mkSel=i; renderMaker(); } else mkDraw();
+    if(i!==mkSel){ mkSel=i; mkRender(); } else mkDraw();
   });
   c.addEventListener("pointermove",e=>{
     if(mkPaint!==e.pointerId||!mkDrag)return;
@@ -456,13 +456,18 @@ function mkValParts(){
   return mkParts.filter(p=>p.cls===mkVal.g);
 }
 function mkPick(v){
+  if(v.k==="name"){
+    if(mkFocus==null){ compOpen(v.g); return; }
+    const n=$("cpName"); if(n){ n.focus(); n.select&&n.select(); }
+    return;
+  }
   mkVal=(mkVal&&mkVal.k===v.k&&mkVal.i===v.i&&mkVal.g===v.g)?null:v;
   if(mkVal){
     const at=mkVal.i!=null?mkVal.i:mkParts.findIndex(p=>p.cls===mkVal.g);
     if(at>=0)mkSel=at;
   }
-  renderMaker();
-  const ins=$("mkIns"); if(ins&&mkVal)ins.scrollIntoView({block:"nearest"});
+  mkRender();
+  const ins=$(CID()+"Ins"); if(ins&&mkVal)ins.scrollIntoView({block:"nearest"});
 }
 function mkNudge(d){
   const f=CC_CODE.field[mkVal.k]; if(!f)return;
@@ -475,30 +480,14 @@ function mkNudge(d){
   if(typeof sfx==="function")sfx(620,.02);
 }
 function mkInsRefresh(){
-  const v=$("mkInsVal"); if(!v||!mkVal)return;
+  const v=$(CID()+"InsVal"); if(!v||!mkVal)return;
   const f=CC_CODE.field[mkVal.k], list=mkValParts();
   if(f&&list.length)v.textContent=(mkVal.k==="a"?(list[0].a|0):list[0][mkVal.k])+f.unit;
 }
 function mkInspector(){
-  const box=document.createElement("div");box.className="mk-ins";box.id="mkIns";
+  const box=document.createElement("div");box.className="mk-ins";box.id=CID()+"Ins";
   if(!mkVal||!mkValParts().length){ box.hidden=true; return box; }
   const f=CC_CODE.field[mkVal.k], list=mkValParts(), p=list[0];
-
-  if(mkVal.k==="name"){
-    const lab=document.createElement("span");lab.className="mk-inslab";lab.textContent="class";
-    box.appendChild(lab);
-    const inp=document.createElement("input");inp.type="text";inp.className="mk-insname";
-    inp.maxLength=16;inp.setAttribute("aria-label","Class name");
-    inp.value=CC_CODE.classNames(mkParts)[mkVal.g]||"";
-    const put=()=>{
-      const n=CC_CODE.cleanName(inp.value);
-      for(const q of mkParts)if(q.cls===mkVal.g){ if(n)q.cn=n; else delete q.cn; }
-      mkCodeRefresh();
-    };
-    inp.addEventListener("input",put);
-    box.appendChild(inp);
-    return box;
-  }
 
   if(mkVal.k==="c"){
     const lab=document.createElement("span");lab.className="mk-inslab";lab.textContent="background";
@@ -509,7 +498,7 @@ function mkInspector(){
       b.className="mk-insdot"+(p.c===i?" on":"");
       b.style.background=CC_WEAR.pal[i];
       b.setAttribute("aria-label",CC_WEAR.names[i]);
-      b.addEventListener("click",()=>{ for(const q of list)q.c=i; mkColor=i; renderMaker(); });
+      b.addEventListener("click",()=>{ for(const q of list)q.c=i; mkColor=i; mkRender(); });
       row.appendChild(b);
     }
     box.appendChild(row);
@@ -529,7 +518,7 @@ function mkInspector(){
      for an SVG glyph, which would leave one button an icon and its twin
      across the value plain text */
   step(-f.big,"-"+f.big); step(-f.step,"-1");
-  const v=document.createElement("span");v.className="mk-insval";v.id="mkInsVal";
+  const v=document.createElement("span");v.className="mk-insval";v.id=CID()+"InsVal";
   v.textContent=(mkVal.k==="a"?(p.a|0):p[mkVal.k])+f.unit;
   box.appendChild(v);
   step(f.step,"+1"); step(f.big,"+"+f.big);
@@ -540,7 +529,7 @@ function mkInspector(){
    in any HTML file. Copying it out is the shortest path from this game to a
    real browser, so it is one button. */
 function mkCopy(){
-  const src=CC_CODE.code({name:mkName||"my piece",parts:mkParts},mkSlot);
+  const src=CC_CODE.code({name:mkName||"my piece",parts:mkParts},mkSlot,mkFocus);
   const done=()=>toast("Copied! Paste it into an HTML file to see it in a browser.");
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(src).then(done).catch(()=>mkCopyFallback(src,done));
@@ -557,9 +546,12 @@ function mkCopyFallback(src,done){
   }catch(_){ toast("Could not copy — select the code and copy it by hand."); }
 }
 
-function mkCodeRefresh(){
-  const pre=$("mkCode"); if(!pre)return;
-  pre.innerHTML=CC_CODE.html({name:mkName||"my piece",parts:mkParts},mkSlot);
+/* `el` is passed while the block is still being assembled: getElementById
+   cannot find a <pre> that is not in the document yet, and the first fill
+   happens before the caller appends it. */
+function mkCodeRefresh(el){
+  const pre=el||$(CID()+"Code"); if(!pre)return;
+  pre.innerHTML=CC_CODE.html({name:mkName||"my piece",parts:mkParts},mkSlot,mkFocus);
   /* the click handler lives on <pre>, so replacing its children keeps it —
      only the mark on the chosen token has to be put back */
   if(!mkVal)return;
@@ -568,6 +560,175 @@ function mkCodeRefresh(){
     const i=b.dataset.i!=null?+b.dataset.i:null, g=b.dataset.g!=null?+b.dataset.g:null;
     if(i===mkVal.i&&g===mkVal.g){ b.classList.add("on"); break; }
   }
+}
+
+/* The code block, on either screen. The same promise the Python tab makes
+   about blocks, made about boxes — except every number here is a real
+   declaration in a real rule, so every number here can be tapped. Dragging
+   roughs a box out; the code is where you say exactly 42%.
+
+   The hint sits ABOVE the code, because a hint under three screens of
+   stylesheet is a hint nobody reads. */
+function mkCodeBlock(){
+  const cw=document.createElement("div");cw.className="mk-code";
+  const hint=document.createElement("div");hint.className="mk-tip";
+  hint.innerHTML='<span class="mk-tipk">42%</span>'+
+    '<span class="mk-tipt">Tap any value like this one to change it</span>';
+  cw.appendChild(hint);
+  const pre=document.createElement("pre");pre.className="mono";pre.id=CID()+"Code";
+  pre.addEventListener("click",e=>{
+    const b=e.target.closest(".val"); if(!b)return;
+    mkPick({k:b.dataset.k,
+      i:b.dataset.i!=null?+b.dataset.i:null,
+      g:b.dataset.g!=null?+b.dataset.g:null});
+  });
+  cw.appendChild(pre);
+  mkCodeRefresh(pre);
+  cw.appendChild(mkInspector());
+  const note=document.createElement("div");note.className="pynote";
+  note.textContent=mkFocus!=null
+    ?"One class, and every box that wears it. Change the rule and they all change; the code above is the whole component."
+    :"This is your piece written in HTML and CSS — the language every web page is made of. Tap a class name to open that component on its own.";
+  cw.appendChild(note);
+  const cp=document.createElement("button");cp.type="button";cp.className="mk-btn mk-copy";
+  cp.textContent="Copy code";
+  cp.addEventListener("click",mkCopy);
+  cw.appendChild(cp);
+  return cw;
+}
+
+/* ---------------- one component, on its own screen ----------------
+   Everything a component needs is here and nothing else is: its class, its
+   boxes, its rule. What it does NOT hide is the rest of the piece — the
+   other boxes stay on the canvas at a quarter strength and the robot beside
+   it wears everything it owns, because you cannot design a brim without
+   seeing the hat it goes under. */
+function compOpen(cls){
+  if(mkKind!=="parts")return;
+  const at=mkParts.findIndex(p=>p.cls===cls);
+  if(at<0)return;
+  mkFocus=cls; mkSel=at; mkVal=null;
+  $("maker").classList.remove("open");
+  renderComp();
+  $("comp").classList.add("open");
+  if(typeof sfx==="function")sfx(640,.04);
+}
+function compExit(){
+  mkFocus=null; mkVal=null;
+  $("comp").classList.remove("open");
+}
+function compClose(){
+  compExit();
+  renderMaker();
+  $("maker").classList.add("open");
+}
+
+function renderComp(){
+  const body=$("compBody"); if(!body)return;
+  body.innerHTML="";
+  const list=mkParts.filter(p=>p.cls===mkFocus);
+  if(!list.length){ compClose(); return; }
+  const names=CC_CODE.classNames(mkParts);
+
+  /* the class, first and editable, because the name IS the component */
+  const head=document.createElement("div");head.className="cp-name";
+  const dot=document.createElement("span");dot.className="cp-dot";
+  dot.style.background=CC_WEAR.pal[list[0].c];
+  head.appendChild(dot);
+  const dotlab=document.createElement("span");dotlab.className="cp-sel";dotlab.textContent=".";
+  head.appendChild(dotlab);
+  const inp=document.createElement("input");inp.type="text";inp.id="cpName";inp.className="cp-input";
+  inp.maxLength=16;inp.setAttribute("aria-label","Class name");
+  inp.value=names[mkFocus]||"";
+  inp.addEventListener("input",()=>{
+    const n=CC_CODE.cleanName(inp.value);
+    for(const q of mkParts)if(q.cls===mkFocus){ if(n)q.cn=n; else delete q.cn; }
+    mkCodeRefresh();
+  });
+  head.appendChild(inp);
+  const many=document.createElement("span");many.className="cp-many";
+  many.textContent=list.length>1?"×"+list.length:"";
+  head.appendChild(many);
+  body.appendChild(head);
+
+  /* the canvas, with the rest of the piece behind it, and the robot */
+  const stage=document.createElement("div");stage.className="mk-stage";
+  const pv=document.createElement("div");pv.className="mk-prev";
+  const pc=document.createElement("canvas");pc.id="cpPrev";pv.appendChild(pc);
+  const pad=document.createElement("div");pad.className="mk-pad";
+  const cc=document.createElement("canvas");cc.id="cpCanvas";pad.appendChild(cc);
+  stage.appendChild(pad);stage.appendChild(pv);
+  body.appendChild(stage);
+
+  /* which of this component's boxes you are moving, when there is a choice */
+  if(list.length>1){
+    const chips=document.createElement("div");chips.className="mk-parts";
+    mkParts.forEach((p,i)=>{
+      if(p.cls!==mkFocus)return;
+      const b=document.createElement("button");b.type="button";
+      b.className="mk-part"+(i===mkSel?" on":"");
+      b.innerHTML='<span class="pd" style="background:'+CC_WEAR.pal[p.c]+'"></span>';
+      b.setAttribute("aria-label","."+names[mkFocus]);
+      b.addEventListener("click",()=>{ mkSel=i; mkVal=null; renderComp(); });
+      chips.appendChild(b);
+    });
+    body.appendChild(chips);
+  }
+
+  /* the colours and the corner radius, both of which the rule owns */
+  const pal=document.createElement("div");pal.className="mk-pal";
+  for(let i=0;i<CC_WEAR.pal.length;i++){
+    const b=document.createElement("button");b.type="button";
+    b.className="mk-dot"+(list[0].c===i?" on":"");
+    b.style.background=CC_WEAR.pal[i];
+    b.setAttribute("aria-label",CC_WEAR.names[i]);
+    b.addEventListener("click",()=>{ for(const q of list)q.c=i; mkColor=i; renderComp(); });
+    pal.appendChild(b);
+  }
+  body.appendChild(pal);
+
+  const shp=document.createElement("div");shp.className="mk-shapes";
+  CC_WEAR.rad.forEach((r,i)=>{
+    const b=document.createElement("button");b.type="button";
+    b.className="mk-shape"+(list[0].r===r?" on":"");b.textContent=PART_WORD[i];
+    b.addEventListener("click",()=>{ for(const q of list)q.r=r; renderComp(); });
+    shp.appendChild(b);
+  });
+  body.appendChild(shp);
+
+  const acts=document.createElement("div");acts.className="mk-acts";
+  const btn=(lab,cls,fn)=>{
+    const b=document.createElement("button");b.type="button";b.className="mk-btn"+(cls?" "+cls:"");
+    b.textContent=lab;b.addEventListener("click",fn);acts.appendChild(b);
+  };
+  btn("Copy","",()=>{
+    if(mkParts.length>=CC_WEAR.partMax){ toast("That is as many boxes as one piece can hold."); return; }
+    const c={...mkParts[mkSel]}; c.x=Math.max(-40,Math.min(140,c.x+Math.round(c.w*.6)));
+    mkParts.push(c); mkSel=mkParts.length-1; renderComp();
+    if(typeof sfx==="function")sfx(720,.04);
+  });
+  btn("Front","",()=>{
+    const p=mkParts.splice(mkSel,1)[0]; mkParts.push(p); mkSel=mkParts.length-1; renderComp();
+  });
+  btn("Delete","danger",()=>{
+    for(let i=mkParts.length-1;i>=0;i--)if(mkParts[i].cls===mkFocus)mkParts.splice(i,1);
+    if(typeof sfx==="function")sfx(360,.05);
+    compClose();
+  });
+  body.appendChild(acts);
+
+  body.appendChild(mkCodeBlock());
+
+  const done=document.createElement("div");done.className="mk-acts";
+  const d=document.createElement("button");d.type="button";d.className="mk-btn go";
+  d.textContent="Done";
+  d.addEventListener("click",compClose);
+  done.appendChild(d);
+  body.appendChild(done);
+
+  wireParts(cc);
+  requestAnimationFrame(mkDraw);
+  mkPlay();
 }
 
 /* Painting is pointer-driven so a dragged finger fills a line of cells.
