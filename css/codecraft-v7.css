@@ -171,3 +171,37 @@
 #makerBody #mkCode .hexsw{display:inline-block;width:9px;height:9px;border-radius:3px;
   margin-right:4px;vertical-align:-1px;border:1px solid rgba(255,255,255,.25);}
 #makerBody .pynote{margin:8px 2px 0;font-size:12px;line-height:1.5;color:var(--ink2);}
+
+/* ---- every value in the code is a control ----
+   A token cannot be 44px tall inside a 12px stylesheet, and it does not
+   need to be: the tap only chooses, and the strip below does the precise
+   work with buttons that are. The padding still buys about 22px of target,
+   and the dotted underline is what says "this one is yours to change". */
+#makerBody #mkCode .val{display:inline;padding:2px 3px;margin:-2px -1px;border:none;
+  background:none;font:inherit;border-radius:5px;
+  border-bottom:1px dashed rgba(255,255,255,.32);}
+#makerBody #mkCode .val.on{background:rgba(255,184,48,.24);
+  border-bottom-color:var(--accent);box-shadow:0 0 0 1px rgba(255,184,48,.45);}
+#makerBody #mkCode .val.col{border-bottom-color:rgba(255,255,255,.32);}
+
+/* the strip that edits whatever token is chosen */
+#makerBody .mk-ins{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  margin:8px 0 0;padding:7px;border-radius:15px;background:rgba(255,184,48,.10);
+  border:1px solid rgba(255,184,48,.35);}
+#makerBody .mk-inslab{flex:0 0 auto;padding:0 4px;font-family:ui-monospace,Menlo,Consolas,monospace;
+  font-size:12px;font-weight:700;color:var(--accent2);}
+#makerBody .mk-insval{flex:1;min-width:52px;text-align:center;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;font-weight:800;color:var(--ink);}
+#makerBody .mk-step{flex:0 0 auto;min-width:48px;min-height:44px;border-radius:13px;border:none;
+  font-family:inherit;font-size:13px;font-weight:800;background:var(--panel2);color:var(--ink);}
+#makerBody .mk-step:active{transform:scale(.96);}
+#makerBody .mk-insname{flex:1;min-width:0;min-height:44px;border-radius:13px;
+  border:1px solid var(--hair);background:var(--panel2);color:var(--ink);
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;padding:0 10px;}
+#makerBody .mk-inspal{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;padding:2px 0;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+#makerBody .mk-inspal::-webkit-scrollbar{width:0;height:0;}
+#makerBody .mk-insdot{flex:0 0 auto;width:44px;height:44px;padding:0;border-radius:13px;
+  border:2px solid transparent;}
+#makerBody .mk-insdot.on{border-color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.35);}
+#makerBody .mk-copy{display:block;width:100%;margin:10px 0 0;}

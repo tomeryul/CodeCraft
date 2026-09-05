@@ -99,6 +99,17 @@ const HE={
   "תוסיף קופסה כדי להתחיל. תגרור אותה כדי להזיז, ותגרור את הפינה כדי לשנות גודל.",
 "This is your piece written in HTML and CSS — the language every web page is made of. Your boxes and this code always match.":
   "זה האביזר שלך כתוב ב-HTML וב-CSS — השפה שכל אתר באינטרנט עשוי ממנה. הקופסאות שלך והקוד הזה תמיד תואמים.",
+"This is your piece written in HTML and CSS — the language every web page is made of. Tap any value to change it exactly.":
+  "זה האביזר שלך כתוב ב-HTML וב-CSS — השפה שכל אתר באינטרנט עשוי ממנה. תלחץ על כל ערך כדי לשנות אותו בדיוק.",
+"Copy code":"להעתיק את הקוד",
+"Copied! Paste it into an HTML file to see it in a browser.":
+  "הועתק! תדביק את זה בקובץ HTML כדי לראות את זה בדפדפן.",
+"Could not copy — select the code and copy it by hand.":
+  "לא הצלחתי להעתיק — תסמן את הקוד ותעתיק ידנית.",
+"Class name":"שם ה-class",
+/* the CSS property names the editing strip echoes. They are the words in
+   the stylesheet, so they stay as they are written there — a property is
+   an identifier, not a sentence. */
 /* the palette's colour names — they are also the words that end up in the
    class names, so a child sees the swatch they tapped in the stylesheet */
 "Gold":"זהב","Sand":"חול","Amber":"ענבר","Coral":"אלמוג","Cherry":"דובדבן",

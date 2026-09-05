@@ -24,6 +24,9 @@ let mkSlot="hat", mkId=null, mkName="", mkPx=null, mkColor=0, mkRaf=0, mkPaint=n
    live at once so switching modes never throws work away — mkKind is the
    only thing that decides which of the two gets saved. */
 let mkKind="grid", mkParts=[], mkSel=-1, mkDrag=null;
+/* which token in the code is being edited: {k, i} for the two values an
+   element owns, {k, g} for the five the shared rule owns, null for none */
+let mkVal=null;
 const PART_WORD=["Box","Tile","Pill","Dot"];
 
 function myWear(){ if(!player.myWear)player.myWear=[]; return player.myWear; }
@@ -257,16 +260,29 @@ function renderMaker(){
   body.appendChild(row);
 
   if(mkKind==="parts"){
-    /* The same promise the Python tab makes about blocks, made about boxes:
-       this is not a picture of the piece, it is the piece. */
+    /* The same promise the Python tab makes about blocks, made about boxes —
+       except every number here is a real declaration, so every number here
+       can be tapped. Dragging roughs it out; the code is where you say
+       exactly 42%. */
     const cw=document.createElement("div");cw.className="mk-code";
     const pre=document.createElement("pre");pre.className="mono";pre.id="mkCode";
-    pre.innerHTML=CC_CODE.html({name:mkName||"my piece",parts:mkParts},mkSlot);
-    cw.appendChild(pre);
-    const note=document.createElement("div");note.className="pynote";
-    note.textContent="This is your piece written in HTML and CSS — the language every web page is made of. Your boxes and this code always match.";
-    cw.appendChild(note);
     body.appendChild(cw);
+    pre.addEventListener("click",e=>{
+      const b=e.target.closest(".val"); if(!b)return;
+      mkPick({k:b.dataset.k,
+        i:b.dataset.i!=null?+b.dataset.i:null,
+        g:b.dataset.g!=null?+b.dataset.g:null});
+    });
+    cw.appendChild(pre);
+    mkCodeRefresh();
+    cw.appendChild(mkInspector());
+    const note=document.createElement("div");note.className="pynote";
+    note.textContent="This is your piece written in HTML and CSS — the language every web page is made of. Tap any value to change it exactly.";
+    cw.appendChild(note);
+    const cp=document.createElement("button");cp.type="button";cp.className="mk-btn mk-copy";
+    cp.textContent="Copy code";
+    cp.addEventListener("click",mkCopy);
+    cw.appendChild(cp);
   }
 
   const acts=document.createElement("div");acts.className="mk-acts";
@@ -301,7 +317,7 @@ function mkGroupSize(cls){ let n=0; for(const p of mkParts)if(p.cls===cls)n++; r
 function mkNewCls(){ let m=-1; for(const p of mkParts)if(p.cls>m)m=p.cls; return m+1; }
 function mkAddPart(){
   if(mkParts.length>=CC_WEAR.partMax){ toast("That is as many boxes as one piece can hold."); return; }
-  mkParts.push({cls:mkNewCls(),x:32,y:38,w:36,h:24,r:CC_WEAR.rad[1],
+  mkParts.push({cls:mkNewCls(),x:32,y:38,w:36,h:24,r:CC_WEAR.rad[1],a:0,
     c:mkColor<0?0:mkColor});
   mkSel=mkParts.length-1;
   renderMaker();
@@ -429,9 +445,129 @@ function wireParts(c){
   c.addEventListener("pointerup",up);
   c.addEventListener("pointercancel",up);
 }
+/* ---------------- editing a value in the code ----------------
+   The token you tapped names what it writes to, so the same strip serves
+   every one of them: steppers for a number, the palette for a colour, a
+   text field for the selector. Selecting a token also selects its box on
+   the canvas, because "which one is this?" is the first question. */
+function mkValParts(){
+  if(!mkVal)return [];
+  if(mkVal.i!=null){ const p=mkParts[mkVal.i]; return p?[p]:[]; }
+  return mkParts.filter(p=>p.cls===mkVal.g);
+}
+function mkPick(v){
+  mkVal=(mkVal&&mkVal.k===v.k&&mkVal.i===v.i&&mkVal.g===v.g)?null:v;
+  if(mkVal){
+    const at=mkVal.i!=null?mkVal.i:mkParts.findIndex(p=>p.cls===mkVal.g);
+    if(at>=0)mkSel=at;
+  }
+  renderMaker();
+  const ins=$("mkIns"); if(ins&&mkVal)ins.scrollIntoView({block:"nearest"});
+}
+function mkNudge(d){
+  const f=CC_CODE.field[mkVal.k]; if(!f)return;
+  const list=mkValParts(); if(!list.length)return;
+  const now=(mkVal.k==="a")?(list[0].a|0):list[0][mkVal.k];
+  const next=Math.max(f.lo,Math.min(f.hi,now+d));
+  if(next===now)return;
+  for(const p of list)p[mkVal.k]=next;
+  mkDraw(); mkCodeRefresh(); mkInsRefresh();
+  if(typeof sfx==="function")sfx(620,.02);
+}
+function mkInsRefresh(){
+  const v=$("mkInsVal"); if(!v||!mkVal)return;
+  const f=CC_CODE.field[mkVal.k], list=mkValParts();
+  if(f&&list.length)v.textContent=(mkVal.k==="a"?(list[0].a|0):list[0][mkVal.k])+f.unit;
+}
+function mkInspector(){
+  const box=document.createElement("div");box.className="mk-ins";box.id="mkIns";
+  if(!mkVal||!mkValParts().length){ box.hidden=true; return box; }
+  const f=CC_CODE.field[mkVal.k], list=mkValParts(), p=list[0];
+
+  if(mkVal.k==="name"){
+    const lab=document.createElement("span");lab.className="mk-inslab";lab.textContent="class";
+    box.appendChild(lab);
+    const inp=document.createElement("input");inp.type="text";inp.className="mk-insname";
+    inp.maxLength=16;inp.setAttribute("aria-label","Class name");
+    inp.value=CC_CODE.classNames(mkParts)[mkVal.g]||"";
+    const put=()=>{
+      const n=CC_CODE.cleanName(inp.value);
+      for(const q of mkParts)if(q.cls===mkVal.g){ if(n)q.cn=n; else delete q.cn; }
+      mkCodeRefresh();
+    };
+    inp.addEventListener("input",put);
+    box.appendChild(inp);
+    return box;
+  }
+
+  if(mkVal.k==="c"){
+    const lab=document.createElement("span");lab.className="mk-inslab";lab.textContent="background";
+    box.appendChild(lab);
+    const row=document.createElement("div");row.className="mk-inspal";
+    for(let i=0;i<CC_WEAR.pal.length;i++){
+      const b=document.createElement("button");b.type="button";
+      b.className="mk-insdot"+(p.c===i?" on":"");
+      b.style.background=CC_WEAR.pal[i];
+      b.setAttribute("aria-label",CC_WEAR.names[i]);
+      b.addEventListener("click",()=>{ for(const q of list)q.c=i; mkColor=i; renderMaker(); });
+      row.appendChild(b);
+    }
+    box.appendChild(row);
+    return box;
+  }
+
+  if(!f){ box.hidden=true; return box; }
+  const lab=document.createElement("span");lab.className="mk-inslab";lab.textContent=f.prop;
+  box.appendChild(lab);
+  const step=(d,txt)=>{
+    const b=document.createElement("button");b.type="button";b.className="mk-step";
+    b.textContent=txt;b.setAttribute("aria-label",f.prop+" "+txt);
+    b.addEventListener("click",()=>mkNudge(d));
+    box.appendChild(b);
+  };
+  /* a plain hyphen, not U+2212: js/ui-icons.js swaps the typographic minus
+     for an SVG glyph, which would leave one button an icon and its twin
+     across the value plain text */
+  step(-f.big,"-"+f.big); step(-f.step,"-1");
+  const v=document.createElement("span");v.className="mk-insval";v.id="mkInsVal";
+  v.textContent=(mkVal.k==="a"?(p.a|0):p[mkVal.k])+f.unit;
+  box.appendChild(v);
+  step(f.step,"+1"); step(f.big,"+"+f.big);
+  return box;
+}
+
+/* The code on screen is valid on its own: a div and a stylesheet that work
+   in any HTML file. Copying it out is the shortest path from this game to a
+   real browser, so it is one button. */
+function mkCopy(){
+  const src=CC_CODE.code({name:mkName||"my piece",parts:mkParts},mkSlot);
+  const done=()=>toast("Copied! Paste it into an HTML file to see it in a browser.");
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(src).then(done).catch(()=>mkCopyFallback(src,done));
+  }else mkCopyFallback(src,done);
+}
+function mkCopyFallback(src,done){
+  try{
+    const ta=document.createElement("textarea");
+    ta.value=src;ta.style.cssText="position:fixed;left:-9999px;top:0";
+    document.body.appendChild(ta);ta.select();
+    const ok=document.execCommand&&document.execCommand("copy");
+    ta.remove();
+    if(ok)done(); else toast("Could not copy — select the code and copy it by hand.");
+  }catch(_){ toast("Could not copy — select the code and copy it by hand."); }
+}
+
 function mkCodeRefresh(){
   const pre=$("mkCode"); if(!pre)return;
   pre.innerHTML=CC_CODE.html({name:mkName||"my piece",parts:mkParts},mkSlot);
+  /* the click handler lives on <pre>, so replacing its children keeps it —
+     only the mark on the chosen token has to be put back */
+  if(!mkVal)return;
+  for(const b of pre.querySelectorAll(".val")){
+    if(b.dataset.k!==mkVal.k)continue;
+    const i=b.dataset.i!=null?+b.dataset.i:null, g=b.dataset.g!=null?+b.dataset.g:null;
+    if(i===mkVal.i&&g===mkVal.g){ b.classList.add("on"); break; }
+  }
 }
 
 /* Painting is pointer-driven so a dragged finger fills a line of cells.

@@ -2339,6 +2339,7 @@ async function ev(expr) {
      space, hand-fed two of the seven transforms the body uses — so it sat
      upright while the body leaned through a chop. Its address is the fix, so
      the address is what is asserted. */
+  const CC_FIELD_HI = 160;  // js/game/wear-code.js FIELD.w.hi
   const RENDER_SRC = fs.readFileSync(path.resolve(__dirname, "..", "js", "game", "render.js"), "utf8");
   check("the hat is drawn inside the robot's transform tree",
     /if\(r\.hat[\s\S]{0,80}?\)\{[\s\S]{0,220}?ctx\.restore\(\);/.test(RENDER_SRC) &&
@@ -2500,6 +2501,87 @@ async function ev(expr) {
     BUILT.clamped && BUILT.clamped.cls === 13 && BUILT.clamped.x === 140 &&
     BUILT.clamped.y === 10 && BUILT.clamped.w === 1 && BUILT.clamped.h === 160 &&
     BUILT.clamped.r === 50 && BUILT.clamped.c === 15, JSON.stringify(BUILT.clamped));
+
+  /* Every value in the code is a control. Dragging roughs a box out; the
+     code is where a child says exactly 42%, which is what makes this a
+     programming lesson rather than a drawing one. */
+  const CODE = JSON.parse(await ev(`(()=>{
+    if(typeof mkPick!=='function'||!window.CC_CODE||!CC_CODE.field)return JSON.stringify({missing:true});
+    mgState=null; mgRobot=null; player.myWear=[]; player.level=20;
+    makerOpen('hat',null); mkKind='parts'; mkParts=[]; renderMaker();
+    mkAddPart(); Object.assign(mkParts[mkSel],{x:8,y:60,w:84,h:15,r:40,c:1});
+    mkAddPart(); Object.assign(mkParts[mkSel],{x:30,y:36,w:13,h:13,r:50,c:0});
+    const copy=[...document.querySelectorAll('#makerBody .mk-acts .mk-btn')].find(b=>b.textContent==='Copy');
+    if(copy)copy.click();
+    mkName='Cap'; renderMaker();
+    const out={};
+    const tok=(k,g,i)=>[...document.querySelectorAll('#mkCode .val')].find(b=>
+      b.dataset.k===k &&
+      (g==null?b.dataset.g==null:b.dataset.g===String(g)) &&
+      (i==null?b.dataset.i==null:b.dataset.i===String(i)));
+    out.tokens=document.querySelectorAll('#mkCode .val').length;
+    /* a number: the strip names the CSS property and moves the real value */
+    tok('w',1).click();
+    out.prop=document.querySelector('#mkIns .mk-inslab').textContent;
+    const bump=t=>[...document.querySelectorAll('#mkIns .mk-step')].find(b=>b.textContent===t).click();
+    bump('+10'); bump('+1');
+    out.w=mkParts[1].w; out.shown=document.getElementById('mkInsVal').textContent;
+    out.marked=!!document.querySelector('#mkCode .val.on');
+    /* a value cannot be pushed past what the drag itself can produce */
+    for(let i=0;i<40;i++)bump('+10');
+    out.capped=mkParts[1].w;
+    /* rotate exists only in the code, and it moves both copies of a group */
+    tok('a',1).click(); bump('-15');
+    out.a=[mkParts[1].a,mkParts[2].a];
+    /* the two positions belong to the elements, not the rule */
+    tok('x',null,1).click(); bump('-1');
+    out.x=[mkParts[1].x,mkParts[2].x];
+    /* the class is the player's to name, and renaming it renames it in the
+       HTML at the same time, because there is only one name */
+    tok('name',1).click();
+    const inp=document.querySelector('#mkIns .mk-insname');
+    inp.value='stud'; inp.dispatchEvent(new Event('input'));
+    const src=CC_CODE.code({name:'Cap',parts:mkParts},'hat');
+    out.divs=(src.match(/class="stud"/g)||[]).length;
+    out.rules=(src.match(/^\\.stud \\{/gm)||[]).length;
+    inp.value='<script>'; inp.dispatchEvent(new Event('input'));
+    out.junkName=CC_CODE.classNames(mkParts)[1];
+    inp.value='!!!'; inp.dispatchEvent(new Event('input'));
+    out.emptyName=CC_CODE.classNames(mkParts)[1];
+    /* the code the piece means and the code on screen are one text */
+    out.plainMatchesShown=CC_CODE.code({name:'Cap',parts:mkParts},'hat')
+      .replace(/\\s+/g,' ')===document.getElementById('mkCode').textContent.replace(/\\s+/g,' ');
+    /* rotation reaches the canvas */
+    const shot=a=>{const c=document.createElement('canvas');c.width=c.height=80;
+      const g=c.getContext('2d');
+      CC_WEAR.swatch(g,'outfit',{kind:'parts',parts:[{cls:0,x:20,y:40,w:60,h:14,r:0,a:a,c:0}]},80);
+      return g.getImageData(0,0,80,80).data.join(',');};
+    out.rotates=shot(0)!==shot(30);
+    mkVal=null; player.myWear=[]; makerExit();
+    return JSON.stringify(out);
+  })()`));
+  /* one group of one: name + x y w h r a c. One group of two: name + the
+     five the rule owns, and left/top on each of the two elements. */
+  check("every value in the code is a control", !CODE.missing && CODE.tokens === 18, JSON.stringify(CODE));
+  check("the strip names the CSS property and moves the real value",
+    CODE.prop === 'width' && CODE.w === 24 && CODE.shown === '24%' && CODE.marked === true, JSON.stringify(CODE));
+  check("a value cannot be pushed past what the drag itself can produce",
+    CODE.capped === CC_FIELD_HI, JSON.stringify(CODE));
+  check("rotate is a group's, and both copies turn together",
+    Array.isArray(CODE.a) && CODE.a[0] === -15 && CODE.a[1] === -15, JSON.stringify(CODE));
+  check("left belongs to the element, so only one copy moves",
+    Array.isArray(CODE.x) && CODE.x[0] === 29 && CODE.x[1] !== 29, JSON.stringify(CODE));
+  check("renaming the class renames it in the HTML too",
+    CODE.divs === 2 && CODE.rules === 1, JSON.stringify(CODE));
+  /* whatever a child types, what reaches the stylesheet is an identifier —
+     stripped down to one where it can be, and the derived name where it
+     cannot. Nothing typed here can spell markup. */
+  check("a typed class name is stripped to a CSS identifier",
+    /^[a-z][a-z0-9-]{0,15}$/.test(CODE.junkName||'') && CODE.junkName === 'script', JSON.stringify(CODE));
+  check("a name with nothing left in it falls back to the derived one",
+    CODE.emptyName === 'gold-dot', JSON.stringify(CODE));
+  check("the code on screen is the code the piece means", CODE.plainMatchesShown === true, JSON.stringify(CODE));
+  check("rotate reaches the canvas", CODE.rotates === true, JSON.stringify(CODE));
 
   check("a foreign save's pieces are re-encoded, not trusted",
     Array.isArray(MADE.clean) && MADE.clean.length === 1 &&

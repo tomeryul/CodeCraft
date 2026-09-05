@@ -396,9 +396,14 @@ function paintParts(g,box,parts){
     const w=box.w*pt.w/100, h=box.h*pt.h/100;
     if(w<=0||h<=0)continue;
     const x=box.x+box.w*pt.x/100, y=box.y+box.h*pt.y/100;
+    /* CSS rotates an element about its own centre, so this does too — the
+       code and the canvas have to mean the same thing by rotate() */
+    const a=pt.a|0;
+    if(a){ g.save(); g.translate(x+w/2,y+h/2); g.rotate(a*Math.PI/180); g.translate(-x-w/2,-y-h/2); }
     rrEl(g,x,y,w,h,w*pt.r/100,h*pt.r/100);
     g.fillStyle=WEAR_PAL[pt.c]||WEAR_PAL[0];
     g.fill();
+    if(a)g.restore();
   }
 }
 
@@ -508,12 +513,21 @@ window.CC_WEAR={
            can produce, so a hand-edited save can make an ugly piece but never
            a broken one — and never one that paints outside its slot. */
         const N=(v,lo,hi,d)=>{const n=Math.round(Number(v)); return isFinite(n)?Math.max(lo,Math.min(hi,n)):d;};
-        const parts=(Array.isArray(p.parts)?p.parts:[]).slice(0,PART_MAX).map(q=>({
-          cls:N(q&&q.cls,0,PART_MAX-1,0),
-          x:N(q&&q.x,-40,140,10), y:N(q&&q.y,-40,140,10),
-          w:N(q&&q.w,1,160,30),   h:N(q&&q.h,1,160,30),
-          r:N(q&&q.r,0,50,0),     c:N(q&&q.c,0,WEAR_PAL.length-1,0)
-        }));
+        const parts=(Array.isArray(p.parts)?p.parts:[]).slice(0,PART_MAX).map(q=>{
+          const o={
+            cls:N(q&&q.cls,0,PART_MAX-1,0),
+            x:N(q&&q.x,-40,140,10), y:N(q&&q.y,-40,140,10),
+            w:N(q&&q.w,1,160,30),   h:N(q&&q.h,1,160,30),
+            r:N(q&&q.r,0,50,0),     a:N(q&&q.a,-180,180,0),
+            c:N(q&&q.c,0,WEAR_PAL.length-1,0)
+          };
+          /* a class name a player wrote is an identifier that reaches the
+             screen: it is stripped down to one where it can be, and dropped
+             for the derived name where nothing is left */
+          const cn=(window.CC_CODE&&q)?CC_CODE.cleanName(q.cn):"";
+          if(cn)o.cn=cn;
+          return o;
+        });
         out.push({id:p.id,slot:slot,name:name||"?",kind:"parts",parts:parts});
       }
       /* sm is a look, not data: anything but an explicit false means curves */
