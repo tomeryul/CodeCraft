@@ -22,7 +22,7 @@ if(window.__nav)return; window.__nav=1;
 
 /* The destination sheets. #splash, #agegate and #delacc are modal — they
    own their own buttons and must not gain a Back to somewhere behind. */
-const SHEETS=["editor","mentor","quests","hub","projects","guide","funcLib","orders","report","settings"];
+const SHEETS=["editor","mentor","quests","hub","projects","guide","funcLib","orders","style","report","settings"];
 const has=n=>typeof window[n]==="function";
 
 const ICON_BACK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" '+

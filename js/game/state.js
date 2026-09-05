@@ -17,6 +17,18 @@ let selRobot=0, muted=false, musicOff=false, sheetFull=false, lang="en", isNew=t
 let tut={step:0,done:false}, pendingAway=null;
 let player={xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{}};
 const HATS=[{lvl:2,em:"⛑️"},{lvl:4,em:"🎩"},{lvl:6,em:"🎓"},{lvl:8,em:"🤠"},{lvl:10,em:"👑"},{lvl:12,em:"🥳"}];
+/* Outfits and shoes are painted by js/game/cosmetics.js, not sprites: an
+   outfit has to squash inside the body's clip path and a shoe rides a foot
+   that rotates every frame, and a rigid bitmap can do neither. Hats stay
+   sprites because a hat is rigid.
+   Hats take the even levels from 2, outfits the odd ones and shoes every
+   third, so levelling up hands you something new almost every star to ⭐13.
+   None of it costs coins — the shop already sells the things that do. */
+const OUTFITS=[{lvl:3,id:"vest",name:"Hi-Vis Vest"},{lvl:5,id:"apron",name:"Builder Apron"},
+  {lvl:7,id:"stripes",name:"Stripes"},{lvl:9,id:"hoodie",name:"Hoodie"},
+  {lvl:11,id:"lab",name:"Lab Coat"},{lvl:13,id:"cape",name:"Cape"}];
+const SHOES=[{lvl:6,id:"boots",name:"Work Boots"},{lvl:9,id:"sneakers",name:"Sneakers"},
+  {lvl:12,id:"wellies",name:"Wellies"},{lvl:15,id:"rockets",name:"Rocket Boots"}];
 /* --- action skills: level up slowly with use, each grants a small perk --- */
 const SKILL_DEFS={
   wood:{em:"🪓",name:"Woodcutting",perk:l=>"+"+l*6+"% bonus wood"},

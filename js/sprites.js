@@ -59,7 +59,7 @@ numblocks:`<svg ${NS}><ellipse cx="24" cy="42" rx="17" ry="2.8" fill="rgba(0,0,0
 };
 /* emoji used by the game -> sprite name */
 const MAP={"🪜":"ladder","🛤️":"ramp","🛤":"ramp","🕳️":"pit","🕳":"pit","📐":"cornerwall","⛰️":"peak","⛰":"peak","🔢":"numblocks","🌱":"tree1","🌿":"tree2","🌳":"tree3","🌼":"flower","🪨":"stone","⛓️":"iron","💎":"crystal","🪵":"log",
-"🏠":"home","🏪":"market","📦":"chest","🎁":"gift","🌉":"bridge","🐰":"bunny","🦊":"fox","🪙":"coin","✨":"spark","🐑":"sheep","🦆":"duck","🐿️":"squirrel","💢":"anger","🎩":"tophat","⛑️":"hardhat","👑":"crown","🎓":"gradcap","🤠":"cowboy","🥳":"party",
+"🏠":"home","🏪":"market","📦":"chest","🎁":"gift","🌉":"bridge","🐰":"bunny","🦊":"fox","🪙":"coin","✨":"spark","🐑":"sheep","🦆":"duck","🐿️":"squirrel","💢":"anger","🎩":"tophat","⛑️":"hardhat","⛑":"hardhat","👑":"crown","🎓":"gradcap","🤠":"cowboy","🥳":"party",
 "💧":"drop","😴":"sleep","🏡":"housebuild","🚗":"car","🎡":"ferris","🌍":"globe","✏️":"pencil"};
 const imgs={};
 function img(name){

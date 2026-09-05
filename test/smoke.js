@@ -2306,6 +2306,63 @@ async function ev(expr) {
   check("applySave restores coins/level/skills/hat/inventory", RT.ok && RT.coins===777 && RT.lvl===9 && RT.wood===4 && RT.hat==='🎩' && RT.inv===5, rt);
   check("cloud helpers exist (cloudSave/cloudLoad)", await ev("typeof cloudSave==='function' && typeof cloudLoad==='function'") === true);
 
+  console.log("▶ cosmetics survive a save round-trip");
+  const wear = await ev(`(()=>{
+    if(typeof OUTFITS==='undefined'||typeof SHOES==='undefined')return JSON.stringify({missing:true});
+    mgState=null; mgRobot=null;
+    R().hat='🎩'; R().outfit='vest'; R().shoes='rockets';
+    const snap=JSON.parse(JSON.stringify(buildSave()));
+    R().hat=null; R().outfit=null; R().shoes=null;
+    applySave(JSON.parse(JSON.stringify(snap)));
+    const after={hat:R().hat, outfit:R().outfit, shoes:R().shoes};
+    /* a save written before this feature existed carries neither key */
+    const old=JSON.parse(JSON.stringify(snap));
+    old.robots.forEach(rd=>{delete rd.outfit; delete rd.shoes;});
+    applySave(old);
+    const legacy={hat:R().hat, outfit:R().outfit, shoes:R().shoes};
+    R().hat=null;
+    return JSON.stringify({after, legacy,
+      outfits:OUTFITS.length, shoes:SHOES.length,
+      wear:(typeof CC_WEAR==='object'&&typeof CC_WEAR.outfit==='function'&&
+            typeof CC_WEAR.shoe==='function'&&typeof CC_WEAR.back==='function')});
+  })()`);
+  const WEAR = JSON.parse(wear);
+  check("outfit and shoes survive buildSave → applySave",
+    !WEAR.missing && WEAR.after && WEAR.after.hat==='🎩' && WEAR.after.outfit==='vest' && WEAR.after.shoes==='rockets', wear);
+  check("a save written before cosmetics loads with outfit and shoes null",
+    !WEAR.missing && WEAR.legacy && WEAR.legacy.hat==='🎩' && WEAR.legacy.outfit===null && WEAR.legacy.shoes===null, wear);
+  check("six outfits and four shoes are catalogued", WEAR.outfits===6 && WEAR.shoes===4, wear);
+  check("CC_WEAR exposes outfit/back/shoe painters", WEAR.wear === true, wear);
+  check("every hat emoji resolves to drawn art, not an emoji glyph",
+    await ev("HATS.every(h=>CC_SPRITES.has(h.em))") === true);
+  /* The bug this replaces: the hat was drawn AFTER ctx.restore(), in world
+     space, hand-fed two of the seven transforms the body uses — so it sat
+     upright while the body leaned through a chop. Its address is the fix, so
+     the address is what is asserted. */
+  const RENDER_SRC = fs.readFileSync(path.resolve(__dirname, "..", "js", "game", "render.js"), "utf8");
+  check("the hat is drawn inside the robot's transform tree",
+    /if\(r\.hat\)\{[\s\S]{0,220}?ctx\.restore\(\);/.test(RENDER_SRC) &&
+    !/ctx\.translate\(cx\+2,cy\+bobY/.test(RENDER_SRC));
+  /* the pieces reach the canvas: a dressed robot must not paint the same
+     pixels as a bare one */
+  const px = await ev(`(()=>{
+    if(typeof CC_WEAR!=='object')return JSON.stringify({missing:true});
+    const shot=w=>{const c=document.createElement('canvas');c.width=c.height=90;
+      const g=c.getContext('2d');drawBoardRobot(g,45,45,40,'E','#ffb830',false,0,w);
+      return c.getContext('2d').getImageData(0,0,90,90).data.join(',');};
+    const bare=shot(null);
+    return JSON.stringify({
+      outfit: shot({outfit:'vest'})!==bare,
+      shoes:  shot({shoes:'rockets'})!==bare,
+      cape:   shot({outfit:'cape'})!==bare,
+      none:   shot({hat:null,outfit:null,shoes:null})===bare });
+  })()`);
+  const PX = JSON.parse(px);
+  check("an outfit paints on the board robot", PX.outfit === true, px);
+  check("shoes paint on the board robot", PX.shoes === true, px);
+  check("a cape paints behind the board robot", PX.cape === true, px);
+  check("an undressed robot is unchanged by the new code path", PX.none === true, px);
+
   console.log("▶ splash login gate");
   check("splash shows an email/password login card when online is configured",
     await ev(`(()=>{renderSplashAuth();return !!document.getElementById('spEmail')&&!!document.getElementById('spLogin')&&!!document.getElementById('spSignup');})()`) === true);

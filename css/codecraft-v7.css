@@ -1,0 +1,52 @@
+/* =====================================================================
+   CodeCraft — v7: the Style sheet
+   ---------------------------------------------------------------------
+   Linked AFTER css/codecraft-v6.css. Companion to renderStyle() in
+   js/game/shop.js.
+
+   Style used to be a 130px right-aligned wrap of tiny buttons inside one
+   shop row. Three slots × sixteen pieces do not fit there, so it became a
+   sheet of its own. The sheet itself is nothing new — it reuses .sheet and
+   .m-head like #orders — and every colour below already exists in
+   styles.css. What is new is the slot row.
+   ===================================================================== */
+
+/* ---- the live preview ---- */
+#styleBody .st-prev{display:flex;align-items:center;justify-content:center;
+  margin:14px 0 2px;border-radius:18px;background:rgba(255,255,255,.04);
+  border:1px solid var(--hair);overflow:hidden;}
+#styleBody .st-prev canvas{display:block;width:100%;max-width:330px;height:150px;}
+#styleBody .st-modes{display:flex;gap:6px;justify-content:center;margin:8px 0 0;}
+/* 44px is the floor for anything tappable, and these are chips, not labels */
+#styleBody .st-mode{padding:0 15px;min-width:88px;min-height:44px;border-radius:999px;border:none;
+  font-family:inherit;font-size:12.5px;font-weight:700;
+  background:transparent;color:var(--ink2);}
+#styleBody .st-mode.on{background:var(--accent);color:#241b45;}
+
+/* ---- which robot you are dressing ---- */
+#styleBody .st-crew{display:flex;gap:6px;overflow-x:auto;padding:2px 0;margin:12px 0 0;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+#styleBody .st-crew::-webkit-scrollbar{width:0;height:0;}
+
+/* ---- the slot rows ---- */
+#styleBody .st-slot{display:flex;flex-direction:column;gap:9px;margin:16px 0 0;}
+#styleBody .st-lab{display:flex;align-items:baseline;gap:8px;font-size:13px;font-weight:700;}
+#styleBody .st-lab i{flex:1;font-style:normal;font-size:12.5px;color:var(--ink2);}
+#styleBody .st-lab b{font-size:11px;color:#8f83b8;}
+/* seven 52px swatches do not fit 354px of sheet: the row scrolls, and the
+   right edge fades so it says so */
+#styleBody .st-row{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;
+  padding:2px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  mask-image:linear-gradient(90deg,#000 86%,rgba(0,0,0,.15));
+  -webkit-mask-image:linear-gradient(90deg,#000 86%,rgba(0,0,0,.15));}
+#styleBody .st-row::-webkit-scrollbar{width:0;height:0;}
+#styleBody .st-sw{position:relative;flex:0 0 auto;width:52px;height:52px;padding:0;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  border-radius:15px;background:rgba(255,255,255,.06);border:1px solid var(--hair);}
+#styleBody .st-sw.on{background:rgba(255,184,48,.18);border:2px solid var(--accent);}
+#styleBody .st-sw.locked{opacity:.5;}
+#styleBody .st-sw .lk{position:absolute;left:0;right:0;bottom:0;padding:2px 0 3px;
+  font-size:10px;font-weight:800;background:rgba(23,17,48,.82);color:var(--accent2);}
+#styleBody .st-sw canvas{display:block;width:46px;height:46px;}
+/* the "no piece" swatch: the only one that is a glyph rather than art */
+#styleBody .st-sw .none{font-size:17px;color:var(--ink2);font-weight:700;}

@@ -52,7 +52,7 @@ const shownBands = () => [...document.getElementById('projList').children]
   }));
   ck('the menu opens with all three groups', menu.open &&
      menu.groups.join()==='Play,Create,Your world', menu);
-  ck('every destination is on it', menu.tiles.length===15, menu.tiles);
+  ck('every destination is on it', menu.tiles.length===16, menu.tiles);
   ck('every tile carries a dimension tag', menu.tagged, menu.tiles);
   ck('"Next up" answers what to do, above the menu', menu.next, menu);
   ck('the old buttons are hidden, not deleted', menu.questInDom && menu.questHidden &&

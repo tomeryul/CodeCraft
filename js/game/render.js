@@ -271,6 +271,9 @@ function draw(t){
     const pk=1+r.pop*.22;
     ctx.translate(0,18);ctx.scale(sqx*pk,sqy*pk);ctx.translate(0,-18);
     const limbDk=(function(hex){try{const n=parseInt(hex.slice(1),16);const f=c=>Math.max(0,Math.round(c*.72));return "rgb("+f(n>>16&255)+","+f(n>>8&255)+","+f(n&255)+")";}catch(e){return hex;}})(r.color);
+    // ---- back piece (capes) — before the legs, so it reads as behind the
+    // robot, and inside the tree, so it leans and trails with the gait
+    if(window.CC_WEAR&&r.outfit&&CC_WEAR.back[r.outfit])CC_WEAR.back(ctx,r.outfit,swayDeg,gp);
     // ---- legs (drawn behind body) — hips at (±5.53,13.28); thigh rotates at
     // the hip, foot rounded-rect at the leg end counter-rotates to stay flat.
     // Planted straight during tool actions (SVG tool groups don't animate legs).
@@ -280,7 +283,11 @@ function draw(t){
         ctx.strokeStyle=limbDk;ctx.lineWidth=5;ctx.lineCap="round";
         ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,len);ctx.stroke();
         ctx.translate(0,len);ctx.rotate(footDeg*D2R);
-        ctx.fillStyle=limbDk;rr(ctx,-3.5,-1,7,4.5,2.2);ctx.fill();
+        // the foot anchor: a shoe drawn here inherits the thigh swing, the leg
+        // shortening and the foot's counter-rotation, which is the same reason
+        // the plain foot below never slides
+        if(window.CC_WEAR&&r.shoes)CC_WEAR.shoe(ctx,r.shoes,limbDk,moving,t);
+        else{ctx.fillStyle=limbDk;rr(ctx,-3.5,-1,7,4.5,2.2);ctx.fill();}
         ctx.restore();
       };
       if(TL){draw(-5.53,0,5.53,0);draw(5.53,0,5.53,0);}
@@ -294,6 +301,9 @@ function draw(t){
     grd.addColorStop(0,window.CC_EXTRAS?CC_EXTRAS.lighten(rc,.3):rc);grd.addColorStop(1,rc);
     ctx.fillStyle=grd;rr(ctx,-s2/2,-s2/2,s2,s2,11);ctx.fill();
     ctx.save();rr(ctx,-s2/2,-s2/2,s2,s2,11);ctx.clip();
+    // the torso anchor: painted inside the body's own clip, so an outfit
+    // squashes with the body and the bevel paints over it
+    if(window.CC_WEAR&&r.outfit)CC_WEAR.outfit(ctx,r.outfit,rc);
     ctx.fillStyle="rgba(0,0,0,.25)";ctx.fillRect(-s2/2,s2/2-6,s2,6);
     ctx.fillStyle="rgba(255,255,255,.35)";rr(ctx,-s2/2+4,-s2/2+3,s2-8,4.5,2.5);ctx.fill();
     ctx.restore();
@@ -388,6 +398,17 @@ function draw(t){
     }
     // smile
     ctx.strokeStyle="#1c1638";ctx.lineWidth=2;ctx.beginPath();ctx.arc(ex*.5,4+ey*.5,5,.2*Math.PI,.8*Math.PI);ctx.stroke();
+    /* the head anchor. The hat used to be drawn AFTER ctx.restore(), in world
+       space, hand-fed two of the seven values the body uses — so it missed the
+       sway pivot, the squash, the pop, the move lunge, the turn and, during
+       every tool action, the body lean entirely. Drawn here it inherits all of
+       them. 4.75 is where the sprite grid's brim line (y≈34 of 48, at the
+       TILE*.5 the hat is drawn at) lands on the body top, a quarter-pixel into
+       the bevel so it reads as resting on it. */
+    if(r.hat){
+      const hp=sprite(r.hat,TILE*.5);
+      ctx.drawImage(hp,-hp.lw/2,-s2/2-4.75-hp.lw/2,hp.lw,hp.lw);
+    }
     ctx.restore();
     // sleepy Zzz while resting
     if(atype==="rest"){
@@ -396,15 +417,6 @@ function draw(t){
       ctx.globalAlpha=.8*(1-zp);ctx.fillText("z",cx+s2*.42,cy-s2*.6-zp*11);
       ctx.globalAlpha=.6*(1-zp2);ctx.fillText("z",cx+s2*.56,cy-s2*.74-zp2*11);
       ctx.globalAlpha=1;
-    }
-    // hat — bounces with the body and tilts with the step wobble
-    if(r.hat){
-      const hp=sprite(r.hat,TILE*.5);
-      ctx.save();
-      ctx.translate(cx+2,cy+bobY-s2*.62-6);
-      if(!TL)ctx.rotate(swayDeg*Math.PI/180*.5);
-      ctx.drawImage(hp,-hp.lw/2,-hp.lw/2,hp.lw,hp.lw);
-      ctx.restore();
     }
     // name
     ctx.fillStyle="rgba(20,14,45,.75)";
@@ -633,17 +645,34 @@ function drawTeamLayer(t,x0,y0,x1,y1){
     ctx.restore();
   }
 }
-function drawBoardRobot(g,cx,cy,s2,dir,color,running,t){
+/* `wear` is optional: {hat,outfit,shoes}, the same three fields a robot
+   carries. The board robot has no gait, so shoes get moving=false, and it
+   grows a pair of planted legs only when there is a shoe to stand in. */
+function drawBoardRobot(g,cx,cy,s2,dir,color,running,t,wear){
   const RS=TILE*0.72, k=s2/RS;
   g.save();g.translate(cx,cy);g.scale(k,k);
-  const S=RS;
+  const S=RS, W=wear||{};
   g.fillStyle="rgba(0,0,0,.22)";g.beginPath();g.ellipse(0,S*.42,S*.42,S*.16,0,0,7);g.fill();
   const bob=running?Math.sin(t/120)*1.6:0; g.translate(0,bob);
+  // back piece, then legs + shoes — same anchors as the world robot
+  if(window.CC_WEAR&&W.outfit&&CC_WEAR.back[W.outfit])CC_WEAR.back(g,W.outfit,0,0);
+  if(window.CC_WEAR&&W.shoes){
+    const limb=(function(hex){try{const n=parseInt(String(hex).slice(1),16);const f=c=>Math.max(0,Math.round(c*.72));return "rgb("+f(n>>16&255)+","+f(n>>8&255)+","+f(n&255)+")";}catch(e){return hex;}})(color);
+    [-5.53,5.53].forEach(hx=>{
+      g.save();g.translate(hx,13.28);
+      g.strokeStyle=limb;g.lineWidth=5;g.lineCap="round";
+      g.beginPath();g.moveTo(0,0);g.lineTo(0,5.53);g.stroke();
+      g.translate(0,5.53);
+      CC_WEAR.shoe(g,W.shoes,limb,false,t);
+      g.restore();
+    });
+  }
   // body — toy bevel
   const grd=g.createLinearGradient(0,-S/2,0,S/2);
   grd.addColorStop(0,window.CC_EXTRAS?CC_EXTRAS.lighten(color,.3):color);grd.addColorStop(1,color);
   g.fillStyle=grd;rr(g,-S/2,-S/2,S,S,11);g.fill();
   g.save();rr(g,-S/2,-S/2,S,S,11);g.clip();
+  if(window.CC_WEAR&&W.outfit)CC_WEAR.outfit(g,W.outfit,color);
   g.fillStyle="rgba(0,0,0,.25)";g.fillRect(-S/2,S/2-6,S,6);
   g.fillStyle="rgba(255,255,255,.35)";rr(g,-S/2+4,-S/2+3,S-8,4.5,2.5);g.fill();
   g.restore();
@@ -666,6 +695,11 @@ function drawBoardRobot(g,cx,cy,s2,dir,color,running,t){
   }
   // smile
   g.strokeStyle="#1c1638";g.lineWidth=2;g.beginPath();g.arc(ex*.5,4+ey*.5,5,.2*Math.PI,.8*Math.PI);g.stroke();
+  // head anchor — inside the transform, exactly as in the world
+  if(W.hat){
+    const hp=sprite(W.hat,TILE*.5);
+    g.drawImage(hp,-hp.lw/2,-S/2-4.75-hp.lw/2,hp.lw,hp.lw);
+  }
   g.restore();
 }
 function drawBoardBrick(g,px,py,cell,onPlan,no){

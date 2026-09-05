@@ -1698,7 +1698,12 @@ function mgDraw(){
   if(st.robot.items)for(const k of st.robot.items){const q=k.split("_");spr("💎",+q[0],+q[1],.6,Math.sin(T/300+(+q[0]))*2);}
   // ---- robot — the open-world look ----
   const rb=st.robot;
-  drawBoardRobot(g,rb.x*cell+cell/2,rb.y*cell+cell/2,cell*.72,rb.dir,ROBOT_COLORS[0],!!mgState.running,T);
+  /* the board robot wears what the player's own robot wears, so a hat you
+     just unlocked shows up in the Academy too. Not mgRobot: that is a scratch
+     robot made for this board and never wears anything. */
+  const rw=(typeof robots!=="undefined"&&robots[selRobot])||null;
+  drawBoardRobot(g,rb.x*cell+cell/2,rb.y*cell+cell/2,cell*.72,rb.dir,ROBOT_COLORS[0],!!mgState.running,T,
+    rw?{hat:rw.hat,outfit:rw.outfit,shoes:rw.shoes}:null);
   // brick being carried, floating above the robot's head
   if(rb.held!=null){
     const hs=cell*0.52, cxp=rb.x*cell+cell/2, hy=rb.y*cell+cell/2-cell*.55-hs+Math.sin(T/260)*2;

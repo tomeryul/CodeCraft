@@ -62,6 +62,8 @@ const HE={
 "My Functions":"הפונקציות שלי","reusable":"לשימוש חוזר",
 "How to design":"איך לעצב","guide":"מדריך",
 "Shop":"חנות","robots & upgrades":"רובוטים ושדרוגים",
+"Style":"סטייל","dress your robots":"להלביש את הרובוטים",
+"Open":"פתח",
 "Settings":"הגדרות","sound & world":"צליל ועולם",
 "Market Orders":"הזמנות מהשוק","on a clock":"על השעון",
 "Quests":"משימות","progress":"התקדמות",
@@ -76,6 +78,17 @@ const HE={
   "שמור פונקציה פעם אחת — והשתמש בה בכל עולם ובכל מיני-משחק.",
 "A job on a clock. Deliver it before time runs out.":
   "עבודה על השעון. תספק אותה לפני שהזמן נגמר.",
+"Dress your robots. New pieces unlock as you level up.":
+  "תלביש את הרובוטים שלך. פריטים חדשים נפתחים כשאתה עולה רמה.",
+/* the Style sheet: slot labels, the two preview poses, and the pieces */
+"Hat":"כובע","Outfit":"תלבושת","Shoes":"נעליים","None":"אין",
+"Idle":"עומד","Walk":"הולך",
+"Hard Hat":"קסדה","Top Hat":"מגבעת","Graduate":"בוגר","Ranger":"פרש",
+"Crown":"כתר","Party":"מסיבה",
+"Hi-Vis Vest":"אפוד זוהר","Builder Apron":"סינר בנאי","Stripes":"פסים",
+"Hoodie":"קפוצ׳ון","Lab Coat":"חלוק מעבדה","Cape":"גלימה",
+"Work Boots":"מגפי עבודה","Sneakers":"נעלי ספורט","Wellies":"מגפי גשם",
+"Rocket Boots":"מגפי רקטה",
 "Quests & Progress":"משימות והתקדמות",
 "Finish goals, claim rewards, level up!":"תסיים מטרות, תאסוף פרסים, תעלה רמה!",
 "Byte — your AI mentor":"Byte — המנטור שלך",
@@ -715,7 +728,9 @@ const HE_N={
   "Bigger Bag +{n} — {n}":"תיק גדול יותר +{n} — {n}",
   "New Robot — {n}":"רובוט חדש — {n}",
   "Speed Boost — {n}":"האצה — {n}",
-  "Sell the Bank — +{n}":"למכור את הבנק — +{n}"
+  "Sell the Bank — +{n}":"למכור את הבנק — +{n}",
+  "Hats, outfits and shoes — {n} of {n} unlocked.":"כובעים, תלבושות ונעליים — {n} מתוך {n} נפתחו.",
+  "Unlocks at level {n}":"נפתח ברמה {n}"
 };
 
 /* Ignoring emoji means two different English strings can normalise to the
@@ -739,6 +754,8 @@ const SCOPED=[
    ui-icons.js turns whatever emoji they carry into icons either way. */
 const HE_RAW={
   /* the emoji sit inside these sentences, so they are used as written */
+  "Hats, outfits and shoes unlock as you level up ⭐ (first at level 2).":
+    "כובעים, תלבושות ונעליים נפתחים כשאתה עולה רמה ⭐ (הראשון ברמה 2).",
   "Collect 10 🪵 wood":"לאסוף 10 🪵 עץ",
   "Collect 8 🪨 stone":"לאסוף 8 🪨 אבן",
   "Collect 5 ⛓️ iron":"לאסוף 5 ⛓️ ברזל",
