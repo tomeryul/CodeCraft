@@ -24,7 +24,10 @@
    padding-right:52px for exactly that, so the reservation was counted twice
    — and now that the market handle lives inside the pill, those 52px are
    the difference between the handle fitting and hanging out of the end. */
-#topbar #stats{flex-wrap:nowrap;gap:0;max-width:100%;}
+/* 42px is the design's own number for the pill, and pinning it keeps the row
+   from twitching by 2px when a chip that happens to be the tallest — ⭐ and
+   its XP bar — folds away on a narrow screen. */
+#topbar #stats{flex-wrap:nowrap;gap:0;max-width:100%;min-height:42px;}
 #stats .chip{padding:5px 8px;font-size:12.5px;gap:4px;}
 /* the hairline divider styles.css already draws — the 600px breakpoint
    switched it off because the pill used to wrap; it does not any more */
@@ -50,6 +53,45 @@
 #stats #ticker .tk-btn .tk-car{display:none;}   /* the caret costs 14px and says nothing */
 #stats #ticker .tk-btn .tk-shape{display:none;} /* order shape stays in the panel */
 #stats #ticker .tk-btn.q0 .tk-rate{display:none;} /* 🪙/min only once it is earning */
+
+/* ---- 2b. the order clock is its OWN chip ----
+   It used to be a span inside the market handle: one pill, one shape, and
+   two different screens depending on which half of it you hit — the price
+   panel on the left, the Orders sheet on the right, with nothing saying so.
+   A gap and two fills make them two buttons, and the order chip borrows the
+   violet the Orders sheet and the panel's own order row already use, so its
+   colour says where it goes before you press it. */
+/* styles.css lays #ticker out as a column — which did not matter while it
+   held one button and does the moment it holds two. The price panel is
+   position:absolute and stays out of this flow. */
+#stats #ticker{flex-direction:row;align-items:center;gap:4px;}
+#stats #ticker .tk-ord{
+  pointer-events:auto;display:inline-flex;align-items:center;font-family:inherit;
+  padding:5px 8px;min-height:32px;font-size:12px;font-weight:800;
+  border:none;box-shadow:none;border-radius:999px;
+  background:rgba(122,77,255,.28);color:var(--ink);
+  transition:transform .09s;}
+#stats #ticker .tk-ord:active{transform:scale(.96);}
+#stats #ticker .tk-ord .tk-clk{color:var(--ink);}
+
+/* ---- 2c. an order on the row costs what energy costs ----
+   The clock chip only exists while an order is live, and while it is, it is
+   the thing on that row a player acts on. Energy steps aside for it — unless
+   it is low, which is the one state energy is worth reading. body:has() is
+   already how the scrim works in v5, so this is the same tool. */
+#stats:has(#ticker .tk-ord) #energyChip{display:none;}
+#stats:has(#ticker .tk-ord) #energyChip.low{display:flex;}
+
+/* ---- 2d. 320px with an order running ----
+   The narrowest phones have 248px for the row, and five-digit coins plus two
+   market chips need 269. Something has to go, and ⭐ is the only readout up
+   there that is not either a resource you manage or a way into a screen — a
+   level and an XP bar are progress, not something you act on this second. It
+   comes back the moment the order ends or the screen is wider, and the XP is
+   never lost, only not shown. */
+@media (max-width:359px){
+  #stats:has(#ticker .tk-ord) #lvlChip{display:none;}
+}
 
 /* ---- 3. narrow screens: energy folds back to alert-only ----
    The handoff put this at 359px, measured on a 390px screen. Measured across

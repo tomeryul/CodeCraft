@@ -374,7 +374,17 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
         stats: box('#stats'), ticker: box('#ticker'),
         handleH: (box('#ticker .tk-btn') || {}).h,
         tools: box('#tbBtns'),
-        bag: (document.getElementById('bagEl') || {}).textContent
+        bag: (document.getElementById('bagEl') || {}).textContent,
+        /* the market handle and the order clock are two buttons, not two
+           halves of one — they open different screens */
+        buttons: document.querySelectorAll('#ticker button').length,
+        ordH: (box('#ticker .tk-ord') || {}).h,
+        gap: (() => { const a = document.querySelector('#ticker .tk-btn'),
+                            c = document.querySelector('#ticker .tk-ord');
+          return (a && c) ? Math.round(c.getBoundingClientRect().left -
+                                       a.getBoundingClientRect().right) : null; })(),
+        fills: [...document.querySelectorAll('#ticker button')]
+          .map(e => getComputedStyle(e).backgroundColor)
       };
     });
     await pg.waitForTimeout(200);
@@ -384,6 +394,12 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     ck(`${W}x${H} the market handle sits inside the pill, clear of the tools`,
        pill.ticker.r <= pill.stats.r + 1 && pill.ticker.r <= pill.tools.l, pill);
     ck(`${W}x${H} the handle is still a tap target`, pill.handleH >= 32, pill);
+    /* One pill-shaped button used to open the price panel on its left and the
+       Orders sheet on its right, with nothing on it saying so. */
+    ck(`${W}x${H} the market and the order are two separate chips`,
+       pill.buttons === 2 && pill.gap >= 3 && pill.ordH >= 32, pill);
+    ck(`${W}x${H} and they do not look like one`,
+       pill.fills.length === 2 && pill.fills[0] !== pill.fills[1], pill.fills);
     ck(`${W}x${H} the bag chip is a count, not a changing-width preview`,
        /^\d+\/\d+$/.test((pill.bag || '').trim()), pill.bag);
 

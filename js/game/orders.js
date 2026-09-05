@@ -81,8 +81,13 @@ function renderOrders(){
 $("ordClose").addEventListener("click",ordersClose);
 /* the ticker is the only place an order is visible from the world, so its
    order chip is the way in — a screen nothing opens is a screen nobody finds */
+/* .tk-ord is the clock chip in the top bar, .tk-order the order row inside
+   the price panel — two ways into the same sheet. The chip is its own button
+   now rather than a region of the market handle, so this no longer has to
+   win a race with that handle's listener; the capture phase stays because
+   the panel row still sits inside the market's own click target. */
 $("ticker").addEventListener("click",e=>{
-  if(e.target.closest(".tk-order")||e.target.closest(".tk-shape")||e.target.closest(".tk-clk")){
+  if(e.target.closest(".tk-ord")||e.target.closest(".tk-order")){
     e.stopPropagation();ordersOpen();
   }
 },true);

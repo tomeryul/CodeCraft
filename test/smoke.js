@@ -403,6 +403,54 @@ async function ev(expr) {
   await ev(`mgExit(false); document.getElementById('editor').classList.remove('open','max'); 'ok'`);
   check("Board tab hidden after leaving a challenge", await ev(`document.getElementById('boardTabBtn').style.display==='none'`) === true);
 
+  console.log("▶ 📈 ⏱ two chips, two screens");
+  /* The clock used to be a span inside the market handle: one pill, and
+     tapping its right half opened the Orders sheet while its left half
+     opened the price panel. Two buttons now, and each must open only its
+     own screen. */
+  const twoChips = await ev(`(()=>{
+    const out={};
+    if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+    document.querySelectorAll('.sheet.open').forEach(x=>x.classList.remove('open'));
+    document.getElementById('ticker').classList.remove('open');
+    market.order={need:{wood:41},got:{},until:now+110000,reward:298,shape:'bulk'};
+    renderMarket();
+    const q=s=>document.querySelector(s);
+    out.buttons=document.querySelectorAll('#ticker button').length;
+    if(!q('#ticker .tk-ord'))return JSON.stringify({missing:true});
+
+    q('#ticker .tk-btn').click();
+    out.marketOpensPanel=!!q('#ticker .tk-panel');
+    out.marketLeavesOrders=!document.getElementById('orders').classList.contains('open');
+    q('#ticker .tk-btn').click();
+
+    q('#ticker .tk-ord').click();
+    out.orderOpensSheet=document.getElementById('orders').classList.contains('open');
+    out.orderLeavesPanel=!q('#ticker .tk-panel');
+    ordersClose();
+
+    /* the panel's own order row is the second way in, and still works */
+    q('#ticker .tk-btn').click();
+    const row=q('#ticker .tk-order');
+    out.panelRow=!!row;
+    if(row){ row.click(); out.rowOpensSheet=document.getElementById('orders').classList.contains('open'); ordersClose(); }
+    document.getElementById('ticker').classList.remove('open');
+    market.order=null; renderMarket();
+    out.noOrderOneButton=document.querySelectorAll('#ticker button').length;
+    return JSON.stringify(out);
+  })()`);
+  const CH = JSON.parse(twoChips);
+  check("the market handle and the order clock are two buttons",
+    CH.buttons === 2, twoChips);
+  check("the 📈 chip opens the price panel and nothing else",
+    CH.marketOpensPanel === true && CH.marketLeavesOrders === true, twoChips);
+  check("the ⏱ chip opens the Orders sheet and nothing else",
+    CH.orderOpensSheet === true && CH.orderLeavesPanel === true, twoChips);
+  check("the panel's own order row still opens the sheet too",
+    CH.panelRow === true && CH.rowOpensSheet === true, twoChips);
+  check("with no order running there is just the one chip",
+    CH.noOrderOneButton === 1, twoChips);
+
   console.log("▶ ❗ is / is not: the switch in the block");
   const negUi = await ev(`(()=>{
     const out={};
