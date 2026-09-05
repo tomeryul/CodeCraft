@@ -85,6 +85,10 @@ function applySave(d){
     player=Object.assign({xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{},myChallenges:[],academy:{},funcLib:[]},d.player||{});
     if(!player.academy)player.academy={};
     if(!player.funcLib)player.funcLib=[];
+    /* pieces the player painted. A save can come from a file somebody else
+       wrote, and these are both drawn and named on screen, so they are
+       re-encoded from the allowed alphabet rather than trusted. */
+    player.myWear=window.CC_WEAR?CC_WEAR.clean(player.myWear):[];
     market=freshMarket();
     if(d.market){
       market.prices=Object.assign(market.prices,d.market.prices||{});

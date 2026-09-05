@@ -405,7 +405,7 @@ function draw(t){
        them. 4.75 is where the sprite grid's brim line (y≈34 of 48, at the
        TILE*.5 the hat is drawn at) lands on the body top, a quarter-pixel into
        the bevel so it reads as resting on it. */
-    if(r.hat){
+    if(r.hat&&!(window.CC_WEAR&&CC_WEAR.hat(ctx,r.hat))){
       const hp=sprite(r.hat,TILE*.5);
       ctx.drawImage(hp,-hp.lw/2,-s2/2-4.75-hp.lw/2,hp.lw,hp.lw);
     }
@@ -696,7 +696,7 @@ function drawBoardRobot(g,cx,cy,s2,dir,color,running,t,wear){
   // smile
   g.strokeStyle="#1c1638";g.lineWidth=2;g.beginPath();g.arc(ex*.5,4+ey*.5,5,.2*Math.PI,.8*Math.PI);g.stroke();
   // head anchor — inside the transform, exactly as in the world
-  if(W.hat){
+  if(W.hat&&!(window.CC_WEAR&&CC_WEAR.hat(g,W.hat))){
     const hp=sprite(W.hat,TILE*.5);
     g.drawImage(hp,-hp.lw/2,-S/2-4.75-hp.lw/2,hp.lw,hp.lw);
   }

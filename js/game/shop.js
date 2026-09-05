@@ -137,6 +137,14 @@ function stylePaintSwatch(c,kind,id,color){
   const g=styleFit(c,46,46); if(!g)return;
   const col=safeColor(color);
   g.save();
+  /* a piece the player painted is the same grid the robot wears, fitted to
+     the swatch — no second way of drawing it, so what you pick is what you
+     get */
+  if(window.CC_WEAR&&CC_WEAR.isCustom(id)){
+    const p=wearFind(id);
+    if(p)CC_WEAR.swatch(g,kind,p.px,46);
+    g.restore();return;
+  }
   if(kind==="hat"){
     const hp=sprite(id,30);
     g.drawImage(hp,23-hp.lw/2,25-hp.lw/2,hp.lw,hp.lw);
@@ -196,21 +204,28 @@ function renderStyle(){
   const slot=(kind,label,list,label4)=>{
     const cur=r[kind];
     const wrap=document.createElement("div");wrap.className="st-slot";
-    const found=list.find(x=>(x.id||x.em)===cur);
+    const found=list.find(x=>(x.id||x.em)===cur)||wearFind(cur);
     const owned=list.filter(x=>x.lvl<=player.level).length;
     const lab=document.createElement("div");lab.className="st-lab";
     lab.innerHTML=esc(label)+' <i>'+esc(found?(found.name||found.id):"None")+'</i><b>'+owned+"/"+list.length+"</b>";
     wrap.appendChild(lab);
     const row=document.createElement("div");row.className="st-row";
-    const sw=(val,locked,lvl,paint)=>{
+    const sw=(val,locked,lvl,paint,mine,nm)=>{
       const b=document.createElement("button");b.type="button";
-      b.className="st-sw"+(cur===val?" on":"")+(locked?" locked":"");
-      b.setAttribute("aria-label",label4+" "+(val===null?"none":String(val))+(locked?" (locked until level "+lvl+")":""));
+      b.className="st-sw"+(cur===val?" on":"")+(locked?" locked":"")+(mine?" mine":"");
+      /* the label is the piece's own name, not a slot-plus-id string: a name
+         is a sentence the dictionary can translate, "outfit vest" is not */
+      b.setAttribute("aria-label",val===null?"None":String(nm||val));
+      if(locked)b.title="Unlocks at level "+lvl;
       if(paint){const c=document.createElement("canvas");b.appendChild(c);paint(c);}
       else{const n=document.createElement("span");n.className="none";n.textContent="✖";b.appendChild(n);}
       if(locked){const t=document.createElement("span");t.className="lk";t.textContent="🔒"+lvl;b.appendChild(t);}
       b.addEventListener("click",()=>{
         if(locked){toast("🔒 Unlocks at level "+lvl+" ⭐");return;}
+        /* a second tap on a piece you already wear opens it for repainting:
+           the piece is the button, so it does not need a second one beside
+           it on a row that is already scrolling */
+        if(mine&&cur===val){makerOpen(kind,val);return;}
         r[kind]=val;saveSoon();renderStyle();
         if(typeof sfx==="function")sfx(700,.05);
       });
@@ -219,9 +234,28 @@ function renderStyle(){
     sw(null,false,0,null);
     list.forEach(it=>{
       const val=it.id||it.em, locked=it.lvl>player.level;
-      sw(val,locked,it.lvl,c=>stylePaintSwatch(c,kind==="hat"?"hat":kind,kind==="hat"?it.em:it.id,r.color));
+      sw(val,locked,it.lvl,c=>stylePaintSwatch(c,kind==="hat"?"hat":kind,kind==="hat"?it.em:it.id,r.color),false,it.name);
     });
+    /* the player's own pieces sit in the same row as the shop's, because
+       they are the same thing: something the robot can wear. Tapping one
+       wears it; the pencil on the selected one opens it for repainting. */
+    wearOf(kind).forEach(p=>{
+      sw(p.id,false,0,c=>stylePaintSwatch(c,kind,p.id,r.color),true,p.name);
+    });
+    const add=document.createElement("button");add.type="button";add.className="st-sw add";
+    add.setAttribute("aria-label","Make your own "+label4);
+    add.innerHTML='<span class="pl">＋</span>';
+    add.addEventListener("click",()=>makerOpen(kind,null));
+    row.appendChild(add);
     wrap.appendChild(row);body.appendChild(wrap);
+    /* The row is wider than the sheet, and the piece you are wearing — or
+       have just made, which lands at the far end — is often the one past the
+       right edge. A picker that hides your own choice is not a picker. */
+    requestAnimationFrame(()=>{
+      const on=row.querySelector(".st-sw.on");
+      if(on&&row.scrollWidth>row.clientWidth)
+        row.scrollLeft=Math.max(0,on.offsetLeft-row.clientWidth/2+on.offsetWidth/2);
+    });
   };
   /* the labels are words, not emoji: the icon pack covers every emoji the app
      ships, and a slot label is not worth two new icons when the swatches

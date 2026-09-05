@@ -122,14 +122,125 @@ const shoes={
   }
 };
 
+/* =====================================================================
+   Pieces the player painted
+   ---------------------------------------------------------------------
+   A made piece is a 12×12 grid of palette indices — one character per
+   cell, "." for see-through — and an id that starts with "my:". That is
+   the whole format: it fits in a save, it survives being typed into a
+   text editor, and it cannot carry anything but colour.
+
+   The grid lands in the SAME body units the hand-painted pieces use, so
+   a made hat rides the head anchor and a made shoe rides the foot for
+   exactly the same reason the drawn ones do. Only the paint is the
+   player's; the rig is not up for negotiation.
+
+   The palette is the game's own sixteen colours. A free colour picker
+   would let a player paint a robot in colours that belong to nothing
+   else on screen, and the point of a small palette is that whatever they
+   make still looks like it comes from this world.
+   ===================================================================== */
+const WEAR_PAL=["#ffb830","#ffd66b","#e09a12","#ff5d73","#e04a5f","#ff8fa0",
+  "#5ab8ff","#3f93cf","#54d66a","#3fb257","#b184ff","#f2f3f7",
+  "#cfd4e0","#9aa3b5","#4a3728","#241b45"];
+const WEAR_KEY="0123456789abcdef";
+const WEAR_N=12;                     /* 12×12: chunky enough to paint with a thumb */
+const WEAR_MAX=8;                    /* pieces per slot */
+const WEAR_PRE="my:";
+/* where the grid sits, in body units. The hat box is the sprite's own
+   footprint — 24 units square, centred where sprite hats are drawn — so a
+   made hat and a drawn one occupy the same space. */
+const WEAR_BOX={
+  hat:   {x:-12,   y:-S/2-16.75, w:24, h:24},
+  outfit:{x:-S/2,  y:-S/2,       w:S,  h:S },
+  shoes: {x:-6,    y:-4,         w:12, h:12}
+};
+
+function isCustom(id){ return typeof id==="string" && id.indexOf(WEAR_PRE)===0; }
+/* the draft is the piece being painted right now: it has no entry in the
+   save yet, and the preview has to be able to draw it anyway */
+let draft=null;
+function customPx(id){
+  if(!isCustom(id))return null;
+  if(draft&&draft.id===id)return draft.px;
+  const list=(typeof player!=="undefined"&&player&&player.myWear)||[];
+  for(let i=0;i<list.length;i++)if(list[i]&&list[i].id===id)return list[i].px;
+  return null;
+}
+function paintGrid(g,box,px){
+  if(typeof px!=="string")return;
+  const cw=box.w/WEAR_N, ch=box.h/WEAR_N, n=WEAR_N*WEAR_N;
+  for(let i=0;i<n&&i<px.length;i++){
+    const k=WEAR_KEY.indexOf(px.charAt(i));
+    if(k<0)continue;
+    g.fillStyle=WEAR_PAL[k];
+    /* the .04 overlap closes the hairline seams antialiasing leaves
+       between neighbouring cells when the whole grid is scaled */
+    g.fillRect(box.x+(i%WEAR_N)*cw-.02, box.y+((i/WEAR_N)|0)*ch-.02, cw+.04, ch+.04);
+  }
+}
+
 window.CC_WEAR={
   outfits:outfits, backs:backs, shoes:shoes,
+  pal:WEAR_PAL, key:WEAR_KEY, cells:WEAR_N, max:WEAR_MAX, prefix:WEAR_PRE, box:WEAR_BOX,
+  isCustom:isCustom,
   /* body-local; the caller has already clipped to the body square */
-  outfit(g,id,color){const f=outfits[id]; if(f)f(g,color);},
+  outfit(g,id,color){
+    const px=customPx(id); if(px!==null)return paintGrid(g,WEAR_BOX.outfit,px);
+    const f=outfits[id]; if(f)f(g,color);
+  },
   /* body-local; drawn before the legs */
   back(g,id,sway,gp){const f=backs[id]; if(f)f(g,sway,gp);},
   /* foot-local; origin = leg end, already rotated */
-  shoe(g,id,limb,moving,t){const f=shoes[id]; if(f)f(g,limb,moving,t);}
+  shoe(g,id,limb,moving,t){
+    const px=customPx(id); if(px!==null)return paintGrid(g,WEAR_BOX.shoes,px);
+    const f=shoes[id]; if(f)f(g,limb,moving,t);
+  },
+  /* body-local. Returns false for a shop hat so the caller falls back to
+     the sprite — a hat that is not painted is still rigid art. */
+  hat(g,id){
+    const px=customPx(id); if(px===null)return false;
+    paintGrid(g,WEAR_BOX.hat,px); return true;
+  },
+  /* the piece on its own, fitted to a size×size box: swatches and previews */
+  swatch(g,slot,px,size){
+    const b=WEAR_BOX[slot]; if(!b)return;
+    const k=size/Math.max(b.w,b.h)*.94;
+    g.save();
+    g.translate(size/2,size/2);g.scale(k,k);g.translate(-(b.x+b.w/2),-(b.y+b.h/2));
+    paintGrid(g,b,px);
+    g.restore();
+  },
+  grid(g,slot,px){const b=WEAR_BOX[slot]; if(b)paintGrid(g,b,px);},
+  setDraft(d){draft=d||null;},
+  /* A save can arrive from a file somebody else wrote, and a made piece is
+     both drawn and named on screen. Everything that is not a palette
+     character becomes a hole, and anything the game does not recognise is
+     dropped rather than repaired. */
+  clean(list){
+    if(!Array.isArray(list))return [];
+    const out=[], n=WEAR_N*WEAR_N, seen={};
+    for(const p of list){
+      if(!p||typeof p!=="object")continue;
+      const slot=p.slot;
+      if(slot!=="hat"&&slot!=="outfit"&&slot!=="shoes")continue;
+      if(!isCustom(p.id)||!/^my:[a-z0-9]{1,24}$/.test(p.id)||seen[p.id])continue;
+      const px=String(p.px==null?"":p.px);
+      let clean="";
+      /* charAt past the end returns "", and "".indexOf() is 0 — which would
+         quietly read a short grid as a row of colour 0. The length check is
+         what keeps a truncated piece a truncated piece. */
+      for(let i=0;i<n;i++){
+        const c=i<px.length?px.charAt(i):"";
+        clean+=(c&&WEAR_KEY.indexOf(c)>=0)?c:".";
+      }
+      const name=(typeof safeText==="function")?safeText(p.name,18):String(p.name||"").slice(0,18);
+      seen[p.id]=1;
+      out.push({id:p.id,slot:slot,name:name||"?",px:clean});
+      if(out.length>=WEAR_MAX*3)break;
+    }
+    return out;
+  }
 };
 /* `back` is looked up as CC_WEAR.back[id] at the call site in render.js —
    a function has no such property, so expose the table under the same name

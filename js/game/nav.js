@@ -22,7 +22,7 @@ if(window.__nav)return; window.__nav=1;
 
 /* The destination sheets. #splash, #agegate and #delacc are modal — they
    own their own buttons and must not gain a Back to somewhere behind. */
-const SHEETS=["editor","mentor","quests","hub","projects","guide","funcLib","orders","style","report","settings"];
+const SHEETS=["editor","mentor","quests","hub","projects","guide","funcLib","orders","style","maker","report","settings"];
 const has=n=>typeof window[n]==="function";
 
 const ICON_BACK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" '+
@@ -51,6 +51,11 @@ function navHome(){
    destination page it is the menu; from the menu there is nothing. */
 function navBack(){
   if($("editor").classList.contains("mg")){ if(has("mgExit"))mgExit(true); return; }
+  /* The paint sheet is the one page that was opened FROM another page
+     rather than from the menu, so one step back is Style, not the menu. */
+  if($("maker")&&$("maker").classList.contains("open")&&has("makerClose")){
+    makerClose(); if(has("sfx"))sfx(500,.04); return;
+  }
   const wasProjects=$("projects").classList.contains("open");
   closeAll();
   if(has("hubOpen"))setTimeout(hubOpen,wasProjects?120:0);

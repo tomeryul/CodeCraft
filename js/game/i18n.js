@@ -82,6 +82,17 @@ const HE={
   "תלביש את הרובוטים שלך. פריטים חדשים נפתחים כשאתה עולה רמה.",
 /* the Style sheet: slot labels, the two preview poses, and the pieces */
 "Hat":"כובע","Outfit":"תלבושת","Shoes":"נעליים","None":"אין",
+/* ---- make a piece ---- */
+"Make a piece":"להכין אביזר",
+"Paint your own. It shows up in Style with the rest.":
+  "תצייר משלך. זה מופיע בסטייל יחד עם כל השאר.",
+"Name it":"תן שם","Clear":"לנקות","Save":"לשמור","Delete":"למחוק",
+"Piece name":"שם האביזר",
+"My piece":"האביזר שלי","Eraser":"מחק",
+"Paint something first!":"קודם תצייר משהו!",
+"Make your own hat":"להכין כובע משלך",
+"Make your own outfit":"להכין תלבושת משלך",
+"Make your own shoes":"להכין נעליים משלך",
 "Idle":"עומד","Walk":"הולך",
 "Hard Hat":"קסדה","Top Hat":"מגבעת","Graduate":"בוגר","Ranger":"פרש",
 "Crown":"כתר","Party":"מסיבה",
@@ -730,7 +741,10 @@ const HE_N={
   "Speed Boost — {n}":"האצה — {n}",
   "Sell the Bank — +{n}":"למכור את הבנק — +{n}",
   "Hats, outfits and shoes — {n} of {n} unlocked.":"כובעים, תלבושות ונעליים — {n} מתוך {n} נפתחו.",
-  "Unlocks at level {n}":"נפתח ברמה {n}"
+  "Unlocks at level {n}":"נפתח ברמה {n}",
+  "Colour {n}":"צבע {n}",
+  "You already have {n} of these. Delete one to make another.":
+    "כבר יש לך {n} כאלה. תמחק אחד כדי להכין עוד."
 };
 
 /* Ignoring emoji means two different English strings can normalise to the
@@ -1200,6 +1214,7 @@ const HE_T={
 "{n} levels · {s} — your multi-level minigame!":"{1} שלבים · {2} — המשחקון רב-השלבים שלך!",
 "{s} built!":"{1} נבנה!",
 "{s} is live!":"{1} באוויר!",
+"{s} is yours!":"{1} שלך!",
 "{s} is updated!":"{1} עודכן!",
 "{s} steps":"{1} צעדים",
 "{s} — Level {n}/{n}":"{1} — שלב {2}/{3}",

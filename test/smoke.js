@@ -2341,7 +2341,7 @@ async function ev(expr) {
      the address is what is asserted. */
   const RENDER_SRC = fs.readFileSync(path.resolve(__dirname, "..", "js", "game", "render.js"), "utf8");
   check("the hat is drawn inside the robot's transform tree",
-    /if\(r\.hat\)\{[\s\S]{0,220}?ctx\.restore\(\);/.test(RENDER_SRC) &&
+    /if\(r\.hat[\s\S]{0,80}?\)\{[\s\S]{0,220}?ctx\.restore\(\);/.test(RENDER_SRC) &&
     !/ctx\.translate\(cx\+2,cy\+bobY/.test(RENDER_SRC));
   /* the pieces reach the canvas: a dressed robot must not paint the same
      pixels as a bare one */
@@ -2362,6 +2362,64 @@ async function ev(expr) {
   check("shoes paint on the board robot", PX.shoes === true, px);
   check("a cape paints behind the board robot", PX.cape === true, px);
   check("an undressed robot is unchanged by the new code path", PX.none === true, px);
+
+  console.log("▶ pieces the player paints");
+  const MADE = JSON.parse(await ev(`(()=>{
+    if(typeof makerOpen!=='function'||!window.CC_WEAR||!CC_WEAR.isCustom)return JSON.stringify({missing:true});
+    mgState=null; mgRobot=null;
+    player.myWear=[]; player.level=20;
+    const out={};
+    /* paint a stripe and keep it */
+    makerOpen('hat',null);
+    const id=mkId;
+    out.pre=CC_WEAR.isCustom(id);
+    for(let c=2;c<10;c++)mkPx[7*CC_WEAR.cells+c]='0';
+    mkName='Test Lid'; mkSave();
+    out.saved=player.myWear.length;
+    out.worn=robots[selRobot].hat===id;
+    out.name=(player.myWear[0]||{}).name;
+    out.len=(player.myWear[0]||{}).px.length;
+    /* it reaches the canvas: a robot wearing it must not paint like a bare one */
+    const shot=w=>{const c=document.createElement('canvas');c.width=c.height=90;
+      const g=c.getContext('2d');drawBoardRobot(g,45,45,40,'E','#ffb830',false,0,w);
+      return g.getImageData(0,0,90,90).data.join(',');};
+    out.paints = shot({hat:id})!==shot(null);
+    /* it survives the trip through a save */
+    const snap=JSON.parse(JSON.stringify(buildSave()));
+    player.myWear=[]; robots[selRobot].hat=null;
+    applySave(snap);
+    out.rt = player.myWear.length===1 && player.myWear[0].id===id && robots[selRobot].hat===id;
+    /* an empty grid is not a piece */
+    makerOpen('outfit',null); mkSave();
+    out.emptyRejected = player.myWear.length===1;
+    makerExit();
+    /* deleting one takes it off the robot it was on */
+    makerOpen('hat',id); mkDelete();
+    out.deleted = player.myWear.length===0 && robots[selRobot].hat===null;
+    /* a save someone else wrote is re-encoded, never trusted */
+    const dirty=JSON.parse(JSON.stringify(buildSave()));
+    dirty.player.myWear=[
+      {id:'my:a1',slot:'hat',name:'<img src=x onerror=1>',px:'<<<<'},
+      {id:'notmine',slot:'hat',name:'x',px:'0'},
+      {id:'my:b2',slot:'trousers',name:'x',px:'0'}];
+    applySave(dirty);
+    out.clean=player.myWear.map(p=>p.id+'|'+p.name+'|'+p.px.length+'|'+p.px.replace(/\\./g,'').length);
+    player.myWear=[];
+    return JSON.stringify(out);
+  })()`));
+  check("the maker mints a custom id and saves the piece",
+    !MADE.missing && MADE.pre === true && MADE.saved === 1 && MADE.name === 'Test Lid' && MADE.len === 144, JSON.stringify(MADE));
+  check("saving a piece puts it on the robot", MADE.worn === true, JSON.stringify(MADE));
+  check("a painted piece reaches the canvas", MADE.paints === true, JSON.stringify(MADE));
+  check("a painted piece survives buildSave → applySave", MADE.rt === true, JSON.stringify(MADE));
+  check("an empty grid is not saved as a piece", MADE.emptyRejected === true, JSON.stringify(MADE));
+  check("deleting a piece takes it off the robot wearing it", MADE.deleted === true, JSON.stringify(MADE));
+  /* the grid is the only thing a made piece can carry: a foreign save gets
+     its markup stripped, its unknown slots dropped and its grid re-encoded
+     to exactly 144 palette characters */
+  check("a foreign save's pieces are re-encoded, not trusted",
+    Array.isArray(MADE.clean) && MADE.clean.length === 1 &&
+    MADE.clean[0] === 'my:a1|img src=x onerror=|144|0', JSON.stringify(MADE.clean));
 
   console.log("▶ splash login gate");
   check("splash shows an email/password login card when online is configured",

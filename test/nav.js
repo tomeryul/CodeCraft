@@ -156,6 +156,31 @@ async function toWorld(pg){
          e.offsetParent && getComputedStyle(e).visibility!=='hidden');
      }), null);
 
+  /* The paint sheet is the one page reached from another page rather than
+     from the menu, so Back has to mean Style there and Exit still has to
+     mean the world. */
+  await pg.evaluate(()=>navHome()); await pg.waitForTimeout(400);
+  if (await pg.evaluate(()=>typeof makerOpen==='function')) {
+    /* a level-up card left over from the run so far would sit over the
+       header and swallow the click */
+    await pg.evaluate(()=>{ const c=document.getElementById('ccCele'); if(c)c.remove(); });
+    await pg.evaluate(()=>{ player.myWear=[]; makerOpen('hat',null); });
+    await pg.waitForTimeout(500);
+    await pg.click('#makerBack'); await pg.waitForTimeout(500);
+    ck('Back out of the paint sheet lands on Style, not the menu',
+       await pg.evaluate(()=>$('style').classList.contains('open') &&
+         !$('maker').classList.contains('open') && !$('hub').classList.contains('open')),
+       await pg.evaluate(()=>[...document.querySelectorAll('.sheet.open')].map(s=>s.id)));
+    await pg.evaluate(()=>makerOpen('hat',null)); await pg.waitForTimeout(500);
+    await pg.click('#makerClose'); await pg.waitForTimeout(500);
+    ck('Exit out of the paint sheet lands on the world',
+       await pg.evaluate(()=>document.querySelectorAll('.sheet.open').length===0),
+       await pg.evaluate(()=>[...document.querySelectorAll('.sheet.open')].map(s=>s.id)));
+  } else {
+    ck('Back out of the paint sheet lands on Style, not the menu', false, 'makerOpen missing');
+    ck('Exit out of the paint sheet lands on the world', false, 'makerOpen missing');
+  }
+
   console.log('  pageerrors:', errs.length?errs.slice(0,3):'none');
   ck('no uncaught exceptions', errs.length===0, errs.slice(0,3));
   console.log(`\n${pass} passed, ${fail} failed`);
