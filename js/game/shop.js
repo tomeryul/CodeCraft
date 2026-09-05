@@ -124,8 +124,8 @@ function stylePlay(){
          narrow sheet */
       const w=Math.max(200,Math.round(cv.clientWidth||330));
       const g=styleFit(cv,w,150);
-      if(g)drawBoardRobot(g,w/2,84,66,"E",safeColor(r.color),styleMode==="walk",ts||0,
-        {hat:r.hat,outfit:r.outfit,shoes:r.shoes});
+      if(g)drawBoardRobot(g,w/2,84,70,"E",safeColor(r.color),false,ts||0,
+        {hat:r.hat,outfit:r.outfit,shoes:r.shoes},styleMode);
     }
     styleRaf=requestAnimationFrame(step);
   };
@@ -192,7 +192,9 @@ function renderStyle(){
   const cv=document.createElement("canvas");cv.id="stylePrev";
   pv.appendChild(cv);body.appendChild(pv);
   const modes=document.createElement("div");modes.className="st-modes";
-  [["idle","Idle"],["walk","Walk"]].forEach(([k,lab])=>{
+  /* the three the world actually shows — a piece has to be judged on a
+     moving robot, and the chop is the pose that catches a bad hat */
+  [["idle","Idle"],["walk","Walk"],["work","Chop"]].forEach(([k,lab])=>{
     const b=document.createElement("button");
     b.className="st-mode"+(styleMode===k?" on":"");b.type="button";b.textContent=lab;
     b.addEventListener("click",()=>{styleMode=k;renderStyle();});

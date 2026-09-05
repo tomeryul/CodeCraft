@@ -2625,6 +2625,47 @@ async function ev(expr) {
   check("the code on screen is the code the piece means", CODE.plainMatchesShown === true, JSON.stringify(CODE));
   check("rotate reaches the canvas", CODE.rotates === true, JSON.stringify(CODE));
 
+  /* A piece has to be judged on a moving robot: a brim that clears the
+     antenna at rest can still swing through it on a chop, and shoes only
+     make sense mid-stride. The preview animates on the world robot's own
+     tables so the two cannot become different-looking robots. */
+  const POSE = JSON.parse(await ev(`(()=>{
+    if(typeof boardPose!=='function')return JSON.stringify({missing:true});
+    const shot=(pose,t)=>{const c=document.createElement('canvas');c.width=c.height=140;
+      const g=c.getContext('2d');
+      drawBoardRobot(g,70,74,54,'E','#ffb830',false,t,{shoes:'boots'},pose);
+      return g.getImageData(0,0,140,140).data.join(',');};
+    const idle=shot('idle',400), walk=shot('walk',400), work=shot('work',500);
+    const bare=(()=>{const c=document.createElement('canvas');c.width=c.height=140;
+      const g=c.getContext('2d');
+      drawBoardRobot(g,70,74,54,'E','#ffb830',false,400,{shoes:'boots'});
+      return g.getImageData(0,0,140,140).data.join(',');})();
+    /* the walk cycle has to move between frames, or it is a still picture */
+    const moves=shot('walk',400)!==shot('walk',760);
+    const P=boardPose('work',500);
+    return JSON.stringify({
+      three:idle!==walk&&walk!==work&&idle!==work,
+      posedDiffers:idle!==bare, moves:moves,
+      workLeans:Math.abs(P.rot)>1, workHasTool:!!P.TL,
+      /* the pose driver reads the same tables the world robot animates on */
+      sameTables:P.TL===ACT_TL.chop
+    });
+  })()`));
+  check("the preview strikes three different poses",
+    !POSE.missing && POSE.three === true, JSON.stringify(POSE));
+  check("a posed robot has the legs and arms the still one does not",
+    POSE.posedDiffers === true, JSON.stringify(POSE));
+  check("the walk actually walks between frames", POSE.moves === true, JSON.stringify(POSE));
+  check("the chop leans and carries the tool arm",
+    POSE.workLeans === true && POSE.workHasTool === true, JSON.stringify(POSE));
+  check("the preview animates on the world robot's own keyframes",
+    POSE.sameTables === true, JSON.stringify(POSE));
+  /* the Academy board is the one caller that must NOT get a pose: it draws
+     the same token it always has */
+  check("the Academy board robot is still drawn without a pose",
+    /drawBoardRobot\([^;]*rw\?\{hat:rw\.hat,outfit:rw\.outfit,shoes:rw\.shoes\}:null\);/
+      .test(fs.readFileSync(path.resolve(__dirname, "..", "js", "game", "challenges.js"), "utf8")));
+
   check("a foreign save's pieces are re-encoded, not trusted",
     Array.isArray(MADE.clean) && MADE.clean.length === 1 &&
     MADE.clean[0] === 'my:a1|img src=x onerror=|144|0', JSON.stringify(MADE.clean));

@@ -36,6 +36,11 @@ let mkFocus=null;
 const CID=()=>mkFocus!=null?"cp":"mk";
 const mkRender=()=>{ if(mkFocus!=null)renderComp(); else renderMaker(); };
 const PART_WORD=["Box","Tile","Pill","Dot"];
+/* which pose the preview robot holds. A piece has to be judged on a moving
+   robot, not a standing one: a brim that clears the antenna at rest can
+   still swing through it on a chop, and shoes only make sense mid-stride. */
+let mkPose="idle";
+const POSES=[["idle","Idle"],["walk","Walk"],["work","Chop"]];
 
 function myWear(){ if(!player.myWear)player.myWear=[]; return player.myWear; }
 function wearOf(slot){ return myWear().filter(p=>p.slot===slot); }
@@ -164,13 +169,27 @@ function mkPlay(){
       :{id:mkId,px:mkStr(),sm:mkSm});
     const r=robots[selRobot]||robots[0];
     if(r){
-      const w=Math.max(140,Math.round(cv.clientWidth||200)), d=Math.min(2,window.devicePixelRatio||1);
-      if(cv.width!==Math.round(w*d)){cv.width=Math.round(w*d);cv.height=Math.round(132*d);}
+      /* the box is portrait and as tall as the canvas beside it, so the
+         robot gets read at a size a child can actually judge — the old one
+         was 58 body units in a 132px square and looked like a token */
+      const w=Math.max(80,Math.round(cv.clientWidth||120));
+      const h=Math.max(120,Math.round(cv.clientHeight||220));
+      const d=Math.min(2,window.devicePixelRatio||1);
+      if(cv.width!==Math.round(w*d)||cv.height!==Math.round(h*d)){
+        cv.width=Math.round(w*d);cv.height=Math.round(h*d);
+      }
       const g=cv.getContext("2d");
-      g.setTransform(d,0,0,d,0,0);g.clearRect(0,0,w,132);
+      g.setTransform(d,0,0,d,0,0);g.clearRect(0,0,w,h);
       const wear={hat:r.hat,outfit:r.outfit,shoes:r.shoes};
       wear[mkSlot]=mkId;
-      drawBoardRobot(g,w/2,74,58,"E",safeColor(r.color),false,ts||0,wear);
+      /* A chopping robot is 1.9 body-widths across once the axe is out and
+         1.68 tall from hat to sole, so the fit is against both — and one
+         size for all three poses, because a robot that changes size when you
+         switch pose is a robot you cannot compare. The chop reaches to the
+         right, so the body sits a little left of centre on that one. */
+      const s2=Math.min(w/1.95,h*.55);
+      drawBoardRobot(g,w/2-(mkPose==="work"?s2*.2:0),h*.5,s2,
+        "E",safeColor(r.color),false,ts||0,wear,mkPose);
     }
     mkRaf=requestAnimationFrame(step);
   };
@@ -217,7 +236,7 @@ function renderMaker(){
   const pc=document.createElement("canvas");pc.id="mkPrev";pv.appendChild(pc);
   const pad=document.createElement("div");pad.className="mk-pad";
   const cc=document.createElement("canvas");cc.id="mkCanvas";pad.appendChild(cc);
-  stage.appendChild(pad);stage.appendChild(pv);
+  stage.appendChild(pv);stage.appendChild(mkPoseRow());stage.appendChild(pad);
   body.appendChild(stage);
 
   /* colours. In Paint they are the brush; in Build they recolour the box
@@ -562,6 +581,20 @@ function mkCodeRefresh(el){
   }
 }
 
+/* Standing, walking, chopping — the three the world actually shows. */
+function mkPoseRow(){
+  const wrap=document.createElement("div");wrap.className="mk-fin mk-poses";
+  const seg=document.createElement("div");seg.className="mk-seg";
+  POSES.forEach(([k,lab])=>{
+    const b=document.createElement("button");b.type="button";
+    b.className="mk-sm"+(mkPose===k?" on":"");b.textContent=lab;
+    b.addEventListener("click",()=>{ if(mkPose===k)return; mkPose=k; mkRender(); });
+    seg.appendChild(b);
+  });
+  wrap.appendChild(seg);
+  return wrap;
+}
+
 /* The code block, on either screen. The same promise the Python tab makes
    about blocks, made about boxes — except every number here is a real
    declaration in a real rule, so every number here can be tapped. Dragging
@@ -657,7 +690,7 @@ function renderComp(){
   const pc=document.createElement("canvas");pc.id="cpPrev";pv.appendChild(pc);
   const pad=document.createElement("div");pad.className="mk-pad";
   const cc=document.createElement("canvas");cc.id="cpCanvas";pad.appendChild(cc);
-  stage.appendChild(pad);stage.appendChild(pv);
+  stage.appendChild(pv);stage.appendChild(mkPoseRow());stage.appendChild(pad);
   body.appendChild(stage);
 
   /* which of this component's boxes you are moving, when there is a choice */

@@ -30,7 +30,8 @@
 #styleBody .st-prev canvas{display:block;width:100%;max-width:330px;height:150px;}
 #styleBody .st-modes{display:flex;gap:6px;justify-content:center;margin:8px 0 0;}
 /* 44px is the floor for anything tappable, and these are chips, not labels */
-#styleBody .st-mode{padding:0 15px;min-width:88px;min-height:44px;border-radius:999px;border:none;
+/* three of them now, so they share the row rather than each claiming 88px */
+#styleBody .st-mode{padding:0 13px;min-width:0;flex:1;max-width:120px;min-height:44px;border-radius:999px;border:none;
   font-family:inherit;font-size:12.5px;font-weight:700;
   background:transparent;color:var(--ink2);}
 #styleBody .st-mode.on{background:var(--accent);color:#241b45;}
@@ -76,22 +77,27 @@
   font-size:13px;font-weight:700;background:var(--panel2);color:var(--ink2);}
 .mk-body .mk-tab.on{background:var(--accent);color:#241b45;}
 
-/* the grid and the robot side by side; the grid keeps the room it needs */
-.mk-body .mk-stage{display:flex;gap:10px;align-items:flex-start;margin:12px 0 0;}
-.mk-body .mk-pad{flex:1 1 auto;min-width:0;max-width:288px;}
+/* The robot gets the full width, above the grid — it used to be a 132px
+   column holding a 58-unit robot, which read as a token rather than a
+   character, and a chopping robot is nearly two body-widths across once the
+   axe is in its hand, so a narrow column cut the axe off entirely. The pose
+   switch floats on the panel rather than taking a row of its own, which
+   buys back most of the height the wider robot costs. */
+.mk-body .mk-stage{display:flex;flex-direction:column;gap:10px;margin:12px 0 0;}
+/* 158px is what a robot 1.68 body-heights tall needs to reach the ~87 units
+   that reads clearly, and the pose switch sits under it rather than floating
+   on top — floated, it covered the legs, which are exactly what the walk and
+   the shoes are there to show. */
+.mk-body .mk-prev{position:relative;width:100%;height:158px;border-radius:18px;
+  background:rgba(255,255,255,.04);border:1px solid var(--hair);overflow:hidden;}
+.mk-body .mk-prev canvas{position:absolute;inset:0;display:block;width:100%;height:100%;}
+.mk-body .mk-poses{margin:0;}
+/* the grid gives up 40px so that the robot and the grid are both on screen
+   at once: 248px is still 20px a cell, which a thumb can hit */
+.mk-body .mk-pad{width:100%;max-width:248px;margin:0 auto;}
 /* touch-action is what stops the sheet scrolling out from under a stroke */
 .mk-body .mk-pad canvas{display:block;width:100%;aspect-ratio:1;touch-action:none;
   border-radius:16px;background:rgba(255,255,255,.05);border:1px solid var(--hair);}
-.mk-body .mk-prev{flex:0 1 132px;min-width:96px;border-radius:16px;
-  background:rgba(255,255,255,.04);border:1px solid var(--hair);overflow:hidden;}
-.mk-body .mk-prev canvas{display:block;width:100%;height:132px;}
-@media (max-width:359px){
-  /* under 360px the two boxes together leave the grid too small to aim at,
-     so the robot goes above it instead of beside it */
-  .mk-body .mk-stage{flex-direction:column-reverse;align-items:stretch;}
-  .mk-body .mk-pad{max-width:none;}
-  .mk-body .mk-prev{flex:0 0 auto;}
-}
 
 /* colours: one scrolling row, the eraser first */
 .mk-body .mk-pal{display:flex;gap:7px;overflow-x:auto;padding:4px 0;margin:12px 0 0;
