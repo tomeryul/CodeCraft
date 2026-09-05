@@ -2417,6 +2417,40 @@ async function ev(expr) {
   /* the grid is the only thing a made piece can carry: a foreign save gets
      its markup stripped, its unknown slots dropped and its grid re-encoded
      to exactly 144 palette characters */
+  /* the piece is stored as cells and DRAWN as curves, so the two looks must
+     actually differ on the canvas — and both must survive the save */
+  const LOOK = JSON.parse(await ev(`(()=>{
+    if(!window.CC_WEAR||typeof CC_WEAR.swatch!=='function')return JSON.stringify({missing:true});
+    const N=CC_WEAR.cells, g0=new Array(N*N).fill('.');
+    for(let r=0;r<6;r++)for(let x=6-r;x<=5+r;x++){const i=(r+3)*N+x; if(x>=0&&x<N)g0[i]='0';}
+    const px=g0.join('');
+    const shot=sm=>{const c=document.createElement('canvas');c.width=c.height=80;
+      const g=c.getContext('2d');CC_WEAR.swatch(g,'outfit',{px:px,sm:sm},80);
+      return g.getImageData(0,0,80,80).data;};
+    const a=shot(true), b=shot(false);
+    let diff=0; for(let i=3;i<a.length;i+=4)if((a[i]>128)!==(b[i]>128))diff++;
+    /* a lone cell is the shape a tolerance that flattens staircases can wipe
+       out, so it gets its own check */
+    const dot=new Array(N*N).fill('.'); dot[5*N+5]='0';
+    const c2=document.createElement('canvas');c2.width=c2.height=80;
+    const g2=c2.getContext('2d');CC_WEAR.swatch(g2,'outfit',{px:dot.join(''),sm:true},80);
+    let ink=0; const d2=g2.getImageData(0,0,80,80).data;
+    for(let i=3;i<d2.length;i+=4)if(d2[i]>128)ink++;
+    mgState=null; mgRobot=null; player.myWear=[];
+    makerOpen('hat',null); for(let x=2;x<10;x++)mkPx[7*N+x]='0';
+    mkSm=false; mkName='Blocky one'; mkSave();
+    const kept=JSON.parse(JSON.stringify(buildSave()));
+    player.myWear=[]; applySave(kept);
+    const back=player.myWear[0]||{};
+    player.myWear=[]; robots[selRobot].hat=null;
+    return JSON.stringify({diff:diff, dot:ink, sm:back.sm, name:back.name});
+  })()`));
+  check("curves and blocks are two different pictures of one grid",
+    !LOOK.missing && LOOK.diff > 100, JSON.stringify(LOOK));
+  check("a single painted cell survives the smoothing", LOOK.dot > 40, JSON.stringify(LOOK));
+  check("the blocky/smooth choice is saved with the piece",
+    LOOK.sm === false && LOOK.name === 'Blocky one', JSON.stringify(LOOK));
+
   check("a foreign save's pieces are re-encoded, not trusted",
     Array.isArray(MADE.clean) && MADE.clean.length === 1 &&
     MADE.clean[0] === 'my:a1|img src=x onerror=|144|0', JSON.stringify(MADE.clean));

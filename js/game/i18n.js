@@ -88,6 +88,7 @@ const HE={
   "תצייר משלך. זה מופיע בסטייל יחד עם כל השאר.",
 "Name it":"תן שם","Clear":"לנקות","Save":"לשמור","Delete":"למחוק",
 "Piece name":"שם האביזר",
+"Smooth":"חלק","Blocky":"מרובע",
 "My piece":"האביזר שלי","Eraser":"מחק",
 "Paint something first!":"קודם תצייר משהו!",
 "Make your own hat":"להכין כובע משלך",

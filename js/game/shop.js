@@ -142,7 +142,7 @@ function stylePaintSwatch(c,kind,id,color){
      get */
   if(window.CC_WEAR&&CC_WEAR.isCustom(id)){
     const p=wearFind(id);
-    if(p)CC_WEAR.swatch(g,kind,p.px,46);
+    if(p)CC_WEAR.swatch(g,kind,p,46);
     g.restore();return;
   }
   if(kind==="hat"){

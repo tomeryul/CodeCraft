@@ -160,15 +160,19 @@ function isCustom(id){ return typeof id==="string" && id.indexOf(WEAR_PRE)===0; 
 /* the draft is the piece being painted right now: it has no entry in the
    save yet, and the preview has to be able to draw it anyway */
 let draft=null;
-function customPx(id){
+function customPiece(id){
   if(!isCustom(id))return null;
-  if(draft&&draft.id===id)return draft.px;
+  if(draft&&draft.id===id)return draft;
   const list=(typeof player!=="undefined"&&player&&player.myWear)||[];
-  for(let i=0;i<list.length;i++)if(list[i]&&list[i].id===id)return list[i].px;
+  for(let i=0;i<list.length;i++)if(list[i]&&list[i].id===id)return list[i];
   return null;
 }
-function paintGrid(g,box,px){
-  if(typeof px!=="string")return;
+/* smooth unless the piece says otherwise: a grid painted before this
+   existed, and every new one, reads as curves */
+const isSmooth=p=>!p||p.sm!==false;
+
+/* ---------- blocks ---------- */
+function paintBlocks(g,box,px){
   const cw=box.w/WEAR_N, ch=box.h/WEAR_N, n=WEAR_N*WEAR_N;
   for(let i=0;i<n&&i<px.length;i++){
     const k=WEAR_KEY.indexOf(px.charAt(i));
@@ -180,38 +184,237 @@ function paintGrid(g,box,px){
   }
 }
 
+/* =====================================================================
+   Curves, not blocks
+   ---------------------------------------------------------------------
+   The pieces the game ships are rounded rectangles and quadratic curves,
+   and a grid of squares next to them looks like it came from a different
+   game. So the grid is only how a piece is STORED and painted; it is not
+   how it is drawn.
+
+   Walking the boundary of one colour's cells gives closed loops of unit
+   axis-aligned edges — a staircase. Three rounds of Chaikin corner-cutting
+   turn that staircase into a curve, and drawing the result as quadratics
+   through the midpoints finishes the job. A single cell becomes a blob, a
+   diagonal run becomes a slope, and a square block keeps its edges and
+   loses its corners, which is what every other shape in this game does.
+   ===================================================================== */
+function maskLoops(mask,n){
+  /* Each filled cell contributes only the edges facing an empty
+     neighbour, wound so outer loops and holes come out with opposite
+     handedness — which is what lets one path with "evenodd" fill a shape
+     that has a hole in it. */
+  const segs=new Map();
+  const key=(x,y)=>x+","+y;
+  const add=(ax,ay,bx,by)=>{
+    const k=key(ax,ay); let l=segs.get(k);
+    if(!l){l=[];segs.set(k,l);} l.push(bx,by);
+  };
+  const on=(x,y)=>x>=0&&y>=0&&x<n&&y<n&&mask[y*n+x];
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+    if(!mask[y*n+x])continue;
+    if(!on(x,y-1))add(x,y,x+1,y);
+    if(!on(x+1,y))add(x+1,y,x+1,y+1);
+    if(!on(x,y+1))add(x+1,y+1,x,y+1);
+    if(!on(x-1,y))add(x,y+1,x,y);
+  }
+  const loops=[];
+  while(segs.size){
+    const startK=segs.keys().next().value;
+    const sp=startK.split(","); let cx=+sp[0], cy=+sp[1];
+    const loop=[];
+    /* the guard is not paranoia: two regions that touch only at a corner
+       give one lattice point two exits, and a wrong turn there must end
+       the loop rather than spin */
+    for(let guard=0;guard<n*n*8;guard++){
+      const k=key(cx,cy), l=segs.get(k);
+      if(!l||!l.length)break;
+      const ny=l.pop(), nx=l.pop();
+      if(!l.length)segs.delete(k);
+      loop.push(cx,cy);
+      cx=nx; cy=ny;
+      if(cx===+sp[0]&&cy===+sp[1])break;
+    }
+    if(loop.length>=6)loops.push(loop);
+  }
+  return loops;
+}
+/* how far a point may sit off the straight line drawn through its
+   neighbours before it counts as a corner rather than a stair, and how much
+   of a cell each surviving corner is rounded by */
+const SIMP=.72, FILLET=.85;
+/* ---------- staircase -> straight lines -> rounded corners ----------
+   Corner-cutting alone is not enough. Run it on a one-cell staircase and
+   the diagonal comes out scalloped, because the wave IS the staircase,
+   only rounder. So the loop is simplified first — Ramer-Douglas-Peucker
+   with a tolerance a little over half a cell, which is exactly the height
+   of a one-cell step, so a staircase collapses to the straight line it was
+   drawn to mean while a real notch survives — and only then are the
+   corners that remain replaced with fillets.
+
+   That is the same two ingredients every piece the game ships is made of:
+   straight edges and a consistent corner radius. */
+function rdp(p,i,j,eps,keep){
+  keep[i]=1;keep[j]=1;
+  if(j<=i+1)return;
+  const ax=p[i*2],ay=p[i*2+1],bx=p[j*2],by=p[j*2+1];
+  const dx=bx-ax,dy=by-ay,len=Math.hypot(dx,dy)||1;
+  let far=-1,at=-1;
+  for(let k=i+1;k<j;k++){
+    const d=Math.abs(dy*p[k*2]-dx*p[k*2+1]+bx*ay-by*ax)/len;
+    if(d>far){far=d;at=k;}
+  }
+  if(far>eps){ rdp(p,i,at,eps,keep); rdp(p,at,j,eps,keep); }
+}
+function simplify(flat,eps){
+  const m=flat.length/2;
+  if(m<4)return flat;
+  /* the topmost-then-leftmost lattice point is a genuine corner of the
+     shape, so it is safe to cut the closed loop open there */
+  let a=0;
+  for(let i=1;i<m;i++)
+    if(flat[i*2+1]<flat[a*2+1]||(flat[i*2+1]===flat[a*2+1]&&flat[i*2]<flat[a*2]))a=i;
+  const rot=new Array(m*2);
+  for(let i=0;i<m;i++){const j=(a+i)%m;rot[i*2]=flat[j*2];rot[i*2+1]=flat[j*2+1];}
+  let b=1,bd=-1;
+  for(let i=1;i<m;i++){
+    const dx=rot[i*2]-rot[0], dy=rot[i*2+1]-rot[1], d=dx*dx+dy*dy;
+    if(d>bd){bd=d;b=i;}
+  }
+  const keep=new Uint8Array(m);
+  rdp(rot,0,b,eps,keep);
+  /* the far side of the loop, walked as its own open line back to the start */
+  const tail=rot.slice(b*2); tail.push(rot[0],rot[1]);
+  const keep2=new Uint8Array(m-b+1);
+  rdp(tail,0,m-b,eps,keep2);
+  for(let i=0;i<=m-b;i++)if(keep2[i])keep[(b+i)%m]=1;
+  const out=[];
+  for(let i=0;i<m;i++)if(keep[i])out.push(rot[i*2],rot[i*2+1]);
+  return out;
+}
+/* every corner becomes a fillet of the same radius, shortened where an
+   edge is too short to hold it — so a lone cell rounds all the way to a
+   blob and a long edge stays a long edge */
+function roundLoop(g,pts,r,ox,oy,sc){
+  const m=pts.length/2;
+  if(m<3)return;
+  const X=i=>ox+pts[(i%m)*2]*sc, Y=i=>oy+pts[(i%m)*2+1]*sc;
+  for(let i=0;i<m;i++){
+    const pv=(i+m-1)%m, nx=(i+1)%m;
+    const ux=X(pv)-X(i), uy=Y(pv)-Y(i), Lp=Math.hypot(ux,uy)||1;
+    const vx=X(nx)-X(i), vy=Y(nx)-Y(i), Ln=Math.hypot(vx,vy)||1;
+    const rad=Math.min(r,Lp/2,Ln/2);
+    const ex=X(i)+ux/Lp*rad, ey=Y(i)+uy/Lp*rad;
+    if(i===0)g.moveTo(ex,ey); else g.lineTo(ex,ey);
+    g.quadraticCurveTo(X(i),Y(i),X(i)+vx/Ln*rad,Y(i)+vy/Ln*rad);
+  }
+  g.closePath();
+}
+function paintSmooth(g,box,px){
+  const n=WEAR_N, cw=box.w/n, cells=n*n;
+  /* Largest area first, so a big shape cannot land on top of the detail
+     drawn into it. Each region is also stroked in its own colour: two
+     smoothed edges that used to share a cell border pull apart by a
+     fraction of a cell, and a hairline of background between two colours
+     is the one artefact that would give the trick away. */
+  const count={};
+  for(let i=0;i<cells&&i<px.length;i++){
+    const c=px.charAt(i);
+    if(WEAR_KEY.indexOf(c)>=0)count[c]=(count[c]||0)+1;
+  }
+  const order=Object.keys(count).sort((a,b)=>count[b]-count[a]);
+  const mask=new Uint8Array(cells);
+  for(const c of order){
+    for(let i=0;i<cells;i++)mask[i]=(i<px.length&&px.charAt(i)===c)?1:0;
+    const loops=maskLoops(mask,n);
+    if(!loops.length)continue;
+    g.beginPath();
+    for(const lp of loops){
+      /* A one-cell dot and a diagonal staircase deviate from their chord by
+         the same 0.707 of a cell, so a tolerance that flattens the staircase
+         can also collapse the dot to nothing. The fallback is the guard: a
+         loop simplified out of existence is drawn as it was. */
+      const sm=simplify(lp,SIMP);
+      roundLoop(g,sm.length>=6?sm:lp,cw*FILLET,box.x,box.y,cw);
+    }
+    g.fillStyle=WEAR_PAL[WEAR_KEY.indexOf(c)];
+    g.fill("evenodd");
+    g.strokeStyle=g.fillStyle;g.lineJoin="round";g.lineCap="round";
+    g.lineWidth=cw*.22;
+    g.stroke();
+  }
+}
+
+/* Smoothing costs a few hundred path operations per colour, and the world
+   redraws every robot sixty times a second — so a smoothed piece is baked
+   once into a small canvas and blitted after that. It can be a bitmap
+   precisely because a made piece never animates: unlike the cape, which
+   trails on the gait phase, or the rocket boots, whose flame flickers,
+   nothing about a painted grid changes between frames. The blit still sits
+   inside the robot's transform, so it squashes, leans and rotates with the
+   body exactly as the vector version would. */
+const BAKE=112;
+const baked=new Map();
+function bake(slot,px){
+  const key=slot+"|"+px;
+  let c=baked.get(key);
+  if(c)return c;
+  const b=WEAR_BOX[slot];
+  c=document.createElement("canvas");
+  c.width=c.height=BAKE;
+  const k=BAKE/b.w, g=c.getContext("2d");
+  g.setTransform(k,0,0,k,-b.x*k,-b.y*k);
+  paintSmooth(g,b,px);
+  /* a stroke of drafts arrives one grid per frame while a child paints, so
+     the oldest entries go rather than the map growing without end */
+  if(baked.size>48)baked.delete(baked.keys().next().value);
+  baked.set(key,c);
+  return c;
+}
+function paintPiece(g,slot,p){
+  if(!p||typeof p.px!=="string")return;
+  if(!isSmooth(p)){ paintBlocks(g,WEAR_BOX[slot],p.px); return; }
+  const b=WEAR_BOX[slot];
+  g.drawImage(bake(slot,p.px),b.x,b.y,b.w,b.h);
+}
+
 window.CC_WEAR={
   outfits:outfits, backs:backs, shoes:shoes,
   pal:WEAR_PAL, key:WEAR_KEY, cells:WEAR_N, max:WEAR_MAX, prefix:WEAR_PRE, box:WEAR_BOX,
   isCustom:isCustom,
   /* body-local; the caller has already clipped to the body square */
   outfit(g,id,color){
-    const px=customPx(id); if(px!==null)return paintGrid(g,WEAR_BOX.outfit,px);
+    const p=customPiece(id); if(p)return paintPiece(g,"outfit",p);
     const f=outfits[id]; if(f)f(g,color);
   },
   /* body-local; drawn before the legs */
   back(g,id,sway,gp){const f=backs[id]; if(f)f(g,sway,gp);},
   /* foot-local; origin = leg end, already rotated */
   shoe(g,id,limb,moving,t){
-    const px=customPx(id); if(px!==null)return paintGrid(g,WEAR_BOX.shoes,px);
+    const p=customPiece(id); if(p)return paintPiece(g,"shoes",p);
     const f=shoes[id]; if(f)f(g,limb,moving,t);
   },
   /* body-local. Returns false for a shop hat so the caller falls back to
      the sprite — a hat that is not painted is still rigid art. */
   hat(g,id){
-    const px=customPx(id); if(px===null)return false;
-    paintGrid(g,WEAR_BOX.hat,px); return true;
+    const p=customPiece(id); if(!p)return false;
+    paintPiece(g,"hat",p); return true;
   },
   /* the piece on its own, fitted to a size×size box: swatches and previews */
-  swatch(g,slot,px,size){
+  swatch(g,slot,piece,size){
     const b=WEAR_BOX[slot]; if(!b)return;
     const k=size/Math.max(b.w,b.h)*.94;
     g.save();
     g.translate(size/2,size/2);g.scale(k,k);g.translate(-(b.x+b.w/2),-(b.y+b.h/2));
-    paintGrid(g,b,px);
+    paintPiece(g,slot,piece);
     g.restore();
   },
-  grid(g,slot,px){const b=WEAR_BOX[slot]; if(b)paintGrid(g,b,px);},
+  /* the paint sheet draws the working grid straight, without the bake:
+     a stroke has to appear on the canvas the same frame it is made */
+  grid(g,slot,px,smooth){
+    const b=WEAR_BOX[slot]; if(!b)return;
+    if(smooth)paintSmooth(g,b,px); else paintBlocks(g,b,px);
+  },
   setDraft(d){draft=d||null;},
   /* A save can arrive from a file somebody else wrote, and a made piece is
      both drawn and named on screen. Everything that is not a palette
@@ -236,15 +439,12 @@ window.CC_WEAR={
       }
       const name=(typeof safeText==="function")?safeText(p.name,18):String(p.name||"").slice(0,18);
       seen[p.id]=1;
-      out.push({id:p.id,slot:slot,name:name||"?",px:clean});
+      /* sm is a look, not data: anything but an explicit false means curves */
+      out.push({id:p.id,slot:slot,name:name||"?",px:clean,sm:p.sm!==false});
       if(out.length>=WEAR_MAX*3)break;
     }
     return out;
   }
 };
-/* `back` is looked up as CC_WEAR.back[id] at the call site in render.js —
-   a function has no such property, so expose the table under the same name
-   through the function object. It keeps the call site honest: only ids that
-   actually paint something behind the robot cost a save/restore. */
 Object.keys(backs).forEach(k=>{window.CC_WEAR.back[k]=backs[k];});
 })();

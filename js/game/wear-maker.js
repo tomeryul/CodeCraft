@@ -19,7 +19,7 @@
    ===================================================================== */
 
 /* the working piece: slot, id, name, and the grid as an array of chars */
-let mkSlot="hat", mkId=null, mkName="", mkPx=null, mkColor=0, mkRaf=0, mkPaint=null;
+let mkSlot="hat", mkId=null, mkName="", mkPx=null, mkColor=0, mkRaf=0, mkPaint=null, mkSm=true;
 
 function myWear(){ if(!player.myWear)player.myWear=[]; return player.myWear; }
 function wearOf(slot){ return myWear().filter(p=>p.slot===slot); }
@@ -40,13 +40,13 @@ const mkEmpty=()=>mkPx.every(c=>c===".");
 function makerOpen(slot,id){
   mkSlot=(slot==="outfit"||slot==="shoes")?slot:"hat";
   const p=id?wearFind(id):null;
-  if(p){ mkId=p.id; mkName=p.name; mkPx=p.px.split(""); }
+  if(p){ mkId=p.id; mkName=p.name; mkPx=p.px.split(""); mkSm=p.sm!==false; }
   else{
     if(wearOf(mkSlot).length>=CC_WEAR.max){
       toast("You already have "+CC_WEAR.max+" of these. Delete one to make another.");
       return;
     }
-    mkId=wearNewId(); mkName=""; mkPx=mkBlank();
+    mkId=wearNewId(); mkName=""; mkPx=mkBlank(); mkSm=true;
   }
   mkColor=0;
   $("style").classList.remove("open");
@@ -100,12 +100,14 @@ function mkDraw(){
   const g=c.getContext("2d");
   g.setTransform(d,0,0,d,0,0);g.clearRect(0,0,W,H);
   mkGuide(g,W,H);
-  const n=CC_WEAR.cells, cw=W/n;
-  for(let i=0;i<mkPx.length;i++){
-    const k=CC_WEAR.key.indexOf(mkPx[i]); if(k<0)continue;
-    g.fillStyle=CC_WEAR.pal[k];
-    g.fillRect((i%n)*cw,((i/n)|0)*cw,cw+.5,cw+.5);
-  }
+  /* the canvas shows the piece the way the robot will wear it — curves when
+     it is a smooth piece — with the cell grid still drawn over the top, so
+     what you see is the result and what you aim at is still a cell */
+  const b=CC_WEAR.box[mkSlot], n=CC_WEAR.cells, cw=W/n, k=W/b.w;
+  g.save();
+  g.setTransform(d*k,0,0,d*k,-b.x*k*d,-b.y*k*d);
+  CC_WEAR.grid(g,mkSlot,mkStr(),mkSm);
+  g.restore();
   g.strokeStyle="rgba(255,255,255,.13)";g.lineWidth=1;
   for(let i=1;i<n;i++){
     g.beginPath();g.moveTo(i*cw,0);g.lineTo(i*cw,H);g.stroke();
@@ -120,7 +122,7 @@ function mkPlay(){
     mkRaf=0;
     const sheet=$("maker"), cv=$("mkPrev");
     if(!sheet||!sheet.classList.contains("open")||!cv){CC_WEAR.setDraft(null);return;}
-    CC_WEAR.setDraft({id:mkId,px:mkStr()});
+    CC_WEAR.setDraft({id:mkId,px:mkStr(),sm:mkSm});
     const r=robots[selRobot]||robots[0];
     if(r){
       const w=Math.max(140,Math.round(cv.clientWidth||200)), d=Math.min(2,window.devicePixelRatio||1);
@@ -181,17 +183,30 @@ function renderMaker(){
   for(let i=0;i<CC_WEAR.pal.length;i++)dot(i);
   body.appendChild(pal);
 
-  /* name + the two things you can do with the piece */
+  /* Curves or blocks. The pieces the game ships are curves, so that is the
+     default and the reason this switch exists is the child who wanted
+     pixel art on purpose. */
+  const fin=document.createElement("div");fin.className="mk-fin";
+  const seg=document.createElement("div");seg.className="mk-seg";
+  [["Smooth",true],["Blocky",false]].forEach(([lab,v])=>{
+    const b2=document.createElement("button");b2.type="button";
+    b2.className="mk-sm"+(mkSm===v?" on":"");b2.textContent=lab;
+    b2.addEventListener("click",()=>{ if(mkSm===v)return; mkSm=v; renderMaker(); });
+    seg.appendChild(b2);
+  });
+  fin.appendChild(seg);
+  const clr=document.createElement("button");clr.type="button";clr.className="mk-btn";
+  clr.textContent="Clear";
+  clr.addEventListener("click",()=>{mkPx=mkBlank();mkDraw();});
+  fin.appendChild(clr);
+  body.appendChild(fin);
+
   const row=document.createElement("div");row.className="mk-row";
   const nm=document.createElement("input");
   nm.type="text";nm.id="mkName";nm.maxLength=18;nm.placeholder="Name it";
   nm.value=mkName;nm.setAttribute("aria-label","Piece name");
   nm.addEventListener("input",()=>{mkName=nm.value;});
   row.appendChild(nm);
-  const clr=document.createElement("button");clr.type="button";clr.className="mk-btn";
-  clr.textContent="Clear";
-  clr.addEventListener("click",()=>{mkPx=mkBlank();mkDraw();});
-  row.appendChild(clr);
   body.appendChild(row);
 
   const acts=document.createElement("div");acts.className="mk-acts";
@@ -248,7 +263,7 @@ function mkSave(){
     return;
   }
   const nm=safeText(mkName,18)||"My piece";
-  const piece={id:mkId,slot:mkSlot,name:nm,px:mkStr()};
+  const piece={id:mkId,slot:mkSlot,name:nm,px:mkStr(),sm:mkSm};
   if(at<0)list.push(piece); else list[at]=piece;
   /* wearing it is the point of making it */
   const r=robots[selRobot]||robots[0];
