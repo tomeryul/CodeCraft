@@ -247,10 +247,12 @@
 
 <!-- ============ MAKE A PIECE ============ -->
 <!-- Four regions, not one column: the head says where you are and keeps
-     Save reachable, the stage is pinned so the robot and the canvas never
-     scroll away from the code that describes them, and the dock owns the
-     only scrollbar. A component is this same editor filtered to one class,
-     so there is no second sheet. -->
+     Save reachable, the stage is pinned so the canvas never scrolls away
+     from the code that describes it, the dock owns the only scrollbar with
+     the inspector docked to its foot, and the tabs sit at the bottom the
+     way the code page's do. A component is this same editor filtered to
+     one class, so there is no second sheet; the slot was chosen on the
+     Style page, so there is nothing to switch up here. -->
 <div class="sheet" id="maker">
   <div class="m-head">
     <div class="face">🎨</div>
@@ -258,13 +260,12 @@
     <button class="mk-save" id="mkSaveBtn" type="button">Save</button>
     <button class="iconbtn x" id="makerClose">✕</button>
   </div>
-  <div class="mk-top" id="mkTop"></div>
   <div class="mk-stage-fixed" id="mkStage"></div>
   <div class="mk-dock">
-    <div class="mk-tabrow" id="mkTabRow"></div>
     <div id="makerBody" class="mk-body"></div>
     <div class="mk-insdock" id="mkInsDock"></div>
   </div>
+  <div class="mk-tabbar" id="mkTabs"></div>
 </div>
 
 <!-- ============ REPORT ============ -->

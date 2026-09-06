@@ -121,7 +121,15 @@ const HE={
    property name below is missing on purpose: `display`, `padding` and the
    rest are identifiers and stay as written, and an entry that maps a word
    to itself is the shape that froze the game once already. */
-"Boxes":"קופסאות","Code":"קוד","Layout":"פריסה","Brush":"מכחול",
+"Boxes":"קופסאות","Code":"קוד","Layout":"פריסה",
+"· back to front, tap twice to open one":"· מאחור לפנים, לחץ פעמיים כדי לפתוח אחת",
+"· this component's, back to front":"· של הקונפוננטה הזאת, מאחור לפנים",
+"Shape":"צורה","· border-radius, shared by the class":"· border-radius, משותף ל-class",
+"Colour":"צבע","· shared by the class":"· משותף ל-class",
+"worn, live · pick a pose":"לבוש, חי · בחר תנוחה",
+"This one was painted. The boxes you build here take its place when you save.":
+  "את זה ציירת. הקופסאות שתבנה כאן יחליפו אותו כשתשמור.",
+"Done with this value":"סיימתי עם הערך הזה",
 "This box":"הקופסה הזאת","The piece":"האביזר",
 "one component":"קונפוננטה אחת","whole piece":"כל האביזר",
 "Add a box in Boxes first — a rule is always about something.":

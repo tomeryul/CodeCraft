@@ -181,7 +181,7 @@ async function toWorld(pg){
        maker filtered to one class. Back still has to walk it one step at a
        time: first the filter, then Style. Exit still skips all of it. */
     await pg.evaluate(()=>{ player.myWear=[]; makerOpen('hat',null);
-      mkKind='parts'; mkParts=[]; renderMaker(); mkAddPart(); });
+      mkParts=[]; renderMaker(); mkAddPart(); });
     await pg.waitForTimeout(400);
     await pg.evaluate(()=>mkFocusOn(mkParts[0].cls));
     await pg.waitForTimeout(400);

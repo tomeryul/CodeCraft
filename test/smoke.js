@@ -2365,22 +2365,22 @@ async function ev(expr) {
   check("a cape paints behind the board robot", PX.cape === true, px);
   check("an undressed robot is unchanged by the new code path", PX.none === true, px);
 
-  console.log("▶ pieces the player paints");
+  console.log("▶ pieces the player builds");
   const MADE = JSON.parse(await ev(`(()=>{
     if(typeof makerOpen!=='function'||!window.CC_WEAR||!CC_WEAR.isCustom)return JSON.stringify({missing:true});
     mgState=null; mgRobot=null;
     player.myWear=[]; player.level=20;
     const out={};
-    /* paint a stripe and keep it */
+    /* build a brim and keep it */
     makerOpen('hat',null);
     const id=mkId;
     out.pre=CC_WEAR.isCustom(id);
-    for(let c=2;c<10;c++)mkPx[7*CC_WEAR.cells+c]='0';
+    mkAddPart(); Object.assign(mkParts[0],{x:8,y:60,w:84,h:15,r:40,c:1});
     mkName='Test Lid'; mkSave();
     out.saved=player.myWear.length;
     out.worn=robots[selRobot].hat===id;
     out.name=(player.myWear[0]||{}).name;
-    out.len=(player.myWear[0]||{}).px.length;
+    out.len=((player.myWear[0]||{}).parts||[]).length;
     /* it reaches the canvas: a robot wearing it must not paint like a bare one */
     const shot=w=>{const c=document.createElement('canvas');c.width=c.height=90;
       const g=c.getContext('2d');drawBoardRobot(g,45,45,40,'E','#ffb830',false,0,w);
@@ -2391,7 +2391,7 @@ async function ev(expr) {
     player.myWear=[]; robots[selRobot].hat=null;
     applySave(snap);
     out.rt = player.myWear.length===1 && player.myWear[0].id===id && robots[selRobot].hat===id;
-    /* an empty grid is not a piece */
+    /* a piece with nothing in it is not a piece */
     makerOpen('outfit',null); mkSave();
     out.emptyRejected = player.myWear.length===1;
     makerExit();
@@ -2410,11 +2410,11 @@ async function ev(expr) {
     return JSON.stringify(out);
   })()`));
   check("the maker mints a custom id and saves the piece",
-    !MADE.missing && MADE.pre === true && MADE.saved === 1 && MADE.name === 'Test Lid' && MADE.len === 144, JSON.stringify(MADE));
+    !MADE.missing && MADE.pre === true && MADE.saved === 1 && MADE.name === 'Test Lid' && MADE.len === 1, JSON.stringify(MADE));
   check("saving a piece puts it on the robot", MADE.worn === true, JSON.stringify(MADE));
-  check("a painted piece reaches the canvas", MADE.paints === true, JSON.stringify(MADE));
-  check("a painted piece survives buildSave → applySave", MADE.rt === true, JSON.stringify(MADE));
-  check("an empty grid is not saved as a piece", MADE.emptyRejected === true, JSON.stringify(MADE));
+  check("a built piece reaches the canvas", MADE.paints === true, JSON.stringify(MADE));
+  check("a built piece survives buildSave → applySave", MADE.rt === true, JSON.stringify(MADE));
+  check("a piece with nothing in it is not saved", MADE.emptyRejected === true, JSON.stringify(MADE));
   check("deleting a piece takes it off the robot wearing it", MADE.deleted === true, JSON.stringify(MADE));
   /* the grid is the only thing a made piece can carry: a foreign save gets
      its markup stripped, its unknown slots dropped and its grid re-encoded
@@ -2438,9 +2438,12 @@ async function ev(expr) {
     const g2=c2.getContext('2d');CC_WEAR.swatch(g2,'outfit',{px:dot.join(''),sm:true},80);
     let ink=0; const d2=g2.getImageData(0,0,80,80).data;
     for(let i=3;i<d2.length;i+=4)if(d2[i]>128)ink++;
-    mgState=null; mgRobot=null; player.myWear=[];
-    makerOpen('hat',null); for(let x=2;x<10;x++)mkPx[7*N+x]='0';
-    mkSm=false; mkName='Blocky one'; mkSave();
+    /* the brush is gone from the maker, but a piece painted before it went
+       is still a piece: it still renders, and its finish still survives a
+       save — that is what keeps an old player's hat on their robot */
+    mgState=null; mgRobot=null;
+    const stripe=new Array(N*N).fill('.'); for(let x=2;x<10;x++)stripe[7*N+x]='0';
+    player.myWear=[{id:'my:oldhat',slot:'hat',name:'Blocky one',px:stripe.join(''),sm:false}];
     const kept=JSON.parse(JSON.stringify(buildSave()));
     player.myWear=[]; applySave(kept);
     const back=player.myWear[0]||{};
@@ -2460,7 +2463,7 @@ async function ev(expr) {
     if(typeof makerOpen!=='function'||!window.CC_CODE)return JSON.stringify({missing:true});
     mgState=null; mgRobot=null; player.myWear=[]; player.level=20;
     makerOpen('hat',null);
-    mkKind='parts'; mkParts=[]; renderMaker();
+    mkParts=[]; renderMaker();
     mkAddPart(); Object.assign(mkParts[mkSel],{x:8,y:60,w:84,h:15,r:40,c:1});
     mkAddPart(); Object.assign(mkParts[mkSel],{x:30,y:36,w:13,h:13,r:50,c:0});
     /* Copy is the component: the twin shares the class, so one rule paints
@@ -2509,7 +2512,7 @@ async function ev(expr) {
   const CODE = JSON.parse(await ev(`(()=>{
     if(typeof mkPick!=='function'||!window.CC_CODE||!CC_CODE.field)return JSON.stringify({missing:true});
     mgState=null; mgRobot=null; player.myWear=[]; player.level=20;
-    makerOpen('hat',null); mkKind='parts'; mkParts=[]; renderMaker();
+    makerOpen('hat',null); mkParts=[]; renderMaker();
     mkAddPart(); Object.assign(mkParts[mkSel],{x:8,y:60,w:84,h:15,r:40,c:1});
     mkAddPart(); Object.assign(mkParts[mkSel],{x:30,y:36,w:13,h:13,r:50,c:0});
     const copy=[...document.querySelectorAll('#makerBody .mk-acts .mk-btn')].find(b=>b.textContent==='Copy');
@@ -2537,6 +2540,17 @@ async function ev(expr) {
     /* the two positions belong to the elements, not the rule */
     tok('x',null,1).click(); bump('-1');
     out.x=[mkParts[1].x,mkParts[2].x];
+    /* the piece's own rule is editable too: its tokens say "root" rather
+       than a class number, and that word once came through a unary plus as
+       NaN, leaving .hat { padding; display } as chips that opened nothing */
+    tok('lay','root').click();
+    out.rootWords=[...document.querySelectorAll('#mkIns .mk-kw')].map(b=>b.textContent);
+    const rowBtn=[...document.querySelectorAll('#mkIns .mk-kw')].find(b=>b.textContent==='row');
+    if(rowBtn)rowBtn.click();
+    out.rootLay=mkRoot.lay;
+    /* one strip, docked — not one in the dock and another under the code */
+    out.strips=document.querySelectorAll('#mkIns').length;
+    mkRoot.lay=0; mkVal=null; renderMaker();
     /* the code the piece means and the code on screen are one text */
     out.plainMatchesShown=CC_CODE.code({name:'Cap',parts:mkParts},'hat')
       .replace(/\\s+/g,' ')===document.getElementById('mkCode').textContent.replace(/\\s+/g,' ');
@@ -2603,6 +2617,9 @@ async function ev(expr) {
     CODE.prop === 'width' && CODE.w === 24 && CODE.shown === '24%' && CODE.marked === true, JSON.stringify(CODE));
   check("a value cannot be pushed past what the drag itself can produce",
     CODE.capped === CC_FIELD_HI, JSON.stringify(CODE));
+  check("the piece's own rule opens the strip like any other",
+    JSON.stringify(CODE.rootWords) === JSON.stringify(['block','row','column']) && CODE.rootLay === 1 &&
+    CODE.strips === 1, JSON.stringify({rootWords:CODE.rootWords,rootLay:CODE.rootLay,strips:CODE.strips}));
   check("rotate is a group's, and both copies turn together",
     Array.isArray(CODE.a) && CODE.a[0] === -15 && CODE.a[1] === -15, JSON.stringify(CODE));
   check("left belongs to the element, so only one copy moves",
@@ -2730,7 +2747,7 @@ async function ev(expr) {
   const LAYT = JSON.parse(await ev(`(()=>{
     if(typeof mkLayoutPanel!=='function')return JSON.stringify({missing:true});
     mgState=null; mgRobot=null; player.myWear=[]; player.level=20; player.feTut=null;
-    makerOpen('hat',null); mkKind='parts'; mkParts=[]; renderMaker();
+    makerOpen('hat',null); mkParts=[]; renderMaker();
     mkAddPart(); mkAddPart();
     mkTab='layout'; renderMaker();
     const out={};
@@ -2817,7 +2834,7 @@ async function ev(expr) {
     feStart();
     out.began=player.feTut===0;
     /* walking the whole tour by doing the work, never by pressing Next */
-    mkKind='parts'; mkParts=[]; renderMaker();
+    mkParts=[]; renderMaker();
     mkAddPart();                                                out.seen.push(player.feTut);
     Object.assign(mkParts[0],{w:70,h:16,y:60,x:15}); mkRender(); out.seen.push(player.feTut);
     mkParts[0].r=40; mkRender();                                out.seen.push(player.feTut);

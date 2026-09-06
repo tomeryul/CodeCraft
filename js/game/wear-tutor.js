@@ -17,7 +17,7 @@
    ===================================================================== */
 
 /* the working piece, however it is being edited right now */
-function feWork(){ return {parts:mkParts,root:mkRoot,kind:mkKind}; }
+function feWork(){ return {parts:mkParts,root:mkRoot}; }
 function feGroups(){ return new Set(mkParts.map(p=>p.cls)).size; }
 function feHas(fn){ return mkParts.some(fn); }
 /* a box that is holding something */
@@ -27,8 +27,8 @@ function feHolder(){
 
 const FE_STEPS=[
   {id:"box", title:"A box is a &lt;div&gt;",
-   say:"Everything on a web page is a box. Tap Build, then ＋ to make one — that is a <div>, the tag every page is made of.",
-   done:()=>mkKind==="parts"&&mkParts.length>=1},
+   say:"Everything on a web page is a box. Tap ＋ to make one — that is a <div>, the tag every page is made of.",
+   done:()=>mkParts.length>=1},
 
   {id:"size", title:"width and height",
    say:"Drag its corner to make it wide and low, near the bottom. In the code that is width and height — a share of the box it lives in.",
@@ -74,7 +74,6 @@ function feStep(){ return Math.max(0,Math.min(FE_STEPS.length,(player.feTut|0)))
 function feOn(){ return player.feTut!=null&&feStep()<FE_STEPS.length; }
 function feStart(){
   player.feTut=0;
-  if(mkKind!=="parts"){ mkKind="parts"; }
   saveSoon();
   if($("maker").classList.contains("open"))mkRender();
   else{ makerOpen(mkSlot||"hat",null); }

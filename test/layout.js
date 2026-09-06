@@ -586,9 +586,9 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
       const opens = {
         style:  () => styleOpen(),
         maker:  () => makerOpen('hat', null),
-        maker2: () => { makerOpen('hat', null); mkKind = 'parts'; mkParts = []; renderMaker();
+        maker2: () => { makerOpen('hat', null); mkParts = []; renderMaker();
                         mkAddPart(); mkAddPart(); mkTab = 'code'; renderMaker(); },
-        maker3: () => { makerOpen('hat', null); mkKind = 'parts'; mkParts = []; renderMaker();
+        maker3: () => { makerOpen('hat', null); mkParts = []; renderMaker();
                         mkAddPart(); mkFocusOn(mkParts[0].cls); mkTab = 'layout'; renderMaker(); }
       };
       for (const id of ['style', 'maker', 'maker2', 'maker3']) {
