@@ -24,6 +24,9 @@ let mkSlot="hat", mkId=null, mkName="", mkPx=null, mkColor=0, mkRaf=0, mkPaint=n
    live at once so switching modes never throws work away — mkKind is the
    only thing that decides which of the two gets saved. */
 let mkKind="grid", mkParts=[], mkSel=-1, mkDrag=null;
+/* the piece itself is a box too: it has padding, and it can lay its own
+   children out instead of letting each of them say where it goes */
+let mkRoot={lay:0,pad:0,gap:0,jus:0,ali:0};
 /* which token in the code is being edited: {k, i} for the two values an
    element owns, {k, g} for the five the shared rule owns, null for none */
 let mkVal=null;
@@ -62,9 +65,11 @@ function makerOpen(slot,id){
   mkSlot=(slot==="outfit"||slot==="shoes")?slot:"hat";
   const p=id?wearFind(id):null;
   mkKind="grid"; mkParts=[]; mkSel=-1; mkDrag=null; mkPx=mkBlank(); mkSm=true;
+  mkRoot={lay:0,pad:0,gap:0,jus:0,ali:0};
   if(p){
     mkId=p.id; mkName=p.name;
-    if(p.kind==="parts"){ mkKind="parts"; mkParts=p.parts.map(q=>({...q})); }
+    if(p.kind==="parts"){ mkKind="parts"; mkParts=p.parts.map(q=>({...q}));
+      if(p.root)mkRoot=Object.assign(mkRoot,p.root); }
     else { mkPx=p.px.split(""); mkSm=p.sm!==false; }
   }
   else{
@@ -134,7 +139,7 @@ function mkDraw(){
   const b=CC_WEAR.box[mkSlot], n=CC_WEAR.cells, cw=W/n, k=W/b.w;
   g.save();
   g.setTransform(d*k,0,0,d*k,-b.x*k*d,-b.y*k*d);
-  if(mkKind==="parts")CC_WEAR.parts(g,mkSlot,mkParts,mkFocus);
+  if(mkKind==="parts")CC_WEAR.parts(g,mkSlot,mkParts,mkFocus,mkRoot);
   else CC_WEAR.grid(g,mkSlot,mkStr(),mkSm);
   g.restore();
   if(mkKind==="parts"){ mkHandles(g,W,H); return; }
@@ -144,17 +149,69 @@ function mkDraw(){
     g.beginPath();g.moveTo(0,i*cw);g.lineTo(W,i*cw);g.stroke();
   }
 }
-/* the selected box gets an outline and one corner grip: drag anywhere
-   inside to move it, drag the grip to resize. Two gestures, no sliders. */
+/* Where the boxes actually landed. Everything that has to agree about a
+   box's position — the paint, the drag, the overlay — reads this one
+   answer, so they cannot disagree. */
+function mkLayout(){ return CC_WEAR.layout(mkParts,mkRoot); }
+/* the content box a part's own numbers are measured against: its holder's,
+   or the piece's */
+function mkHolderBox(L,i){
+  const p=mkParts[i]; if(!p)return L.rootContent;
+  if(p.pin==null)return L.rootContent;
+  const at=mkParts.findIndex(q=>q.pid===p.pin);
+  return (at>=0&&L.content[at])?L.content[at]:L.rootContent;
+}
+function mkHolderBoxObj(i){
+  const p=mkParts[i]; if(!p||p.pin==null)return mkRoot;
+  return mkParts.find(q=>q.pid===p.pin)||mkRoot;
+}
+const mkFlows=o=>(CC_WEAR.lay[CC_WEAR.field(o,"lay")]||"free")!=="free";
+
+/* The box model, drawn the way devtools draws it: margin, border, padding,
+   content, out from the middle. It is the single picture that makes CSS
+   click, and it costs four rectangles. The container's centre lines are
+   drawn with it, because "is this centred" is the question the whole
+   layout section exists to answer. */
+const RING=[["margin","rgba(246,178,107,.30)"],["border","rgba(255,214,107,.32)"],
+            ["padding","rgba(147,224,155,.30)"],["content","rgba(120,180,255,.34)"]];
 const HANDLE=13;
 function mkHandles(g,W,H){
   const p=mkParts[mkSel]; if(!p)return;
-  const x=p.x/100*W, y=p.y/100*H, w=p.w/100*W, h=p.h/100*H;
+  const L=mkLayout(), r=L.rect[mkSel]; if(!r)return;
+  const K=W/100;
+  const x=r.x*K, y=r.y*K, w=r.w*K, h=r.h*K;
+  const rings=CC_WEAR.rings(x,y,w,h,p,K);
+
+  /* the holder's centre lines: what "centre" means for THIS box */
+  const hb=mkHolderBox(L,mkSel);
+  if(hb){
+    g.save();g.setLineDash([3,5]);g.lineWidth=1;g.strokeStyle="rgba(255,255,255,.30)";
+    const hx=(hb.x+hb.w/2)*K, hy=(hb.y+hb.h/2)*K;
+    g.beginPath();g.moveTo(hx,hb.y*K);g.lineTo(hx,(hb.y+hb.h)*K);g.stroke();
+    g.beginPath();g.moveTo(hb.x*K,hy);g.lineTo((hb.x+hb.w)*K,hy);g.stroke();
+    g.restore();
+  }
+
+  /* each ring as the band between it and the next one in */
+  for(let i=0;i<RING.length-1;i++){
+    const a=rings[i], b=rings[i+1];
+    if(a[3]<=0||a[4]<=0)continue;
+    if(Math.abs(a[1]-b[1])<.3&&Math.abs(a[2]-b[2])<.3)continue;
+    g.save();
+    g.beginPath();g.rect(a[1],a[2],a[3],a[4]);
+    g.rect(b[1]+b[3],b[2],-b[3],b[4]);   /* reverse-wound hole */
+    g.fillStyle=RING[i][1];g.fill("evenodd");
+    g.restore();
+  }
   g.setLineDash([5,4]);
   g.strokeStyle="#fff";g.lineWidth=2;g.strokeRect(x,y,w,h);
   g.setLineDash([]);
-  g.fillStyle="#ffb830";g.strokeStyle="#241b45";g.lineWidth=2;
-  g.beginPath();g.arc(x+w,y+h,HANDLE/2+2,0,7);g.fill();g.stroke();
+  /* a box the layout is placing cannot be dragged, so it is not offered a
+     grip — the grip is a promise that dragging will do something */
+  if(!mkFlows(mkHolderBoxObj(mkSel))){
+    g.fillStyle="#ffb830";g.strokeStyle="#241b45";g.lineWidth=2;
+    g.beginPath();g.arc(x+w,y+h,HANDLE/2+2,0,7);g.fill();g.stroke();
+  }
 }
 /* one loop for the live preview; it stops itself when the sheet closes, so
    Back and Exit in the shared header need to know nothing about it */
@@ -165,7 +222,7 @@ function mkPlay(){
     const sheet=$(mkFocus!=null?"comp":"maker"), cv=$(CID()+"Prev");
     if(!sheet||!sheet.classList.contains("open")||!cv){CC_WEAR.setDraft(null);return;}
     CC_WEAR.setDraft(mkKind==="parts"
-      ?{id:mkId,kind:"parts",parts:mkParts}
+      ?{id:mkId,kind:"parts",parts:mkParts,root:mkRoot}
       :{id:mkId,px:mkStr(),sm:mkSm});
     const r=robots[selRobot]||robots[0];
     if(r){
@@ -238,6 +295,7 @@ function renderMaker(){
   const cc=document.createElement("canvas");cc.id="mkCanvas";pad.appendChild(cc);
   stage.appendChild(pv);stage.appendChild(mkPoseRow());stage.appendChild(pad);
   body.appendChild(stage);
+  if(mkKind==="parts")body.appendChild(mkBoxKey());
 
   /* colours. In Paint they are the brush; in Build they recolour the box
      you have chosen — and because a colour lives in the shared rule, every
@@ -320,13 +378,43 @@ function mkGroup(fn){
 }
 function mkGroupSize(cls){ let n=0; for(const p of mkParts)if(p.cls===cls)n++; return n; }
 function mkNewCls(){ let m=-1; for(const p of mkParts)if(p.cls>m)m=p.cls; return m+1; }
+function mkNewPid(){ let m=-1; for(const p of mkParts)if(p.pid>m)m=p.pid; return m+1; }
+/* a fresh box carries every field, so nothing downstream has to guess what
+   a missing one meant */
+function mkBox(over){
+  return Object.assign({cls:mkNewCls(),pid:mkNewPid(),x:32,y:38,w:36,h:24,
+    r:CC_WEAR.rad[1],a:0,c:mkColor<0?0:mkColor,
+    pad:0,mg:0,bw:0,bc:15,lay:0,gap:0,jus:0,ali:0},over||{});
+}
 function mkAddPart(){
   if(mkParts.length>=CC_WEAR.partMax){ toast("That is as many boxes as one piece can hold."); return; }
-  mkParts.push({cls:mkNewCls(),x:32,y:38,w:36,h:24,r:CC_WEAR.rad[1],a:0,
-    c:mkColor<0?0:mkColor});
+  /* a new box joins whatever is open: on a component screen it lands inside
+     that component, which is what "add" means while you are looking at one */
+  const host=(mkFocus!=null)?mkParts.find(p=>p.cls===mkFocus):null;
+  mkParts.push(mkBox(host?{pin:host.pid}:null));
   mkSel=mkParts.length-1;
   mkRender();
   if(typeof sfx==="function")sfx(660,.04);
+}
+/* the boxes held inside one box, however deep */
+function mkDescend(pid,acc){
+  acc=acc||[];
+  mkParts.forEach((p,i)=>{ if(p.pin===pid){ acc.push(i); mkDescend(p.pid,acc); } });
+  return acc;
+}
+/* Parents come before their children, always: it is what makes a cycle
+   impossible and the paint order right. Sending a box to the front takes
+   its children with it, and dropping a box lets its children out rather
+   than taking them down with it. */
+function mkToFront(at){
+  const p=mkParts[at], moving=[at].concat(mkDescend(p.pid));
+  const set=new Set(moving), keep=[], went=[];
+  mkParts.forEach((q,i)=>{ (set.has(i)?went:keep).push(q); });
+  mkParts=keep.concat(went);
+  mkSel=mkParts.indexOf(p);
+}
+function mkOrphan(pid){
+  for(const q of mkParts)if(q.pin===pid)delete q.pin;
 }
 function mkBuildUI(body){
   const sel=mkParts[mkSel]||null;
@@ -383,16 +471,10 @@ function mkBuildUI(body){
   };
   /* Copy is the component button: the twin shares the class, so it shares
      the rule, and only its own left/top says where it stands. */
-  btn("Copy","",()=>{
-    if(mkParts.length>=CC_WEAR.partMax){ toast("That is as many boxes as one piece can hold."); return; }
-    const c={...sel}; c.x=Math.max(-40,Math.min(140,c.x+Math.round(c.w*.6)));
-    mkParts.push(c); mkSel=mkParts.length-1; mkRender();
-    if(typeof sfx==="function")sfx(720,.04);
-  });
-  btn("Front","",()=>{
-    const p=mkParts.splice(mkSel,1)[0]; mkParts.push(p); mkSel=mkParts.length-1; mkRender();
-  });
+  btn("Copy","",()=>{ mkCopyPart(mkSel); });
+  btn("Front","",()=>{ mkToFront(mkSel); mkRender(); });
   btn("Delete","danger",()=>{
+    mkOrphan(mkParts[mkSel].pid);
     mkParts.splice(mkSel,1); mkSel=Math.min(mkSel,mkParts.length-1); mkRender();
     if(typeof sfx==="function")sfx(360,.05);
   });
@@ -400,9 +482,65 @@ function mkBuildUI(body){
 
   /* the way in that does not need to be discovered */
   const open=document.createElement("button");open.type="button";open.className="mk-btn mk-open";
-  open.innerHTML='Open <b>.'+esc(CC_CODE.classNames(mkParts)[sel.cls]||"")+'</b> on its own';
+  /* one text node, not three: js/game/i18n.js reassembles a run of text and
+     lifted emoji, and a <b> in the middle breaks the run — the sentence
+     would reach the dictionary in pieces and come back English */
+  open.textContent="Open ."+(CC_CODE.classNames(mkParts)[sel.cls]||"")+" on its own";
   open.addEventListener("click",()=>compOpen(sel.cls));
   body.appendChild(open);
+}
+
+/* Putting a component inside another one. Every box of the group moves,
+   because a class is one thing wherever it appears — and the whole group
+   has to land after its new parent, or "parents come first" is broken and
+   the tree stops being a tree. */
+function mkNestInto(pid){
+  if(mkFocus==null)return;
+  const moving=[];
+  mkParts.forEach((q,i)=>{ if(q.cls===mkFocus){ moving.push(i); mkDescend(q.pid).forEach(j=>moving.push(j)); } });
+  const set=new Set(moving);
+  const went=[], keep=[];
+  mkParts.forEach((q,i)=>{ (set.has(i)?went:keep).push(q); });
+  for(const q of went)if(q.cls===mkFocus){ if(pid==null)delete q.pin; else q.pin=pid; }
+  if(pid==null){ mkParts=went.concat(keep); }
+  else{
+    /* land directly after the parent's own subtree, so nothing that was
+       inside the parent ends up in front of the newcomer by accident */
+    let at=keep.findIndex(q=>q.pid===pid);
+    if(at<0){ mkParts=keep.concat(went); }
+    else{
+      at++;
+      while(at<keep.length&&mkDescend(pid).length&&keep[at]&&keep[at].pin!=null)at++;
+      mkParts=keep.slice(0,at).concat(went,keep.slice(at));
+    }
+  }
+  mkSel=mkParts.findIndex(q=>q.cls===mkFocus);
+  renderComp();
+  if(typeof sfx==="function")sfx(680,.04);
+}
+
+/* A copy shares the class, so it shares the rule — and it takes whatever is
+   inside it, because copying an element in HTML copies its children too. */
+function mkCopyPart(at){
+  const src=mkParts[at];
+  if(!src)return;
+  const subs=mkDescend(src.pid);
+  if(mkParts.length+1+subs.length>CC_WEAR.partMax){
+    toast("That is as many boxes as one piece can hold."); return;
+  }
+  const c={...src}; c.pid=mkNewPid();
+  if(c.pin==null)c.x=Math.max(-40,Math.min(140,c.x+Math.round(c.w*.6)));
+  mkParts.push(c);
+  const map={}; map[src.pid]=c.pid;
+  for(const i of subs){
+    const q={...mkParts[i]}; q.pid=mkNewPid();
+    map[mkParts[i].pid]=q.pid;
+    q.pin=map[mkParts[i].pin];
+    mkParts.push(q);
+  }
+  mkSel=mkParts.indexOf(c);
+  mkRender();
+  if(typeof sfx==="function")sfx(720,.04);
 }
 
 /* Drag inside the selected box to move it; drag its corner grip to resize.
@@ -413,44 +551,62 @@ function wireParts(c){
     const r=c.getBoundingClientRect();
     return {x:(e.clientX-r.left)/r.width*100, y:(e.clientY-r.top)/r.height*100, w:r.width};
   };
+  /* Hit-testing reads the laid-out rectangles, not the raw numbers: a box
+     inside a row is nowhere near its own left/top, and a box inside a
+     padded parent is inset from them. */
   const hit=q=>{
+    const L=mkLayout();
     for(let i=mkParts.length-1;i>=0;i--){
-      const p=mkParts[i];
+      const p=mkParts[i], r=L.rect[i]; if(!r)continue;
       /* on a component screen the rest of the piece is there to look at,
          not to grab: a stray tap on the hat must not pull the brim */
       if(mkFocus!=null&&p.cls!==mkFocus)continue;
-      if(q.x>=p.x&&q.y>=p.y&&q.x<=p.x+p.w&&q.y<=p.y+p.h)return i;
+      if(q.x>=r.x&&q.y>=r.y&&q.x<=r.x+r.w&&q.y<=r.y+r.h)return i;
     }
     return -1;
   };
   c.addEventListener("pointerdown",e=>{
-    const q=at(e), sel=mkParts[mkSel];
+    const q=at(e), L=mkLayout(), sr=L.rect[mkSel];
     mkPaint=e.pointerId;
     try{c.setPointerCapture(e.pointerId);}catch(_){}
     e.preventDefault();
     /* the grip wins over everything, including a box sitting on top of it */
-    if(sel){
-      const gx=sel.x+sel.w, gy=sel.y+sel.h, near=(HANDLE+9)/q.w*100;
+    if(sr&&!mkFlows(mkHolderBoxObj(mkSel))){
+      const gx=sr.x+sr.w, gy=sr.y+sr.h, near=(HANDLE+9)/q.w*100;
       if(Math.abs(q.x-gx)<near&&Math.abs(q.y-gy)<near){
         mkDrag={mode:"size",ox:q.x-gx,oy:q.y-gy}; return;
       }
     }
     const i=hit(q);
     if(i<0){ if(mkSel!==-1&&mkFocus==null){mkSel=-1;mkRender();} mkDrag=null; return; }
-    const p=mkParts[i];
-    mkDrag={mode:"move",ox:q.x-p.x,oy:q.y-p.y};
+    if(mkFlows(mkHolderBoxObj(i))){
+      /* the layout is placing this one. Saying so once beats a drag that
+         silently does nothing, and it names the two things that WOULD
+         move it. */
+      mkDrag=null;
+      if(i!==mkSel){ mkSel=i; mkRender(); }
+      toast("The layout places this box — change justify-content or its margin.");
+      return;
+    }
+    const r=L.rect[i];
+    mkDrag={mode:"move",ox:q.x-r.x,oy:q.y-r.y};
     if(i!==mkSel){ mkSel=i; mkRender(); } else mkDraw();
   });
   c.addEventListener("pointermove",e=>{
     if(mkPaint!==e.pointerId||!mkDrag)return;
     const q=at(e), p=mkParts[mkSel]; if(!p)return;
+    /* a box's own numbers are percentages of its holder's content box, so
+       that is the space a drag has to be converted into */
+    const L=mkLayout(), hb=mkHolderBox(L,mkSel);
+    const sx=(hb&&hb.w>0)?hb.w/100:1, sy=(hb&&hb.h>0)?hb.h/100:1;
     if(mkDrag.mode==="move"){
-      p.x=Math.round(Math.max(-40,Math.min(140-p.w,q.x-mkDrag.ox)));
-      p.y=Math.round(Math.max(-40,Math.min(140-p.h,q.y-mkDrag.oy)));
+      p.x=Math.round(Math.max(-40,Math.min(140-p.w,(q.x-mkDrag.ox-hb.x)/sx)));
+      p.y=Math.round(Math.max(-40,Math.min(140-p.h,(q.y-mkDrag.oy-hb.y)/sy)));
     }else{
       /* size belongs to the shared rule, so the whole group grows together */
-      const w=Math.round(Math.max(3,Math.min(160,q.x-mkDrag.ox-p.x)));
-      const h=Math.round(Math.max(3,Math.min(160,q.y-mkDrag.oy-p.y)));
+      const r=L.rect[mkSel];
+      const w=Math.round(Math.max(3,Math.min(160,(q.x-mkDrag.ox-r.x)/sx)));
+      const h=Math.round(Math.max(3,Math.min(160,(q.y-mkDrag.oy-r.y)/sy)));
       mkGroup(q2=>{q2.w=w;q2.h=h;});
     }
     mkDraw();
@@ -469,8 +625,11 @@ function wireParts(c){
    every one of them: steppers for a number, the palette for a colour, a
    text field for the selector. Selecting a token also selects its box on
    the canvas, because "which one is this?" is the first question. */
+/* what a chosen token writes to: one element, a whole group, or the piece
+   itself — the three scopes a CSS declaration can belong to here */
 function mkValParts(){
   if(!mkVal)return [];
+  if(mkVal.g==="root")return [mkRoot];
   if(mkVal.i!=null){ const p=mkParts[mkVal.i]; return p?[p]:[]; }
   return mkParts.filter(p=>p.cls===mkVal.g);
 }
@@ -481,17 +640,18 @@ function mkPick(v){
     return;
   }
   mkVal=(mkVal&&mkVal.k===v.k&&mkVal.i===v.i&&mkVal.g===v.g)?null:v;
-  if(mkVal){
+  if(mkVal&&mkVal.g!=="root"){
     const at=mkVal.i!=null?mkVal.i:mkParts.findIndex(p=>p.cls===mkVal.g);
     if(at>=0)mkSel=at;
   }
   mkRender();
   const ins=$(CID()+"Ins"); if(ins&&mkVal)ins.scrollIntoView({block:"nearest"});
 }
+const mkValNow=(o,k)=>CC_WEAR.field(o,k)|0;
 function mkNudge(d){
   const f=CC_CODE.field[mkVal.k]; if(!f)return;
   const list=mkValParts(); if(!list.length)return;
-  const now=(mkVal.k==="a")?(list[0].a|0):list[0][mkVal.k];
+  const now=mkValNow(list[0],mkVal.k);
   const next=Math.max(f.lo,Math.min(f.hi,now+d));
   if(next===now)return;
   for(const p of list)p[mkVal.k]=next;
@@ -501,23 +661,49 @@ function mkNudge(d){
 function mkInsRefresh(){
   const v=$(CID()+"InsVal"); if(!v||!mkVal)return;
   const f=CC_CODE.field[mkVal.k], list=mkValParts();
-  if(f&&list.length)v.textContent=(mkVal.k==="a"?(list[0].a|0):list[0][mkVal.k])+f.unit;
+  if(f&&list.length)v.textContent=mkValNow(list[0],mkVal.k)+f.unit;
 }
 function mkInspector(){
   const box=document.createElement("div");box.className="mk-ins";box.id=CID()+"Ins";
   if(!mkVal||!mkValParts().length){ box.hidden=true; return box; }
   const f=CC_CODE.field[mkVal.k], list=mkValParts(), p=list[0];
+  if(!p){ box.hidden=true; return box; }
 
-  if(mkVal.k==="c"){
-    const lab=document.createElement("span");lab.className="mk-inslab";lab.textContent="background";
+  /* a keyword is not a range — it is a short list of words, so the strip
+     offers the words. This is how flexbox is reachable at all: nothing on
+     the canvas can say "justify-content". */
+  const KW=CC_CODE.keyword[mkVal.k];
+  if(KW){
+    const lab=document.createElement("span");lab.className="mk-inslab";lab.textContent=KW.prop;
+    box.appendChild(lab);
+    const row=document.createElement("div");row.className="mk-inskw";
+    KW.opts().forEach((word,v)=>{
+      const b=document.createElement("button");b.type="button";
+      b.className="mk-kw"+(CC_WEAR.field(p,mkVal.k)===v?" on":"");
+      b.textContent=word;
+      b.addEventListener("click",()=>{ for(const q of list)q[mkVal.k]=v; mkRender(); });
+      row.appendChild(b);
+    });
+    box.appendChild(row);
+    return box;
+  }
+
+  if(mkVal.k==="c"||mkVal.k==="bc"){
+    const lab=document.createElement("span");lab.className="mk-inslab";
+    lab.textContent=mkVal.k==="bc"?"border-color":"background";
     box.appendChild(lab);
     const row=document.createElement("div");row.className="mk-inspal";
     for(let i=0;i<CC_WEAR.pal.length;i++){
       const b=document.createElement("button");b.type="button";
-      b.className="mk-insdot"+(p.c===i?" on":"");
+      b.className="mk-insdot"+(CC_WEAR.field(p,mkVal.k)===i?" on":"");
       b.style.background=CC_WEAR.pal[i];
       b.setAttribute("aria-label",CC_WEAR.names[i]);
-      b.addEventListener("click",()=>{ for(const q of list)q.c=i; mkColor=i; mkRender(); });
+      b.addEventListener("click",()=>{
+        const k=mkVal.k;
+        for(const q of list)q[k]=i;
+        if(k==="c")mkColor=i;
+        mkRender();
+      });
       row.appendChild(b);
     }
     box.appendChild(row);
@@ -538,7 +724,7 @@ function mkInspector(){
      across the value plain text */
   step(-f.big,"-"+f.big); step(-f.step,"-1");
   const v=document.createElement("span");v.className="mk-insval";v.id=CID()+"InsVal";
-  v.textContent=(mkVal.k==="a"?(p.a|0):p[mkVal.k])+f.unit;
+  v.textContent=mkValNow(p,mkVal.k)+f.unit;
   box.appendChild(v);
   step(f.step,"+1"); step(f.big,"+"+f.big);
   return box;
@@ -579,6 +765,21 @@ function mkCodeRefresh(el){
     const i=b.dataset.i!=null?+b.dataset.i:null, g=b.dataset.g!=null?+b.dataset.g:null;
     if(i===mkVal.i&&g===mkVal.g){ b.classList.add("on"); break; }
   }
+}
+
+/* The four colours on the canvas, named. Without this the overlay is
+   decoration; with it, it is the box model — and the box model is the one
+   diagram that makes CSS make sense. */
+function mkBoxKey(){
+  const k=document.createElement("div");k.className="mk-key";
+  [["margin","#f6b26b"],["border","#ffd66b"],["padding","#93e09b"],["content","#78b4ff"]]
+    .forEach(([lab,col])=>{
+      const s2=document.createElement("span");
+      const i=document.createElement("i");i.style.background=col;
+      s2.appendChild(i);s2.appendChild(document.createTextNode(lab));
+      k.appendChild(s2);
+    });
+  return k;
 }
 
 /* Standing, walking, chopping — the three the world actually shows. */
@@ -692,6 +893,7 @@ function renderComp(){
   const cc=document.createElement("canvas");cc.id="cpCanvas";pad.appendChild(cc);
   stage.appendChild(pv);stage.appendChild(mkPoseRow());stage.appendChild(pad);
   body.appendChild(stage);
+  if(mkKind==="parts")body.appendChild(mkBoxKey());
 
   /* which of this component's boxes you are moving, when there is a choice */
   if(list.length>1){
@@ -707,6 +909,33 @@ function renderComp(){
     });
     body.appendChild(chips);
   }
+
+  /* Which box this one lives inside. "What I make is inside them" is the
+     whole idea of nesting, and it needs one row: the slot, or any box that
+     is not this one and not something already inside it. */
+  const host=document.createElement("div");host.className="cp-in";
+  const hlab=document.createElement("span");hlab.className="cp-inlab";hlab.textContent="Inside";
+  host.appendChild(hlab);
+  const hrow=document.createElement("div");hrow.className="cp-inrow";
+  const inside=list[0].pin;
+  const mkIn=(lab,pid,dis)=>{
+    const b=document.createElement("button");b.type="button";
+    b.className="mk-kw"+(inside===pid||(pid==null&&inside==null)?" on":"");
+    b.textContent=lab; b.disabled=!!dis;
+    b.addEventListener("click",()=>{ mkNestInto(pid); });
+    hrow.appendChild(b);
+  };
+  mkIn("."+mkSlot,null,false);
+  const banned=new Set([mkFocus]);
+  mkParts.forEach(q=>{ if(banned.has(q.cls))mkDescend(q.pid).forEach(j=>banned.add(mkParts[j].cls)); });
+  const offered=new Set();
+  mkParts.forEach(q=>{
+    if(banned.has(q.cls)||offered.has(q.cls))return;
+    offered.add(q.cls);
+    mkIn("."+names[q.cls],q.pid,false);
+  });
+  host.appendChild(hrow);
+  body.appendChild(host);
 
   /* the colours and the corner radius, both of which the rule owns */
   const pal=document.createElement("div");pal.className="mk-pal";
@@ -734,15 +963,8 @@ function renderComp(){
     const b=document.createElement("button");b.type="button";b.className="mk-btn"+(cls?" "+cls:"");
     b.textContent=lab;b.addEventListener("click",fn);acts.appendChild(b);
   };
-  btn("Copy","",()=>{
-    if(mkParts.length>=CC_WEAR.partMax){ toast("That is as many boxes as one piece can hold."); return; }
-    const c={...mkParts[mkSel]}; c.x=Math.max(-40,Math.min(140,c.x+Math.round(c.w*.6)));
-    mkParts.push(c); mkSel=mkParts.length-1; renderComp();
-    if(typeof sfx==="function")sfx(720,.04);
-  });
-  btn("Front","",()=>{
-    const p=mkParts.splice(mkSel,1)[0]; mkParts.push(p); mkSel=mkParts.length-1; renderComp();
-  });
+  btn("Copy","",()=>{ mkCopyPart(mkSel); });
+  btn("Front","",()=>{ mkToFront(mkSel); renderComp(); });
   btn("Delete","danger",()=>{
     for(let i=mkParts.length-1;i>=0;i--)if(mkParts[i].cls===mkFocus)mkParts.splice(i,1);
     if(typeof sfx==="function")sfx(360,.05);
@@ -803,7 +1025,7 @@ function mkSave(){
   }
   const nm=safeText(mkName,18)||"My piece";
   const piece=mkKind==="parts"
-    ?{id:mkId,slot:mkSlot,name:nm,kind:"parts",parts:mkParts.map(p=>({...p}))}
+    ?{id:mkId,slot:mkSlot,name:nm,kind:"parts",parts:mkParts.map(p=>({...p})),root:{...mkRoot}}
     :{id:mkId,slot:mkSlot,name:nm,px:mkStr(),sm:mkSm};
   if(at<0)list.push(piece); else list[at]=piece;
   /* wearing it is the point of making it */

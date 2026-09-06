@@ -2590,9 +2590,10 @@ async function ev(expr) {
     mkVal=null; player.myWear=[]; makerExit();
     return JSON.stringify(out);
   })()`));
-  /* one group of one: name + x y w h r a c. One group of two: name + the
-     five the rule owns, and left/top on each of the two elements. */
-  check("every value in the code is a control", !CODE.missing && CODE.tokens === 18, JSON.stringify(CODE));
+  /* one group of one: name + x y w h r a c and the four box-model values.
+     One group of two: the same minus left/top, plus left/top on each of the
+     two elements. And the piece itself: its padding and its display. */
+  check("every value in the code is a control", !CODE.missing && CODE.tokens === 28, JSON.stringify(CODE));
   check("the strip names the CSS property and moves the real value",
     CODE.prop === 'width' && CODE.w === 24 && CODE.shown === '24%' && CODE.marked === true, JSON.stringify(CODE));
   check("a value cannot be pushed past what the drag itself can produce",
@@ -2624,6 +2625,76 @@ async function ev(expr) {
     CODE.emptyName === 'gold-dot', JSON.stringify(CODE));
   check("the code on screen is the code the piece means", CODE.plainMatchesShown === true, JSON.stringify(CODE));
   check("rotate reaches the canvas", CODE.rotates === true, JSON.stringify(CODE));
+
+  /* The box model and the layout that uses it — the part of CSS that is
+     actually front-end work, and the part you cannot see by dragging. */
+  const BOXM = JSON.parse(await ev(`(()=>{
+    if(!CC_WEAR.layout)return JSON.stringify({missing:true});
+    const L=CC_WEAR.layout;
+    const box=o=>Object.assign({cls:0,pid:0,x:0,y:0,w:20,h:20,r:0,a:0,c:0,
+      pad:0,mg:0,bw:0,bc:15,lay:0,gap:0,jus:0,ali:0},o);
+    const out={};
+    /* padding on a container insets what is inside it */
+    const pad=[box({pid:0,x:0,y:0,w:100,h:100,pad:10}),box({cls:1,pid:1,pin:0,x:0,y:0,w:100,h:100})];
+    const r1=L(pad,{}).rect[1];
+    out.padInsets=Math.round(r1.x)===10&&Math.round(r1.w)===80;
+    /* justify-content: center puts the middle of the children on the
+       middle of the container, which is the answer to "where is the centre" */
+    const row=[box({pid:0,x:0,y:0,w:100,h:100,lay:1,jus:1,ali:1}),
+               box({cls:1,pid:1,pin:0,w:20,h:20}),box({cls:1,pid:2,pin:0,w:20,h:20})];
+    const a=L(row,{}).rect[1], b=L(row,{}).rect[2];
+    out.centred=Math.abs(((a.x+b.x+b.w)/2)-50)<0.6 && Math.abs((a.y+a.h/2)-50)<0.6;
+    /* flex-start is not centre, or the switch means nothing */
+    row[0].jus=0;
+    out.startDiffers=Math.round(L(row,{}).rect[1].x)!==Math.round(a.x);
+    /* margin pushes a box away from where it would otherwise sit */
+    row[0].jus=0; row[1].mg=6;
+    out.marginMoves=Math.round(L(row,{}).rect[1].x)===6;
+    /* a container that flows takes left and top out of its children's rule,
+       because it is placing them now */
+    const flow={name:"n",root:{},parts:[box({pid:0,x:10,y:10,w:60,h:60,lay:1}),
+                                        box({cls:1,pid:1,pin:0,w:30,h:30})]};
+    const withFlow=CC_CODE.code(flow,"hat");
+    flow.parts[0].lay=0;
+    const withFree=CC_CODE.code(flow,"hat");
+    /* the container itself is still placed by hand — it sits in the slot,
+       which places nothing. It is its CHILD that stops being positioned, so
+       the count is what says it: two rules positioned, then one. */
+    const abs=src=>(src.match(/position: absolute/g)||[]).length;
+    const lefts=src=>(src.match(/left: /g)||[]).length;
+    out.flowDropsLeft=abs(withFlow)===1&&abs(withFree)===2&&
+                      lefts(withFlow)===1&&lefts(withFree)===2;
+    out.flowHasFlex=withFlow.indexOf("display: flex")>=0 && withFree.indexOf("display: flex")<0;
+    /* the HTML nests the way the boxes do */
+    out.nests=/<div class="[^"]+">[\\s]*[\\n][\\s]+<div class="[^"]+"><[\\/]div>/.test(withFlow);
+    /* a save cannot describe a box inside itself: a pin has to name a box
+       already read, so a cycle is not representable */
+    const dirty=CC_WEAR.clean([{id:'my:c1',slot:'hat',name:'x',kind:'parts',
+      parts:[{pid:1,pin:2,x:0,y:0,w:9,h:9},{pid:2,pin:1,x:0,y:0,w:9,h:9}]}]);
+    out.noCycle=dirty[0].parts[0].pin===undefined && dirty[0].parts[1].pin===1;
+    /* and a piece written before any of this renders exactly as it did */
+    const oldPiece={kind:'parts',parts:[{cls:0,x:10,y:10,w:50,h:50,r:0,a:0,c:3}]};
+    const shot=pc=>{const cv=document.createElement('canvas');cv.width=cv.height=80;
+      const g=cv.getContext('2d');CC_WEAR.swatch(g,'outfit',pc,80);
+      return g.getImageData(0,0,80,80).data.join(',');};
+    out.oldStillRenders=shot(oldPiece)===shot({kind:'parts',root:{lay:0,pad:0,gap:0,jus:0,ali:0},
+      parts:[{cls:0,pid:0,x:10,y:10,w:50,h:50,r:0,a:0,c:3,pad:0,mg:0,bw:0,bc:15,lay:0,gap:0,jus:0,ali:0}]});
+    return JSON.stringify(out);
+  })()`));
+  check("padding on a container insets what is inside it",
+    !BOXM.missing && BOXM.padInsets === true, JSON.stringify(BOXM));
+  check("justify-content: center is what centre means",
+    BOXM.centred === true && BOXM.startDiffers === true, JSON.stringify(BOXM));
+  check("margin pushes a box away from where it would sit",
+    BOXM.marginMoves === true, JSON.stringify(BOXM));
+  /* the single most important thing on this screen: turning a container
+     into a flex container takes the hand-placement out of its children */
+  check("a flow container takes left and top out of its children's rule",
+    BOXM.flowDropsLeft === true && BOXM.flowHasFlex === true, JSON.stringify(BOXM));
+  check("the HTML nests the way the boxes do", BOXM.nests === true, JSON.stringify(BOXM));
+  check("a save cannot describe a box inside itself", BOXM.noCycle === true, JSON.stringify(BOXM));
+  check("a piece built before the box model renders exactly as it did",
+    BOXM.oldStillRenders === true, JSON.stringify(BOXM));
 
   /* A piece has to be judged on a moving robot: a brim that clears the
      antenna at rest can still swing through it on a chop, and shoes only

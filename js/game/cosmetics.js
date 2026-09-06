@@ -390,27 +390,164 @@ function rrEl(g,x,y,w,h,rx,ry){
   g.ellipse(x+rx,y+ry,rx,ry,0,P,P*1.5);
   g.closePath();
 }
+/* =====================================================================
+   The box model, and the layout that uses it
+   ---------------------------------------------------------------------
+   A box used to be four numbers and a colour, placed by hand. That is
+   absolute positioning, which is the least representative corner of CSS —
+   real front-end work is a container telling its children where to go.
+
+   So a box now has the whole box model — content, padding, border, margin,
+   in that order out from the middle — and it can HOLD other boxes. A
+   container lays its children out one of three ways:
+
+     free   each child sits where its own left/top say, inside the
+            container's content box. What every piece did before this.
+     row    children in a line across, in the order they were made
+     col    children in a line down
+
+   and in the two flow modes, justify-content places them along that line
+   and align-items across it. `center` is then a word rather than a sum,
+   which is the whole point: a child who typed left: 37% to centre
+   something and watched it drift has learned nothing, and a child who
+   writes justify-content: center has learned how the web is laid out.
+
+   Everything is in a 0..100 space, and the stylesheet says width: 100px on
+   the root — so a percentage and a pixel are the same number here, a
+   border of 3 is 3 either way, and nothing has to be converted to be
+   understood.
+
+   Parents come before their children in the array. That one invariant
+   makes cycles impossible, keeps the paint order right without a sort, and
+   lets the cleaner check a hand-edited save in a single pass.
+   ===================================================================== */
+const LAY=["free","row","col"];
+const JUS=["flex-start","center","flex-end","space-between"];
+const ALI=["flex-start","center","flex-end"];
+const BOXF={pad:0,mg:0,bw:0,bc:15,lay:0,gap:0,jus:0,ali:0};
+const bf=(p,k)=>{const v=p&&p[k]; return typeof v==="number"?v:BOXF[k];};
+
+/* the four rectangles devtools draws, out from the middle */
+function boxRings(x,y,w,h,pt,K){
+  const m=bf(pt,"mg")*K, b=bf(pt,"bw")*K, pd=bf(pt,"pad")*K;
+  return [
+    ["margin", x-m,y-m,w+m*2,h+m*2],
+    ["border", x,y,w,h],
+    ["padding",x+b,y+b,Math.max(0,w-b*2),Math.max(0,h-b*2)],
+    ["content",x+b+pd,y+b+pd,Math.max(0,w-(b+pd)*2),Math.max(0,h-(b+pd)*2)]
+  ];
+}
+
+/* Lay the whole tree out once and hand back a rect per part, in the 0..100
+   space, plus the content box each container offers its children. The
+   renderer, the drag and the box-model overlay all read this, so there is
+   one answer to "where is that box" instead of three. */
+function layoutParts(parts,root){
+  const out={rect:new Array(parts?parts.length:0),content:new Array(parts?parts.length:0),rootContent:null};
+  if(!Array.isArray(parts)||!parts.length)return out;
+  const seen=new Set(), kids=new Map();
+  parts.forEach((p,i)=>{
+    /* a parent must already have been seen, which is the invariant that
+       makes a cycle unrepresentable */
+    const key=(p.pin!=null&&seen.has(p.pin))?p.pin:"";
+    if(!kids.has(key))kids.set(key,[]);
+    kids.get(key).push(i);
+    if(p.pid!=null)seen.add(p.pid);
+  });
+  const content=(box,cont)=>{
+    const inset=bf(cont,"bw")+bf(cont,"pad");
+    const kx=box.w/100, ky=box.h/100;
+    return {x:box.x+inset*kx, y:box.y+inset*ky,
+            w:Math.max(0,box.w-inset*2*kx), h:Math.max(0,box.h-inset*2*ky)};
+  };
+  const place=(key,box,cont,depth)=>{
+    const c=content(box,cont);
+    if(key==="")out.rootContent=c; else out.content[key.at]=c;
+    const list=kids.get(key==="" ? "" : key.pid); if(!list||depth>4)return;
+    const sx=c.w/100, sy=c.h/100;
+    const lay=LAY[bf(cont,"lay")]||"free";
+    if(lay==="free"){
+      for(const i of list){
+        const p=parts[i];
+        const r={x:c.x+p.x*sx,y:c.y+p.y*sy,w:p.w*sx,h:p.h*sy};
+        out.rect[i]=r;
+        place({pid:p.pid,at:i},r,p,depth+1);
+      }
+      return;
+    }
+    /* flow: pack along the main axis, honouring each child's margin and
+       the container's gap, then justify along it and align across it */
+    const rowMode=lay==="row", gap=bf(cont,"gap");
+    let total=gap*(list.length-1);
+    const items=list.map(i=>{
+      const p=parts[i], m=bf(p,"mg");
+      const main=(rowMode?p.w:p.h)+m*2, cross=(rowMode?p.h:p.w)+m*2;
+      total+=main;
+      return {i,p,m,main,cross};
+    });
+    const jus=JUS[bf(cont,"jus")]||"flex-start";
+    const ali=ALI[bf(cont,"ali")]||"flex-start";
+    const free=100-total;
+    let cursor=0, spread=gap;
+    if(jus==="center")cursor=free/2;
+    else if(jus==="flex-end")cursor=free;
+    else if(jus==="space-between"&&list.length>1)spread=gap+Math.max(0,free)/(list.length-1);
+    for(const it of items){
+      const p=it.p, m=it.m;
+      let cross=0;
+      if(ali==="center")cross=(100-it.cross)/2;
+      else if(ali==="flex-end")cross=100-it.cross;
+      const r=rowMode
+        ?{x:c.x+(cursor+m)*sx,y:c.y+(cross+m)*sy,w:p.w*sx,h:p.h*sy}
+        :{x:c.x+(cross+m)*sx,y:c.y+(cursor+m)*sy,w:p.w*sx,h:p.h*sy};
+      out.rect[it.i]=r;
+      place({pid:p.pid,at:it.i},r,p,depth+1);
+      cursor+=it.main+spread;
+    }
+  };
+  place("",{x:0,y:0,w:100,h:100},root||{},0);
+  return out;
+}
+
 /* `focus`, when it is a class id, dims every box that does not belong to
    it — in place, so the stacking order a player built is still what they
    see. It is how the component screen keeps the rest of the piece visible
    without letting it compete. */
-function paintParts(g,box,parts,focus){
+function paintParts(g,box,parts,focus,root){
   if(!Array.isArray(parts))return;
   const a0=g.globalAlpha;
-  for(const pt of parts){
+  const L=layoutParts(parts,root), K=box.w/100;
+  parts.forEach((pt,i)=>{
+    const r=L.rect[i]; if(!r)return;
     if(focus!=null)g.globalAlpha=a0*(pt.cls===focus?1:.25);
-    const w=box.w*pt.w/100, h=box.h*pt.h/100;
-    if(w<=0||h<=0)continue;
-    const x=box.x+box.w*pt.x/100, y=box.y+box.h*pt.y/100;
+    const w=r.w*K, h=r.h*K;
+    if(w<=0||h<=0)return;
+    const x=box.x+r.x*K, y=box.y+r.y*K;
     /* CSS rotates an element about its own centre, so this does too — the
        code and the canvas have to mean the same thing by rotate() */
     const a=pt.a|0;
     if(a){ g.save(); g.translate(x+w/2,y+h/2); g.rotate(a*Math.PI/180); g.translate(-x-w/2,-y-h/2); }
-    rrEl(g,x,y,w,h,w*pt.r/100,h*pt.r/100);
-    g.fillStyle=WEAR_PAL[pt.c]||WEAR_PAL[0];
-    g.fill();
+    const bw=bf(pt,"bw")*K;
+    if(bw>0){
+      /* a border is a ring: the border colour fills the whole box and the
+         background fills what is left inside it, which is exactly the order
+         a browser paints them in */
+      rrEl(g,x,y,w,h,w*pt.r/100,h*pt.r/100);
+      g.fillStyle=WEAR_PAL[bf(pt,"bc")]||WEAR_PAL[15];
+      g.fill();
+      const iw=Math.max(0,w-bw*2), ih=Math.max(0,h-bw*2);
+      if(iw>0&&ih>0){
+        rrEl(g,x+bw,y+bw,iw,ih,iw*pt.r/100,ih*pt.r/100);
+        g.fillStyle=WEAR_PAL[pt.c]||WEAR_PAL[0];
+        g.fill();
+      }
+    }else{
+      rrEl(g,x,y,w,h,w*pt.r/100,h*pt.r/100);
+      g.fillStyle=WEAR_PAL[pt.c]||WEAR_PAL[0];
+      g.fill();
+    }
     if(a)g.restore();
-  }
+  });
   g.globalAlpha=a0;
 }
 
@@ -445,7 +582,7 @@ function paintPiece(g,slot,p){
   const b=WEAR_BOX[slot];
   /* parts are already curves and already cheap — a handful of filled
      rounded rects — so they are drawn straight, with no bake in the way */
-  if(p.kind==="parts"){ paintParts(g,b,p.parts); return; }
+  if(p.kind==="parts"){ paintParts(g,b,p.parts,null,p.root); return; }
   if(typeof p.px!=="string")return;
   if(!isSmooth(p)){ paintBlocks(g,b,p.px); return; }
   g.drawImage(bake(slot,p.px),b.x,b.y,b.w,b.h);
@@ -457,7 +594,11 @@ window.CC_WEAR={
   names:WEAR_NAME, rad:PART_RAD, partMax:PART_MAX,
   isCustom:isCustom,
   /* the maker's build canvas draws the working parts straight */
-  parts(g,slot,list,focus){const b=WEAR_BOX[slot]; if(b)paintParts(g,b,list,focus);},
+  parts(g,slot,list,focus,root){const b=WEAR_BOX[slot]; if(b)paintParts(g,b,list,focus,root);},
+  /* one answer to "where is that box", shared by the paint, the drag and
+     the box-model overlay */
+  layout:layoutParts, rings:boxRings, lay:LAY, jus:JUS, ali:ALI, boxDefault:BOXF,
+  field:bf,
   /* body-local; the caller has already clipped to the body square */
   outfit(g,id,color){
     const p=customPiece(id); if(p)return paintPiece(g,"outfit",p);
@@ -520,22 +661,43 @@ window.CC_WEAR={
            can produce, so a hand-edited save can make an ugly piece but never
            a broken one — and never one that paints outside its slot. */
         const N=(v,lo,hi,d)=>{const n=Math.round(Number(v)); return isFinite(n)?Math.max(lo,Math.min(hi,n)):d;};
+        /* pid is a name, not a position: it survives reordering, which is
+           what lets a child keep its parent when a box is sent to the
+           front. A save that brings its own ids keeps them when they are
+           whole and unique; anything else gets a fresh one. */
+        const seenPid=new Set(); let nextPid=0;
+        const freshPid=()=>{ while(seenPid.has(nextPid))nextPid++; return nextPid; };
         const parts=(Array.isArray(p.parts)?p.parts:[]).slice(0,PART_MAX).map(q=>{
+          let pid=(q&&q.pid!=null)?Math.round(Number(q.pid)):NaN;
+          if(!isFinite(pid)||pid<0||pid>9999||seenPid.has(pid))pid=freshPid();
           const o={
-            cls:N(q&&q.cls,0,PART_MAX-1,0),
+            cls:N(q&&q.cls,0,PART_MAX-1,0), pid:pid,
             x:N(q&&q.x,-40,140,10), y:N(q&&q.y,-40,140,10),
             w:N(q&&q.w,1,160,30),   h:N(q&&q.h,1,160,30),
             r:N(q&&q.r,0,50,0),     a:N(q&&q.a,-180,180,0),
-            c:N(q&&q.c,0,WEAR_PAL.length-1,0)
+            c:N(q&&q.c,0,WEAR_PAL.length-1,0),
+            pad:N(q&&q.pad,0,40,0), mg:N(q&&q.mg,0,40,0),
+            bw:N(q&&q.bw,0,20,0),   bc:N(q&&q.bc,0,WEAR_PAL.length-1,15),
+            lay:N(q&&q.lay,0,LAY.length-1,0), gap:N(q&&q.gap,0,40,0),
+            jus:N(q&&q.jus,0,JUS.length-1,0), ali:N(q&&q.ali,0,ALI.length-1,0)
           };
-          /* a class name a player wrote is an identifier that reaches the
-             screen: it is stripped down to one where it can be, and dropped
-             for the derived name where nothing is left */
+          /* Parents come first, always. A pin that does not name a box
+             already read is simply not a pin — which is how a hand-edited
+             save gets a cycle rejected without anything having to look for
+             one. pid is re-issued by position so the links stay sound
+             however the array was reordered on the way in. */
+          const pin=(q&&q.pin!=null)?Math.round(Number(q.pin)):null;
+          if(pin!=null&&isFinite(pin)&&seenPid.has(pin))o.pin=pin;
+          seenPid.add(pid);
           const cn=(window.CC_CODE&&q)?CC_CODE.cleanName(q.cn):"";
           if(cn)o.cn=cn;
           return o;
         });
-        out.push({id:p.id,slot:slot,name:name||"?",kind:"parts",parts:parts});
+        const rt=p.root||{};
+        const root={lay:N(rt.lay,0,LAY.length-1,0), pad:N(rt.pad,0,40,0),
+                    gap:N(rt.gap,0,40,0), jus:N(rt.jus,0,JUS.length-1,0),
+                    ali:N(rt.ali,0,ALI.length-1,0)};
+        out.push({id:p.id,slot:slot,name:name||"?",kind:"parts",parts:parts,root:root});
       }
       /* sm is a look, not data: anything but an explicit false means curves */
       else out.push({id:p.id,slot:slot,name:name||"?",px:clean,sm:p.sm!==false});

@@ -107,6 +107,14 @@ const HE={
 "Could not copy — select the code and copy it by hand.":
   "לא הצלחתי להעתיק — תסמן את הקוד ותעתיק ידנית.",
 "Class name":"שם ה-class",
+/* the box model and the layout */
+"Inside":"בתוך",
+/* margin, padding and border are NOT listed: a CSS property name is an
+   identifier and stays as written, and an entry that maps a word to itself
+   is the shape that froze the game once already — the observer sees a write
+   that changes nothing, queues a record for it, and never stops. */
+"The layout places this box — change justify-content or its margin.":
+  "הפריסה ממקמת את הקופסה הזאת — תשנה את justify-content או את ה-margin שלה.",
 /* the component screen */
 "Component":"קונפוננטה",
 "One class, on its own — the robot still shows the rest.":

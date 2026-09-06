@@ -219,7 +219,7 @@
 #compBody .cp-many{flex:0 0 auto;padding:0 6px;font-size:12.5px;font-weight:800;color:var(--accent2);}
 .mk-body .mk-open{display:block;width:100%;margin:10px 0 0;
   background:rgba(177,132,255,.16);border:1px solid rgba(177,132,255,.4);}
-.mk-body .mk-open b{font-family:ui-monospace,Menlo,Consolas,monospace;color:#b184ff;}
+.mk-body .mk-open{color:#d9ccff;}
 
 /* the strip that edits whatever token is chosen */
 .mk-body .mk-ins{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
@@ -242,3 +242,29 @@
   border:2px solid transparent;}
 .mk-body .mk-insdot.on{border-color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.35);}
 .mk-body .mk-copy{display:block;width:100%;margin:10px 0 0;}
+
+/* ---- the box model, and the words a layout is made of ---- */
+/* a keyword is a word, not a number, so the strip offers the words */
+.mk-body .mk-inskw{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;padding:2px 0;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+.mk-body .mk-inskw::-webkit-scrollbar{width:0;height:0;}
+.mk-body .mk-kw{flex:0 0 auto;min-height:44px;padding:0 13px;border-radius:13px;border:none;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;font-weight:700;
+  background:var(--panel2);color:var(--ink2);white-space:nowrap;}
+.mk-body .mk-kw.on{background:var(--accent);color:#241b45;}
+.mk-body .mk-kw:disabled{opacity:.4;}
+/* a keyword token in the code reads green, like the value it is */
+.mk-body .mk-code pre .val.kw{border-color:rgba(143,240,160,.5);background:rgba(143,240,160,.12);}
+
+/* which box this component lives inside */
+#compBody .cp-in{display:flex;align-items:center;gap:8px;margin:12px 0 0;}
+#compBody .cp-inlab{flex:0 0 auto;font-size:12.5px;font-weight:700;color:var(--ink2);}
+#compBody .cp-inrow{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;padding:2px 0;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+#compBody .cp-inrow::-webkit-scrollbar{width:0;height:0;}
+
+/* the box-model key, so the four colours on the canvas mean something */
+.mk-body .mk-key{display:flex;flex-wrap:wrap;gap:4px 12px;margin:8px 2px 0;}
+.mk-body .mk-key span{display:flex;align-items:center;gap:5px;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--ink2);}
+.mk-body .mk-key i{width:11px;height:11px;border-radius:3px;display:block;}
