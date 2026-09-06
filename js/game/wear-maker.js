@@ -44,6 +44,12 @@ let mkFocus=null;
 let mkTab="boxes";
 /* which Layout row has its sentence open */
 let mkLHelp=null;
+/* Wide: the canvas gives most of its height to the dock, the way Focus in
+   the code sheet drops everything that is not the program. It is this
+   screen's own control, not the shared sheet size — a pinned canvas does
+   not fit in 56vh — so it is a flag here rather than body.sheets-full, and
+   it is remembered for the session. */
+let mkWide=false;
 const mkRender=()=>renderMaker();
 const PART_WORD=["Box","Tile","Pill","Dot"];
 /* which pose the preview robot holds. A piece has to be judged on a moving
@@ -99,6 +105,23 @@ function makerExit(){
   CC_WEAR.setDraft(null);
   mkFocus=null; mkVal=null;
   $("maker").classList.remove("open");
+}
+
+/* ---------------- wide: more dock, less canvas ---------------- */
+function makerWideToggle(){
+  mkWide=!mkWide;
+  mkWideApply();
+  if(typeof sfx==="function")sfx(mkWide?600:520,.04);
+  /* the canvas changed size under its own backing store */
+  requestAnimationFrame(mkDraw);
+}
+/* Guarded with contains(): an unconditional classList write queues a
+   mutation record, and the i18n observer answering one of those is how
+   this screen froze once. */
+function mkWideApply(){
+  const sh=$("maker"); if(!sh)return;
+  if(mkWide&&!sh.classList.contains("wide"))sh.classList.add("wide");
+  else if(!mkWide&&sh.classList.contains("wide"))sh.classList.remove("wide");
 }
 function makerClose(){ makerExit(); styleOpen(); }
 
@@ -216,11 +239,13 @@ function mkPlay(){
   if(mkRaf)return;
   const step=ts=>{
     mkRaf=0;
-    const sheet=$("maker"), cv=$("mkPrev");
-    if(!sheet||!sheet.classList.contains("open")||!cv){CC_WEAR.setDraft(null);return;}
+    const sheet=$("maker");
+    /* the loop feeds every live box that exists and stops when none does */
+    const lives=[...document.querySelectorAll("canvas.mk-live")].filter(c=>c.isConnected&&c.clientWidth>0);
+    if(!sheet||!sheet.classList.contains("open")||!lives.length){CC_WEAR.setDraft(null);return;}
     CC_WEAR.setDraft({id:mkId,kind:"parts",parts:mkParts,root:mkRoot});
     const r=robots[selRobot]||robots[0];
-    if(r){
+    for(const cv of (r?lives:[])){
       /* the box is the whole dock, so the robot gets read at a size a
          child can actually judge — it used to be 58 body units in a 132px
          column and looked like a token */
@@ -262,6 +287,7 @@ function renderMaker(){
   /* the lesson watches the piece rather than a Next button, so the check
      belongs wherever the piece is about to be drawn again */
   if(typeof feCheck==="function")feCheck();
+  mkWideApply();
   mkHead(); mkStage(); mkDock();
 }
 /* a tab switch, or a value being chosen, only ever repaints the dock */
@@ -341,7 +367,7 @@ function mkDock(){
 function mkOutfitPanel(body){
   const wrap=document.createElement("div");wrap.className="mk-outfit";
   const pv=document.createElement("div");pv.className="mk-prev";
-  const pc=document.createElement("canvas");pc.id="mkPrev";pv.appendChild(pc);
+  const pc=document.createElement("canvas");pc.id="mkPrev";pc.className="mk-live";pv.appendChild(pc);
   pv.appendChild(mkPoseRow());
   wrap.appendChild(pv);
   const cap=document.createElement("div");cap.className="mk-cap";

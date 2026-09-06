@@ -308,7 +308,25 @@
 body:not(.sheets-full) #maker.sized,
 body.sheets-full #maker.sized,
 #maker{height:var(--sheet-full);max-height:var(--sheet-full);
-  display:flex;flex-direction:column;background:var(--bg);}
+  display:flex;flex-direction:column;background:var(--bg);
+  /* .sheet pads itself by the safe area and the tab bar pads by it again,
+     so without this the home-indicator zone was counted twice and the tabs
+     floated a strip of sheet above the bottom of the screen */
+  padding-bottom:0;}
+
+/* Wide: the canvas gives most of its height to the dock, the way Focus in
+   the code sheet gives the program the rows that are not the program. The
+   canvas stays — a box is still dragged there — at the size a thumbnail
+   needs, and the key and the lesson offer step aside; a lesson in progress
+   does not, because it is the one thing being read. */
+#maker.wide .mk-stage-fixed .mk-pad{height:132px;min-height:96px;}
+#maker.wide .mk-stage-fixed .mk-key,
+#maker.wide .mk-stage-fixed .fe-offer{display:none;}
+/* the icon says what pressing it does: grow the dock, or give the canvas back */
+#maker .m-head .iconbtn.size .ic-min{display:none;}
+#maker .m-head .iconbtn.size .ic-max{display:block;}
+#maker.wide .m-head .iconbtn.size .ic-max{display:none;}
+#maker.wide .m-head .iconbtn.size .ic-min{display:block;}
 #maker .m-head{background:transparent;}
 
 /* Save belongs in the head, where it is reachable from every tab without

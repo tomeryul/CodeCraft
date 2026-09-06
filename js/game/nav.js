@@ -90,7 +90,13 @@ function fit(id){
     b.className="iconbtn size"; b.id=id+"Size";
     b.title="Shrink or expand"; b.setAttribute("aria-label","Shrink or expand");
     b.innerHTML=ICON_SIZE;
-    b.addEventListener("click",()=>{const m=$("edMax"); if(m)m.click();});
+    /* The maker is the one sheet whose size is not the shared preference —
+       a pinned canvas does not fit in 56vh — so its control is its own:
+       the canvas gives its height to the dock, and takes it back. */
+    b.addEventListener("click",()=>{
+      if(id==="maker"&&has("makerWideToggle")){ makerWideToggle(); return; }
+      const m=$("edMax"); if(m)m.click();
+    });
     const back=head.querySelector(".iconbtn.back");
     head.insertBefore(b,back?back.nextSibling:head.firstChild);
   }

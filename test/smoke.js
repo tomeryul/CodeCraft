@@ -2819,6 +2819,40 @@ async function ev(expr) {
     JSON.stringify(LAYT.groups) === JSON.stringify(['This box','Inside','The piece']) &&
     LAYT.pieceFlex === 5, JSON.stringify(LAYT));
 
+  /* Wide: the maker's own size control. The canvas gives its height to
+     the dock and takes it back, remembered for the session — and the safe
+     area is padded once, not by the sheet and its tab bar both. */
+  const WIDE = JSON.parse(await ev(`(async()=>{
+    if(typeof makerWideToggle!=='function')return JSON.stringify({missing:true});
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    mgState=null; mgRobot=null; player.myWear=[]; player.level=20; player.feTut=null;
+    mkWide=false;
+    makerOpen('hat',null); mkParts=[]; renderMaker(); mkAddPart();
+    await wait(350);
+    const sh=document.getElementById('maker');
+    const body=()=>document.getElementById('makerBody').clientHeight;
+    const cv=()=>Math.round(document.getElementById('mkCanvas').getBoundingClientRect().height);
+    const out={padB:getComputedStyle(sh).paddingBottom, body0:body(), cv0:cv()};
+    document.getElementById('makerSize').click();
+    await wait(350);
+    out.body1=body(); out.cv1=cv(); out.over=sh.scrollHeight-sh.clientHeight;
+    out.sharedUntouched=!document.body.classList.contains('sheets-full')===!document.getElementById('editor').classList.contains('max');
+    /* remembered across a close and reopen */
+    makerExit(); makerOpen('hat',null); await wait(350);
+    out.kept=sh.classList.contains('wide');
+    document.getElementById('makerSize').click(); await wait(350);
+    out.body2=body(); out.cv2=cv();
+    makerExit(); player.myWear=[];
+    return JSON.stringify(out);
+  })()`));
+  check("the maker's size control gives the canvas's height to the dock, and back",
+    !WIDE.missing && WIDE.body1 > WIDE.body0 + 120 && WIDE.cv1 < WIDE.cv0 - 80 &&
+    WIDE.body2 === WIDE.body0 && WIDE.cv2 === WIDE.cv0, JSON.stringify(WIDE));
+  check("wide is the maker's own, remembered for the session, and never clips",
+    WIDE.kept === true && WIDE.over === 0 && WIDE.sharedUntouched === true, JSON.stringify(WIDE));
+  check("the safe area is padded once, so the tabs sit on the bottom edge",
+    WIDE.padB === '0px', JSON.stringify(WIDE));
+
   /* The tour of the front end. Every step is a predicate over the piece,
      so nothing here can be clicked through — a step is done when the piece
      actually has the thing. */
