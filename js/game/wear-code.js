@@ -221,7 +221,13 @@ function build(piece,slot,live,only){
     raw("  ");tok(C.prop,"border");raw(": ");val(C.num,F(p,"bw")+"px",{k:"bw",g:p.cls});
     raw(" ");tok(C.kw,"solid");raw(" ");hexVal(CC_WEAR.pal[F(p,"bc")]||CC_WEAR.pal[15],{k:"bc",g:p.cls});raw(";\n");
     raw("  ");tok(C.prop,"border-radius");raw(": ");val(C.num,p.r+"%",{k:"r",g:p.cls});raw(";\n");
-    raw("  ");tok(C.prop,"transform");raw(": rotate(");val(C.num,(p.a|0)+"deg",{k:"a",g:p.cls});raw(");\n");
+    /* translate first, then rotate: the box is moved by a share of its own
+       size and then turned about its own middle, which is what the canvas
+       does too. translate(0px, 0px) is a real no-op, and writing it is what
+       gives a child something to tap to find the other one. */
+    raw("  ");tok(C.prop,"transform");raw(": translate(");
+    val(C.kw,inFlow?"0px, 0px":(F(p,"org")===1?"-50%, -50%":"0px, 0px"),{k:"org",g:p.cls},"kw");
+    raw(") rotate(");val(C.num,(p.a|0)+"deg",{k:"a",g:p.cls});raw(");\n");
     raw("  ");tok(C.prop,"background");raw(": ");hexVal(CC_WEAR.pal[p.c]||CC_WEAR.pal[0],{k:"c",g:p.cls});raw(";\n");
     if((kids.get(p.pid)||[]).length)layDecl(p,p.cls);
     raw("}\n");
@@ -236,27 +242,51 @@ const wearCodeHtml=(piece,slot,only)=>build(piece,slot,true,only).html;
 /* what each field may hold, and how far one tap moves it. The ranges are
    the ones the canvas drag itself produces, so the two ways of editing can
    never disagree about what a legal box is. */
+/* Every one of them carries a sentence, because a value you can change and
+   cannot name is a slider, not a lesson. The sentence appears the moment a
+   token is tapped — the only moment a child is actually asking. */
 const FIELD={
-  x:{lo:-40,hi:140,step:1,big:10,unit:"%",prop:"left"},
-  y:{lo:-40,hi:140,step:1,big:10,unit:"%",prop:"top"},
-  w:{lo:1,  hi:160,step:1,big:10,unit:"%",prop:"width"},
-  h:{lo:1,  hi:160,step:1,big:10,unit:"%",prop:"height"},
-  r:{lo:0,  hi:50, step:1,big:5, unit:"%",prop:"border-radius"},
-  a:{lo:-180,hi:180,step:1,big:15,unit:"deg",prop:"rotate"},
-  pad:{lo:0,hi:40, step:1,big:5, unit:"px",prop:"padding"},
-  mg:{lo:0, hi:40, step:1,big:5, unit:"px",prop:"margin"},
-  bw:{lo:0, hi:20, step:1,big:5, unit:"px",prop:"border"},
-  gap:{lo:0,hi:40, step:1,big:5, unit:"px",prop:"gap"}
+  x:{lo:-40,hi:140,step:1,big:10,unit:"%",prop:"left",
+     tip:"How far in from the left edge of the box it lives in."},
+  y:{lo:-40,hi:140,step:1,big:10,unit:"%",prop:"top",
+     tip:"How far down from the top of the box it lives in."},
+  w:{lo:1,  hi:160,step:1,big:10,unit:"%",prop:"width",
+     tip:"How wide it is — a share of the box it lives in, not of the screen."},
+  h:{lo:1,  hi:160,step:1,big:10,unit:"%",prop:"height",
+     tip:"How tall it is, as a share of the box it lives in."},
+  r:{lo:0,  hi:50, step:1,big:5, unit:"%",prop:"border-radius",
+     tip:"How round the corners are. At 50% the box becomes a circle."},
+  a:{lo:-180,hi:180,step:1,big:15,unit:"deg",prop:"rotate",
+     tip:"How far it is turned, in degrees, about its own middle."},
+  pad:{lo:0,hi:40, step:1,big:5, unit:"px",prop:"padding",
+     tip:"Space INSIDE, between its border and whatever it is holding."},
+  mg:{lo:0, hi:40, step:1,big:5, unit:"px",prop:"margin",
+     tip:"Space OUTSIDE, pushing its neighbours away from it."},
+  bw:{lo:0, hi:20, step:1,big:5, unit:"px",prop:"border",
+     tip:"How thick the ring around it is, between the padding and the margin."},
+  gap:{lo:0,hi:40, step:1,big:5, unit:"px",prop:"gap",
+     tip:"Space it leaves between the boxes it is holding."}
 };
 /* the three that are words rather than numbers. A keyword has options, not
    a range, so tapping one offers the words themselves. */
 const KEYW={
   lay:{prop:"display",opts:()=>["block","row","column"],
-       label:v=>v===0?"block":(v===1?"row":"column")},
-  jus:{prop:"justify-content",opts:()=>CC_WEAR.jus.slice(),label:v=>CC_WEAR.jus[v]},
-  ali:{prop:"align-items",opts:()=>CC_WEAR.ali.slice(),label:v=>CC_WEAR.ali[v]}
+       label:v=>v===0?"block":(v===1?"row":"column"),
+       tip:"block lets every box inside say where it goes. flex places them itself, in a row or a column."},
+  jus:{prop:"justify-content",opts:()=>CC_WEAR.jus.slice(),label:v=>CC_WEAR.jus[v],
+       tip:"Where the boxes sit ALONG the line: at the start, in the middle, at the end, or spread out."},
+  ali:{prop:"align-items",opts:()=>CC_WEAR.ali.slice(),label:v=>CC_WEAR.ali[v],
+       tip:"Where the boxes sit ACROSS the line — up against one side, or centred."},
+  org:{prop:"translate",opts:()=>["0px, 0px","-50%, -50%"],
+       label:v=>v===1?"-50%, -50%":"0px, 0px",
+       tip:"Moves the box by a share of its OWN size. At -50% its left and top name its middle instead of its corner."}
 };
+/* the two colours are neither a range nor a word list, so they get their
+   sentence here rather than in a table of steppers */
+const COLTIP={c:"The colour it is filled with.",
+              bc:"The colour of the ring around it."};
 
 window.CC_CODE={code:wearCode,html:wearCodeHtml,classNames:classNames,
-  shapeWord:shapeWord,cleanName:cleanName,field:FIELD,keyword:KEYW,tree:tree};
+  shapeWord:shapeWord,cleanName:cleanName,field:FIELD,keyword:KEYW,
+  colTip:COLTIP,tree:tree};
 })();

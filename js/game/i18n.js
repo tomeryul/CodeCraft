@@ -108,7 +108,18 @@ const HE={
   "לא הצלחתי להעתיק — תסמן את הקוד ותעתיק ידנית.",
 "Class name":"שם ה-class",
 /* the box model and the layout */
-"Inside":"בתוך",
+"Inside":"בתוך","Measured from":"נמדד מ",
+"One <div> wears this class.":"<div> אחד לובש את ה-class הזה.",
+"It holds nothing yet.":"היא לא מחזיקה כלום עדיין.",
+"It holds one box.":"היא מחזיקה קופסה אחת.",
+"its top-left":"הפינה השמאלית העליונה","its centre":"המרכז שלה",
+"left and top name its middle — that is translate(-50%, -50%) in the code.":
+  "left ו-top מציינים את המרכז שלה — זה translate(-50%, -50%) בקוד.",
+"left and top name its top-left corner, the way a browser measures by default.":
+  "left ו-top מציינים את הפינה השמאלית העליונה שלה, כמו שדפדפן מודד כברירת מחדל.",
+"Learn how a web page is built":"ללמוד איך בונים דף אינטרנט",
+"Stop the lesson":"לעצור את השיעור",
+"🎩 You built a hat out of HTML and CSS!":"🎩 בנית כובע מ-HTML ומ-CSS!",
 /* margin, padding and border are NOT listed: a CSS property name is an
    identifier and stays as written, and an entry that maps a word to itself
    is the shape that froze the game once already — the observer sees a write
@@ -790,6 +801,9 @@ const HE_N={
   "Hats, outfits and shoes — {n} of {n} unlocked.":"כובעים, תלבושות ונעליים — {n} מתוך {n} נפתחו.",
   "Unlocks at level {n}":"נפתח ברמה {n}",
   "Colour {n}":"צבע {n}",
+  "{n} <div>s wear this class — one rule paints them all.":
+    "{n} <div> לובשים את ה-class הזה — כלל אחד צובע את כולם.",
+  "It holds {n} boxes.":"היא מחזיקה {n} קופסאות.",
   "You already have {n} of these. Delete one to make another.":
     "כבר יש לך {n} כאלה. תמחק אחד כדי להכין עוד."
 };
@@ -1268,6 +1282,7 @@ const HE_T={
 "{s} built!":"{1} נבנה!",
 "{s} is live!":"{1} באוויר!",
 "{s} is yours!":"{1} שלך!",
+"It sits inside {s}.":"היא נמצאת בתוך {1}.",
 "Open {s} on its own":"לפתוח את {1} לבד",
 "{s} is updated!":"{1} עודכן!",
 "{s} steps":"{1} צעדים",

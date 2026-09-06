@@ -268,3 +268,39 @@
 .mk-body .mk-key span{display:flex;align-items:center;gap:5px;
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--ink2);}
 .mk-body .mk-key i{width:11px;height:11px;border-radius:3px;display:block;}
+
+/* the sentence under whatever is being edited */
+.mk-body .mk-inswrap{margin:8px 0 0;}
+.mk-body .mk-inswrap .mk-ins{margin:0;}
+.mk-body .mk-instip{margin:7px 4px 0;font-size:12.5px;line-height:1.5;color:var(--ink2);}
+
+/* =====================================================================
+   How a web page is built — the lesson banner
+   ---------------------------------------------------------------------
+   It sits at the top of whichever screen you are on and never covers the
+   work: a step is finished by the piece having the thing, so the banner is
+   something to read, not something to press.
+   ===================================================================== */
+.mk-body .fe-offer{margin:14px 0 0;}
+.mk-body .fe-go{display:block;width:100%;
+  background:rgba(84,214,106,.16);border:1px solid rgba(84,214,106,.45);color:#b6f0c2;}
+.mk-body .fe-bar{margin:14px 0 0;padding:11px 12px 10px;border-radius:17px;
+  background:rgba(84,214,106,.10);border:1px solid rgba(84,214,106,.38);}
+.mk-body .fe-head{display:flex;align-items:center;gap:8px;}
+.mk-body .fe-n{flex:0 0 auto;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;
+  background:rgba(84,214,106,.22);color:#b6f0c2;}
+.mk-body .fe-title{flex:1;min-width:0;font-size:14px;font-weight:800;color:var(--ink);
+  font-family:ui-monospace,Menlo,Consolas,monospace;}
+.mk-body .fe-x{flex:0 0 auto;width:30px;height:30px;padding:0;border:none;border-radius:10px;
+  background:transparent;color:var(--ink2);font-size:13px;}
+.mk-body .fe-say{margin:6px 1px 0;font-size:13px;line-height:1.55;color:var(--ink);}
+.mk-body .fe-say code,.mk-body .fe-title{font-family:ui-monospace,Menlo,Consolas,monospace;}
+.mk-body .fe-dots{display:flex;gap:4px;margin:9px 1px 0;}
+.mk-body .fe-dot{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.13);display:block;}
+.mk-body .fe-dot.got{background:#54d66a;}
+.mk-body .fe-dot.now{background:var(--accent);}
+
+/* what this component is, in a sentence */
+#compBody .cp-what{margin:10px 2px 0;font-size:12.5px;line-height:1.55;color:var(--ink2);}
+#compBody .cp-what span{display:inline;}
+#compBody .cp-what span+span::before{content:" ";}

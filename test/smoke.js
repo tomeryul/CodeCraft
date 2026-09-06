@@ -2590,10 +2590,10 @@ async function ev(expr) {
     mkVal=null; player.myWear=[]; makerExit();
     return JSON.stringify(out);
   })()`));
-  /* one group of one: name + x y w h r a c and the four box-model values.
-     One group of two: the same minus left/top, plus left/top on each of the
-     two elements. And the piece itself: its padding and its display. */
-  check("every value in the code is a control", !CODE.missing && CODE.tokens === 28, JSON.stringify(CODE));
+  /* one group of one: name + x y w h r a c, the four box-model values and
+     the translate. One group of two: the same minus left/top, plus left/top
+     on each of the two elements. And the piece itself: padding and display. */
+  check("every value in the code is a control", !CODE.missing && CODE.tokens === 30, JSON.stringify(CODE));
   check("the strip names the CSS property and moves the real value",
     CODE.prop === 'width' && CODE.w === 24 && CODE.shown === '24%' && CODE.marked === true, JSON.stringify(CODE));
   check("a value cannot be pushed past what the drag itself can produce",
@@ -2695,6 +2695,67 @@ async function ev(expr) {
   check("a save cannot describe a box inside itself", BOXM.noCycle === true, JSON.stringify(BOXM));
   check("a piece built before the box model renders exactly as it did",
     BOXM.oldStillRenders === true, JSON.stringify(BOXM));
+
+  /* The other half of "where is the centre": left and top can name the
+     box's own middle instead of its corner, which is translate(-50%, -50%)
+     and the line every front-end developer writes. */
+  const ANCH = JSON.parse(await ev(`(()=>{
+    const box=o=>Object.assign({cls:0,pid:0,x:50,y:50,w:40,h:20,r:0,a:0,c:0,
+      pad:0,mg:0,bw:0,bc:15,lay:0,gap:0,jus:0,ali:0,org:0},o);
+    const tl=CC_WEAR.layout([box({})],{}).rect[0];
+    const ct=CC_WEAR.layout([box({org:1})],{}).rect[0];
+    const piece=o=>CC_CODE.code({name:"n",root:{},parts:[box(o)]},"hat");
+    return JSON.stringify({
+      /* top-left: the corner lands on 50,50. centre: the middle does. */
+      corner:tl.x===50&&tl.y===50,
+      middle:(ct.x+ct.w/2)===50&&(ct.y+ct.h/2)===50,
+      cssCentre:piece({org:1}).indexOf("translate(-50%, -50%)")>=0,
+      cssCorner:piece({}).indexOf("translate(0px, 0px)")>=0
+    });
+  })()`));
+  check("left and top can name the box's own middle",
+    ANCH.corner === true && ANCH.middle === true, JSON.stringify(ANCH));
+  check("...and the code says so with translate(-50%, -50%)",
+    ANCH.cssCentre === true && ANCH.cssCorner === true, JSON.stringify(ANCH));
+
+  /* The tour of the front end. Every step is a predicate over the piece,
+     so nothing here can be clicked through — a step is done when the piece
+     actually has the thing. */
+  const TUT = JSON.parse(await ev(`(()=>{
+    if(typeof FE_STEPS==='undefined')return JSON.stringify({missing:true});
+    mgState=null; mgRobot=null; player.myWear=[]; player.feTut=null;
+    makerOpen('hat',null);
+    const out={steps:FE_STEPS.length, tips:0, seen:[]};
+    /* every property a child can tap says what it is */
+    for(const k in CC_CODE.field)if(CC_CODE.field[k].tip)out.tips++;
+    for(const k in CC_CODE.keyword)if(CC_CODE.keyword[k].tip)out.tips++;
+    out.props=Object.keys(CC_CODE.field).length+Object.keys(CC_CODE.keyword).length;
+    feStart();
+    out.began=player.feTut===0;
+    /* walking the whole tour by doing the work, never by pressing Next */
+    mkKind='parts'; mkParts=[]; renderMaker();
+    mkAddPart();                                                out.seen.push(player.feTut);
+    Object.assign(mkParts[0],{w:70,h:16,y:60,x:15}); mkRender(); out.seen.push(player.feTut);
+    mkParts[0].r=40; mkRender();                                out.seen.push(player.feTut);
+    mkAddPart(); Object.assign(mkParts[1],{x:20,y:20,w:60,h:42,c:10}); mkRender();
+                                                                out.seen.push(player.feTut);
+    mkAddPart(); Object.assign(mkParts[2],{pin:mkParts[1].pid,w:22,h:44,r:50,c:0}); mkRender();
+                                                                out.seen.push(player.feTut);
+    mkParts[1].pad=9; mkRender();                               out.seen.push(player.feTut);
+    mkParts[1].lay=1; mkRender();                               out.seen.push(player.feTut);
+    mkParts[1].jus=1; mkRender();                               out.seen.push(player.feTut);
+    mkSel=2; mkCopyPart(2);                                     out.seen.push(player.feTut);
+    mkName='Party Cap'; mkSave();                               out.seen.push(player.feTut);
+    out.wore=(robots[selRobot].hat||'').indexOf('my:')===0;
+    player.feTut=null; player.myWear=[]; robots[selRobot].hat=null;
+    return JSON.stringify(out);
+  })()`));
+  check("the tour is ten steps and every one advances by doing the work",
+    !TUT.missing && TUT.steps === 10 && TUT.began === true &&
+    JSON.stringify(TUT.seen) === JSON.stringify([1,2,3,4,5,6,7,8,9,10]), JSON.stringify(TUT));
+  check("the last step is a hat the robot is wearing", TUT.wore === true, JSON.stringify(TUT));
+  check("every value a child can tap says what it is",
+    TUT.tips === TUT.props, JSON.stringify(TUT));
 
   /* A piece has to be judged on a moving robot: a brim that clears the
      antenna at rest can still swing through it on a chop, and shoes only

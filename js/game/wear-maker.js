@@ -256,7 +256,11 @@ function mkPlay(){
 /* ---------------- the sheet ---------------- */
 function renderMaker(){
   const body=$("makerBody"); if(!body)return;
+  /* the lesson watches the piece rather than a Next button, so the check
+     belongs wherever the piece is about to be drawn again */
+  if(typeof feCheck==="function")feCheck();
   body.innerHTML="";
+  if(typeof feBanner==="function")body.appendChild(feBanner());
 
   /* which slot — switching keeps the grid, because a shape you painted for
      a hat is often the start of the shoes */
@@ -384,7 +388,7 @@ function mkNewPid(){ let m=-1; for(const p of mkParts)if(p.pid>m)m=p.pid; return
 function mkBox(over){
   return Object.assign({cls:mkNewCls(),pid:mkNewPid(),x:32,y:38,w:36,h:24,
     r:CC_WEAR.rad[1],a:0,c:mkColor<0?0:mkColor,
-    pad:0,mg:0,bw:0,bc:15,lay:0,gap:0,jus:0,ali:0},over||{});
+    pad:0,mg:0,bw:0,bc:15,lay:0,gap:0,jus:0,ali:0,org:0},over||{});
 }
 function mkAddPart(){
   if(mkParts.length>=CC_WEAR.partMax){ toast("That is as many boxes as one piece can hold."); return; }
@@ -600,8 +604,11 @@ function wireParts(c){
     const L=mkLayout(), hb=mkHolderBox(L,mkSel);
     const sx=(hb&&hb.w>0)?hb.w/100:1, sy=(hb&&hb.h>0)?hb.h/100:1;
     if(mkDrag.mode==="move"){
-      p.x=Math.round(Math.max(-40,Math.min(140-p.w,(q.x-mkDrag.ox-hb.x)/sx)));
-      p.y=Math.round(Math.max(-40,Math.min(140-p.h,(q.y-mkDrag.oy-hb.y)/sy)));
+      /* left/top name the box's top-left or its centre, so a drag has to put
+         back the half-size the layout took off */
+      const off=CC_WEAR.field(p,"org")===1?.5:0;
+      p.x=Math.round(Math.max(-40,Math.min(140,(q.x-mkDrag.ox-hb.x)/sx+p.w*off)));
+      p.y=Math.round(Math.max(-40,Math.min(140,(q.y-mkDrag.oy-hb.y)/sy+p.h*off)));
     }else{
       /* size belongs to the shared rule, so the whole group grows together */
       const r=L.rect[mkSel];
@@ -656,6 +663,7 @@ function mkNudge(d){
   if(next===now)return;
   for(const p of list)p[mkVal.k]=next;
   mkDraw(); mkCodeRefresh(); mkInsRefresh();
+  if(typeof feCheck==="function"&&feCheck())mkRender();
   if(typeof sfx==="function")sfx(620,.02);
 }
 function mkInsRefresh(){
@@ -663,7 +671,24 @@ function mkInsRefresh(){
   const f=CC_CODE.field[mkVal.k], list=mkValParts();
   if(f&&list.length)v.textContent=mkValNow(list[0],mkVal.k)+f.unit;
 }
+/* the sentence for whatever is being edited — a value you can change and
+   cannot name is a slider, not a lesson */
+function mkTip(text){
+  const t=document.createElement("div");t.className="mk-instip";t.textContent=text||"";
+  return t;
+}
 function mkInspector(){
+  const wrap=document.createElement("div");wrap.className="mk-inswrap";
+  const box=mkInspectorStrip();
+  wrap.appendChild(box);
+  if(!box.hidden&&mkVal){
+    const KW=CC_CODE.keyword[mkVal.k], f=CC_CODE.field[mkVal.k];
+    const tip=(KW&&KW.tip)||(f&&f.tip)||CC_CODE.colTip[mkVal.k]||"";
+    if(tip)wrap.appendChild(mkTip(tip));
+  }else wrap.hidden=true;
+  return wrap;
+}
+function mkInspectorStrip(){
   const box=document.createElement("div");box.className="mk-ins";box.id=CID()+"Ins";
   if(!mkVal||!mkValParts().length){ box.hidden=true; return box; }
   const f=CC_CODE.field[mkVal.k], list=mkValParts(), p=list[0];
@@ -859,7 +884,9 @@ function compClose(){
 
 function renderComp(){
   const body=$("compBody"); if(!body)return;
+  if(typeof feCheck==="function")feCheck();
   body.innerHTML="";
+  if(typeof feBanner==="function")body.appendChild(feBanner());
   const list=mkParts.filter(p=>p.cls===mkFocus);
   if(!list.length){ compClose(); return; }
   const names=CC_CODE.classNames(mkParts);
@@ -908,6 +935,51 @@ function renderComp(){
       chips.appendChild(b);
     });
     body.appendChild(chips);
+  }
+
+  /* What this component IS, in a sentence: how many elements wear the
+     class, what it sits in, and what it holds. A component screen that
+     does not say what a component is teaches the buttons, not the idea. */
+  const holdCount=mkParts.filter(q=>q.pin===list[0].pid).length;
+  const inName=(list[0].pin!=null)
+    ?"."+(names[(mkParts.find(q=>q.pid===list[0].pin)||{}).cls]||"?")
+    :"."+mkSlot;
+  /* three sentences, three text nodes: js/game/i18n.js looks a text node up
+     whole, so a paragraph glued together from counts and class names would
+     never match anything and would stay English forever */
+  const what=document.createElement("div");what.className="cp-what";
+  const line=t=>{const sp=document.createElement("span");sp.textContent=t;what.appendChild(sp);};
+  line(list.length===1
+    ?"One <div> wears this class."
+    :list.length+" <div>s wear this class — one rule paints them all.");
+  line("It sits inside "+inName+".");
+  line(holdCount===0?"It holds nothing yet."
+      :(holdCount===1?"It holds one box.":"It holds "+holdCount+" boxes."));
+  body.appendChild(what);
+
+  /* Which corner its left and top name. The other half of "where is the
+     centre": measuring from the middle instead of the top-left is one line
+     of real CSS, and it is the line every front-end developer writes. */
+  const holderFlows=mkFlows(mkParts.find(q=>q.pid===list[0].pin)||mkRoot);
+  const anc=document.createElement("div");anc.className="cp-in";
+  const alab=document.createElement("span");alab.className="cp-inlab";alab.textContent="Measured from";
+  anc.appendChild(alab);
+  const arow=document.createElement("div");arow.className="cp-inrow";
+  [["its top-left",0],["its centre",1]].forEach(([lab,v])=>{
+    const b2=document.createElement("button");b2.type="button";
+    b2.className="mk-kw"+(CC_WEAR.field(list[0],"org")===v?" on":"");
+    b2.textContent=lab; b2.disabled=holderFlows;
+    b2.addEventListener("click",()=>{ for(const q of list)q.org=v; renderComp(); });
+    arow.appendChild(b2);
+  });
+  anc.appendChild(arow);
+  body.appendChild(anc);
+  if(!holderFlows){
+    const at=document.createElement("div");at.className="mk-instip";
+    at.textContent=CC_WEAR.field(list[0],"org")===1
+      ?"left and top name its middle — that is translate(-50%, -50%) in the code."
+      :"left and top name its top-left corner, the way a browser measures by default.";
+    body.appendChild(at);
   }
 
   /* Which box this one lives inside. "What I make is inside them" is the
@@ -1032,6 +1104,7 @@ function mkSave(){
   const r=robots[selRobot]||robots[0];
   if(r)r[mkSlot]=mkId;
   saveSoon();
+  if(typeof feCheck==="function")feCheck();
   if(typeof sfx==="function"){sfx(700,.07);sfx(940,.08,.09);}
   toast("🎨 "+nm+" is yours!");
   makerClose();

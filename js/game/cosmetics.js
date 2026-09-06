@@ -424,7 +424,11 @@ function rrEl(g,x,y,w,h,rx,ry){
 const LAY=["free","row","col"];
 const JUS=["flex-start","center","flex-end","space-between"];
 const ALI=["flex-start","center","flex-end"];
-const BOXF={pad:0,mg:0,bw:0,bc:15,lay:0,gap:0,jus:0,ali:0};
+/* `org` is which corner of the box its left/top name: 0 the top-left, the
+   way a browser measures by default, or 1 its own centre — which in CSS is
+   translate(-50%, -50%), the idiom every front-end developer learns and
+   the only honest way to say "put this in the middle of that". */
+const BOXF={pad:0,mg:0,bw:0,bc:15,lay:0,gap:0,jus:0,ali:0,org:0};
 const bf=(p,k)=>{const v=p&&p[k]; return typeof v==="number"?v:BOXF[k];};
 
 /* the four rectangles devtools draws, out from the middle */
@@ -469,7 +473,11 @@ function layoutParts(parts,root){
     if(lay==="free"){
       for(const i of list){
         const p=parts[i];
-        const r={x:c.x+p.x*sx,y:c.y+p.y*sy,w:p.w*sx,h:p.h*sy};
+        const w=p.w*sx, h=p.h*sy;
+        /* translate(-50%, -50%): half of the box's OWN size, which is what
+           makes the idiom work whatever size the box happens to be */
+        const off=bf(p,"org")===1?.5:0;
+        const r={x:c.x+p.x*sx-w*off,y:c.y+p.y*sy-h*off,w:w,h:h};
         out.rect[i]=r;
         place({pid:p.pid,at:i},r,p,depth+1);
       }
@@ -679,7 +687,8 @@ window.CC_WEAR={
             pad:N(q&&q.pad,0,40,0), mg:N(q&&q.mg,0,40,0),
             bw:N(q&&q.bw,0,20,0),   bc:N(q&&q.bc,0,WEAR_PAL.length-1,15),
             lay:N(q&&q.lay,0,LAY.length-1,0), gap:N(q&&q.gap,0,40,0),
-            jus:N(q&&q.jus,0,JUS.length-1,0), ali:N(q&&q.ali,0,ALI.length-1,0)
+            jus:N(q&&q.jus,0,JUS.length-1,0), ali:N(q&&q.ali,0,ALI.length-1,0),
+            org:N(q&&q.org,0,1,0)
           };
           /* Parents come first, always. A pin that does not name a box
              already read is simply not a pin — which is how a hand-edited
