@@ -580,20 +580,26 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
        fit belongs to a body that scrolls. */
     const clipped = await pg.evaluate(async () => {
       const out = [];
+      /* the maker is checked three ways, because its dock changes shape:
+         the Boxes tab, the Code tab (a whole stylesheet), and the Layout
+         tab (a row per declaration) are three very different heights */
       const opens = {
-        style: () => styleOpen(),
-        maker: () => makerOpen('hat', null),
-        comp:  () => { makerOpen('hat', null); mkKind = 'parts'; mkParts = []; renderMaker();
-                       mkAddPart(); compOpen(mkParts[0].cls); }
+        style:  () => styleOpen(),
+        maker:  () => makerOpen('hat', null),
+        maker2: () => { makerOpen('hat', null); mkKind = 'parts'; mkParts = []; renderMaker();
+                        mkAddPart(); mkAddPart(); mkTab = 'code'; renderMaker(); },
+        maker3: () => { makerOpen('hat', null); mkKind = 'parts'; mkParts = []; renderMaker();
+                        mkAddPart(); mkFocusOn(mkParts[0].cls); mkTab = 'layout'; renderMaker(); }
       };
-      for (const id of ['style', 'maker', 'comp']) {
-        if (typeof makerOpen !== 'function' || typeof compOpen !== 'function') continue;
+      for (const id of ['style', 'maker', 'maker2', 'maker3']) {
+        if (typeof makerOpen !== 'function') continue;
         document.querySelectorAll('.sheet.open').forEach(x => x.classList.remove('open'));
         player.level = 20; player.myWear = [];
         opens[id]();
         await new Promise(r => setTimeout(r, 300));
-        const sh = document.getElementById(id);
-        const body = document.getElementById(id + 'Body');
+        const sheetId = id.replace(/\d$/, '');
+        const sh = document.getElementById(sheetId);
+        const body = document.getElementById(sheetId + 'Body');
         const scrolls = body && body.scrollHeight > body.clientHeight
           ? getComputedStyle(body).overflowY !== 'visible' : true;
         if (sh.scrollHeight > sh.clientHeight + 1 || !scrolls)

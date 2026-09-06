@@ -43,19 +43,19 @@ const FE_STEPS=[
    done:()=>feGroups()>=2},
 
   {id:"nest", title:"Boxes hold boxes",
-   say:"Open a box (tap its class name in the code), then set Inside to the other one. Now one <div> is inside the other, the way every page is nested.",
+   say:"Open the Layout tab and set <b>Inside</b> to the other box. Now one &lt;div&gt; is inside the other, the way every page is nested.",
    done:()=>feHas(p=>p.pin!=null)},
 
   {id:"pad", title:"padding",
-   say:"Give the outer box some padding. That is the space inside it, between its border and what it holds — so what is inside gets pushed in.",
+   say:"On the Layout tab, give the outer box some <b>padding</b>. That is the space inside it, between its border and what it holds — so what is inside gets pushed in.",
    done:()=>{const h=feHolder();return !!h&&CC_WEAR.field(h,"pad")>=4;}},
 
   {id:"flex", title:"display: flex",
-   say:"Tap display on the outer box and choose row. It stops letting each box say where it goes and starts placing them itself — watch left and top vanish from the code.",
+   say:"Choose the outer box, open Layout and set <b>display</b> to row. It stops letting each box say where it goes and starts placing them itself — watch left and top vanish from the code.",
    done:()=>{const h=feHolder();return !!h&&CC_WEAR.field(h,"lay")!==0;}},
 
   {id:"center", title:"justify-content",
-   say:"Now tap justify-content and choose center. This is how the web centres things — a word, not a sum you worked out yourself.",
+   say:"Now set <b>justify-content</b> to center, on the same tab. This is how the web centres things — a word, not a sum you worked out yourself.",
    done:()=>{const h=feHolder();return !!h&&CC_WEAR.field(h,"lay")!==0&&CC_WEAR.field(h,"jus")===1;}},
 
   {id:"share", title:"One class, many elements",
@@ -76,7 +76,7 @@ function feStart(){
   player.feTut=0;
   if(mkKind!=="parts"){ mkKind="parts"; }
   saveSoon();
-  if($("maker").classList.contains("open")||$("comp").classList.contains("open"))mkRender();
+  if($("maker").classList.contains("open"))mkRender();
   else{ makerOpen(mkSlot||"hat",null); }
 }
 function feStop(){ player.feTut=null; saveSoon(); mkRender(); }

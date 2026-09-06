@@ -22,7 +22,7 @@ if(window.__nav)return; window.__nav=1;
 
 /* The destination sheets. #splash, #agegate and #delacc are modal — they
    own their own buttons and must not gain a Back to somewhere behind. */
-const SHEETS=["editor","mentor","quests","hub","projects","guide","funcLib","orders","style","maker","comp","report","settings"];
+const SHEETS=["editor","mentor","quests","hub","projects","guide","funcLib","orders","style","maker","report","settings"];
 const has=n=>typeof window[n]==="function";
 
 const ICON_BACK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" '+
@@ -51,14 +51,15 @@ function navHome(){
    destination page it is the menu; from the menu there is nothing. */
 function navBack(){
   if($("editor").classList.contains("mg")){ if(has("mgExit"))mgExit(true); return; }
-  /* Three pages that were opened FROM another page rather than from the
-     menu, so one step back is the page behind, not the menu. Deepest
-     first: a component sits on top of the maker, which sits on Style. */
-  if($("comp")&&$("comp").classList.contains("open")&&has("compClose")){
-    compClose(); if(has("sfx"))sfx(500,.04); return;
-  }
-  if($("maker")&&$("maker").classList.contains("open")&&has("makerClose")){
-    makerClose(); if(has("sfx"))sfx(500,.04); return;
+  /* Two pages that were opened FROM another page rather than from the
+     menu, so one step back is the page behind, not the menu. A component
+     is no longer a sheet of its own — it is the maker filtered to one
+     class — so the step before Style is dropping that filter. */
+  if($("maker")&&$("maker").classList.contains("open")){
+    if(typeof mkFocus!=="undefined"&&mkFocus!=null&&has("renderMaker")){
+      mkFocus=null; renderMaker(); if(has("sfx"))sfx(500,.04); return;
+    }
+    if(has("makerClose")){ makerClose(); if(has("sfx"))sfx(500,.04); return; }
   }
   const wasProjects=$("projects").classList.contains("open");
   closeAll();

@@ -246,23 +246,25 @@
 </div>
 
 <!-- ============ MAKE A PIECE ============ -->
+<!-- Four regions, not one column: the head says where you are and keeps
+     Save reachable, the stage is pinned so the robot and the canvas never
+     scroll away from the code that describes them, and the dock owns the
+     only scrollbar. A component is this same editor filtered to one class,
+     so there is no second sheet. -->
 <div class="sheet" id="maker">
   <div class="m-head">
     <div class="face">🎨</div>
-    <div><h3>Make a piece</h3><p>Paint it, or build it out of boxes and read the HTML it means.</p></div>
+    <div><div class="mk-crumb" id="mkCrumb"></div></div>
+    <button class="mk-save" id="mkSaveBtn" type="button">Save</button>
     <button class="iconbtn x" id="makerClose">✕</button>
   </div>
-  <div id="makerBody" class="mk-body"></div>
-</div>
-
-<!-- ============ ONE COMPONENT ============ -->
-<div class="sheet" id="comp">
-  <div class="m-head">
-    <div class="face">🧩</div>
-    <div><h3>Component</h3><p>One class, on its own — the robot still shows the rest.</p></div>
-    <button class="iconbtn x" id="compClose">✕</button>
+  <div class="mk-top" id="mkTop"></div>
+  <div class="mk-stage-fixed" id="mkStage"></div>
+  <div class="mk-dock">
+    <div class="mk-tabrow" id="mkTabRow"></div>
+    <div id="makerBody" class="mk-body"></div>
+    <div class="mk-insdock" id="mkInsDock"></div>
   </div>
-  <div id="compBody" class="mk-body"></div>
 </div>
 
 <!-- ============ REPORT ============ -->

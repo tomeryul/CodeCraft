@@ -2340,6 +2340,7 @@ async function ev(expr) {
      upright while the body leaned through a chop. Its address is the fix, so
      the address is what is asserted. */
   const CC_FIELD_HI = 160;  // js/game/wear-code.js FIELD.w.hi
+  const CC_PAD_TIP = "Space INSIDE, between its border and whatever it is holding."; // js/game/wear-code.js FIELD.pad.tip
   const RENDER_SRC = fs.readFileSync(path.resolve(__dirname, "..", "js", "game", "render.js"), "utf8");
   check("the hat is drawn inside the robot's transform tree",
     /if\(r\.hat[\s\S]{0,80}?\)\{[\s\S]{0,220}?ctx\.restore\(\);/.test(RENDER_SRC) &&
@@ -2513,7 +2514,7 @@ async function ev(expr) {
     mkAddPart(); Object.assign(mkParts[mkSel],{x:30,y:36,w:13,h:13,r:50,c:0});
     const copy=[...document.querySelectorAll('#makerBody .mk-acts .mk-btn')].find(b=>b.textContent==='Copy');
     if(copy)copy.click();
-    mkName='Cap'; renderMaker();
+    mkName='Cap'; mkTab='code'; renderMaker();
     const out={};
     const tok=(k,g,i)=>[...document.querySelectorAll('#mkCode .val')].find(b=>
       b.dataset.k===k &&
@@ -2539,14 +2540,17 @@ async function ev(expr) {
     /* the code the piece means and the code on screen are one text */
     out.plainMatchesShown=CC_CODE.code({name:'Cap',parts:mkParts},'hat')
       .replace(/\\s+/g,' ')===document.getElementById('mkCode').textContent.replace(/\\s+/g,' ');
-    /* a class name is a way in: tapping it opens that component alone */
+    /* a class name is a way in: tapping it filters this same editor down to
+       that one component — one screen, not a second sheet on top of it */
     tok('name',1).click();
-    out.compOpen=document.getElementById('comp').classList.contains('open')
-      && !document.getElementById('maker').classList.contains('open') && mkFocus===1;
-    out.compCode=document.getElementById('cpCode').textContent;
-    /* renaming it there renames it in the HTML at the same time, because
-       there is only one name */
-    const inp=document.getElementById('cpName');
+    out.compOpen=document.getElementById('maker').classList.contains('open')
+      && !document.getElementById('comp') && mkFocus===1;
+    out.compCode=document.getElementById('mkCode').textContent;
+    /* renaming it renames it in the HTML at the same time, because there is
+       only one name. The name row is on the Boxes tab, and while a
+       component is focused it edits the class rather than the piece. */
+    mkTab='boxes'; renderMaker();
+    const inp=document.getElementById('mkName');
     inp.value='stud'; inp.dispatchEvent(new Event('input'));
     const src=CC_CODE.code({name:'Cap',parts:mkParts},'hat');
     out.divs=(src.match(/class="stud"/g)||[]).length;
@@ -2578,9 +2582,10 @@ async function ev(expr) {
       }
       return ghost>50&&same>50;   /* one group dimmed, the other untouched */
     })();
-    compClose();
+    /* the breadcrumb is the way out of a component now: .hat, un-focused */
+    document.querySelector('#mkCrumb .mk-crumb-b').click();
     out.backInMaker=document.getElementById('maker').classList.contains('open')
-      && !document.getElementById('comp').classList.contains('open') && mkFocus===null;
+      && mkFocus===null;
     /* rotation reaches the canvas */
     const shot=a=>{const c=document.createElement('canvas');c.width=c.height=80;
       const g=c.getContext('2d');
@@ -2602,20 +2607,20 @@ async function ev(expr) {
     Array.isArray(CODE.a) && CODE.a[0] === -15 && CODE.a[1] === -15, JSON.stringify(CODE));
   check("left belongs to the element, so only one copy moves",
     Array.isArray(CODE.x) && CODE.x[0] === 29 && CODE.x[1] !== 29, JSON.stringify(CODE));
-  check("a class name opens that component on its own screen",
+  check("a class name filters the editor down to that component",
     CODE.compOpen === true, JSON.stringify(CODE));
   /* only that class: its own elements and its own rule, and no other */
-  check("the component screen shows that component's code and no other",
+  check("a focused component shows that component's code and no other",
     typeof CODE.compCode === 'string' &&
     CODE.compCode.indexOf('.gold-dot') >= 0 &&
     CODE.compCode.indexOf('sand-pill') < 0 &&
     CODE.compCode.indexOf('.hat {') < 0 &&
     (CODE.compCode.match(/<div /g)||[]).length === 2, JSON.stringify(CODE.compCode));
-  check("the rest of the piece stays on the component screen's canvas, dimmed",
+  check("the rest of the piece stays on the canvas while one is focused, dimmed",
     CODE.othersDrawn === true, JSON.stringify(CODE.othersDrawn));
   check("renaming the class renames it in the HTML too",
     CODE.divs === 2 && CODE.rules === 1, JSON.stringify(CODE));
-  check("Done goes back to the whole piece", CODE.backInMaker === true, JSON.stringify(CODE));
+  check("the breadcrumb goes back to the whole piece", CODE.backInMaker === true, JSON.stringify(CODE));
   /* whatever a child types, what reaches the stylesheet is an identifier —
      stripped down to one where it can be, and the derived name where it
      cannot. Nothing typed here can spell markup. */
@@ -2717,6 +2722,85 @@ async function ev(expr) {
     ANCH.corner === true && ANCH.middle === true, JSON.stringify(ANCH));
   check("...and the code says so with translate(-50%, -50%)",
     ANCH.cssCentre === true && ANCH.cssCorner === true, JSON.stringify(ANCH));
+
+  /* The Layout tab. It exists because justify-content had nowhere to be
+     found: it was a token inside a rule you had to write before you could
+     tap it. Every row here is the same declaration the code block edits,
+     reachable without hunting for it first. */
+  const LAYT = JSON.parse(await ev(`(()=>{
+    if(typeof mkLayoutPanel!=='function')return JSON.stringify({missing:true});
+    mgState=null; mgRobot=null; player.myWear=[]; player.level=20; player.feTut=null;
+    makerOpen('hat',null); mkKind='parts'; mkParts=[]; renderMaker();
+    mkAddPart(); mkAddPart();
+    mkTab='layout'; renderMaker();
+    const out={};
+    const props=()=>[...document.querySelectorAll('#makerBody .mk-lprop')].map(b=>b.textContent);
+    const row=p=>[...document.querySelectorAll('#makerBody .mk-lrow')]
+      .find(r=>r.querySelector('.mk-lprop').textContent===p);
+    const step=(p,t)=>[...row(p).querySelectorAll('.mk-step')].find(b=>b.textContent===t).click();
+    const word=(p,w)=>[...row(p).querySelectorAll('.mk-kw')].find(b=>b.textContent===w).click();
+    out.rows=props();
+    /* a stepper writes the real value, and says what it wrote */
+    const w0=mkParts[mkSel].w;
+    step('width','+10'); step('width','+1');
+    out.wrote=mkParts[mkSel].w===w0+11 &&
+      row('width').querySelector('.mk-lval').textContent===(w0+11)+'%';
+    /* the property name is the button that says what the property does */
+    row('padding').querySelector('.mk-lprop').click();
+    out.tip=(document.querySelector('#makerBody .mk-lgrp .mk-instip')||{}).textContent;
+    row('padding').querySelector('.mk-lprop').click();
+    out.tipGone=props().length===out.rows.length;
+    /* THE point of the tab: display is a row, and choosing row is what
+       makes justify-content and align-items appear at all */
+    out.hidden=props().indexOf('justify-content')<0;
+    word('display','row');
+    out.shown=props().indexOf('justify-content')>=0 && props().indexOf('gap')>=0;
+    out.lay=mkParts[mkSel].lay;
+    /* and a box its holder lays out loses left and top, here as in the code */
+    mkParts[0].lay=1; mkParts[1].pin=mkParts[0].pid; mkSel=1; renderMaker();
+    out.noLeft=props().indexOf('left')<0 && props().indexOf('translate')<0;
+    out.saysWhy=[...document.querySelectorAll('#makerBody .mk-instip')]
+      .some(t=>t.textContent.indexOf('left and top are not used')>=0);
+    /* Inside is the nesting row, and it never offers a box its own subtree */
+    const ins=[...document.querySelectorAll('#makerBody .mk-lgrp')]
+      .find(g=>g.querySelector('.mk-lgt').textContent==='Inside');
+    out.inside=[...ins.querySelectorAll('.mk-kw')].map(b=>b.textContent);
+    out.own='.'+CC_CODE.classNames(mkParts)[mkParts[1].cls];
+    /* what the component IS, before any of its numbers */
+    out.what=[...document.querySelectorAll('#makerBody .cp-what span')].map(t=>t.textContent);
+    /* the piece has a rule of its own, and it is the last group */
+    out.groups=[...document.querySelectorAll('#makerBody .mk-lgt')].map(t=>t.textContent);
+    mkRoot.lay=1; renderMaker();
+    out.pieceFlex=[...document.querySelectorAll('#makerBody .mk-lgrp')]
+      .find(g=>g.querySelector('.mk-lgt').textContent==='The piece')
+      .querySelectorAll('.mk-lprop').length;
+    mkRoot.lay=0;
+    player.myWear=[]; makerExit();
+    return JSON.stringify(out);
+  })()`));
+  check("the Layout tab lists the rule this box has, in the order CSS writes it",
+    !LAYT.missing && JSON.stringify(LAYT.rows) === JSON.stringify(
+      ['display','padding','margin','border','width','height','rotate',
+       'left','top','translate','display','padding']), JSON.stringify(LAYT.rows));
+  check("a Layout stepper writes the real value", LAYT.wrote === true, JSON.stringify(LAYT));
+  check("every Layout property says what it does when you tap its name",
+    LAYT.tip === CC_PAD_TIP && LAYT.tipGone === true, JSON.stringify(LAYT.tip));
+  /* the whole reason the tab exists */
+  check("display: row is what makes justify-content findable at all",
+    LAYT.hidden === true && LAYT.shown === true && LAYT.lay === 1, JSON.stringify(LAYT));
+  check("a box its holder lays out shows no left, top or translate, and says why",
+    LAYT.noLeft === true && LAYT.saysWhy === true, JSON.stringify(LAYT));
+  /* the piece, and the box it is already in — but never itself, which is
+     what keeps the tree a tree */
+  check("Inside offers the piece and every legal holder, and never itself",
+    JSON.stringify(LAYT.inside) === JSON.stringify(['.hat', '.gold-tile']) &&
+    LAYT.inside.indexOf(LAYT.own) < 0, JSON.stringify(LAYT));
+  check("the tab says what the component is before it says any number",
+    Array.isArray(LAYT.what) && LAYT.what.length === 3 &&
+    LAYT.what[1] === 'It sits inside .gold-tile.', JSON.stringify(LAYT.what));
+  check("the piece has a rule of its own, after the box and its nesting",
+    JSON.stringify(LAYT.groups) === JSON.stringify(['This box','Inside','The piece']) &&
+    LAYT.pieceFlex === 5, JSON.stringify(LAYT));
 
   /* The tour of the front end. Every step is a predicate over the piece,
      so nothing here can be clicked through — a step is done when the piece

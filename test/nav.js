@@ -177,22 +177,22 @@ async function toWorld(pg){
        await pg.evaluate(()=>document.querySelectorAll('.sheet.open').length===0),
        await pg.evaluate(()=>[...document.querySelectorAll('.sheet.open')].map(s=>s.id)));
 
-    /* A component sits on top of the maker, which sits on Style: Back has to
-       walk that back one page at a time, and Exit still has to skip all of
-       it. Three deep is where a shared Back stops being obvious. */
+    /* A component is no longer a sheet on top of the maker — it is the
+       maker filtered to one class. Back still has to walk it one step at a
+       time: first the filter, then Style. Exit still skips all of it. */
     await pg.evaluate(()=>{ player.myWear=[]; makerOpen('hat',null);
       mkKind='parts'; mkParts=[]; renderMaker(); mkAddPart(); });
     await pg.waitForTimeout(400);
-    await pg.evaluate(()=>compOpen(mkParts[0].cls));
+    await pg.evaluate(()=>mkFocusOn(mkParts[0].cls));
     await pg.waitForTimeout(400);
-    await pg.click('#compBack'); await pg.waitForTimeout(400);
+    await pg.click('#makerBack'); await pg.waitForTimeout(400);
     ck('Back out of a component lands on the whole piece',
        await pg.evaluate(()=>$('maker').classList.contains('open') &&
-         !$('comp').classList.contains('open') && mkFocus===null),
+         !$('style').classList.contains('open') && mkFocus===null),
        await pg.evaluate(()=>[...document.querySelectorAll('.sheet.open')].map(s=>s.id)));
-    await pg.evaluate(()=>compOpen(mkParts[0].cls));
+    await pg.evaluate(()=>mkFocusOn(mkParts[0].cls));
     await pg.waitForTimeout(400);
-    await pg.click('#compClose'); await pg.waitForTimeout(400);
+    await pg.click('#makerClose'); await pg.waitForTimeout(400);
     ck('Exit out of a component lands on the world',
        await pg.evaluate(()=>document.querySelectorAll('.sheet.open').length===0),
        await pg.evaluate(()=>[...document.querySelectorAll('.sheet.open')].map(s=>s.id)));

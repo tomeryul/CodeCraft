@@ -72,55 +72,52 @@
    target. Everything that IS a control — the slot tabs, the colours, the
    two actions — is 44px or more.
    ===================================================================== */
-.mk-body .mk-tabs{display:flex;gap:6px;margin:14px 0 0;}
-.mk-body .mk-tab{flex:1;min-height:44px;border-radius:14px;border:none;font-family:inherit;
+#maker .mk-tabs{display:flex;gap:6px;margin:14px 0 0;}
+#maker .mk-tab{flex:1;min-height:44px;border-radius:14px;border:none;font-family:inherit;
   font-size:13px;font-weight:700;background:var(--panel2);color:var(--ink2);}
-.mk-body .mk-tab.on{background:var(--accent);color:#241b45;}
+#maker .mk-tab.on{background:var(--accent);color:#241b45;}
 
 /* The robot gets the full width, above the grid — it used to be a 132px
    column holding a 58-unit robot, which read as a token rather than a
    character, and a chopping robot is nearly two body-widths across once the
-   axe is in its hand, so a narrow column cut the axe off entirely. The pose
-   switch floats on the panel rather than taking a row of its own, which
-   buys back most of the height the wider robot costs. */
-.mk-body .mk-stage{display:flex;flex-direction:column;gap:10px;margin:12px 0 0;}
+   axe is in its hand, so a narrow column cut the axe off entirely. */
 /* 158px is what a robot 1.68 body-heights tall needs to reach the ~87 units
    that reads clearly, and the pose switch sits under it rather than floating
    on top — floated, it covered the legs, which are exactly what the walk and
    the shoes are there to show. */
-.mk-body .mk-prev{position:relative;width:100%;height:158px;border-radius:18px;
+#maker .mk-prev{position:relative;width:100%;height:158px;border-radius:18px;
   background:rgba(255,255,255,.04);border:1px solid var(--hair);overflow:hidden;}
-.mk-body .mk-prev canvas{position:absolute;inset:0;display:block;width:100%;height:100%;}
-.mk-body .mk-poses{margin:0;}
+#maker .mk-prev canvas{position:absolute;inset:0;display:block;width:100%;height:100%;}
+#maker .mk-poses{margin:0;}
 /* the grid gives up 40px so that the robot and the grid are both on screen
    at once: 248px is still 20px a cell, which a thumb can hit */
-.mk-body .mk-pad{width:100%;max-width:248px;margin:0 auto;}
+#maker .mk-pad{width:100%;max-width:248px;margin:0 auto;}
 /* touch-action is what stops the sheet scrolling out from under a stroke */
-.mk-body .mk-pad canvas{display:block;width:100%;aspect-ratio:1;touch-action:none;
+#maker .mk-pad canvas{display:block;width:100%;aspect-ratio:1;touch-action:none;
   border-radius:16px;background:rgba(255,255,255,.05);border:1px solid var(--hair);}
 
 /* colours: one scrolling row, the eraser first */
-.mk-body .mk-pal{display:flex;gap:7px;overflow-x:auto;padding:4px 0;margin:12px 0 0;
+#maker .mk-pal{display:flex;gap:7px;overflow-x:auto;padding:4px 0;margin:12px 0 0;
   scrollbar-width:none;-webkit-overflow-scrolling:touch;
   mask-image:linear-gradient(90deg,#000 88%,rgba(0,0,0,.15));
   -webkit-mask-image:linear-gradient(90deg,#000 88%,rgba(0,0,0,.15));}
-.mk-body .mk-pal::-webkit-scrollbar{width:0;height:0;}
-.mk-body .mk-dot{flex:0 0 auto;width:46px;height:46px;padding:0;border-radius:14px;
+#maker .mk-pal::-webkit-scrollbar{width:0;height:0;}
+#maker .mk-dot{flex:0 0 auto;width:46px;height:46px;padding:0;border-radius:14px;
   border:2px solid transparent;font-family:inherit;font-size:15px;color:var(--ink2);}
-.mk-body .mk-dot.era{background:var(--panel2);}
-.mk-body .mk-dot.on{border-color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.35);}
+#maker .mk-dot.era{background:var(--panel2);}
+#maker .mk-dot.on{border-color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.35);}
 
 /* name it, clear it, keep it */
-.mk-body .mk-row{display:flex;gap:8px;margin:12px 0 0;}
-.mk-body .mk-row input{flex:1;min-width:0;min-height:46px;border-radius:14px;
+#maker .mk-row{display:flex;gap:8px;margin:12px 0 0;}
+#maker .mk-row input{flex:1;min-width:0;min-height:46px;border-radius:14px;
   border:1px solid var(--hair);background:var(--panel2);color:var(--ink);
   font-family:inherit;font-size:14px;padding:0 12px;}
-.mk-body .mk-acts{display:flex;gap:8px;margin:10px 0 4px;}
-.mk-body .mk-btn{min-height:46px;padding:0 18px;border-radius:14px;border:none;
+#maker .mk-acts{display:flex;gap:8px;margin:10px 0 4px;}
+#maker .mk-btn{min-height:46px;padding:0 18px;border-radius:14px;border:none;
   font-family:inherit;font-size:14px;font-weight:700;background:var(--panel2);color:var(--ink);}
-.mk-body .mk-acts .mk-btn{flex:1;}
-.mk-body .mk-btn.go{background:linear-gradient(180deg,#43b862,#2e9e4a);color:#fff;}
-.mk-body .mk-btn.danger{background:rgba(224,74,95,.22);color:#ff8fa0;}
+#maker .mk-acts .mk-btn{flex:1;}
+#maker .mk-btn.go{background:linear-gradient(180deg,#43b862,#2e9e4a);color:#fff;}
+#maker .mk-btn.danger{background:rgba(224,74,95,.22);color:#ff8fa0;}
 
 /* ---- the Style row: your own pieces, and the tile that makes one ---- */
 /* a made piece is marked, because tapping the one you are wearing opens it
@@ -131,52 +128,52 @@
 #styleBody .st-sw.add .pl{font-size:21px;font-weight:700;color:var(--accent2);line-height:1;}
 
 /* curves or blocks, next to Clear */
-.mk-body .mk-fin{display:flex;gap:8px;margin:12px 0 0;align-items:center;}
-.mk-body .mk-seg{display:flex;gap:4px;flex:1;min-width:0;padding:3px;border-radius:16px;
+#maker .mk-fin{display:flex;gap:8px;margin:12px 0 0;align-items:center;}
+#maker .mk-seg{display:flex;gap:4px;flex:1;min-width:0;padding:3px;border-radius:16px;
   background:var(--panel2);}
 /* 44px inside the segment's own 3px, so the pill clears the tap floor */
-.mk-body .mk-sm{flex:1;min-width:0;min-height:44px;border-radius:13px;border:none;
+#maker .mk-sm{flex:1;min-width:0;min-height:44px;border-radius:13px;border:none;
   font-family:inherit;font-size:13px;font-weight:700;background:transparent;color:var(--ink2);}
-.mk-body .mk-sm.on{background:var(--accent);color:#241b45;}
+#maker .mk-sm.on{background:var(--accent);color:#241b45;}
 
 /* =====================================================================
    Build mode — boxes, and the HTML they mean
    ===================================================================== */
 /* the boxes, in draw order: left is behind */
-.mk-body .mk-parts{display:flex;gap:7px;overflow-x:auto;padding:4px 0;margin:12px 0 0;
+#maker .mk-parts{display:flex;gap:7px;overflow-x:auto;padding:4px 0;margin:12px 0 0;
   scrollbar-width:none;-webkit-overflow-scrolling:touch;}
-.mk-body .mk-parts::-webkit-scrollbar{width:0;height:0;}
-.mk-body .mk-part{position:relative;flex:0 0 auto;width:46px;height:46px;padding:0;
+#maker .mk-parts::-webkit-scrollbar{width:0;height:0;}
+#maker .mk-part{position:relative;flex:0 0 auto;width:46px;height:46px;padding:0;
   display:flex;align-items:center;justify-content:center;border-radius:14px;
   background:rgba(255,255,255,.06);border:2px solid transparent;font-family:inherit;}
-.mk-body .mk-part.on{border-color:var(--accent);background:rgba(255,184,48,.16);}
-.mk-body .mk-part .pd{width:20px;height:20px;border-radius:6px;}
+#maker .mk-part.on{border-color:var(--accent);background:rgba(255,184,48,.16);}
+#maker .mk-part .pd{width:20px;height:20px;border-radius:6px;}
 /* the ×2 is the whole component lesson in two characters: this look is
    shared, and the stylesheet underneath shows one rule for both */
-.mk-body .mk-part .px2{position:absolute;right:3px;bottom:2px;font-size:10px;
+#maker .mk-part .px2{position:absolute;right:3px;bottom:2px;font-size:10px;
   font-weight:800;color:var(--accent2);}
-.mk-body .mk-part.add{border:1px dashed rgba(255,184,48,.55);}
-.mk-body .mk-part.add .pl{font-size:20px;font-weight:700;color:var(--accent2);line-height:1;}
+#maker .mk-part.add{border:1px dashed rgba(255,184,48,.55);}
+#maker .mk-part.add .pl{font-size:20px;font-weight:700;color:var(--accent2);line-height:1;}
 
 /* the four corner radii, named the way the class name names them */
-.mk-body .mk-shapes{display:flex;gap:6px;margin:10px 0 0;}
-.mk-body .mk-shape{flex:1;min-width:0;min-height:44px;border-radius:13px;border:none;
+#maker .mk-shapes{display:flex;gap:6px;margin:10px 0 0;}
+#maker .mk-shape{flex:1;min-width:0;min-height:44px;border-radius:13px;border:none;
   font-family:inherit;font-size:12.5px;font-weight:700;background:var(--panel2);color:var(--ink2);}
-.mk-body .mk-shape.on{background:var(--accent);color:#241b45;}
+#maker .mk-shape.on{background:var(--accent);color:#241b45;}
 
-.mk-body .mk-hint{margin:12px 2px 0;font-size:12.5px;line-height:1.5;color:var(--ink2);}
+#maker .mk-hint{margin:12px 2px 0;font-size:12.5px;line-height:1.5;color:var(--ink2);}
 
 /* the code the piece means */
-.mk-body .mk-code{margin:14px 0 0;}
-.mk-body .mk-code pre{margin:0;padding:12px;border-radius:14px;overflow-x:auto;
+#maker .mk-code{margin:14px 0 0;}
+#maker .mk-code pre{margin:0;padding:12px;border-radius:14px;overflow-x:auto;
   background:rgba(10,6,26,.5);border:1px solid var(--hair);
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.75;
   color:#dfe3ec;white-space:pre-wrap;overflow-wrap:anywhere;}
 /* a chip of the colour beside its hex: the fastest way to learn that
    #5ab8ff IS the blue */
-.mk-body .mk-code pre .hexsw{display:inline-block;width:9px;height:9px;border-radius:3px;
+#maker .mk-code pre .hexsw{display:inline-block;width:9px;height:9px;border-radius:3px;
   margin-right:4px;vertical-align:-1px;border:1px solid rgba(255,255,255,.25);}
-.mk-body .pynote{margin:8px 2px 0;font-size:12px;line-height:1.5;color:var(--ink2);}
+#maker .pynote{margin:8px 2px 0;font-size:12px;line-height:1.5;color:var(--ink2);}
 
 /* ---- every value in the code is a control ----
    A token cannot be 44px tall inside a 12px stylesheet, and it does not
@@ -188,91 +185,79 @@
    this whole screen is for. So a value is a chip — filled, outlined, the
    same shape as every other control in the game — and it looks pressable
    at a glance instead of after an explanation. */
-.mk-body .mk-code pre .val{display:inline-block;padding:1px 6px;margin:0 1px;
+#maker .mk-code pre .val{display:inline-block;padding:1px 6px;margin:0 1px;
   border:1px solid rgba(255,184,48,.5);background:rgba(255,184,48,.14);
   font:inherit;border-radius:8px;line-height:1.35;}
-.mk-body .mk-code pre .val:active{transform:scale(.95);}
-.mk-body .mk-code pre .val.on{background:var(--accent);color:#241b45 !important;
+#maker .mk-code pre .val:active{transform:scale(.95);}
+#maker .mk-code pre .val.on{background:var(--accent);color:#241b45 !important;
   border-color:var(--accent);box-shadow:0 0 0 2px rgba(255,184,48,.3);}
-.mk-body .mk-code pre .val.col{border-color:rgba(143,240,160,.5);background:rgba(143,240,160,.12);}
+#maker .mk-code pre .val.col{border-color:rgba(143,240,160,.5);background:rgba(143,240,160,.12);}
 /* the selector is a way in, not a value to nudge, so it is marked as a link */
-.mk-body .mk-code pre .val[data-k="name"]{border-color:rgba(177,132,255,.55);
+#maker .mk-code pre .val[data-k="name"]{border-color:rgba(177,132,255,.55);
   background:rgba(177,132,255,.16);}
 
 /* the hint, above the code where it will be read */
-.mk-body .mk-tip{display:flex;align-items:center;gap:8px;margin:0 2px 7px;}
-.mk-body .mk-tipk{flex:0 0 auto;padding:1px 6px;border-radius:8px;
+#maker .mk-tip{display:flex;align-items:center;gap:8px;margin:0 2px 7px;}
+#maker .mk-tipk{flex:0 0 auto;padding:1px 6px;border-radius:8px;
   border:1px solid rgba(255,184,48,.5);background:rgba(255,184,48,.14);
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--accent2);}
-.mk-body .mk-tipt{font-size:12px;font-weight:700;color:var(--ink2);}
+#maker .mk-tipt{font-size:12px;font-weight:700;color:var(--ink2);}
 
-/* ---- the component screen ---- */
-#compBody .cp-name{display:flex;align-items:center;gap:7px;margin:14px 0 0;
-  padding:8px;border-radius:16px;background:rgba(177,132,255,.12);
-  border:1px solid rgba(177,132,255,.35);}
-#compBody .cp-dot{flex:0 0 auto;width:22px;height:22px;border-radius:7px;}
-#compBody .cp-sel{flex:0 0 auto;font-family:ui-monospace,Menlo,Consolas,monospace;
-  font-size:17px;font-weight:800;color:#b184ff;}
-#compBody .cp-input{flex:1;min-width:0;min-height:44px;border-radius:12px;
+/* the class name, on the shared name row: a selector is monospace and
+   purple wherever it appears, so the row says which of the two names it is
+   editing without a word of explanation */
+#maker .cp-input{flex:1;min-width:0;min-height:44px;border-radius:12px;
   border:1px solid var(--hair);background:var(--panel2);color:var(--ink);
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;padding:0 10px;}
-#compBody .cp-many{flex:0 0 auto;padding:0 6px;font-size:12.5px;font-weight:800;color:var(--accent2);}
-.mk-body .mk-open{display:block;width:100%;margin:10px 0 0;
+#maker .mk-open{display:block;width:100%;margin:10px 0 0;
   background:rgba(177,132,255,.16);border:1px solid rgba(177,132,255,.4);}
-.mk-body .mk-open{color:#d9ccff;}
+#maker .mk-open{color:#d9ccff;}
 
 /* the strip that edits whatever token is chosen */
-.mk-body .mk-ins{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+#maker .mk-ins{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
   margin:8px 0 0;padding:7px;border-radius:15px;background:rgba(255,184,48,.10);
   border:1px solid rgba(255,184,48,.35);}
-.mk-body .mk-inslab{flex:0 0 auto;padding:0 4px;font-family:ui-monospace,Menlo,Consolas,monospace;
+#maker .mk-inslab{flex:0 0 auto;padding:0 4px;font-family:ui-monospace,Menlo,Consolas,monospace;
   font-size:12px;font-weight:700;color:var(--accent2);}
-.mk-body .mk-insval{flex:1;min-width:52px;text-align:center;
+#maker .mk-insval{flex:1;min-width:52px;text-align:center;
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;font-weight:800;color:var(--ink);}
-.mk-body .mk-step{flex:0 0 auto;min-width:48px;min-height:44px;border-radius:13px;border:none;
+#maker .mk-step{flex:0 0 auto;min-width:48px;min-height:44px;border-radius:13px;border:none;
   font-family:inherit;font-size:13px;font-weight:800;background:var(--panel2);color:var(--ink);}
-.mk-body .mk-step:active{transform:scale(.96);}
-.mk-body .mk-insname{flex:1;min-width:0;min-height:44px;border-radius:13px;
+#maker .mk-step:active{transform:scale(.96);}
+#maker .mk-insname{flex:1;min-width:0;min-height:44px;border-radius:13px;
   border:1px solid var(--hair);background:var(--panel2);color:var(--ink);
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;padding:0 10px;}
-.mk-body .mk-inspal{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;padding:2px 0;
+#maker .mk-inspal{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;padding:2px 0;
   scrollbar-width:none;-webkit-overflow-scrolling:touch;}
-.mk-body .mk-inspal::-webkit-scrollbar{width:0;height:0;}
-.mk-body .mk-insdot{flex:0 0 auto;width:44px;height:44px;padding:0;border-radius:13px;
+#maker .mk-inspal::-webkit-scrollbar{width:0;height:0;}
+#maker .mk-insdot{flex:0 0 auto;width:44px;height:44px;padding:0;border-radius:13px;
   border:2px solid transparent;}
-.mk-body .mk-insdot.on{border-color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.35);}
-.mk-body .mk-copy{display:block;width:100%;margin:10px 0 0;}
+#maker .mk-insdot.on{border-color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.35);}
+#maker .mk-copy{display:block;width:100%;margin:10px 0 0;}
 
 /* ---- the box model, and the words a layout is made of ---- */
 /* a keyword is a word, not a number, so the strip offers the words */
-.mk-body .mk-inskw{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;padding:2px 0;
+#maker .mk-inskw{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;padding:2px 0;
   scrollbar-width:none;-webkit-overflow-scrolling:touch;}
-.mk-body .mk-inskw::-webkit-scrollbar{width:0;height:0;}
-.mk-body .mk-kw{flex:0 0 auto;min-height:44px;padding:0 13px;border-radius:13px;border:none;
+#maker .mk-inskw::-webkit-scrollbar{width:0;height:0;}
+#maker .mk-kw{flex:0 0 auto;min-height:44px;padding:0 13px;border-radius:13px;border:none;
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;font-weight:700;
   background:var(--panel2);color:var(--ink2);white-space:nowrap;}
-.mk-body .mk-kw.on{background:var(--accent);color:#241b45;}
-.mk-body .mk-kw:disabled{opacity:.4;}
+#maker .mk-kw.on{background:var(--accent);color:#241b45;}
+#maker .mk-kw:disabled{opacity:.4;}
 /* a keyword token in the code reads green, like the value it is */
-.mk-body .mk-code pre .val.kw{border-color:rgba(143,240,160,.5);background:rgba(143,240,160,.12);}
-
-/* which box this component lives inside */
-#compBody .cp-in{display:flex;align-items:center;gap:8px;margin:12px 0 0;}
-#compBody .cp-inlab{flex:0 0 auto;font-size:12.5px;font-weight:700;color:var(--ink2);}
-#compBody .cp-inrow{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;padding:2px 0;
-  scrollbar-width:none;-webkit-overflow-scrolling:touch;}
-#compBody .cp-inrow::-webkit-scrollbar{width:0;height:0;}
+#maker .mk-code pre .val.kw{border-color:rgba(143,240,160,.5);background:rgba(143,240,160,.12);}
 
 /* the box-model key, so the four colours on the canvas mean something */
-.mk-body .mk-key{display:flex;flex-wrap:wrap;gap:4px 12px;margin:8px 2px 0;}
-.mk-body .mk-key span{display:flex;align-items:center;gap:5px;
+#maker .mk-key{display:flex;flex-wrap:wrap;gap:4px 12px;margin:8px 2px 0;}
+#maker .mk-key span{display:flex;align-items:center;gap:5px;
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--ink2);}
-.mk-body .mk-key i{width:11px;height:11px;border-radius:3px;display:block;}
+#maker .mk-key i{width:11px;height:11px;border-radius:3px;display:block;}
 
 /* the sentence under whatever is being edited */
-.mk-body .mk-inswrap{margin:8px 0 0;}
-.mk-body .mk-inswrap .mk-ins{margin:0;}
-.mk-body .mk-instip{margin:7px 4px 0;font-size:12.5px;line-height:1.5;color:var(--ink2);}
+#maker .mk-inswrap{margin:8px 0 0;}
+#maker .mk-inswrap .mk-ins{margin:0;}
+#maker .mk-instip{margin:7px 4px 0;font-size:12.5px;line-height:1.5;color:var(--ink2);}
 
 /* =====================================================================
    How a web page is built — the lesson banner
@@ -281,26 +266,170 @@
    work: a step is finished by the piece having the thing, so the banner is
    something to read, not something to press.
    ===================================================================== */
-.mk-body .fe-offer{margin:14px 0 0;}
-.mk-body .fe-go{display:block;width:100%;
+#maker .fe-offer{margin:14px 0 0;}
+#maker .fe-go{display:block;width:100%;
   background:rgba(84,214,106,.16);border:1px solid rgba(84,214,106,.45);color:#b6f0c2;}
-.mk-body .fe-bar{margin:14px 0 0;padding:11px 12px 10px;border-radius:17px;
+#maker .fe-bar{margin:14px 0 0;padding:11px 12px 10px;border-radius:17px;
   background:rgba(84,214,106,.10);border:1px solid rgba(84,214,106,.38);}
-.mk-body .fe-head{display:flex;align-items:center;gap:8px;}
-.mk-body .fe-n{flex:0 0 auto;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;
+#maker .fe-head{display:flex;align-items:center;gap:8px;}
+#maker .fe-n{flex:0 0 auto;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;
   background:rgba(84,214,106,.22);color:#b6f0c2;}
-.mk-body .fe-title{flex:1;min-width:0;font-size:14px;font-weight:800;color:var(--ink);
+#maker .fe-title{flex:1;min-width:0;font-size:14px;font-weight:800;color:var(--ink);
   font-family:ui-monospace,Menlo,Consolas,monospace;}
-.mk-body .fe-x{flex:0 0 auto;width:30px;height:30px;padding:0;border:none;border-radius:10px;
+#maker .fe-x{flex:0 0 auto;width:30px;height:30px;padding:0;border:none;border-radius:10px;
   background:transparent;color:var(--ink2);font-size:13px;}
-.mk-body .fe-say{margin:6px 1px 0;font-size:13px;line-height:1.55;color:var(--ink);}
-.mk-body .fe-say code,.mk-body .fe-title{font-family:ui-monospace,Menlo,Consolas,monospace;}
-.mk-body .fe-dots{display:flex;gap:4px;margin:9px 1px 0;}
-.mk-body .fe-dot{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.13);display:block;}
-.mk-body .fe-dot.got{background:#54d66a;}
-.mk-body .fe-dot.now{background:var(--accent);}
+#maker .fe-say{margin:6px 1px 0;font-size:13px;line-height:1.55;color:var(--ink);}
+#maker .fe-say code,#maker .fe-title{font-family:ui-monospace,Menlo,Consolas,monospace;}
+#maker .fe-dots{display:flex;gap:4px;margin:9px 1px 0;}
+#maker .fe-dot{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.13);display:block;}
+#maker .fe-dot.got{background:#54d66a;}
+#maker .fe-dot.now{background:var(--accent);}
 
-/* what this component is, in a sentence */
-#compBody .cp-what{margin:10px 2px 0;font-size:12.5px;line-height:1.55;color:var(--ink2);}
-#compBody .cp-what span{display:inline;}
-#compBody .cp-what span+span::before{content:" ";}
+/* what this component is, in a sentence — at the top of the Layout tab */
+#maker .cp-what{margin:10px 2px 0;font-size:12.5px;line-height:1.55;color:var(--ink2);}
+#maker .cp-what span{display:inline;}
+#maker .cp-what span+span::before{content:" ";}
+
+/* =====================================================================
+   The maker's frame — a pinned stage over a docked panel
+   ---------------------------------------------------------------------
+   Everything above was one scrolling column, and three things followed
+   from that every single time: the canvas scrolled away while you edited
+   the code that describes it; the inspector — the strip that changes the
+   number you just tapped — appeared below the whole stylesheet, so tapping
+   a value moved the thing you were looking at off screen; and a component
+   needed a second sheet to show a subset of the first.
+
+   Four regions instead. The head and the slot row are fixed, the stage is
+   fixed, and the dock is the only thing that scrolls, with the inspector
+   pinned to its bottom edge.
+
+   This is the one sheet whose height is not a preference: a pinned robot,
+   a square canvas and a dock with something in it do not fit in 56vh at
+   any width, so the maker is always the tall sheet. The ⛶ in its header
+   still sets the size every OTHER screen opens at.
+   ===================================================================== */
+body:not(.sheets-full) #maker.sized,
+body.sheets-full #maker.sized,
+#maker{height:var(--sheet-full);max-height:var(--sheet-full);
+  display:flex;flex-direction:column;}
+
+/* Save belongs in the head, where it is reachable from every tab without
+   scrolling. 40px is the height of Back and Exit either side of it. */
+#maker .mk-save{flex:0 0 auto;height:40px;padding:0 15px;border:none;border-radius:12px;
+  font-family:inherit;font-size:13.5px;font-weight:800;
+  background:linear-gradient(180deg,#43b862,#2e9e4a);color:#fff;}
+#maker .mk-save:active{transform:scale(.95);}
+/* The breadcrumb IS the title here. Every other sheet says its name in the
+   header and the maker used to as well, but a pinned stage pays for that
+   title in canvas: two lines of header is 24px, and 24px is the difference
+   between a dock you can read and one you cannot. What the header has to
+   say is which piece, and which component of it is open. */
+#maker .mk-crumb{display:flex;align-items:center;justify-content:center;gap:2px;
+  overflow-x:auto;scrollbar-width:none;}
+#maker .mk-crumb::-webkit-scrollbar{width:0;height:0;}
+#maker .mk-crumb-b{flex:0 0 auto;height:30px;padding:0 9px;border:none;border-radius:10px;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;font-weight:700;
+  background:transparent;color:var(--ink2);white-space:nowrap;}
+#maker .mk-crumb-b.on{background:rgba(255,184,48,.18);color:var(--accent2);}
+#maker .mk-crumb-s{flex:0 0 auto;color:var(--ink2);font-size:13px;font-weight:700;}
+
+/* slot tabs and the Paint/Build switch, on one fixed row */
+#maker .mk-top{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:0 14px 8px;}
+#maker .mk-top .mk-tabs{flex:1;min-width:0;margin:0;}
+#maker .mk-top .mk-seg{flex:0 0 auto;width:132px;margin:0;}
+
+/* The stage: the robot, the canvas, the key and the lesson. It never
+   scrolls — but on a short screen it does give ground, because a dock with
+   nothing visible in it is worse than a slightly smaller robot. Both the
+   preview and the canvas carry the size they want and the size below which
+   they stop being worth drawing. */
+#maker .mk-stage-fixed{flex:0 1 auto;min-height:0;display:flex;flex-direction:column;
+  padding:0 14px 8px;border-bottom:1px solid var(--hair);}
+/* 184, where the old stacked layout spent 150 on the box and another 50 on
+   a pose row below it: the chips move inside, the robot keeps very nearly
+   the size it had, and the stage still comes out 16px shorter. */
+#maker .mk-stage-fixed .mk-prev{flex:0 1 auto;margin:0;height:184px;min-height:98px;}
+/* The pose chips sit inside the preview, along its bottom edge: they used
+   to cost a row of their own, and the stage has no row to spare. The robot
+   is drawn ABOVE them rather than behind them — floated over the picture
+   they covered the legs, which are exactly what the walk and the shoes are
+   there to show, so the canvas stops where the chips start. */
+/* a canvas is a replaced element: with width:auto an over-constrained
+   inset is ignored and it falls back to its intrinsic 300x150, so the size
+   has to be stated rather than implied */
+#maker .mk-stage-fixed .mk-prev canvas{width:100%;height:calc(100% - 40px);}
+#maker .mk-stage-fixed .mk-poses{position:absolute;left:8px;right:8px;bottom:6px;
+  margin:0;z-index:2;}
+#maker .mk-stage-fixed .mk-poses .mk-seg{background:rgba(23,17,48,.72);padding:2px;}
+#maker .mk-stage-fixed .mk-poses .mk-sm{min-height:28px;font-size:11.5px;}
+/* the canvas is square and takes whatever height is left, so a short phone
+   gets a smaller grid rather than a dock with nothing in it */
+#maker .mk-stage-fixed .mk-pad{flex:0 1 auto;height:248px;min-height:104px;max-width:none;
+  margin:8px 0 0;display:flex;justify-content:center;}
+/* Paint needs every pixel of grid it can get — 248px is 20px a cell, which
+   is what a thumb can hit. Build does not: a box is dragged by its middle
+   and resized by a 13px grip, both of which work at 200, and the 48px buys
+   the dock a third row of controls without scrolling. */
+#maker.build .mk-stage-fixed .mk-pad{height:200px;}
+#maker .mk-stage-fixed .mk-pad canvas{width:auto;height:100%;max-width:100%;}
+#maker .mk-stage-fixed .mk-key{margin:6px 2px 0;}
+
+/* the dock: three tabs, one scroller, one docked inspector */
+/* basis 0, not auto: the dock holds a whole stylesheet, and a basis that
+   grew with its content would push the sheet past its own height instead of
+   scrolling. It takes what is left, and never less than a screenful. */
+#maker .mk-dock{flex:1 1 0;min-height:180px;display:flex;flex-direction:column;
+  padding:0 14px;}
+#maker .mk-tabrow{flex:0 0 auto;display:flex;align-items:center;gap:6px;
+  padding:7px 0 6px;}
+#maker .mk-dtab{flex:0 0 auto;min-height:38px;padding:0 13px;border:none;border-radius:12px;
+  font-family:inherit;font-size:13px;font-weight:700;background:transparent;color:var(--ink2);}
+#maker .mk-dtab.on{background:rgba(255,184,48,.18);color:var(--accent2);}
+#maker .mk-dtab:disabled{opacity:1;}
+/* whether what you are editing is the whole piece or one component — the
+   one thing the dock has to say that the tabs do not */
+#maker .mk-dnote{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--ink2);}
+/* the inspector is docked to the bottom of the dock, not appended to the
+   end of the scroll: tapping a number now moves nothing */
+#maker .mk-insdock{flex:0 0 auto;padding:0 0 10px;}
+#maker .mk-insdock .mk-inswrap{margin:6px 0 0;}
+#maker .mk-insdock .mk-inswrap[hidden]{display:none;}
+
+/* the piece name and the class name share one row, so there is one place
+   to look for "what is this called" */
+#maker .mk-rowlab{flex:0 0 auto;align-self:center;font-size:12.5px;font-weight:700;
+  color:var(--ink2);}
+
+/* =====================================================================
+   The Layout tab — every declaration as a row
+   ---------------------------------------------------------------------
+   The Code tab shows the stylesheet; this shows the same declarations as a
+   list you can scan. It exists for one reason: flexbox has no handle on
+   the canvas and no shape button, so justify-content only ever existed as
+   a token inside a rule you had to write first. Here it is a row, in the
+   open, with the words themselves as the buttons.
+   ===================================================================== */
+#maker .mk-lgrp{margin:12px 0 0;padding:10px 11px 11px;border-radius:17px;
+  background:rgba(255,255,255,.04);border:1px solid var(--hair);}
+#maker .mk-lgh{display:flex;align-items:baseline;gap:8px;margin:0 1px 2px;}
+#maker .mk-lgt{font-size:13px;font-weight:800;color:var(--ink);}
+#maker .mk-lgs{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;
+  font-weight:700;color:#b184ff;}
+#maker .mk-lrow{margin:9px 0 0;}
+/* the property name is the button that says what the property does — a
+   value you can change and cannot name is a slider, not a lesson */
+#maker .mk-lprop{display:block;min-height:26px;padding:2px 7px;margin:0 0 5px;
+  border:none;border-radius:9px;background:transparent;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;font-weight:700;
+  color:var(--accent2);text-align:left;}
+#maker .mk-lprop::after{content:"?";margin-left:6px;font-size:10px;color:var(--ink2);}
+#maker .mk-lprop.on{background:rgba(255,184,48,.16);}
+#maker .mk-lctl{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:2px 0;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+#maker .mk-lctl::-webkit-scrollbar{width:0;height:0;}
+#maker .mk-lval{flex:0 0 auto;min-width:58px;text-align:center;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;font-weight:800;
+  color:var(--ink);}
+#maker .mk-lgrp .mk-instip{margin:6px 2px 0;}
+#maker .mk-lgrp .cp-what{margin:4px 1px 2px;}

@@ -36,8 +36,13 @@ let mkVal=null;
    editor, it is this one with a filter. Only the ids differ, so that both
    sheets can be in the DOM at once. */
 let mkFocus=null;
-const CID=()=>mkFocus!=null?"cp":"mk";
-const mkRender=()=>{ if(mkFocus!=null)renderComp(); else renderMaker(); };
+/* which of the dock's three tabs is showing. A tab switch repaints the
+   dock and nothing else, so the canvas and the preview loop are never torn
+   down under the player's finger. */
+let mkTab="boxes";
+/* which Layout row has its sentence open */
+let mkLHelp=null;
+const mkRender=()=>renderMaker();
 const PART_WORD=["Box","Tile","Pill","Dot"];
 /* which pose the preview robot holds. A piece has to be judged on a moving
    robot, not a standing one: a brim that clears the antenna at rest can
@@ -66,6 +71,7 @@ function makerOpen(slot,id){
   const p=id?wearFind(id):null;
   mkKind="grid"; mkParts=[]; mkSel=-1; mkDrag=null; mkPx=mkBlank(); mkSm=true;
   mkRoot={lay:0,pad:0,gap:0,jus:0,ali:0};
+  mkTab="boxes"; mkFocus=null; mkVal=null; mkLHelp=null;
   if(p){
     mkId=p.id; mkName=p.name;
     if(p.kind==="parts"){ mkKind="parts"; mkParts=p.parts.map(q=>({...q}));
@@ -94,7 +100,6 @@ function makerExit(){
   CC_WEAR.setDraft(null);
   mkFocus=null; mkVal=null;
   $("maker").classList.remove("open");
-  $("comp").classList.remove("open");
 }
 function makerClose(){ makerExit(); styleOpen(); }
 
@@ -126,7 +131,7 @@ function mkGuide(g,W,H){
   g.restore();
 }
 function mkDraw(){
-  const c=$(CID()+"Canvas"); if(!c)return;
+  const c=$("mkCanvas"); if(!c)return;
   const W=Math.max(120,Math.round(c.clientWidth||264)), H=W;
   const d=Math.min(2,window.devicePixelRatio||1);
   if(c.width!==Math.round(W*d)){c.width=Math.round(W*d);c.height=Math.round(H*d);}
@@ -219,7 +224,7 @@ function mkPlay(){
   if(mkRaf)return;
   const step=ts=>{
     mkRaf=0;
-    const sheet=$(mkFocus!=null?"comp":"maker"), cv=$(CID()+"Prev");
+    const sheet=$("maker"), cv=$("mkPrev");
     if(!sheet||!sheet.classList.contains("open")||!cv){CC_WEAR.setDraft(null);return;}
     CC_WEAR.setDraft(mkKind==="parts"
       ?{id:mkId,kind:"parts",parts:mkParts,root:mkRoot}
@@ -253,121 +258,454 @@ function mkPlay(){
   mkRaf=requestAnimationFrame(step);
 }
 
-/* ---------------- the sheet ---------------- */
+/* ================= the sheet, in four regions =================
+   head · top · a PINNED stage · a dock with three tabs.
+
+   The whole editor used to be one scrolling column, which meant the canvas
+   scrolled away while you edited the code that describes it, and the strip
+   that changes a value you just tapped appeared below three screens of
+   stylesheet. So the robot and the canvas are pinned, the dock owns the
+   only scrollbar, and the inspector is docked to the bottom of it: tapping
+   a number now moves nothing.
+   ============================================================== */
 function renderMaker(){
-  const body=$("makerBody"); if(!body)return;
   /* the lesson watches the piece rather than a Next button, so the check
      belongs wherever the piece is about to be drawn again */
   if(typeof feCheck==="function")feCheck();
-  body.innerHTML="";
-  if(typeof feBanner==="function")body.appendChild(feBanner());
+  /* the two modes want different amounts of canvas, and the sheet is the
+     only place that can say so. Guarded with contains(): an unconditional
+     classList write queues a mutation record every render, and the i18n
+     observer answering one of those is how this screen froze once. */
+  const sh=$("maker"), build=mkKind==="parts";
+  if(sh){
+    if(build&&!sh.classList.contains("build"))sh.classList.add("build");
+    else if(!build&&sh.classList.contains("build"))sh.classList.remove("build");
+  }
+  mkHead(); mkTop(); mkStage(); mkDock();
+}
+/* a tab switch, or a value being chosen, only ever repaints the dock */
+function mkDockOnly(){ mkDock(); }
 
-  /* which slot — switching keeps the grid, because a shape you painted for
-     a hat is often the start of the shoes */
+/* ---- head: where you are, and Save ---- */
+function mkHead(){
+  const el=$("mkCrumb"); if(!el)return;
+  el.innerHTML="";
+  const crumb=(lab,on,fn)=>{
+    const b=document.createElement("button");b.type="button";
+    b.className="mk-crumb-b"+(on?" on":"");b.textContent=lab;
+    if(fn)b.addEventListener("click",fn); else b.disabled=true;
+    el.appendChild(b);
+  };
+  crumb("."+mkSlot,mkFocus==null,mkFocus==null?null:mkFocusOff);
+  if(mkFocus!=null&&mkKind==="parts"){
+    const sep=document.createElement("span");sep.className="mk-crumb-s";sep.textContent="›";
+    el.appendChild(sep);
+    const names=CC_CODE.classNames(mkParts), n=mkGroupSize(mkFocus);
+    crumb("."+(names[mkFocus]||"?")+(n>1?" ×"+n:""),true,null);
+  }
+  const sv=$("mkSaveBtn");
+  if(sv&&!sv.dataset.wired){ sv.dataset.wired="1"; sv.addEventListener("click",mkSave); }
+}
+
+/* ---- top: which slot, and which way of making it ---- */
+function mkTop(){
+  const el=$("mkTop"); if(!el)return;
+  el.innerHTML="";
   const tabs=document.createElement("div");tabs.className="mk-tabs";
   [["hat","Hat"],["outfit","Outfit"],["shoes","Shoes"]].forEach(([k,lab])=>{
     const b=document.createElement("button");b.type="button";
     b.className="mk-tab"+(mkSlot===k?" on":"");b.textContent=lab;
     b.addEventListener("click",()=>{
       if(mkSlot===k)return;
-      if(!mkId||wearFind(mkId)){ makerOpen(k,null); return; }  // editing a saved piece: start a new one
-      mkSlot=k; renderMaker();
+      if(!mkId||wearFind(mkId)){ makerOpen(k,null); return; }
+      mkSlot=k; mkFocus=null; mkVal=null; mkRender();
     });
     tabs.appendChild(b);
   });
-  body.appendChild(tabs);
+  el.appendChild(tabs);
 
   /* Two ways to make the same thing. Paint is cells and a brush; Build is
-     boxes you stack — and Build is the one that can be written down, so it
-     comes with the code it means. */
-  const modes=document.createElement("div");modes.className="mk-fin";
-  const mseg=document.createElement("div");mseg.className="mk-seg";
+     boxes you stack — and Build is the one that can be written down. */
+  const seg=document.createElement("div");seg.className="mk-seg";
   [["Paint","grid"],["Build","parts"]].forEach(([lab,k])=>{
-    const b2=document.createElement("button");b2.type="button";
-    b2.className="mk-sm"+(mkKind===k?" on":"");b2.textContent=lab;
-    b2.addEventListener("click",()=>{ if(mkKind===k)return; mkKind=k; renderMaker(); });
-    mseg.appendChild(b2);
+    const b=document.createElement("button");b.type="button";
+    b.className="mk-sm"+(mkKind===k?" on":"");b.textContent=lab;
+    b.addEventListener("click",()=>{
+      if(mkKind===k)return;
+      mkKind=k; mkTab="boxes"; mkFocus=null; mkVal=null; mkRender();
+    });
+    seg.appendChild(b);
   });
-  modes.appendChild(mseg);
-  body.appendChild(modes);
+  el.appendChild(seg);
+}
 
-  /* preview + canvas, side by side when there is room */
-  const stage=document.createElement("div");stage.className="mk-stage";
+/* ---- stage: the robot, the canvas, and the box-model key. Pinned. ---- */
+function mkStage(){
+  const el=$("mkStage"); if(!el)return;
+  el.innerHTML="";
   const pv=document.createElement("div");pv.className="mk-prev";
   const pc=document.createElement("canvas");pc.id="mkPrev";pv.appendChild(pc);
+  pv.appendChild(mkPoseRow());
+  el.appendChild(pv);
   const pad=document.createElement("div");pad.className="mk-pad";
   const cc=document.createElement("canvas");cc.id="mkCanvas";pad.appendChild(cc);
-  stage.appendChild(pv);stage.appendChild(mkPoseRow());stage.appendChild(pad);
-  body.appendChild(stage);
-  if(mkKind==="parts")body.appendChild(mkBoxKey());
+  el.appendChild(pad);
+  if(mkKind==="parts")el.appendChild(mkBoxKey());
+  /* the lesson sits between the key and the dock, where it is read without
+     covering either */
+  if(typeof feBanner==="function")el.appendChild(feBanner());
+  if(mkKind==="parts")wireParts(cc); else wirePaint(cc);
+  requestAnimationFrame(mkDraw);
+  mkPlay();
+}
 
-  /* colours. In Paint they are the brush; in Build they recolour the box
-     you have chosen — and because a colour lives in the shared rule, every
-     box in that group changes with it. The eraser belongs to Paint only. */
-  const pal=document.createElement("div");pal.className="mk-pal";
-  const dot=(i)=>{
+/* ---- dock: three tabs, a scroll area, and the docked inspector ---- */
+const MK_TABS=[["boxes","Boxes"],["code","Code"],["layout","Layout"]];
+function mkDock(){
+  const row=$("mkTabRow"), body=$("makerBody"), ins=$("mkInsDock");
+  if(!row||!body||!ins)return;
+  row.innerHTML="";
+  if(mkKind==="parts"){
+    MK_TABS.forEach(([k,lab])=>{
+      const b=document.createElement("button");b.type="button";
+      b.className="mk-dtab"+(mkTab===k?" on":"");b.textContent=lab;
+      b.addEventListener("click",()=>{ if(mkTab===k)return; mkTab=k; mkDockOnly(); });
+      row.appendChild(b);
+    });
+  }else{
     const b=document.createElement("button");b.type="button";
-    b.className="mk-dot"+(mkColor===i?" on":"")+(i<0?" era":"");
+    b.className="mk-dtab on";b.textContent="Brush";b.disabled=true;
+    row.appendChild(b);
+  }
+  const note=document.createElement("span");note.className="mk-dnote";
+  note.textContent=(mkKind==="parts"&&mkFocus!=null)?"one component":"whole piece";
+  row.appendChild(note);
+
+  /* the panel is rebuilt in place, so the scroll has to be put back: a
+     keyword three rows down the Layout tab changes which rows exist, and
+     losing your place every time you tapped one would make the tab
+     unusable for exactly the thing it is for */
+  const top=body.scrollTop;
+  body.innerHTML="";
+  if(mkKind!=="parts")mkBrushPanel(body);
+  else if(mkTab==="code")mkCodePanel(body);
+  else if(mkTab==="layout")mkLayoutPanel(body);
+  else mkBoxesPanel(body);
+
+  body.scrollTop=top;
+
+  ins.innerHTML="";
+  ins.appendChild(mkInspector());
+}
+
+/* ---- Paint: the brush and the two finishes ---- */
+function mkBrushPanel(body){
+  body.appendChild(mkPalette());
+  const fin=document.createElement("div");fin.className="mk-fin";
+  const seg=document.createElement("div");seg.className="mk-seg";
+  [["Smooth",true],["Blocky",false]].forEach(([lab,v])=>{
+    const b=document.createElement("button");b.type="button";
+    b.className="mk-sm"+(mkSm===v?" on":"");b.textContent=lab;
+    b.addEventListener("click",()=>{ if(mkSm===v)return; mkSm=v; mkDraw(); mkDockOnly(); });
+    seg.appendChild(b);
+  });
+  fin.appendChild(seg);
+  const clr=document.createElement("button");clr.type="button";clr.className="mk-btn";
+  clr.textContent="Clear";
+  clr.addEventListener("click",()=>{mkPx=mkBlank();mkDraw();});
+  fin.appendChild(clr);
+  body.appendChild(fin);
+  body.appendChild(mkNameRow());
+  body.appendChild(mkPieceActs());
+}
+
+/* the sixteen colours. In Paint they are the brush; in Build they recolour
+   the box you have chosen — and a colour lives in the shared rule, so every
+   box in that group changes with it. */
+function mkPalette(){
+  const pal=document.createElement("div");pal.className="mk-pal";
+  const dot=i=>{
+    const b=document.createElement("button");b.type="button";
+    const sel=mkParts[mkSel];
+    const on=(mkKind==="parts")?(!!sel&&sel.c===i):(mkColor===i);
+    b.className="mk-dot"+(on?" on":"")+(i<0?" era":"");
     if(i<0){b.textContent="✖";b.setAttribute("aria-label","Eraser");}
     else{b.style.background=CC_WEAR.pal[i];b.setAttribute("aria-label",CC_WEAR.names[i]);}
     b.addEventListener("click",()=>{
       mkColor=i;
-      if(mkKind==="parts"&&i>=0&&mkParts[mkSel]){ mkGroup(p2=>{p2.c=i;}); mkRender(); return; }
-      [...pal.children].forEach(n=>n.classList.remove("on"));b.classList.add("on");
+      if(mkKind==="parts"&&i>=0&&mkParts[mkSel]){ mkGroup(p=>{p.c=i;}); mkDraw(); }
+      mkDockOnly();
     });
     pal.appendChild(b);
   };
   if(mkKind!=="parts")dot(-1);
   for(let i=0;i<CC_WEAR.pal.length;i++)dot(i);
-  body.appendChild(pal);
+  return pal;
+}
 
-  if(mkKind==="parts")mkBuildUI(body);
-  else{
-    /* Curves or blocks. The pieces the game ships are curves, so that is the
-       default and the reason this switch exists is the child who wanted
-       pixel art on purpose. */
-    const fin=document.createElement("div");fin.className="mk-fin";
-    const seg=document.createElement("div");seg.className="mk-seg";
-    [["Smooth",true],["Blocky",false]].forEach(([lab,v])=>{
-      const b2=document.createElement("button");b2.type="button";
-      b2.className="mk-sm"+(mkSm===v?" on":"");b2.textContent=lab;
-      b2.addEventListener("click",()=>{ if(mkSm===v)return; mkSm=v; renderMaker(); });
-      seg.appendChild(b2);
-    });
-    fin.appendChild(seg);
-    const clr=document.createElement("button");clr.type="button";clr.className="mk-btn";
-    clr.textContent="Clear";
-    clr.addEventListener("click",()=>{mkPx=mkBlank();mkDraw();});
-    fin.appendChild(clr);
-    body.appendChild(fin);
-  }
-
+function mkNameRow(){
   const row=document.createElement("div");row.className="mk-row";
+  const lab=document.createElement("span");lab.className="mk-rowlab";
+  const focused=mkKind==="parts"&&mkFocus!=null;
+  const names=focused?CC_CODE.classNames(mkParts):null;
+  lab.textContent=focused?"Class name":"Piece name";
+  row.appendChild(lab);
   const nm=document.createElement("input");
-  nm.type="text";nm.id="mkName";nm.maxLength=18;nm.placeholder="Name it";
-  nm.value=mkName;nm.setAttribute("aria-label","Piece name");
-  nm.addEventListener("input",()=>{mkName=nm.value;mkCodeRefresh();});
+  nm.type="text";nm.id="mkName";nm.maxLength=focused?16:18;
+  nm.className=focused?"cp-input":"";
+  nm.placeholder=focused?"class":"Name it";
+  nm.setAttribute("aria-label",focused?"Class name":"Piece name");
+  nm.value=focused?(names[mkFocus]||""):mkName;
+  nm.addEventListener("input",()=>{
+    if(focused){
+      const n=CC_CODE.cleanName(nm.value);
+      for(const q of mkParts)if(q.cls===mkFocus){ if(n)q.cn=n; else delete q.cn; }
+      mkHead(); mkCodeRefresh();
+    }else{ mkName=nm.value; mkCodeRefresh(); }
+  });
   row.appendChild(nm);
-  body.appendChild(row);
-
-  if(mkKind==="parts")body.appendChild(mkCodeBlock());
-
+  return row;
+}
+/* Save lives in the header; what is left down here is the one destructive
+   action, which does not belong next to it */
+function mkPieceActs(){
   const acts=document.createElement("div");acts.className="mk-acts";
-  const save=document.createElement("button");save.type="button";save.className="mk-btn go";
-  save.textContent="Save";
-  save.addEventListener("click",mkSave);
-  acts.appendChild(save);
   if(wearFind(mkId)){
     const del=document.createElement("button");del.type="button";del.className="mk-btn danger";
-    del.textContent="Delete";
+    del.textContent="Delete this piece";
     del.addEventListener("click",mkDelete);
     acts.appendChild(del);
   }
-  body.appendChild(acts);
+  return acts;
+}
 
-  if(mkKind==="parts")wireParts(cc); else wirePaint(cc);
-  requestAnimationFrame(mkDraw);
-  mkPlay();
+/* ---- Boxes: the direct-manipulation tab ---- */
+function mkBoxesPanel(body){
+  mkBuildUI(body);
+  body.appendChild(mkPalette());
+  body.appendChild(mkNameRow());
+  body.appendChild(mkPieceActs());
+}
+
+/* ---- Code: the stylesheet, with the canvas still above it ---- */
+function mkCodePanel(body){
+  body.appendChild(mkCodeBlock());
+}
+
+/* ================= Layout: every declaration as a row =================
+   The Code tab shows the stylesheet. This shows the same declarations as
+   a list, and it exists for one reason: flexbox has no handle on the
+   canvas and no shape button, so `justify-content` only ever existed as a
+   token inside a rule you had to write first. If you had not already
+   given a box `display: row`, there was no way to find it at all.
+
+   Nothing here is a new capability. Every row writes through the same
+   rules the code block does — left and top belong to the element, and
+   everything else to the class, so a change lands on every box wearing it.
+   ===================================================================== */
+
+/* which row has its sentence open. A value you can change and cannot name
+   is a slider, so every property is a button that says what it does. */
+function mkLTipRow(host,key,tip){
+  if(mkLHelp!==key||!tip)return;
+  host.appendChild(mkTip(tip));
+}
+function mkLRow(host,key,prop,tip,ctrl){
+  const row=document.createElement("div");row.className="mk-lrow";
+  const b=document.createElement("button");b.type="button";
+  b.className="mk-lprop"+(mkLHelp===key?" on":"");
+  b.textContent=prop;
+  b.setAttribute("aria-label",prop+" - what it does");
+  b.addEventListener("click",()=>{ mkLHelp=(mkLHelp===key)?null:key; mkDockOnly(); });
+  row.appendChild(b);
+  row.appendChild(ctrl);
+  host.appendChild(row);
+  mkLTipRow(host,key,tip);
+}
+
+/* the same five buttons the inspector strip uses, because they are the
+   same edit: the range is the one the canvas drag itself produces, so the
+   two ways of changing a value cannot disagree about what is legal */
+function mkLNum(list,k){
+  const f=CC_CODE.field[k];
+  const box=document.createElement("div");box.className="mk-lctl";
+  const now=()=>CC_WEAR.field(list[0],k)|0;
+  const v=document.createElement("span");v.className="mk-lval";
+  v.textContent=now()+f.unit;
+  const step=(d,txt)=>{
+    const b=document.createElement("button");b.type="button";b.className="mk-step";
+    b.textContent=txt;b.setAttribute("aria-label",f.prop+" "+txt);
+    b.addEventListener("click",()=>{
+      const cur=now(), next=Math.max(f.lo,Math.min(f.hi,cur+d));
+      if(next===cur)return;
+      for(const q of list)q[k]=next;
+      v.textContent=next+f.unit;
+      mkDraw(); mkCodeRefresh(); mkInsRefresh();
+      if(typeof sfx==="function")sfx(620,.02);
+      /* a finished lesson step changes the banner, which is in the stage
+         and not in this panel */
+      if(typeof feCheck==="function"&&feCheck())mkRender();
+    });
+    box.appendChild(b);
+  };
+  /* a plain hyphen, not U+2212: js/ui-icons.js swaps the typographic minus
+     for an SVG glyph, which would leave one button an icon and its twin
+     across the value plain text */
+  step(-f.big,"-"+f.big); step(-f.step,"-1");
+  box.appendChild(v);
+  step(f.step,"+1"); step(f.big,"+"+f.big);
+  return box;
+}
+
+/* a keyword is not a range — it is a short list of words, and the words
+   themselves are the buttons. `display` decides whether left and top exist
+   at all, so a keyword rebuilds the screen rather than repainting a value. */
+function mkLKw(list,k,labels){
+  const K=CC_CODE.keyword[k];
+  const box=document.createElement("div");box.className="mk-lctl";
+  (labels||K.opts()).forEach((word,v)=>{
+    const b=document.createElement("button");b.type="button";
+    b.className="mk-kw"+(CC_WEAR.field(list[0],k)===v?" on":"");
+    b.textContent=word;
+    b.addEventListener("click",()=>{
+      if(CC_WEAR.field(list[0],k)===v)return;
+      for(const q of list)q[k]=v;
+      if(typeof sfx==="function")sfx(660,.03);
+      mkRender();
+    });
+    box.appendChild(b);
+  });
+  return box;
+}
+
+function mkLGroup(body,title,sel){
+  const g=document.createElement("div");g.className="mk-lgrp";
+  const h=document.createElement("div");h.className="mk-lgh";
+  const t=document.createElement("span");t.className="mk-lgt";t.textContent=title;
+  h.appendChild(t);
+  /* two spans, not one: a class name is an identifier and must reach the
+     dictionary on its own, or the title would be looked up glued to it and
+     stay English forever */
+  if(sel){ const s=document.createElement("span");s.className="mk-lgs";s.textContent=sel;h.appendChild(s); }
+  g.appendChild(h);
+  body.appendChild(g);
+  return g;
+}
+
+function mkLayoutPanel(body){
+  const names=CC_CODE.classNames(mkParts);
+  const cls=(mkFocus!=null&&mkParts.some(p=>p.cls===mkFocus))
+    ?mkFocus:(mkParts[mkSel]?mkParts[mkSel].cls:null);
+  if(cls==null){
+    const hint=document.createElement("div");hint.className="mk-hint";
+    hint.textContent=mkParts.length
+      ?"Choose a box in Boxes, and its rule appears here."
+      :"Add a box in Boxes first — a rule is always about something.";
+    body.appendChild(hint);
+    mkLayoutRoot(body);
+    return;
+  }
+  const list=mkParts.filter(p=>p.cls===cls);
+  /* left and top belong to ONE element, so they follow the selection; the
+     rest of the rule belongs to the class and follows the group */
+  const one=(mkParts[mkSel]&&mkParts[mkSel].cls===cls)?mkParts[mkSel]:list[0];
+  const holder=(one.pin!=null)?(mkParts.find(q=>q.pid===one.pin)||mkRoot):mkRoot;
+  const hf=mkFlows(holder);
+  const F=CC_CODE.field, KW=CC_CODE.keyword;
+
+  const g=mkLGroup(body,"This box","."+(names[cls]||""));
+
+  /* What this component IS, before any of its numbers: how many elements
+     wear the class, what it sits in, and what it holds. Three sentences,
+     three text nodes — js/game/i18n.js looks a text node up whole, so a
+     paragraph glued together from counts and class names would never match
+     anything and would stay English forever. */
+  const holdCount=mkParts.filter(q=>q.pin===one.pid).length;
+  const inName=(one.pin!=null)?"."+(names[holder.cls]||"?"):"."+mkSlot;
+  const what=document.createElement("div");what.className="cp-what";
+  const line=t=>{const sp=document.createElement("span");sp.textContent=t;what.appendChild(sp);};
+  line(list.length===1
+    ?"One <div> wears this class."
+    :list.length+" <div>s wear this class — one rule paints them all.");
+  line("It sits inside "+inName+".");
+  line(holdCount===0?"It holds nothing yet."
+      :(holdCount===1?"It holds one box.":"It holds "+holdCount+" boxes."));
+  g.appendChild(what);
+
+  mkLRow(g,"lay","display",KW.lay.tip,mkLKw(list,"lay"));
+  /* the three that only mean anything once this box places its own
+     children — offering them on a block box would teach the wrong thing */
+  if(mkFlows(one)){
+    mkLRow(g,"jus","justify-content",KW.jus.tip,mkLKw(list,"jus"));
+    mkLRow(g,"ali","align-items",KW.ali.tip,mkLKw(list,"ali"));
+    mkLRow(g,"gap","gap",F.gap.tip,mkLNum(list,"gap"));
+  }
+  ["pad","mg","bw","w","h","a"].forEach(k=>{
+    mkLRow(g,k,F[k].prop,F[k].tip,mkLNum(list,k));
+  });
+  if(hf){
+    g.appendChild(mkTip("The box it lives in lays it out, so left and top are not used - justify-content, align-items and its own margin are what move it."));
+  }else{
+    mkLRow(g,"x","left",F.x.tip,mkLNum([one],"x"));
+    mkLRow(g,"y","top",F.y.tip,mkLNum([one],"y"));
+    /* Which corner its left and top name. The other half of "where is the
+       centre": measuring from the middle instead of the top-left is one
+       line of real CSS, and it is the line every front-end developer
+       writes. */
+    mkLRow(g,"org","translate",KW.org.tip,mkLKw(list,"org",["its top-left","its centre"]));
+    const at=document.createElement("div");at.className="mk-instip";
+    at.textContent=CC_WEAR.field(one,"org")===1
+      ?"left and top name its middle — that is translate(-50%, -50%) in the code."
+      :"left and top name its top-left corner, the way a browser measures by default.";
+    g.appendChild(at);
+  }
+
+  mkLInside(body,cls,names);
+  mkLayoutRoot(body);
+}
+
+/* Which box this one lives inside. "What I make is inside them" is the
+   whole idea of nesting, and it needs one row: the piece, or any box that
+   is not this one and not something already inside it. */
+function mkLInside(body,cls,names){
+  const g=mkLGroup(body,"Inside","");
+  const row=document.createElement("div");row.className="mk-lctl";
+  const inside=(mkParts.find(p=>p.cls===cls)||{}).pin;
+  const opt=(lab,pid)=>{
+    const b=document.createElement("button");b.type="button";
+    b.className="mk-kw"+((pid==null?inside==null:inside===pid)?" on":"");
+    b.textContent=lab;
+    b.addEventListener("click",()=>{ if(inside!==pid)mkNestInto(pid,cls); });
+    row.appendChild(b);
+  };
+  opt("."+mkSlot,null);
+  /* a box may not go inside itself or inside anything it already holds —
+     that is what keeps the tree a tree */
+  const banned=new Set([cls]);
+  mkParts.forEach(q=>{ if(banned.has(q.cls))mkDescend(q.pid).forEach(j=>banned.add(mkParts[j].cls)); });
+  const offered=new Set();
+  mkParts.forEach(q=>{
+    if(banned.has(q.cls)||offered.has(q.cls))return;
+    offered.add(q.cls);
+    opt("."+names[q.cls],q.pid);
+  });
+  g.appendChild(row);
+  g.appendChild(mkTip("Everything inside a box moves with it, and measures its width and height against it."));
+}
+
+/* The piece itself is a box too — 100px square, the one every other box is
+   measured against. Giving it a display is how a whole hat gets laid out
+   rather than positioned. */
+function mkLayoutRoot(body){
+  const g=mkLGroup(body,"The piece","."+mkSlot);
+  const F=CC_CODE.field, KW=CC_CODE.keyword, list=[mkRoot];
+  mkLRow(g,"root-lay","display",KW.lay.tip,mkLKw(list,"lay"));
+  mkLRow(g,"root-pad","padding",F.pad.tip,mkLNum(list,"pad"));
+  if(mkFlows(mkRoot)){
+    mkLRow(g,"root-gap","gap",F.gap.tip,mkLNum(list,"gap"));
+    mkLRow(g,"root-jus","justify-content",KW.jus.tip,mkLKw(list,"jus"));
+    mkLRow(g,"root-ali","align-items",KW.ali.tip,mkLKw(list,"ali"));
+  }
 }
 
 /* ---------------- Build mode: boxes, not cells ----------------
@@ -439,8 +777,8 @@ function mkBuildUI(body){
     /* a second tap on the box you already have opens its component — the
        same idiom the Style row uses for a piece you are already wearing */
     b.addEventListener("click",()=>{
-      if(i===mkSel){ compOpen(p.cls); return; }
-      mkSel=i; renderMaker();
+      if(i===mkSel&&mkFocus==null){ mkFocusOn(p.cls); return; }
+      mkSel=i; mkVal=null; mkRender();
     });
     chips.appendChild(b);
   });
@@ -490,7 +828,7 @@ function mkBuildUI(body){
      lifted emoji, and a <b> in the middle breaks the run — the sentence
      would reach the dictionary in pieces and come back English */
   open.textContent="Open ."+(CC_CODE.classNames(mkParts)[sel.cls]||"")+" on its own";
-  open.addEventListener("click",()=>compOpen(sel.cls));
+  open.addEventListener("click",()=>mkFocusOn(sel.cls));
   body.appendChild(open);
 }
 
@@ -498,14 +836,15 @@ function mkBuildUI(body){
    because a class is one thing wherever it appears — and the whole group
    has to land after its new parent, or "parents come first" is broken and
    the tree stops being a tree. */
-function mkNestInto(pid){
-  if(mkFocus==null)return;
+function mkNestInto(pid,cls){
+  if(cls==null)cls=mkFocus;
+  if(cls==null)return;
   const moving=[];
-  mkParts.forEach((q,i)=>{ if(q.cls===mkFocus){ moving.push(i); mkDescend(q.pid).forEach(j=>moving.push(j)); } });
+  mkParts.forEach((q,i)=>{ if(q.cls===cls){ moving.push(i); mkDescend(q.pid).forEach(j=>moving.push(j)); } });
   const set=new Set(moving);
   const went=[], keep=[];
   mkParts.forEach((q,i)=>{ (set.has(i)?went:keep).push(q); });
-  for(const q of went)if(q.cls===mkFocus){ if(pid==null)delete q.pin; else q.pin=pid; }
+  for(const q of went)if(q.cls===cls){ if(pid==null)delete q.pin; else q.pin=pid; }
   if(pid==null){ mkParts=went.concat(keep); }
   else{
     /* land directly after the parent's own subtree, so nothing that was
@@ -518,8 +857,8 @@ function mkNestInto(pid){
       mkParts=keep.slice(0,at).concat(went,keep.slice(at));
     }
   }
-  mkSel=mkParts.findIndex(q=>q.cls===mkFocus);
-  renderComp();
+  mkSel=mkParts.findIndex(q=>q.cls===cls);
+  mkRender();
   if(typeof sfx==="function")sfx(680,.04);
 }
 
@@ -642,8 +981,8 @@ function mkValParts(){
 }
 function mkPick(v){
   if(v.k==="name"){
-    if(mkFocus==null){ compOpen(v.g); return; }
-    const n=$("cpName"); if(n){ n.focus(); n.select&&n.select(); }
+    if(mkFocus!==v.g){ mkFocusOn(v.g); return; }
+    const n=$("mkName"); if(n){ n.focus(); n.select&&n.select(); }
     return;
   }
   mkVal=(mkVal&&mkVal.k===v.k&&mkVal.i===v.i&&mkVal.g===v.g)?null:v;
@@ -652,8 +991,7 @@ function mkPick(v){
     if(at>=0)mkSel=at;
   }
   mkRender();
-  const ins=$(CID()+"Ins"); if(ins&&mkVal)ins.scrollIntoView({block:"nearest"});
-}
+  }
 const mkValNow=(o,k)=>CC_WEAR.field(o,k)|0;
 function mkNudge(d){
   const f=CC_CODE.field[mkVal.k]; if(!f)return;
@@ -667,7 +1005,7 @@ function mkNudge(d){
   if(typeof sfx==="function")sfx(620,.02);
 }
 function mkInsRefresh(){
-  const v=$(CID()+"InsVal"); if(!v||!mkVal)return;
+  const v=$("mkInsVal"); if(!v||!mkVal)return;
   const f=CC_CODE.field[mkVal.k], list=mkValParts();
   if(f&&list.length)v.textContent=mkValNow(list[0],mkVal.k)+f.unit;
 }
@@ -689,7 +1027,7 @@ function mkInspector(){
   return wrap;
 }
 function mkInspectorStrip(){
-  const box=document.createElement("div");box.className="mk-ins";box.id=CID()+"Ins";
+  const box=document.createElement("div");box.className="mk-ins";box.id="mkIns";
   if(!mkVal||!mkValParts().length){ box.hidden=true; return box; }
   const f=CC_CODE.field[mkVal.k], list=mkValParts(), p=list[0];
   if(!p){ box.hidden=true; return box; }
@@ -748,7 +1086,7 @@ function mkInspectorStrip(){
      for an SVG glyph, which would leave one button an icon and its twin
      across the value plain text */
   step(-f.big,"-"+f.big); step(-f.step,"-1");
-  const v=document.createElement("span");v.className="mk-insval";v.id=CID()+"InsVal";
+  const v=document.createElement("span");v.className="mk-insval";v.id="mkInsVal";
   v.textContent=mkValNow(p,mkVal.k)+f.unit;
   box.appendChild(v);
   step(f.step,"+1"); step(f.big,"+"+f.big);
@@ -780,7 +1118,7 @@ function mkCopyFallback(src,done){
    cannot find a <pre> that is not in the document yet, and the first fill
    happens before the caller appends it. */
 function mkCodeRefresh(el){
-  const pre=el||$(CID()+"Code"); if(!pre)return;
+  const pre=el||$("mkCode"); if(!pre)return;
   pre.innerHTML=CC_CODE.html({name:mkName||"my piece",parts:mkParts},mkSlot,mkFocus);
   /* the click handler lives on <pre>, so replacing its children keeps it —
      only the mark on the chosen token has to be put back */
@@ -834,7 +1172,7 @@ function mkCodeBlock(){
   hint.innerHTML='<span class="mk-tipk">42%</span>'+
     '<span class="mk-tipt">Tap any value like this one to change it</span>';
   cw.appendChild(hint);
-  const pre=document.createElement("pre");pre.className="mono";pre.id=CID()+"Code";
+  const pre=document.createElement("pre");pre.className="mono";pre.id="mkCode";
   pre.addEventListener("click",e=>{
     const b=e.target.closest(".val"); if(!b)return;
     mkPick({k:b.dataset.k,
@@ -856,207 +1194,21 @@ function mkCodeBlock(){
   return cw;
 }
 
-/* ---------------- one component, on its own screen ----------------
-   Everything a component needs is here and nothing else is: its class, its
-   boxes, its rule. What it does NOT hide is the rest of the piece — the
-   other boxes stay on the canvas at a quarter strength and the robot beside
-   it wears everything it owns, because you cannot design a brim without
-   seeing the hat it goes under. */
-function compOpen(cls){
+/* Focusing a component no longer swaps screens. mkFocus keeps its exact
+   meaning — a class id, or null for the whole piece — and every region
+   below reads it: the canvas dims the rest, the chip row shows only that
+   class, the code shows only its rule, and the breadcrumb offers the way
+   back out. One editor, filtered. */
+function mkFocusOn(cls){
   if(mkKind!=="parts")return;
+  if(!mkParts.some(p=>p.cls===cls))return;
+  mkFocus=cls; mkVal=null;
   const at=mkParts.findIndex(p=>p.cls===cls);
-  if(at<0)return;
-  mkFocus=cls; mkSel=at; mkVal=null;
-  $("maker").classList.remove("open");
-  renderComp();
-  $("comp").classList.add("open");
+  if(at>=0)mkSel=at;
+  mkRender();
   if(typeof sfx==="function")sfx(640,.04);
 }
-function compExit(){
-  mkFocus=null; mkVal=null;
-  $("comp").classList.remove("open");
-}
-function compClose(){
-  compExit();
-  renderMaker();
-  $("maker").classList.add("open");
-}
-
-function renderComp(){
-  const body=$("compBody"); if(!body)return;
-  if(typeof feCheck==="function")feCheck();
-  body.innerHTML="";
-  if(typeof feBanner==="function")body.appendChild(feBanner());
-  const list=mkParts.filter(p=>p.cls===mkFocus);
-  if(!list.length){ compClose(); return; }
-  const names=CC_CODE.classNames(mkParts);
-
-  /* the class, first and editable, because the name IS the component */
-  const head=document.createElement("div");head.className="cp-name";
-  const dot=document.createElement("span");dot.className="cp-dot";
-  dot.style.background=CC_WEAR.pal[list[0].c];
-  head.appendChild(dot);
-  const dotlab=document.createElement("span");dotlab.className="cp-sel";dotlab.textContent=".";
-  head.appendChild(dotlab);
-  const inp=document.createElement("input");inp.type="text";inp.id="cpName";inp.className="cp-input";
-  inp.maxLength=16;inp.setAttribute("aria-label","Class name");
-  inp.value=names[mkFocus]||"";
-  inp.addEventListener("input",()=>{
-    const n=CC_CODE.cleanName(inp.value);
-    for(const q of mkParts)if(q.cls===mkFocus){ if(n)q.cn=n; else delete q.cn; }
-    mkCodeRefresh();
-  });
-  head.appendChild(inp);
-  const many=document.createElement("span");many.className="cp-many";
-  many.textContent=list.length>1?"×"+list.length:"";
-  head.appendChild(many);
-  body.appendChild(head);
-
-  /* the canvas, with the rest of the piece behind it, and the robot */
-  const stage=document.createElement("div");stage.className="mk-stage";
-  const pv=document.createElement("div");pv.className="mk-prev";
-  const pc=document.createElement("canvas");pc.id="cpPrev";pv.appendChild(pc);
-  const pad=document.createElement("div");pad.className="mk-pad";
-  const cc=document.createElement("canvas");cc.id="cpCanvas";pad.appendChild(cc);
-  stage.appendChild(pv);stage.appendChild(mkPoseRow());stage.appendChild(pad);
-  body.appendChild(stage);
-  if(mkKind==="parts")body.appendChild(mkBoxKey());
-
-  /* which of this component's boxes you are moving, when there is a choice */
-  if(list.length>1){
-    const chips=document.createElement("div");chips.className="mk-parts";
-    mkParts.forEach((p,i)=>{
-      if(p.cls!==mkFocus)return;
-      const b=document.createElement("button");b.type="button";
-      b.className="mk-part"+(i===mkSel?" on":"");
-      b.innerHTML='<span class="pd" style="background:'+CC_WEAR.pal[p.c]+'"></span>';
-      b.setAttribute("aria-label","."+names[mkFocus]);
-      b.addEventListener("click",()=>{ mkSel=i; mkVal=null; renderComp(); });
-      chips.appendChild(b);
-    });
-    body.appendChild(chips);
-  }
-
-  /* What this component IS, in a sentence: how many elements wear the
-     class, what it sits in, and what it holds. A component screen that
-     does not say what a component is teaches the buttons, not the idea. */
-  const holdCount=mkParts.filter(q=>q.pin===list[0].pid).length;
-  const inName=(list[0].pin!=null)
-    ?"."+(names[(mkParts.find(q=>q.pid===list[0].pin)||{}).cls]||"?")
-    :"."+mkSlot;
-  /* three sentences, three text nodes: js/game/i18n.js looks a text node up
-     whole, so a paragraph glued together from counts and class names would
-     never match anything and would stay English forever */
-  const what=document.createElement("div");what.className="cp-what";
-  const line=t=>{const sp=document.createElement("span");sp.textContent=t;what.appendChild(sp);};
-  line(list.length===1
-    ?"One <div> wears this class."
-    :list.length+" <div>s wear this class — one rule paints them all.");
-  line("It sits inside "+inName+".");
-  line(holdCount===0?"It holds nothing yet."
-      :(holdCount===1?"It holds one box.":"It holds "+holdCount+" boxes."));
-  body.appendChild(what);
-
-  /* Which corner its left and top name. The other half of "where is the
-     centre": measuring from the middle instead of the top-left is one line
-     of real CSS, and it is the line every front-end developer writes. */
-  const holderFlows=mkFlows(mkParts.find(q=>q.pid===list[0].pin)||mkRoot);
-  const anc=document.createElement("div");anc.className="cp-in";
-  const alab=document.createElement("span");alab.className="cp-inlab";alab.textContent="Measured from";
-  anc.appendChild(alab);
-  const arow=document.createElement("div");arow.className="cp-inrow";
-  [["its top-left",0],["its centre",1]].forEach(([lab,v])=>{
-    const b2=document.createElement("button");b2.type="button";
-    b2.className="mk-kw"+(CC_WEAR.field(list[0],"org")===v?" on":"");
-    b2.textContent=lab; b2.disabled=holderFlows;
-    b2.addEventListener("click",()=>{ for(const q of list)q.org=v; renderComp(); });
-    arow.appendChild(b2);
-  });
-  anc.appendChild(arow);
-  body.appendChild(anc);
-  if(!holderFlows){
-    const at=document.createElement("div");at.className="mk-instip";
-    at.textContent=CC_WEAR.field(list[0],"org")===1
-      ?"left and top name its middle — that is translate(-50%, -50%) in the code."
-      :"left and top name its top-left corner, the way a browser measures by default.";
-    body.appendChild(at);
-  }
-
-  /* Which box this one lives inside. "What I make is inside them" is the
-     whole idea of nesting, and it needs one row: the slot, or any box that
-     is not this one and not something already inside it. */
-  const host=document.createElement("div");host.className="cp-in";
-  const hlab=document.createElement("span");hlab.className="cp-inlab";hlab.textContent="Inside";
-  host.appendChild(hlab);
-  const hrow=document.createElement("div");hrow.className="cp-inrow";
-  const inside=list[0].pin;
-  const mkIn=(lab,pid,dis)=>{
-    const b=document.createElement("button");b.type="button";
-    b.className="mk-kw"+(inside===pid||(pid==null&&inside==null)?" on":"");
-    b.textContent=lab; b.disabled=!!dis;
-    b.addEventListener("click",()=>{ mkNestInto(pid); });
-    hrow.appendChild(b);
-  };
-  mkIn("."+mkSlot,null,false);
-  const banned=new Set([mkFocus]);
-  mkParts.forEach(q=>{ if(banned.has(q.cls))mkDescend(q.pid).forEach(j=>banned.add(mkParts[j].cls)); });
-  const offered=new Set();
-  mkParts.forEach(q=>{
-    if(banned.has(q.cls)||offered.has(q.cls))return;
-    offered.add(q.cls);
-    mkIn("."+names[q.cls],q.pid,false);
-  });
-  host.appendChild(hrow);
-  body.appendChild(host);
-
-  /* the colours and the corner radius, both of which the rule owns */
-  const pal=document.createElement("div");pal.className="mk-pal";
-  for(let i=0;i<CC_WEAR.pal.length;i++){
-    const b=document.createElement("button");b.type="button";
-    b.className="mk-dot"+(list[0].c===i?" on":"");
-    b.style.background=CC_WEAR.pal[i];
-    b.setAttribute("aria-label",CC_WEAR.names[i]);
-    b.addEventListener("click",()=>{ for(const q of list)q.c=i; mkColor=i; renderComp(); });
-    pal.appendChild(b);
-  }
-  body.appendChild(pal);
-
-  const shp=document.createElement("div");shp.className="mk-shapes";
-  CC_WEAR.rad.forEach((r,i)=>{
-    const b=document.createElement("button");b.type="button";
-    b.className="mk-shape"+(list[0].r===r?" on":"");b.textContent=PART_WORD[i];
-    b.addEventListener("click",()=>{ for(const q of list)q.r=r; renderComp(); });
-    shp.appendChild(b);
-  });
-  body.appendChild(shp);
-
-  const acts=document.createElement("div");acts.className="mk-acts";
-  const btn=(lab,cls,fn)=>{
-    const b=document.createElement("button");b.type="button";b.className="mk-btn"+(cls?" "+cls:"");
-    b.textContent=lab;b.addEventListener("click",fn);acts.appendChild(b);
-  };
-  btn("Copy","",()=>{ mkCopyPart(mkSel); });
-  btn("Front","",()=>{ mkToFront(mkSel); renderComp(); });
-  btn("Delete","danger",()=>{
-    for(let i=mkParts.length-1;i>=0;i--)if(mkParts[i].cls===mkFocus)mkParts.splice(i,1);
-    if(typeof sfx==="function")sfx(360,.05);
-    compClose();
-  });
-  body.appendChild(acts);
-
-  body.appendChild(mkCodeBlock());
-
-  const done=document.createElement("div");done.className="mk-acts";
-  const d=document.createElement("button");d.type="button";d.className="mk-btn go";
-  d.textContent="Done";
-  d.addEventListener("click",compClose);
-  done.appendChild(d);
-  body.appendChild(done);
-
-  wireParts(cc);
-  requestAnimationFrame(mkDraw);
-  mkPlay();
-}
+function mkFocusOff(){ mkFocus=null; mkVal=null; mkRender(); }
 
 /* Painting is pointer-driven so a dragged finger fills a line of cells.
    touch-action:none on the canvas (css/codecraft-v7.css) is what stops the

@@ -117,6 +117,21 @@ const HE={
   "left ו-top מציינים את המרכז שלה — זה translate(-50%, -50%) בקוד.",
 "left and top name its top-left corner, the way a browser measures by default.":
   "left ו-top מציינים את הפינה השמאלית העליונה שלה, כמו שדפדפן מודד כברירת מחדל.",
+/* the three tabs, and what the Layout tab groups its rows under. Every
+   property name below is missing on purpose: `display`, `padding` and the
+   rest are identifiers and stay as written, and an entry that maps a word
+   to itself is the shape that froze the game once already. */
+"Boxes":"קופסאות","Code":"קוד","Layout":"פריסה","Brush":"מכחול",
+"This box":"הקופסה הזאת","The piece":"האביזר",
+"one component":"קונפוננטה אחת","whole piece":"כל האביזר",
+"Add a box in Boxes first — a rule is always about something.":
+  "קודם תוסיף קופסה בקופסאות — כלל תמיד מדבר על משהו.",
+"Choose a box in Boxes, and its rule appears here.":
+  "תבחר קופסה בקופסאות, והכלל שלה יופיע כאן.",
+"The box it lives in lays it out, so left and top are not used - justify-content, align-items and its own margin are what move it.":
+  "הקופסה שהיא נמצאת בתוכה מסדרת אותה, אז left ו-top לא בשימוש - justify-content, align-items וה-margin שלה הם שמזיזים אותה.",
+"Everything inside a box moves with it, and measures its width and height against it.":
+  "כל מה שבתוך קופסה זז איתה, ומודד את הרוחב והגובה שלו לפיה.",
 "Learn how a web page is built":"ללמוד איך בונים דף אינטרנט",
 "Stop the lesson":"לעצור את השיעור",
 "🎩 You built a hat out of HTML and CSS!":"🎩 בנית כובע מ-HTML ומ-CSS!",
