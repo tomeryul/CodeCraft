@@ -183,7 +183,14 @@ async function loadCommunity(){
     const rows=all.filter(r=>!(typeof isBlocked==="function"&&isBlocked(r.author))
                           && !(typeof wasReported==="function"&&wasReported(r.id)));
     el.innerHTML="";
-    if(!rows.length){el.innerHTML='<div class="authnote">No challenges yet — be the first to publish one! ✏️</div>';return;}
+    if(!rows.length){
+      el.innerHTML='<div class="authnote">No challenges yet — be the first to publish one! ✏️</div>';
+      const b=document.createElement("button");b.type="button";b.className="ord-go ord-code";
+      b.textContent="✏️ Publish yours";
+      b.addEventListener("click",()=>{ document.querySelectorAll(".sheet.open").forEach(x=>x.classList.remove("open")); mgEnterCreator(); });
+      el.appendChild(b);
+      return;
+    }
     const myUid=(sbUser&&sbUser.uid)||null;
     for(const row of rows){
       const solved=!!player.projects["cc_"+row.id];
@@ -210,7 +217,7 @@ async function loadCommunity(){
 }
 function mgEnterCreator(){
   mgEnter({id:"custom",em:"✏️",name:"My Challenge",diff:1,coins:0,xp:0,maxBlocks:12,gw:8,gh:6,
-    desc:"Design mode — pick a tool: 🖌️ target tiles · 🤖 the robot's start · 🔢 pre-placed blocks · 🧱 walls to route around · 🕳️ pits (⤵️ Drop a block in to bridge one) · 🔑 keys and 🚪 doors of the same colour · 🌀 a pair of portals · 🔘 plates that open 🚧 gates (the robot — or a block left behind — holds one down) · ➡️ one-way tiles · 🧹 erase. Then write a program and press ▶ to PROVE the level is solvable — only then do 💾 Save / ➕ Add level / 🌍 Publish open up. Build several levels for a multi-level minigame.",
+    desc:"Pick a tool under the board and tap tiles. Then write a program and press ▶ to prove it can be solved — that is what opens 💾 Save, ➕ Add level and 🌍 Publish.",
     allowed:CREATOR_BLOCKS,start:{x:0,y:0,dir:1},cells:[],initial:[],tiles:[],cases:[],preset:null});
   // Every creator session shares player.projPrograms["custom"], so a new challenge
   // used to open with the PREVIOUS one's program — which could then be run with ▶ and
@@ -343,14 +350,31 @@ function mgStepArg(d){
   else mgState.brickNum=mgState.brickNum==null?null:(mgState.brickNum<=1?null:mgState.brickNum-1);
   mgCreatorUI();
 }
+/* The tools dock to the bottom of the board tab. position:sticky never
+   leaves its parent, and their parent was the creator bar, which now sits
+   below the board — so with the board on screen the tools were not. As a
+   direct child of the panel, last in order, they stick to the foot of the
+   scroll for as long as any of the panel is in view. Done once, at load. */
+(function(){
+  const panel=$("mgPanel"), tools=$("mgTools"), stp=$("mgBrickStp");
+  if(!panel||!tools||!stp||$("mgDock"))return;
+  const dock=document.createElement("div");dock.id="mgDock";
+  dock.appendChild(stp);dock.appendChild(tools);
+  panel.appendChild(dock);
+})();
 function mgToolsUI(){
   const el=$("mgTools");if(!el)return;
   const cur=mgState.paintMode, list=mgToolList();
   el.innerHTML="";
   for(const t of list){
+    /* the name under the icon: eleven unlabelled glyphs in a row was the
+       one part of the creator that needed the guide open beside it */
     const b=document.createElement("button");
     b.className="tool"+(t.id===cur?" on":"");
-    b.textContent=t.em;b.title=t.lbl;
+    b.title=t.lbl;
+    const em=document.createElement("span");em.className="tl-em";em.textContent=t.em;
+    const lb=document.createElement("span");lb.className="tl-lb";lb.textContent=t.lbl;
+    b.appendChild(em);b.appendChild(lb);
     b.addEventListener("click",()=>{mgState.paintMode=t.id;sfx(560,.03);mgCreatorUI();});
     el.appendChild(b);
   }
@@ -361,7 +385,7 @@ function mgToolsUI(){
     stp.style.display=on?"":"none";
     if(on){
       const lab=stp.querySelector(".clab");
-      if(lab)lab.textContent=t.dir?"🧭 Way":t.colour?"🎨 Colour":"🔢 No.";
+      if(lab)lab.textContent=t.dir?"🧭 Direction":t.colour?"🎨 Colour":"🔢 Block number";
       $("mgBrickN").textContent=t.dir?DIR_EM[(mgState.tileArg|0)%4]
         :t.colour?(mgState.tileArg||1)
         :(mgState.brickNum==null?"—":mgState.brickNum);

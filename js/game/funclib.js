@@ -79,6 +79,12 @@ function renderFuncLib(){
     const n=document.createElement("div");n.className="authnote";
     n.textContent="Nothing saved yet. Write something in 🔧 A or 🔧 B, then save it here — it will be waiting in every world and every minigame.";
     el.appendChild(n);
+    /* the empty shelf points at where a function gets written */
+    const b=document.createElement("button");b.type="button";b.className="ord-go ord-code";
+    b.textContent="🔧 Write a program";
+    b.addEventListener("click",()=>{ document.querySelectorAll(".sheet.open").forEach(x=>x.classList.remove("open"));
+      $("editor").classList.add("open"); if(typeof setTab==="function")setTab("blocks"); });
+    el.appendChild(b);
     return;
   }
   for(const e of lib){

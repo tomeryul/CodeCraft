@@ -301,7 +301,7 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #splashAuth .sp-link{background:none;border:none;color:var(--accent2);font-weight:700;text-decoration:underline;font-size:12.5px;padding:0;cursor:pointer;}
 #splashStatus{position:relative;z-index:1;font-size:12.5px;color:var(--accent2);min-height:16px;margin-top:8px;font-weight:600;}
 #splash .feats{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap;justify-content:center;}
-#splash .feats span{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:7px 14px;font-size:12.5px;color:#e8e2ff;font-weight:600;}
+#splash .feats>span{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:7px 14px;font-size:12.5px;color:#e8e2ff;font-weight:600;}
 #splash .floaty{position:absolute;top:0;font-size:26px;opacity:.3;animation:floatUp linear infinite;pointer-events:none;}
 @keyframes floatUp{from{transform:translateY(105vh) rotate(-10deg)}to{transform:translateY(-12vh) rotate(35deg)}}
 #splash .bot,#splash h1,#splash .tag,#playBtn,#splash .feats{position:relative;z-index:1;}

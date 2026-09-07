@@ -118,6 +118,11 @@ function renderPy(){
     }
   }
   const src = "# "+r.name+" — program\n" + defs +
-    (r.program.length?toPy(r.program,""):"# (no blocks yet — build something in the Blocks tab!)");
+    (r.program.length?toPy(r.program,"")
+      /* an empty listing shows what a listing looks like, so the promise
+         "your blocks and this code always match" has something to point at */
+      :"# (no blocks yet — build something in the Blocks tab!)\n"+
+       "#\n# Add a block, and its Python appears here — line for line.\n#\n"+
+       "#   walk_to(\"tree\")\n#   chop()\n#   walk_to(\"market\")\n#   drop()");
   if(window.CC_EXTRAS)$("pyCode").innerHTML=CC_EXTRAS.hl(src);else $("pyCode").textContent=src;
 }

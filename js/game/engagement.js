@@ -104,11 +104,13 @@ function renderQuests(){
     }
     el.appendChild(div);
   }
+  /* four numbers, one strip, above the list: as four tiles pinned to the
+     foot they took a quarter of the sheet and read as the point of it */
   $("statsBox").innerHTML=
-    '<div>Collected<b>'+totals.collected+'</b></div>'+
-    '<div>Earned<b>'+totals.earned+' 🪙</b></div>'+
-    '<div>Steps walked<b>'+(totals.dist||0)+'</b></div>'+
-    '<div>Robot team<b>'+robots.length+' 🤖</b></div>';
+    '<div><b>'+totals.collected+'</b>Collected</div>'+
+    '<div><b>'+totals.earned+' 🪙</b>Earned</div>'+
+    '<div><b>'+(totals.dist||0)+'</b>Steps walked</div>'+
+    '<div><b>'+robots.length+' 🤖</b>Robot team</div>';
 }
 function dailyGift(){
   const today=new Date().toDateString();

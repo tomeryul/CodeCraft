@@ -110,7 +110,7 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
        wed.run && !wed.stop && !wed.reset && !wed.step, wed);
     ck(`${W}x${H} the run row sits directly on the tab bar, which is last`,
        wed.barAboveTabs && wed.tabsLast, wed);
-    ck(`${W}x${H} Run is 58px`, wed.runH===58, wed);
+    ck(`${W}x${H} Run is 50px`, wed.runH===50, wed);
 
     // ---------------------------------------------- challenge: all four
     const mg = await pg.evaluate(()=>{
@@ -339,12 +339,19 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
       if(mgState) mgExit(false);
       mgEnterCreator();
       $('mgCreatorBar').classList.add('setup');
-      const t=document.querySelector('#mgCreatorBar .cb-row.tools');
-      const st=t?getComputedStyle(t).position:null, r=t?t.getBoundingClientRect():null;
+      /* the tray is the dock at the foot of the board's scroll: sticky
+         never leaves its parent, so it is a direct child of the panel and
+         has to be on screen with the board, at the half height too */
+      const d=document.getElementById('mgDock'), t=document.querySelector('#mgDock .cb-row.tools');
+      const st=d?getComputedStyle(d).position:null, r=d?d.getBoundingClientRect():null;
+      const bt=document.getElementById('boardTab').getBoundingClientRect();
+      const named=[...document.querySelectorAll('#mgDock .tool .tl-lb')].map(e=>e.textContent.trim()).filter(Boolean).length;
+      const tools=document.querySelectorAll('#mgDock .tool').length;
       if(mgState) mgExit(false);
-      return { sticky:st, inView:r?r.top<innerHeight:false };
+      return { sticky:st, inView:r?(r.bottom<=bt.bottom+1&&r.top<innerHeight):false, named, tools };
     });
-    ck(`${W}x${H} creator tool tray is sticky`, cr.sticky==='sticky'&&cr.inView, cr);
+    ck(`${W}x${H} creator tool tray is sticky at the foot of the board`, cr.sticky==='sticky'&&cr.inView, cr);
+    ck(`${W}x${H} every creator tool carries its name`, cr.tools>0&&cr.named===cr.tools, cr);
 
     // ---------------------------------------------- the status pill is one line
     /* The corner used to hold two objects on three rows, 105px of map. It is

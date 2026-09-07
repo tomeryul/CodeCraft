@@ -123,8 +123,10 @@ function stylePlay(){
       /* fit to the canvas's own CSS width so the robot is never squeezed on a
          narrow sheet */
       const w=Math.max(200,Math.round(cv.clientWidth||330));
-      const g=styleFit(cv,w,150);
-      if(g)drawBoardRobot(g,w/2,84,70,"E",safeColor(r.color),false,ts||0,
+      /* 186 tall, with the pose chips in the bottom 40: the robot stands
+         above them rather than behind them */
+      const g=styleFit(cv,w,186);
+      if(g)drawBoardRobot(g,w/2,78,70,"E",safeColor(r.color),false,ts||0,
         {hat:r.hat,outfit:r.outfit,shoes:r.shoes},styleMode);
     }
     styleRaf=requestAnimationFrame(step);
@@ -191,6 +193,8 @@ function renderStyle(){
   const pv=document.createElement("div");pv.className="st-prev";
   const cv=document.createElement("canvas");cv.id="stylePrev";
   pv.appendChild(cv);body.appendChild(pv);
+  /* inside the box, along its bottom edge — the same place the maker keeps
+     them, so the two screens agree about where a pose is chosen */
   const modes=document.createElement("div");modes.className="st-modes";
   /* the three the world actually shows — a piece has to be judged on a
      moving robot, and the chop is the pose that catches a bad hat */
@@ -200,7 +204,7 @@ function renderStyle(){
     b.addEventListener("click",()=>{styleMode=k;renderStyle();});
     modes.appendChild(b);
   });
-  body.appendChild(modes);
+  pv.appendChild(modes);
 
   /* three slots */
   const slot=(kind,label,list,label4)=>{

@@ -125,14 +125,19 @@ function editor(){
   if(x){x.classList.add("iconbtn","x");hd.appendChild(x);}
   ed.insertBefore(hd,ed.firstChild);
 
-  /* chips, undo, redo and expand belong to the program, not to the
-     screen — they move into the tab that shows the program */
-  const bt=$("blocksTab");
-  if(bt){
+  /* The robot chips ARE the title of the world editor — "Robo-1" was in
+     the header and again in a row under it, and that row cost the program
+     60px on a screen where the program had 90. So the chips take the
+     title's slot when there is no challenge (the challenge keeps its name
+     there), and undo/redo — controls on the program — sit at the end of
+     the routine row, beside the cost button that already lives there. */
+  const chips=$("robotChips");
+  if(chips){ chips.classList.add("v5-chips"); hd.insertBefore(chips,t.nextSibling); }
+  const bt=$("blocksTab"), rt=$("routineTabs");
+  if(bt&&rt&&btns){
     const row=document.createElement("div");row.className="v5-edrow";
-    const chips=$("robotChips"); if(chips)row.appendChild(chips);
-    if(btns)row.appendChild(btns);
-    bt.insertBefore(row,bt.firstChild);
+    rt.parentNode.insertBefore(row,rt);
+    row.appendChild(rt); row.appendChild(btns);
   }
   if(edHead&&!edHead.children.length)edHead.remove();
 

@@ -78,6 +78,7 @@ const HE={
   "שמור פונקציה פעם אחת — והשתמש בה בכל עולם ובכל מיני-משחק.",
 "A job on a clock. Deliver it before time runs out.":
   "עבודה על השעון. תספק אותה לפני שהזמן נגמר.",
+"New pieces unlock as you level up.":"חלקים חדשים נפתחים כשאתה עולה רמה.",
 "Dress your robots. New pieces unlock as you level up.":
   "תלביש את הרובוטים שלך. פריטים חדשים נפתחים כשאתה עולה רמה.",
 /* the Style sheet: slot labels, the two preview poses, and the pieces */
@@ -140,6 +141,11 @@ const HE={
   "הקופסה שהיא נמצאת בתוכה מסדרת אותה, אז left ו-top לא בשימוש - justify-content, align-items וה-margin שלה הם שמזיזים אותה.",
 "Everything inside a box moves with it, and measures its width and height against it.":
   "כל מה שבתוך קופסה זז איתה, ומודד את הרוחב והגובה שלו לפיה.",
+"Pick a tool under the board and tap tiles. Then write a program and press ▶ to prove it can be solved — that is what opens 💾 Save, ➕ Add level and 🌍 Publish.":
+  "בחר כלי מתחת ללוח ולחץ על משבצות. אחר כך כתוב תוכנית ולחץ ▶ כדי להוכיח שאפשר לפתור — זה מה שפותח 💾 שמור, ➕ הוסף שלב ו-🌍 פרסם.",
+"Write a program":"לכתוב תוכנית",
+"Add a block, and its Python appears here — line for line.":"תוסיף בלוק, והפייתון שלו יופיע כאן — שורה מול שורה.",
+"Publish yours":"לפרסם משלך",
 "Learn how a web page is built":"ללמוד איך בונים דף אינטרנט",
 "Stop the lesson":"לעצור את השיעור",
 "🎩 You built a hat out of HTML and CSS!":"🎩 בנית כובע מ-HTML ומ-CSS!",
@@ -1015,7 +1021,7 @@ const HE_RAW={
 "🔢 Eight inputs is the maximum.":"🔢 שמונה קלטים זה המקסימום.",
 "🔢 Match every \"→n\" target — each numbered tile needs that exact block!":
   "🔢 התאם כל יעד „→n” — כל משבצת ממוספרת צריכה בדיוק את הבלוק הזה!",
-"🔢 No.":"🔢 לא.",
+"🔢 Block number":"🔢 מספר הבלוק","🧭 Direction":"🧭 כיוון",
 "🔢 Not sorted yet — get every numbered block onto its target cell in order!":
   "🔢 עוד לא ממוין — תביא כל בלוק ממוספר למשבצת היעד שלו לפי הסדר!",
 "🔧 Write something in routine A or B first — that is what players will be given.":
@@ -1564,6 +1570,17 @@ for(const k in HE_T){
   if(bare!==raw)compile(bare,HE_T[k]);
 }
 
+/* A Hebrew line that opens with a Latin word — a robot's name, a class
+   name — takes its direction from that word under unicode-bidi:plaintext,
+   and its full stop ends up on the wrong side. A right-to-left mark in
+   front says which language the sentence is in; it is zero-width, so
+   nothing else moves. Only when the line actually holds Hebrew. */
+const HEB_RX=/[\u0590-\u05FF]/, STRONG_LATIN=/^[\s"'“(\[]*[A-Za-z0-9]/;
+function rtlLead(s){
+  if(typeof s!=="string"||s.charCodeAt(0)===0x200F)return s;
+  return (HEB_RX.test(s)&&STRONG_LATIN.test(s))?"\u200F"+s:s;
+}
+
 /* ---------- the swap ---------- */
 function tr(s,el){
   const core=norm(s);
@@ -1639,7 +1656,7 @@ function walk(node){
        observer, which assigns it again — a microtask loop that never
        yields, so the page freezes. Any entry that translates to itself was
        enough to trigger it; the Language row's "English · עברית" did. */
-    if(out!==null&&out!==node.nodeValue)node.nodeValue=out;
+    if(out!==null&&out!==node.nodeValue)node.nodeValue=rtlLead(out);
     return;
   }
   if(node.nodeType!==1)return;

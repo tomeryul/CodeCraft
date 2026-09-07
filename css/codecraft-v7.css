@@ -437,3 +437,125 @@ body.sheets-full #maker.sized,
 /* what this component is, in a card the colour of a property name */
 #maker .mk-lgrp .cp-what{margin:2px 0 8px;padding:9px 11px;border-radius:13px;
   background:rgba(90,184,255,.09);border:1px solid rgba(90,184,255,.18);color:var(--ink);}
+
+/* =====================================================================
+   The review pass — the code page gets its room, and the rest follows
+   ---------------------------------------------------------------------
+   Twenty-eight screens walked at phone size. What follows is every place
+   the walk found, in the order they matter.
+   ===================================================================== */
+
+/* ---- 1. THE EDITOR: the program had 90px on a screen named after it ----
+   Two rows above the program said the same thing twice: "Robo-1" in the
+   header and "Robo-1" again in a chip row under it, with undo/redo beside.
+   The chips ARE the title of the world editor, so they take its slot; a
+   challenge keeps its own name there and hides them. Undo/redo — controls
+   on the program — sit at the end of the routine row, where the cost
+   button already lives. The run row loses 22px it never used. */
+#editor .v5-head #robotChips{flex:1;min-width:0;margin:0;padding:2px 0;gap:6px;}
+#editor.mg .v5-head #robotChips{display:none;}
+#editor:not(.mg) .v5-head .v5-title{display:none;}
+#editor .v5-head .rchip{min-height:40px;padding:0 12px;font-size:13px;}
+#blocksTab .v5-edrow{display:flex;align-items:center;gap:8px;margin:0 0 8px;}
+#blocksTab .v5-edrow #routineTabs{flex:1;min-width:0;margin:0;flex-wrap:nowrap;
+  overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:2px 0;}
+#blocksTab .v5-edrow #routineTabs::-webkit-scrollbar{display:none;}
+#blocksTab .v5-edrow #routineTabs .rtab{flex:0 0 auto;min-height:36px;}
+#blocksTab .v5-edrow .ed-btns{
+  display:flex;flex:0 0 auto;gap:3px;padding:3px;
+  border-radius:12px;background:rgba(0,0,0,.24);border:1px solid var(--hair);}
+#blocksTab .v5-edrow .ed-btns button{width:36px;height:36px;border-radius:9px;}
+/* the run row: 58px of Run inside 23px of padding was a third of the
+   program's height. 50 is still the biggest thing on the sheet. */
+#actionBar{padding:7px 12px 9px;gap:8px;}
+#actionBar #runBtn,#actionBar #stopBtn{height:50px;font-size:17px;}
+#actionBar .ibtn,#actionBar #mgSpeedBtn{width:48px;height:48px;}
+
+/* ---- 2. THE CREATOR: the board first, and tools that say their name ----
+   At half height the creator showed one row of the board under two bars
+   of controls: the goal, the canvas, THEN the tools (sticky, at the foot
+   of the scroll) and the rest. A tool is an icon with its name under it,
+   the way the build bar in the world already does it, so the legend that
+   used to be a truncated paragraph is the row itself. */
+#boardTab #mgPanel{display:flex;flex-direction:column;}
+#boardTab #mgGoal{order:-3;}
+#boardTab #mgCases{order:-2;}
+#boardTab #mgCanvas{order:-1;}
+#mgCreatorBar .cb-row.tools{gap:4px;padding:5px;}
+#mgCreatorBar .tool{width:auto;min-width:52px;height:50px;padding:0 6px;border-radius:12px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
+#mgCreatorBar .tool .tl-em{font-size:18px;line-height:1;}
+#mgCreatorBar .tool .tl-em .ui-emoji{width:19px;height:19px;vertical-align:0;}
+#mgCreatorBar .tool .tl-lb{font-size:9px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
+  color:var(--ink2);white-space:nowrap;}
+#mgCreatorBar .tool.on .tl-lb{color:var(--accent2);}
+/* the tools and their stepper dock to the foot of the board's scroll —
+   see the note above mgToolsUI in js/game/challenges.js */
+#mgDock{display:none;order:99;position:sticky;bottom:0;z-index:3;flex-direction:column;gap:5px;
+  margin-top:8px;padding-top:4px;background:var(--panel);}
+#mgCreatorBar.on ~ #mgDock{display:flex;}
+#mgDock .cb-row.tools{position:static;display:flex;align-items:center;flex-wrap:nowrap;
+  overflow-x:auto;scrollbar-width:none;background:rgba(26,19,50,.86);
+  border:1px solid var(--hair);border-radius:16px;}
+#mgDock .cb-row.tools::-webkit-scrollbar{display:none;}
+/* the stepper belongs to the tool it edits: a full row above the tools,
+   not a pill floating right above the actions */
+#mgDock .stp{position:static;display:flex;align-items:center;gap:2px;align-self:stretch;
+  justify-content:center;padding:3px;border-radius:999px;
+  background:rgba(0,0,0,.22);backdrop-filter:none;border:none;}
+#mgDock .stp .clab{font-size:11px;font-weight:800;color:var(--ink2);margin:0 4px 0 8px;white-space:nowrap;}
+#mgDock .stp button{width:36px;height:36px;padding:0;border-radius:999px;font-size:15px;
+  background:rgba(255,255,255,.07);color:var(--ink);border:none;}
+#mgDock .num{min-width:24px;text-align:center;font-weight:900;font-size:13.5px;}
+#mgDock .tool{width:auto;min-width:52px;height:50px;padding:0 6px;border-radius:12px;border:none;
+  background:transparent;color:var(--ink);font-family:inherit;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
+#mgDock .tool.on{background:rgba(255,184,48,.2);box-shadow:inset 0 0 0 1.5px rgba(255,214,107,.7);}
+#mgDock .tool .tl-em{font-size:18px;line-height:1;}
+#mgDock .tool .tl-em .ui-emoji{width:19px;height:19px;vertical-align:0;}
+#mgDock .tool .tl-lb{font-size:9px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
+  color:var(--ink2);white-space:nowrap;}
+#mgDock .tool.on .tl-lb{color:var(--accent2);}
+/* three lines before the goal folds: two cut the creator's one sentence */
+#mgGoal{-webkit-line-clamp:3;}
+/* the actions fill their row instead of huddling at its right edge */
+#mgCreatorBar .cb-act .spacer{display:none;}
+#mgCreatorBar .cb-act #mgAddStage,#mgCreatorBar .cb-act #mgPublish{flex:1;min-width:0;}
+#mgCreatorBar .cb-act .ibtn{width:40px;height:40px;}
+
+/* ---- 3. TOASTS over an open sheet ----
+   A banner about the world ("New order!") sat in the middle of the dimmed
+   world behind whatever sheet was open, and read as something stuck. With
+   a sheet open a toast is a notification, so it comes up from the bottom,
+   over the sheet, the way one does everywhere else on the phone. */
+body:has(.sheet.open) #toasts{top:auto;bottom:calc(var(--sab) + 18px);}
+body:has(.sheet.open) #toasts .toast{max-width:88vw;}
+
+/* ---- 5. EMPTY STATES point at the next thing ---- */
+.ord-code{display:block;margin:14px auto 0;align-self:center;
+  background:var(--glass-hi);color:var(--ink);border:1px solid var(--hair);}
+#ccList .ord-code,#funcLibBody .ord-code{margin:10px auto 0;}
+#pyCode{min-height:0;}
+
+/* ---- 6. QUESTS: the totals are one strip at the top, not a quarter of
+   the sheet pinned to its foot ---- */
+#quests{display:flex;flex-direction:column;}
+#quests .m-head{order:-2;}
+#statsBox{order:-1;display:flex;gap:6px;padding:8px 14px 2px;}
+#statsBox div{flex:1;min-width:0;padding:7px 4px 6px;text-align:center;font-size:10px;line-height:1.25;
+  border-radius:11px;}
+#statsBox b{display:block;font-size:14px;margin:0 0 2px;}
+#statsBox b .ui-emoji{width:13px;height:13px;vertical-align:-1px;}
+#questList{order:0;}
+
+/* ---- 6. STYLE: the poses sit inside the preview, as in the maker ---- */
+#styleBody .st-prev{position:relative;}
+#styleBody .st-prev canvas{height:186px;}
+#styleBody .st-modes{position:absolute;left:8px;right:8px;bottom:6px;margin:0;
+  padding:2px;border-radius:14px;background:rgba(23,17,48,.72);}
+#styleBody .st-mode{min-height:36px;max-width:none;border-radius:12px;font-size:12px;}
+
+/* ---- 6. AGE GATE: "not yet" is grey, not a faded green that reads as an
+   error ---- */
+#ageGo:disabled{opacity:1;background:rgba(255,255,255,.08);color:var(--ink2);
+  border:1px solid var(--hair);border-bottom-color:var(--hair);box-shadow:none;}
