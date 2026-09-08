@@ -126,6 +126,17 @@ const HE={
 "· back to front, tap twice to open one":"· מאחור לפנים, לחץ פעמיים כדי לפתוח אחת",
 "· this component's, back to front":"· של הקונפוננטה הזאת, מאחור לפנים",
 "Shape":"צורה","· border-radius, shared by the class":"· border-radius, משותף ל-class",
+/* the Layout tab's cards: a question each, and what it means */
+"Where":"איפה","Inside what, and where in it":"בתוך מה, ואיפה בתוכו",
+"Size":"גודל","How wide and how tall":"כמה רחב וכמה גבוה",
+"The corners, and the turn":"הפינות, והסיבוב",
+"Space around":"רווח מסביב","Padding, border and margin - the box model":"padding, border ו-margin - מודל הקופסה",
+"Boxes inside":"קופסאות בפנים","How it arranges what it holds":"איך היא מסדרת את מה שהיא מחזיקה",
+"The box every other box is inside":"הקופסה שכל שאר הקופסאות בתוכה",
+"Nothing inside yet. Open another box, set its Inside to this one, and arrange them here.":
+  "עדיין אין כלום בפנים. פתח קופסה אחרת, קבע לה Inside לתוך זו, וסדר אותן כאן.",
+"Which box this one lives inside. Everything inside a box moves with it, and measures its width and height against it.":
+  "בתוך איזו קופסה זו נמצאת. כל מה שבתוך קופסה זז איתה, ומודד את הרוחב והגובה שלו לפיה.",
 "Colour":"צבע","· shared by the class":"· משותף ל-class",
 "worn, live · pick a pose":"לבוש, חי · בחר תנוחה",
 "This one was painted. The boxes you build here take its place when you save.":
@@ -1313,6 +1324,7 @@ const HE_T={
 "{s} is yours!":"{1} שלך!",
 "It sits inside {s}.":"היא נמצאת בתוך {1}.",
 "Open {s} on its own":"לפתוח את {1} לבד",
+"Open {s}":"לפתוח את {1}",
 "{s} is updated!":"{1} עודכן!",
 "{s} steps":"{1} צעדים",
 "{s} — Level {n}/{n}":"{1} — שלב {2}/{3}",
@@ -1575,7 +1587,9 @@ for(const k in HE_T){
    and its full stop ends up on the wrong side. A right-to-left mark in
    front says which language the sentence is in; it is zero-width, so
    nothing else moves. Only when the line actually holds Hebrew. */
-const HEB_RX=/[\u0590-\u05FF]/, STRONG_LATIN=/^[\s"'“(\[]*[A-Za-z0-9]/;
+/* "first strong letter is Latin": punctuation and brackets are neutral, so
+   a line that opens with <div> is decided by the d, not the < */
+const HEB_RX=/[\u0590-\u05FF]/, STRONG_LATIN=/^[^A-Za-z\u0590-\u05FF]*[A-Za-z0-9]/;
 function rtlLead(s){
   if(typeof s!=="string"||s.charCodeAt(0)===0x200F)return s;
   return (HEB_RX.test(s)&&STRONG_LATIN.test(s))?"\u200F"+s:s;

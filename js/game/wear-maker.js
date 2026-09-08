@@ -468,107 +468,195 @@ function mkCodePanel(body){
   body.appendChild(mkCodeBlock());
 }
 
-/* ================= Layout: every declaration as a row =================
-   The Code tab shows the stylesheet. This shows the same declarations as
-   a list, and it exists for one reason: flexbox has no handle on the
-   canvas and no shape button, so `justify-content` only ever existed as a
-   token inside a rule you had to write first. If you had not already
-   given a box `display: row`, there was no way to find it at all.
+/* ================= Layout: the rule, asked as questions =================
+   The Code tab shows the stylesheet. This tab used to show the same
+   declarations as a list — thirteen rows in the order a stylesheet writes
+   them — and a child looking for "how do I put this inside that" found it
+   at the bottom, under rotate. A stylesheet's order is not a person's.
+
+   So the rule is asked the way a person asks it, one card per question:
+
+     Where          inside what, and where in it
+     Size           how wide, how tall
+     Shape          the corners, the turn
+     Space around   padding · border · margin — the box model
+     Boxes inside   how it arranges what it holds
+     The piece      the box every other box is inside
+
+   A card folded shows its values in its header, so the whole rule is
+   readable at a glance and only the card being edited is open. A number
+   is a slider with a −/+ either side: the slider is the rough move, the
+   buttons the exact one, and the value is on the card whichever you use.
 
    Nothing here is a new capability. Every row writes through the same
    rules the code block does — left and top belong to the element, and
    everything else to the class, so a change lands on every box wearing it.
    ===================================================================== */
 
+/* which cards are open. Where and Size to begin with: the first two
+   questions anyone asks of a box they just made. */
+const mkSecOpen={where:true,size:true};
 /* which row has its sentence open. A value you can change and cannot name
    is a slider, so every property is a button that says what it does. */
 function mkLTipRow(host,key,tip){
   if(mkLHelp!==key||!tip)return;
   host.appendChild(mkTip(tip));
 }
-function mkLRow(host,key,prop,tip,ctrl){
+
+/* one card: a header that says what the question is and what the answer
+   currently is, and a body that opens under it */
+function mkCard(body,key,icon,title,meaning,summary){
+  const open=!!mkSecOpen[key];
+  const card=document.createElement("section");card.className="mk-lgrp"+(open?" open":"");
+  card.dataset.sec=key;
+  const h=document.createElement("button");h.type="button";h.className="mk-lgh";
+  h.setAttribute("aria-expanded",open?"true":"false");
+  const ic=document.createElement("span");ic.className="mk-lgi";ic.textContent=icon;
+  h.appendChild(ic);
+  const tw=document.createElement("span");tw.className="mk-lgtw";
+  const t=document.createElement("span");t.className="mk-lgt";t.textContent=title;
+  tw.appendChild(t);
+  const m=document.createElement("span");m.className="mk-lgm";m.textContent=meaning;
+  tw.appendChild(m);
+  h.appendChild(tw);
+  /* the values, in the code's own colours, so a folded card is still read */
+  const sm=document.createElement("span");sm.className="mk-lgs";
+  (summary||[]).forEach(([prop,val])=>{
+    const chip=document.createElement("span");chip.className="mk-lgsv";
+    const pn=document.createElement("i");pn.textContent=prop;chip.appendChild(pn);
+    chip.appendChild(document.createTextNode(String(val)));
+    sm.appendChild(chip);
+  });
+  h.appendChild(sm);
+  const cv=document.createElement("span");cv.className="mk-lgv";h.appendChild(cv);
+  h.addEventListener("click",()=>{ mkSecOpen[key]=!mkSecOpen[key]; mkDockOnly(); });
+  card.appendChild(h);
+  const bd=document.createElement("div");bd.className="mk-lgb";
+  if(!open)bd.hidden=true;
+  card.appendChild(bd);
+  body.appendChild(card);
+  return bd;
+}
+
+/* a row: the property on the first line with its value on the right, the
+   control on the second. The property is the button that says what it
+   does — a value you can change and cannot name is a slider, not a lesson. */
+function mkLRow(host,key,prop,tip,ctrl,valueEl){
   const row=document.createElement("div");row.className="mk-lrow";
+  const head=document.createElement("div");head.className="mk-lrh";
   const b=document.createElement("button");b.type="button";
   b.className="mk-lprop"+(mkLHelp===key?" on":"");
   b.textContent=prop;
   b.setAttribute("aria-label",prop+" - what it does");
   b.addEventListener("click",()=>{ mkLHelp=(mkLHelp===key)?null:key; mkDockOnly(); });
-  row.appendChild(b);
+  head.appendChild(b);
+  if(valueEl)head.appendChild(valueEl);
+  row.appendChild(head);
   row.appendChild(ctrl);
   host.appendChild(row);
   mkLTipRow(host,key,tip);
 }
 
-/* the same five buttons the inspector strip uses, because they are the
-   same edit: the range is the one the canvas drag itself produces, so the
-   two ways of changing a value cannot disagree about what is legal */
-function mkLNum(list,k){
+/* a number: a slider between − and +. The slider is the rough move, the
+   buttons the exact one; the range is the one the canvas drag itself
+   produces, so the two ways of editing cannot disagree about what is
+   legal. Sliding paints live; letting go is when the lesson checks. */
+function mkLNum(host,key,list,k,prop,tip,dot){
   const f=CC_CODE.field[k];
-  const box=document.createElement("div");box.className="mk-lctl";
   const now=()=>CC_WEAR.field(list[0],k)|0;
   const v=document.createElement("span");v.className="mk-lval";
   v.textContent=now()+f.unit;
-  const step=(d,txt)=>{
-    const b=document.createElement("button");b.type="button";b.className="mk-step";
-    b.textContent=txt;b.setAttribute("aria-label",f.prop+" "+txt);
-    b.addEventListener("click",()=>{
-      const cur=now(), next=Math.max(f.lo,Math.min(f.hi,cur+d));
-      if(next===cur)return;
-      for(const q of list)q[k]=next;
-      v.textContent=next+f.unit;
-      mkDraw(); mkCodeRefresh(); mkInsRefresh();
+  const box=document.createElement("div");box.className="mk-lctl";
+  const write=(next,settle)=>{
+    next=Math.max(f.lo,Math.min(f.hi,next|0));
+    const cur=now(); if(next===cur)return;
+    for(const q of list)q[k]=next;
+    v.textContent=next+f.unit;
+    rng.value=next;
+    mkDraw(); mkCodeRefresh(); mkInsRefresh();
+    if(settle){
       if(typeof sfx==="function")sfx(620,.02);
-      /* a finished lesson step changes the banner, which is in the stage
-         and not in this panel */
       if(typeof feCheck==="function"&&feCheck())mkRender();
-    });
+    }
+  };
+  const step=(d,txt)=>{
+    const b=document.createElement("button");b.type="button";b.className="mk-lb";
+    b.textContent=txt;b.setAttribute("aria-label",(prop||f.prop)+" "+txt);
+    b.addEventListener("click",()=>write(now()+d,true));
     box.appendChild(b);
   };
   /* a plain hyphen, not U+2212: js/ui-icons.js swaps the typographic minus
      for an SVG glyph, which would leave one button an icon and its twin
      across the value plain text */
-  step(-f.big,"-"+f.big); step(-f.step,"-1");
-  box.appendChild(v);
-  step(f.step,"+1"); step(f.big,"+"+f.big);
-  return box;
+  step(-f.step,"-");
+  const rng=document.createElement("input");rng.type="range";rng.className="mk-rng";
+  rng.min=f.lo;rng.max=f.hi;rng.step=f.step;rng.value=now();
+  rng.setAttribute("aria-label",prop||f.prop);
+  rng.addEventListener("input",()=>write(+rng.value,false));
+  rng.addEventListener("change",()=>{
+    if(typeof sfx==="function")sfx(620,.02);
+    if(typeof feCheck==="function"&&feCheck())mkRender();
+  });
+  box.appendChild(rng);
+  step(f.step,"+");
+  /* the property name carries the colour the canvas paints that ring in,
+     so padding on the card and padding on the picture are the same green */
+  let label=prop||f.prop;
+  const valueEl=v;
+  const dotEl=dot?(()=>{const i=document.createElement("i");i.className="mk-ldot";i.style.background=dot;return i;})():null;
+  mkLRow(host,key,label,tip||f.tip,box,valueEl);
+  if(dotEl){ const pb=host.querySelector('.mk-lrow:last-of-type .mk-lprop'); if(pb)pb.insertBefore(dotEl,pb.firstChild); }
 }
 
 /* a keyword is not a range — it is a short list of words, and the words
    themselves are the buttons. `display` decides whether left and top exist
    at all, so a keyword rebuilds the screen rather than repainting a value. */
-function mkLKw(list,k,labels){
+function mkLKw(host,key,list,k,prop,tip,labels){
   const K=CC_CODE.keyword[k];
-  const box=document.createElement("div");box.className="mk-lctl";
-  (labels||K.opts()).forEach((word,v)=>{
+  const cur=CC_WEAR.field(list[0],k);
+  const words=labels||K.opts();
+  const v=document.createElement("span");v.className="mk-lval kw";v.textContent=words[cur]||"";
+  const box=document.createElement("div");box.className="mk-lctl words";
+  words.forEach((word,i)=>{
     const b=document.createElement("button");b.type="button";
-    b.className="mk-kw"+(CC_WEAR.field(list[0],k)===v?" on":"");
+    b.className="mk-kw"+(cur===i?" on":"");
     b.textContent=word;
     b.addEventListener("click",()=>{
-      if(CC_WEAR.field(list[0],k)===v)return;
-      for(const q of list)q[k]=v;
+      if(CC_WEAR.field(list[0],k)===i)return;
+      for(const q of list)q[k]=i;
       if(typeof sfx==="function")sfx(660,.03);
       mkRender();
     });
     box.appendChild(b);
   });
-  return box;
+  mkLRow(host,key,prop||K.prop,tip||K.tip,box,v);
 }
 
-function mkLGroup(body,title,sel){
-  const g=document.createElement("div");g.className="mk-lgrp";
-  const h=document.createElement("div");h.className="mk-lgh";
-  const t=document.createElement("span");t.className="mk-lgt";t.textContent=title;
-  h.appendChild(t);
-  /* two spans, not one: a class name is an identifier and must reach the
-     dictionary on its own, or the title would be looked up glued to it and
-     stay English forever */
-  if(sel){ const s=document.createElement("span");s.className="mk-lgs";s.textContent=sel;h.appendChild(s); }
-  g.appendChild(h);
-  body.appendChild(g);
-  return g;
+/* the sentences that say what this component IS, before any number: how
+   many elements wear the class, what it sits in, and what it holds. Three
+   text nodes — js/game/i18n.js looks a text node up whole. */
+function mkWhat(body,list,one,holder,names){
+  const holdCount=mkParts.filter(q=>q.pin===one.pid).length;
+  const inName=(one.pin!=null)?"."+(names[holder.cls]||"?"):"."+mkSlot;
+  const what=document.createElement("div");what.className="cp-what";
+  const line=t=>{const sp=document.createElement("span");sp.textContent=t;what.appendChild(sp);};
+  line(list.length===1
+    ?"One <div> wears this class."
+    :list.length+" <div>s wear this class — one rule paints them all.");
+  line("It sits inside "+inName+".");
+  line(holdCount===0?"It holds nothing yet."
+      :(holdCount===1?"It holds one box.":"It holds "+holdCount+" boxes."));
+  body.appendChild(what);
+  return holdCount;
 }
 
+/* a lesson step that lives on one card unfolds that card, so "give the
+   outer box some padding" is not also "and find where padding is" */
+const FE_CARD={nest:"where",pad:"space",flex:"inside",center:"inside"};
 function mkLayoutPanel(body){
+  if(typeof feOn==="function"&&feOn()){
+    const st=FE_STEPS[feStep()]; if(st&&FE_CARD[st.id])mkSecOpen[FE_CARD[st.id]]=true;
+  }
   const names=CC_CODE.classNames(mkParts);
   const cls=(mkFocus!=null&&mkParts.some(p=>p.cls===mkFocus))
     ?mkFocus:(mkParts[mkSel]?mkParts[mkSel].cls:null);
@@ -587,66 +675,94 @@ function mkLayoutPanel(body){
   const one=(mkParts[mkSel]&&mkParts[mkSel].cls===cls)?mkParts[mkSel]:list[0];
   const holder=(one.pin!=null)?(mkParts.find(q=>q.pid===one.pin)||mkRoot):mkRoot;
   const hf=mkFlows(holder);
-  const F=CC_CODE.field, KW=CC_CODE.keyword;
+  const F=CC_CODE.field, KW=CC_CODE.keyword, fv=(o,k)=>CC_WEAR.field(o,k)|0;
 
-  const g=mkLGroup(body,"This box","."+(names[cls]||""));
+  /* the name, and what it is */
+  const head=document.createElement("div");head.className="mk-lname";
+  const sel=document.createElement("span");sel.className="mk-lsel";sel.textContent="."+(names[cls]||"");
+  head.appendChild(sel);
+  body.appendChild(head);
+  const holdCount=mkWhat(body,list,one,holder,names);
 
-  /* What this component IS, before any of its numbers: how many elements
-     wear the class, what it sits in, and what it holds. Three sentences,
-     three text nodes — js/game/i18n.js looks a text node up whole, so a
-     paragraph glued together from counts and class names would never match
-     anything and would stay English forever. */
-  const holdCount=mkParts.filter(q=>q.pin===one.pid).length;
+  /* ---- Where: inside what, and where in it. First, because it is the
+     question the whole idea of nesting lives in. ---- */
   const inName=(one.pin!=null)?"."+(names[holder.cls]||"?"):"."+mkSlot;
-  const what=document.createElement("div");what.className="cp-what";
-  const line=t=>{const sp=document.createElement("span");sp.textContent=t;what.appendChild(sp);};
-  line(list.length===1
-    ?"One <div> wears this class."
-    :list.length+" <div>s wear this class — one rule paints them all.");
-  line("It sits inside "+inName+".");
-  line(holdCount===0?"It holds nothing yet."
-      :(holdCount===1?"It holds one box.":"It holds "+holdCount+" boxes."));
-  g.appendChild(what);
-
-  mkLRow(g,"lay","display",KW.lay.tip,mkLKw(list,"lay"));
-  /* the three that only mean anything once this box places its own
-     children — offering them on a block box would teach the wrong thing */
-  if(mkFlows(one)){
-    mkLRow(g,"jus","justify-content",KW.jus.tip,mkLKw(list,"jus"));
-    mkLRow(g,"ali","align-items",KW.ali.tip,mkLKw(list,"ali"));
-    mkLRow(g,"gap","gap",F.gap.tip,mkLNum(list,"gap"));
-  }
-  ["pad","mg","bw","w","h","a"].forEach(k=>{
-    mkLRow(g,k,F[k].prop,F[k].tip,mkLNum(list,k));
-  });
+  const whereSum=hf?[["inside",inName],["placed by",inName]]
+                   :[["inside",inName],["left",one.x+"%"],["top",one.y+"%"]];
+  const w=mkCard(body,"where","🧭","Where","Inside what, and where in it",whereSum);
+  mkLInside(w,cls,names,one);
   if(hf){
-    g.appendChild(mkTip("The box it lives in lays it out, so left and top are not used - justify-content, align-items and its own margin are what move it."));
+    /* its holder lays it out: left and top are not used, and the way to
+       move it is on the holder — so offer the holder */
+    const note=document.createElement("div");note.className="mk-lnote";
+    note.textContent="The box it lives in lays it out, so left and top are not used - justify-content, align-items and its own margin are what move it.";
+    w.appendChild(note);
+    if(holder!==mkRoot){
+      const go=document.createElement("button");go.type="button";go.className="mk-btn mk-lgo";
+      go.textContent="Open "+inName;
+      go.addEventListener("click",()=>{ mkSecOpen.inside=true; mkFocusOn(holder.cls); });
+      w.appendChild(go);
+    }
   }else{
-    mkLRow(g,"x","left",F.x.tip,mkLNum([one],"x"));
-    mkLRow(g,"y","top",F.y.tip,mkLNum([one],"y"));
+    mkLNum(w,"x",[one],"x","left");
+    mkLNum(w,"y",[one],"y","top");
     /* Which corner its left and top name. The other half of "where is the
        centre": measuring from the middle instead of the top-left is one
        line of real CSS, and it is the line every front-end developer
        writes. */
-    mkLRow(g,"org","translate",KW.org.tip,mkLKw(list,"org",["its top-left","its centre"]));
+    mkLKw(w,"org",list,"org","translate",KW.org.tip,["its top-left","its centre"]);
     const at=document.createElement("div");at.className="mk-instip";
-    at.textContent=CC_WEAR.field(one,"org")===1
+    at.textContent=fv(one,"org")===1
       ?"left and top name its middle — that is translate(-50%, -50%) in the code."
       :"left and top name its top-left corner, the way a browser measures by default.";
-    g.appendChild(at);
+    w.appendChild(at);
   }
 
-  mkLInside(body,cls,names);
+  /* ---- Size ---- */
+  const sz=mkCard(body,"size","📏","Size","How wide and how tall",[["width",one.w+"%"],["height",one.h+"%"]]);
+  mkLNum(sz,"w",list,"w","width");
+  mkLNum(sz,"h",list,"h","height");
+
+  /* ---- Shape ---- */
+  const sh=mkCard(body,"shape","⬜","Shape","The corners, and the turn",[["border-radius",one.r+"%"],["rotate",(one.a|0)+"deg"]]);
+  mkLNum(sh,"r",list,"r","border-radius");
+  mkLNum(sh,"a",list,"a","rotate");
+
+  /* ---- Space around: the box model, in the canvas's own colours ---- */
+  const sp=mkCard(body,"space","📐","Space around","Padding, border and margin - the box model",
+    [["padding",fv(one,"pad")+"px"],["border",fv(one,"bw")+"px"],["margin",fv(one,"mg")+"px"]]);
+  mkLNum(sp,"pad",list,"pad","padding",null,"#93e09b");
+  mkLNum(sp,"bw",list,"bw","border",null,"#ffd66b");
+  mkLNum(sp,"mg",list,"mg","margin",null,"#f6b26b");
+
+  /* ---- Boxes inside: how it arranges what it holds ---- */
+  const flows=mkFlows(one);
+  const inSum=[["display",flows?CC_WEAR.lay[fv(one,"lay")]:"block"]];
+  if(flows)inSum.push(["justify",CC_WEAR.jus[fv(one,"jus")]],["align",CC_WEAR.ali[fv(one,"ali")]],["gap",fv(one,"gap")+"px"]);
+  const ins=mkCard(body,"inside","🧱","Boxes inside","How it arranges what it holds",inSum);
+  if(!holdCount){
+    const n=document.createElement("div");n.className="mk-lnote";
+    n.textContent="Nothing inside yet. Open another box, set its Inside to this one, and arrange them here.";
+    ins.appendChild(n);
+  }
+  mkLKw(ins,"lay",list,"lay","display");
+  if(flows){
+    mkLKw(ins,"jus",list,"jus","justify-content");
+    mkLKw(ins,"ali",list,"ali","align-items");
+    mkLNum(ins,"gap",list,"gap","gap");
+  }
+
   mkLayoutRoot(body);
 }
 
 /* Which box this one lives inside. "What I make is inside them" is the
    whole idea of nesting, and it needs one row: the piece, or any box that
    is not this one and not something already inside it. */
-function mkLInside(body,cls,names){
-  const g=mkLGroup(body,"Inside","");
-  const row=document.createElement("div");row.className="mk-lctl";
-  const inside=(mkParts.find(p=>p.cls===cls)||{}).pin;
+function mkLInside(host,cls,names,one){
+  const inside=one.pin;
+  const v=document.createElement("span");v.className="mk-lval kw";
+  v.textContent=(inside==null)?"."+mkSlot:"."+(names[(mkParts.find(q=>q.pid===inside)||{}).cls]||"?");
+  const row=document.createElement("div");row.className="mk-lctl words";
   const opt=(lab,pid)=>{
     const b=document.createElement("button");b.type="button";
     b.className="mk-kw"+((pid==null?inside==null:inside===pid)?" on":"");
@@ -665,22 +781,27 @@ function mkLInside(body,cls,names){
     offered.add(q.cls);
     opt("."+names[q.cls],q.pid);
   });
-  g.appendChild(row);
-  g.appendChild(mkTip("Everything inside a box moves with it, and measures its width and height against it."));
+  mkLRow(host,"pin","Inside","Which box this one lives inside. Everything inside a box moves with it, and measures its width and height against it.",row,v);
 }
 
 /* The piece itself is a box too — 100px square, the one every other box is
    measured against. Giving it a display is how a whole hat gets laid out
    rather than positioned. */
 function mkLayoutRoot(body){
-  const g=mkLGroup(body,"The piece","."+mkSlot);
-  const F=CC_CODE.field, KW=CC_CODE.keyword, list=[mkRoot];
-  mkLRow(g,"root-lay","display",KW.lay.tip,mkLKw(list,"lay"));
-  mkLRow(g,"root-pad","padding",F.pad.tip,mkLNum(list,"pad"));
-  if(mkFlows(mkRoot)){
-    mkLRow(g,"root-gap","gap",F.gap.tip,mkLNum(list,"gap"));
-    mkLRow(g,"root-jus","justify-content",KW.jus.tip,mkLKw(list,"jus"));
-    mkLRow(g,"root-ali","align-items",KW.ali.tip,mkLKw(list,"ali"));
+  const F=CC_CODE.field, KW=CC_CODE.keyword, list=[mkRoot], fv=k=>CC_WEAR.field(mkRoot,k)|0;
+  const flows=mkFlows(mkRoot);
+  const sum=[["display",flows?CC_WEAR.lay[fv("lay")]:"block"],["padding",fv("pad")+"px"]];
+  if(flows)sum.push(["gap",fv("gap")+"px"]);
+  const g=mkCard(body,"root","🎩","The piece","The box every other box is inside",sum);
+  const nm=document.createElement("div");nm.className="mk-lname small";
+  const sel=document.createElement("span");sel.className="mk-lsel";sel.textContent="."+mkSlot;
+  nm.appendChild(sel);g.appendChild(nm);
+  mkLKw(g,"root-lay",list,"lay","display");
+  mkLNum(g,"root-pad",list,"pad","padding",null,"#93e09b");
+  if(flows){
+    mkLNum(g,"root-gap",list,"gap","gap");
+    mkLKw(g,"root-jus",list,"jus","justify-content");
+    mkLKw(g,"root-ali",list,"ali","align-items");
   }
 }
 

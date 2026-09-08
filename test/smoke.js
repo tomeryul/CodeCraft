@@ -2742,71 +2742,81 @@ async function ev(expr) {
 
   /* The Layout tab. It exists because justify-content had nowhere to be
      found: it was a token inside a rule you had to write before you could
-     tap it. Every row here is the same declaration the code block edits,
-     reachable without hunting for it first. */
+     tap it. It is the rule asked as questions — Where, Size, Shape, Space
+     around, Boxes inside, The piece — one card each, with the values in
+     the header while the card is folded, and a slider between − and +
+     where there was a row of five buttons. */
   const LAYT = JSON.parse(await ev(`(()=>{
     if(typeof mkLayoutPanel!=='function')return JSON.stringify({missing:true});
     mgState=null; mgRobot=null; player.myWear=[]; player.level=20; player.feTut=null;
     makerOpen('hat',null); mkParts=[]; renderMaker();
     mkAddPart(); mkAddPart();
+    for(const k in mkSecOpen)delete mkSecOpen[k]; mkSecOpen.where=true; mkSecOpen.size=true;
     mkTab='layout'; renderMaker();
     const out={};
-    const props=()=>[...document.querySelectorAll('#makerBody .mk-lprop')].map(b=>b.textContent);
-    const row=p=>[...document.querySelectorAll('#makerBody .mk-lrow')]
-      .find(r=>r.querySelector('.mk-lprop').textContent===p);
-    const step=(p,t)=>[...row(p).querySelectorAll('.mk-step')].find(b=>b.textContent===t).click();
-    const word=(p,w)=>[...row(p).querySelectorAll('.mk-kw')].find(b=>b.textContent===w).click();
-    out.rows=props();
-    /* a stepper writes the real value, and says what it wrote */
+    const cards=()=>[...document.querySelectorAll('#makerBody .mk-lgrp')];
+    const card=t=>cards().find(g=>g.querySelector('.mk-lgt').textContent===t);
+    const rows=c=>[...c.querySelectorAll('.mk-lrow')].map(r=>r.querySelector('.mk-lprop').textContent);
+    const row=(c,p)=>[...c.querySelectorAll('.mk-lrow')].find(r=>r.querySelector('.mk-lprop').textContent===p);
+    out.cards=cards().map(g=>g.querySelector('.mk-lgt').textContent);
+    /* the question a child asks first is the first card, and its first
+       row is the one that used to be at the bottom of the list */
+    out.whereOpen=card('Where').classList.contains('open');
+    out.whereRows=rows(card('Where'));
+    out.foldedSummary=[...card('Space around').querySelectorAll('.mk-lgsv')].map(e=>e.textContent);
+    /* a slider writes the real value; the + writes exactly one more */
     const w0=mkParts[mkSel].w;
-    step('width','+10'); step('width','+1');
-    out.wrote=mkParts[mkSel].w===w0+11 &&
-      row('width').querySelector('.mk-lval').textContent===(w0+11)+'%';
+    const wr=row(card('Size'),'width'), rng=wr.querySelector('.mk-rng');
+    rng.value=w0+10; rng.dispatchEvent(new Event('input'));
+    wr.querySelector('.mk-lb:last-child').click();
+    out.wrote=mkParts[mkSel].w===w0+11 && wr.querySelector('.mk-lval').textContent===(w0+11)+'%';
     /* the property name is the button that says what the property does */
-    row('padding').querySelector('.mk-lprop').click();
-    out.tip=(document.querySelector('#makerBody .mk-lgrp .mk-instip')||{}).textContent;
-    row('padding').querySelector('.mk-lprop').click();
-    out.tipGone=props().length===out.rows.length;
+    mkSecOpen.space=true; renderMaker();
+    row(card('Space around'),'padding').querySelector('.mk-lprop').click();
+    out.tip=(card('Space around').querySelector('.mk-instip')||{}).textContent;
+    row(card('Space around'),'padding').querySelector('.mk-lprop').click();
+    out.tipGone=!card('Space around').querySelector('.mk-instip');
     /* THE point of the tab: display is a row, and choosing row is what
        makes justify-content and align-items appear at all */
-    out.hidden=props().indexOf('justify-content')<0;
-    word('display','row');
-    out.shown=props().indexOf('justify-content')>=0 && props().indexOf('gap')>=0;
+    mkSecOpen.inside=true; renderMaker();
+    out.hidden=rows(card('Boxes inside')).indexOf('justify-content')<0;
+    [...row(card('Boxes inside'),'display').querySelectorAll('.mk-kw')].find(b=>b.textContent==='row').click();
+    out.shown=rows(card('Boxes inside')).indexOf('justify-content')>=0 && rows(card('Boxes inside')).indexOf('gap')>=0;
     out.lay=mkParts[mkSel].lay;
-    /* and a box its holder lays out loses left and top, here as in the code */
+    /* a box its holder lays out loses left and top, says why, and offers
+       the holder — because the holder is where the answer now is */
     mkParts[0].lay=1; mkParts[1].pin=mkParts[0].pid; mkSel=1; renderMaker();
-    out.noLeft=props().indexOf('left')<0 && props().indexOf('translate')<0;
-    out.saysWhy=[...document.querySelectorAll('#makerBody .mk-instip')]
-      .some(t=>t.textContent.indexOf('left and top are not used')>=0);
-    /* Inside is the nesting row, and it never offers a box its own subtree */
-    const ins=[...document.querySelectorAll('#makerBody .mk-lgrp')]
-      .find(g=>g.querySelector('.mk-lgt').textContent==='Inside');
-    out.inside=[...ins.querySelectorAll('.mk-kw')].map(b=>b.textContent);
+    out.noLeft=rows(card('Where')).indexOf('left')<0 && rows(card('Where')).indexOf('translate')<0;
+    out.saysWhy=[...card('Where').querySelectorAll('.mk-lnote')].some(t=>t.textContent.indexOf('left and top are not used')>=0);
+    out.offersHolder=(card('Where').querySelector('.mk-lgo')||{}).textContent;
+    /* Inside is the first row of the first card, and it never offers the
+       box its own subtree */
+    out.inside=[...row(card('Where'),'Inside').querySelectorAll('.mk-kw')].map(b=>b.textContent);
     out.own='.'+CC_CODE.classNames(mkParts)[mkParts[1].cls];
-    /* what the component IS, before any of its numbers */
     out.what=[...document.querySelectorAll('#makerBody .cp-what span')].map(t=>t.textContent);
-    /* the piece has a rule of its own, and it is the last group */
-    out.groups=[...document.querySelectorAll('#makerBody .mk-lgt')].map(t=>t.textContent);
-    mkRoot.lay=1; renderMaker();
-    out.pieceFlex=[...document.querySelectorAll('#makerBody .mk-lgrp')]
-      .find(g=>g.querySelector('.mk-lgt').textContent==='The piece')
-      .querySelectorAll('.mk-lprop').length;
+    /* the piece has a rule of its own, and it is the last card */
+    mkRoot.lay=1; mkSecOpen.root=true; renderMaker();
+    out.pieceFlex=card('The piece').querySelectorAll('.mk-lprop').length;
     mkRoot.lay=0;
     player.myWear=[]; makerExit();
     return JSON.stringify(out);
   })()`));
-  check("the Layout tab lists the rule this box has, in the order CSS writes it",
-    !LAYT.missing && JSON.stringify(LAYT.rows) === JSON.stringify(
-      ['display','padding','margin','border','width','height','rotate',
-       'left','top','translate','display','padding']), JSON.stringify(LAYT.rows));
-  check("a Layout stepper writes the real value", LAYT.wrote === true, JSON.stringify(LAYT));
+  check("the Layout tab asks the rule as questions, Where first",
+    !LAYT.missing && JSON.stringify(LAYT.cards) === JSON.stringify(
+      ['Where','Size','Shape','Space around','Boxes inside','The piece']), JSON.stringify(LAYT.cards));
+  check("Inside is the first row of the first card, open by default",
+    LAYT.whereOpen === true && LAYT.whereRows[0] === 'Inside' &&
+    JSON.stringify(LAYT.whereRows) === JSON.stringify(['Inside','left','top','translate']), JSON.stringify(LAYT));
+  check("a folded card still shows its values",
+    JSON.stringify(LAYT.foldedSummary) === JSON.stringify(['padding0px','border0px','margin0px']), JSON.stringify(LAYT.foldedSummary));
+  check("a Layout slider writes the real value, and + writes one more", LAYT.wrote === true, JSON.stringify(LAYT));
   check("every Layout property says what it does when you tap its name",
     LAYT.tip === CC_PAD_TIP && LAYT.tipGone === true, JSON.stringify(LAYT.tip));
   /* the whole reason the tab exists */
   check("display: row is what makes justify-content findable at all",
     LAYT.hidden === true && LAYT.shown === true && LAYT.lay === 1, JSON.stringify(LAYT));
-  check("a box its holder lays out shows no left, top or translate, and says why",
-    LAYT.noLeft === true && LAYT.saysWhy === true, JSON.stringify(LAYT));
+  check("a box its holder lays out shows no left or top, says why, and offers the holder",
+    LAYT.noLeft === true && LAYT.saysWhy === true && LAYT.offersHolder === 'Open .gold-tile', JSON.stringify(LAYT));
   /* the piece, and the box it is already in — but never itself, which is
      what keeps the tree a tree */
   check("Inside offers the piece and every legal holder, and never itself",
@@ -2815,8 +2825,7 @@ async function ev(expr) {
   check("the tab says what the component is before it says any number",
     Array.isArray(LAYT.what) && LAYT.what.length === 3 &&
     LAYT.what[1] === 'It sits inside .gold-tile.', JSON.stringify(LAYT.what));
-  check("the piece has a rule of its own, after the box and its nesting",
-    JSON.stringify(LAYT.groups) === JSON.stringify(['This box','Inside','The piece']) &&
+  check("the piece has a rule of its own, on the last card",
     LAYT.pieceFlex === 5, JSON.stringify(LAYT));
 
   /* Wide: the maker's own size control. The canvas gives its height to
