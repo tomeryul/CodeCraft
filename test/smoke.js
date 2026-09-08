@@ -2817,6 +2817,66 @@ async function ev(expr) {
     typeof BOARD.empty === 'string' && BOARD.empty.indexOf('Walk To') < 0 &&
     BOARD.empty.indexOf(String(BOARD.budget) + ' blocks') >= 0, JSON.stringify(BOARD.empty));
 
+  /* The level designer. Every control in it used to be an icon in a
+     square: a cube, a gear the icon pack draws as a sun, a floppy disk —
+     and the greyed-out ones gave no reason for being greyed out. */
+  const MAKE = JSON.parse(await ev(`(async()=>{
+    if(typeof mgEnterCreator!=='function'||typeof mgStatus!=='function')return JSON.stringify({missing:true});
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    if(mgState)mgExit(false); player.level=20;
+    document.querySelectorAll('.sheet.open').forEach(x=>x.classList.remove('open'));
+    mgEnterCreator(); await wait(700);
+    const out={};
+    const labels=sel=>[...document.querySelectorAll(sel)].filter(e=>e.offsetParent)
+      .map(e=>{const l=e.querySelector('.tl-lb');return l?l.textContent:'';});
+    out.tools2d=labels('#mgTools .tool');
+    /* the 3D toggle is an .ibtn too and carries its own word, not a label */
+    out.acts=labels('#mgCreatorBar .cb-act .ibtn').filter(Boolean);
+    /* an empty board says so, and says it where Save is greyed */
+    out.empty=$('mgStatus').textContent;
+    out.emptyBad=$('mgStatus').className.indexOf('bad')>=0;
+    out.saveOff=$('mgSave').classList.contains('locked');
+    /* design something: the strip moves on to what is left to do */
+    mgState.proj.cells=[[3,3]]; mgState.solved=false; mgCreatorUI();
+    out.unproven=$('mgStatus').textContent;
+    out.unprovenHmm=$('mgStatus').className.indexOf('hmm')>=0;
+    mgState.solved=true; mgCreatorUI();
+    out.proven=$('mgStatus').className.indexOf('ok')>=0;
+    out.saveOn=!$('mgSave').classList.contains('locked');
+    /* the setup steppers were three numbers with no names */
+    $('mgSetup').click(); await wait(300);
+    /* js/ui-icons.js lifts each emoji into its own span, so the words are
+       what is compared — the emoji is an <svg> by the time this runs */
+    out.stp=[...document.querySelectorAll('#mgCreatorBar .stprow .clab')]
+      .map(e=>e.textContent.trim());
+    $('mgSetup').click();
+    /* the 3D designer's tools carry names too */
+    if(typeof on3d==='function'&&$('t3Btn')){
+      const c=window.confirm; window.confirm=()=>true;
+      $('t3Btn').click(); await wait(600); window.confirm=c;
+      out.tools3d=labels('#mgTools .tool');
+      out.statusOff=$('mgStatus').style.display==='none';
+      out.t3warn=($('t3Warn').textContent||'').length>0;
+    }
+    mgExit(false);
+    return JSON.stringify(out);
+  })()`));
+  check("every tool in the designer carries its name, flat and in 3D",
+    !MAKE.missing && MAKE.tools2d.indexOf('Target') >= 0 && MAKE.tools2d.every(t => !!t) &&
+    Array.isArray(MAKE.tools3d) && MAKE.tools3d.join() === 'Brick,Ground,Pit,Start,Erase',
+    JSON.stringify(MAKE));
+  check("so do Setup and Save, which were a sun and a floppy disk",
+    MAKE.acts.join() === 'Setup,Save', JSON.stringify(MAKE.acts));
+  check("a greyed-out Save says why, and stops saying it once it is earned",
+    MAKE.emptyBad === true && MAKE.saveOff === true && MAKE.unprovenHmm === true &&
+    MAKE.proven === true && MAKE.saveOn === true, JSON.stringify(MAKE));
+  check("the setup steppers say what their numbers are",
+    JSON.stringify(MAKE.stp) === JSON.stringify(['Block budget','Width','Height']),
+    JSON.stringify(MAKE.stp));
+  /* two strips saying the same thing is one strip too many */
+  check("the 3D designer keeps its own status strip, and only its own",
+    MAKE.statusOff === true && MAKE.t3warn === true, JSON.stringify(MAKE));
+
   /* The Layout tab. It exists because justify-content had nowhere to be
      found: it was a token inside a rule you had to write before you could
      tap it. It is the rule asked as questions — Where, Size, Shape, Space

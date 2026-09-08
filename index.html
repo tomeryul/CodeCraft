@@ -92,8 +92,10 @@
       <div id="mgCreatorBar">
         <div class="cb-row tools" id="mgTools"></div>
         <span class="stp" id="mgBrickStp"><span class="clab">🔢</span><button id="mgBrickDec">−</button><span id="mgBrickN" class="num"></span><button id="mgBrickInc">＋</button></span>
+        <!-- where the design is, in one line: nothing yet, unproven, or
+             ready. The 3D designer has had one since it was written. -->
+        <div id="mgStatus" class="t3warn"></div>
         <div class="cb-row cb-act">
-          <span class="spacer"></span>
           <button id="mgSetup" class="ibtn" title="Level setup">⚙️</button>
           <button id="mgSave" class="ibtn" title="Save to My Challenges">💾</button>
           <button id="mgAddStage" title="Prove the level, then bank it and start the next">➕ Add level</button>
@@ -110,9 +112,9 @@
           <div class="cb-row" id="mgCaseEdit" style="display:none"></div>
           <button id="mgDiff" class="rowbtn" title="Difficulty">⭐ Easy</button>
           <div class="stprow">
-            <span class="stp"><span class="clab">🧩</span><button id="mgBudDec">−</button><span id="mgBudget" class="num"></span><button id="mgBudInc">＋</button></span>
-            <span class="stp"><span class="clab">↔️</span><button id="mgWDec">−</button><span id="mgW" class="num"></span><button id="mgWInc">＋</button></span>
-            <span class="stp"><span class="clab">↕️</span><button id="mgHDec">−</button><span id="mgH" class="num"></span><button id="mgHInc">＋</button></span>
+            <span class="stp"><span class="clab">🧩 Block budget</span><button id="mgBudDec">−</button><span id="mgBudget" class="num"></span><button id="mgBudInc">＋</button></span>
+            <span class="stp"><span class="clab">↔️ Width</span><button id="mgWDec">−</button><span id="mgW" class="num"></span><button id="mgWInc">＋</button></span>
+            <span class="stp"><span class="clab">↕️ Height</span><button id="mgHDec">−</button><span id="mgH" class="num"></span><button id="mgHInc">＋</button></span>
           </div>
         </div>
         <div class="cb-row" id="mgLevels" style="display:none"></div>

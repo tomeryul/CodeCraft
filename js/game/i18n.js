@@ -124,6 +124,15 @@ const HE={
    to itself is the shape that froze the game once already. */
 "Boxes":"קופסאות","Code":"קוד","Layout":"פריסה",
 "More":"עוד","Less":"פחות",
+/* the level designer */
+"Setup":"הגדרות","Save":"לשמור","Brick":"לבנה","Ground":"קרקע","Pit":"בור","Start":"התחלה","Erase":"למחוק",
+"🧩 Block budget":"🧩 תקציב בלוקים","↔️ Width":"↔️ רוחב","↕️ Height":"↕️ גובה",
+"Nothing on the board yet — pick a tool below and tap tiles.":
+  "עדיין אין כלום על הלוח — תבחר כלי למטה ותלחץ על משבצות.",
+"Now write it in 🧩 Blocks and press ▶ — a level counts as a level once you have solved it yourself.":
+  "עכשיו תכתוב את זה ב-🧩 בלוקים ותלחץ ▶ — שלב נחשב שלב רק אחרי שפתרת אותו בעצמך.",
+"✅ Solved — 💾 Save it, ➕ Add another level, or 🌍 Publish it.":
+  "✅ נפתר — 💾 תשמור, ➕ תוסיף עוד שלב, או 🌍 תפרסם.",
 "Tap blocks below to write your program.":"לחץ על בלוקים למטה כדי לכתוב את התוכנית שלך.",
 "Then press ▶ to run it on the board.":"אחר כך לחץ ▶ כדי להריץ אותה על הלוח.",
 "· back to front, tap twice to open one":"· מאחור לפנים, לחץ פעמיים כדי לפתוח אחת",
@@ -156,8 +165,8 @@ const HE={
   "הקופסה שהיא נמצאת בתוכה מסדרת אותה, אז left ו-top לא בשימוש - justify-content, align-items וה-margin שלה הם שמזיזים אותה.",
 "Everything inside a box moves with it, and measures its width and height against it.":
   "כל מה שבתוך קופסה זז איתה, ומודד את הרוחב והגובה שלו לפיה.",
-"Pick a tool under the board and tap tiles. Then write a program and press ▶ to prove it can be solved — that is what opens 💾 Save, ➕ Add level and 🌍 Publish.":
-  "בחר כלי מתחת ללוח ולחץ על משבצות. אחר כך כתוב תוכנית ולחץ ▶ כדי להוכיח שאפשר לפתור — זה מה שפותח 💾 שמור, ➕ הוסף שלב ו-🌍 פרסם.",
+"Pick a tool under the board and tap tiles to design a level.":
+  "בחר כלי מתחת ללוח ולחץ על משבצות כדי לעצב שלב.",
 "Write a program":"לכתוב תוכנית",
 "Add a block, and its Python appears here — line for line.":"תוסיף בלוק, והפייתון שלו יופיע כאן — שורה מול שורה.",
 "Publish yours":"לפרסם משלך",

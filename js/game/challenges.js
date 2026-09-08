@@ -217,7 +217,7 @@ async function loadCommunity(){
 }
 function mgEnterCreator(){
   mgEnter({id:"custom",em:"✏️",name:"My Challenge",diff:1,coins:0,xp:0,maxBlocks:12,gw:8,gh:6,
-    desc:"Pick a tool under the board and tap tiles. Then write a program and press ▶ to prove it can be solved — that is what opens 💾 Save, ➕ Add level and 🌍 Publish.",
+    desc:"Pick a tool under the board and tap tiles to design a level.",
     allowed:CREATOR_BLOCKS,start:{x:0,y:0,dir:1},cells:[],initial:[],tiles:[],cases:[],preset:null});
   // Every creator session shares player.projPrograms["custom"], so a new challenge
   // used to open with the PREVIOUS one's program — which could then be run with ▶ and
@@ -323,6 +323,20 @@ function mgSelectFirstCase(){
   if((p.cases||[]).length){mgState.caseEdit=0;putBoard(p,p.cases[0]);}
   else mgState.caseEdit=null;
   mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir};mgSeed(mgState.robot,p);
+}
+/* Where the design is, in one line: nothing yet, something unproven, or
+   proven and ready to keep. The 3D designer's strip is the same idea and
+   the same three colours — see check() in js/game/tower-editor.js. */
+function mgStatus(has,solved,banked){
+  const el=$("mgStatus"); if(!el)return;
+  if(typeof on3d==="function"&&on3d()){ el.style.display="none"; return; }
+  el.style.display="";
+  if(!has&&!banked){ el.className="t3warn bad";
+    el.textContent="Nothing on the board yet — pick a tool below and tap tiles."; return; }
+  if(!solved&&has){ el.className="t3warn hmm";
+    el.textContent="Now write it in 🧩 Blocks and press ▶ — a level counts as a level once you have solved it yourself."; return; }
+  el.className="t3warn ok";
+  el.textContent="✅ Solved — 💾 Save it, ➕ Add another level, or 🌍 Publish it.";
 }
 function mgSetBtn(id,on){const b=$(id);if(!b)return;b.style.opacity=on?"":".4";b.classList.toggle("locked",!on);}
 // The creator's tool strip: the fixed board tools plus one chip per terrain type,
@@ -448,8 +462,25 @@ function mgToolsUI(){
     }
   }
 }
+/* The action row was four icons in 34px squares: a cube, a gear the icon
+   pack draws as a sun, a floppy disk and a plus. Nothing said which was
+   Setup and which was Save, and the two that were greyed out gave no
+   reason. They say their names now, the way the tool row does. */
+function mgActLabels(){
+  const say=(id,txt)=>{
+    const b=$(id); if(!b||b.dataset.lb)return;
+    b.dataset.lb="1";
+    const em=b.textContent.trim();
+    b.textContent="";
+    const e=document.createElement("span");e.className="tl-em";e.textContent=em;
+    const l=document.createElement("span");l.className="tl-lb";l.textContent=txt;
+    b.appendChild(e);b.appendChild(l);
+  };
+  say("mgSetup","Setup"); say("mgSave","Save");
+}
 function mgCreatorUI(){
   if(!mgState||!mgState.creator)return;
+  mgActLabels();
   mgToolsUI();
   const p=mgState.proj;
   $("mgBudget").textContent=p.maxBlocks;
@@ -476,6 +507,10 @@ function mgCreatorUI(){
   // ---- gate Save / Add / Publish behind proving the level solvable ----
   const curHas=mgHasDesign(p);
   const solved=!!mgState.solved;
+  /* Save was greyed out and nothing said why. The 3D designer has had a
+     strip that says where you are since it was written; the flat one is
+     the same three states, so it gets the same strip. */
+  mgStatus(curHas,solved,banked);
   const canSaveCur=curHas&&solved;               // current design proven
   mgSetBtn("mgAddStage",canSaveCur);             // must prove before banking
   mgSetBtn("mgSave",canSaveCur||(banked>0&&!curHas)); // proven current, or already-proven banked levels

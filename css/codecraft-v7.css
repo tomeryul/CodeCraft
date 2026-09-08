@@ -633,3 +633,33 @@ body:has(.sheet.open) #toasts .toast{max-width:88vw;}
    error ---- */
 #ageGo:disabled{opacity:1;background:rgba(255,255,255,.08);color:var(--ink2);
   border:1px solid var(--hair);border-bottom-color:var(--hair);box-shadow:none;}
+
+/* ---- the level designer says what each of its controls is ----
+   The action row was four icons in 34px squares — a cube, a gear the icon
+   pack draws as a sun, a floppy disk and a plus — and the two that were
+   greyed out gave no reason for it. They carry their names now, the way
+   the tool row does, and the strip above them says where the design is.
+   ===================================================================== */
+#mgCreatorBar .cb-act{gap:6px;flex-wrap:nowrap;}
+#mgCreatorBar .cb-act .ibtn{width:auto;min-width:56px;height:50px;padding:0 8px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
+#mgCreatorBar .cb-act .ibtn .tl-em{font-size:16px;line-height:1;}
+#mgCreatorBar .cb-act .ibtn .tl-em .ui-emoji{width:17px;height:17px;vertical-align:0;}
+#mgCreatorBar .cb-act .ibtn .tl-lb{font-size:9px;font-weight:800;letter-spacing:.03em;
+  text-transform:uppercase;color:var(--ink2);}
+#mgCreatorBar .cb-act #t3Btn{width:auto;min-width:56px;height:50px;font-size:12px;}
+#mgCreatorBar .cb-act #mgAddStage,#mgCreatorBar .cb-act #mgPublish{
+  flex:1;min-width:0;height:50px;font-size:12.5px;}
+/* a locked button is a question, so it does not look like a hole */
+#mgCreatorBar button.locked{filter:none;opacity:.5;}
+/* the status strip leads the row it explains */
+#mgStatus{margin:0 0 2px;}
+#mgStatus:empty{display:none;}
+/* the setup steppers said 🧩 12 and nothing else — three numbers with no
+   names. The label is the point of a number nobody can guess. */
+#mgCreatorBar .stprow{gap:6px;}
+#mgCreatorBar .stprow .stp{flex:1 1 auto;justify-content:space-between;}
+#mgCreatorBar .stp .clab{white-space:nowrap;}
+/* designing is not writing: the Blocks hint belongs to playing a level */
+#editor.mg #mgCreatorBar.on ~ #mgBoardHint,
+#mgRead #mgCreatorBar.on ~ #mgBoardHint{display:none;}
