@@ -48,7 +48,7 @@ function classNames(parts){
   for(const cls of order){
     const p=first[cls];
     const own=cleanName(p.cn);
-    const base=own||((CC_WEAR.names[p.c]||"part")+"-"+shapeWord(p.r)).toLowerCase();
+    const base=own||(((p.c|0)<0?"clear":CC_WEAR.names[p.c]||"part")+"-"+shapeWord(p.r)).toLowerCase();
     let n=base, i=2;
     while(used[n])n=base+"-"+(i++);
     used[n]=1; out[cls]=n;
@@ -228,7 +228,11 @@ function build(piece,slot,live,only){
     raw("  ");tok(C.prop,"transform");raw(": translate(");
     val(C.kw,inFlow?"0px, 0px":(F(p,"org")===1?"-50%, -50%":"0px, 0px"),{k:"org",g:p.cls},"kw");
     raw(") rotate(");val(C.num,(p.a|0)+"deg",{k:"a",g:p.cls});raw(");\n");
-    raw("  ");tok(C.prop,"background");raw(": ");hexVal(CC_WEAR.pal[p.c]||CC_WEAR.pal[0],{k:"c",g:p.cls});raw(";\n");
+    /* no colour is a real declaration too, and the one a page's holding
+       divs nearly always have */
+    raw("  ");tok(C.prop,"background");raw(": ");
+    if((p.c|0)<0)val(C.kw,"transparent",{k:"c",g:p.cls},"kw"); else hexVal(CC_WEAR.pal[p.c]||CC_WEAR.pal[0],{k:"c",g:p.cls});
+    raw(";\n");
     if((kids.get(p.pid)||[]).length)layDecl(p,p.cls);
     raw("}\n");
   });

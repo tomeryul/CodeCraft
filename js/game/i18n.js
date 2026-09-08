@@ -126,6 +126,7 @@ const HE={
 "· back to front, tap twice to open one":"· מאחור לפנים, לחץ פעמיים כדי לפתוח אחת",
 "· this component's, back to front":"· של הקונפוננטה הזאת, מאחור לפנים",
 "Shape":"צורה","· border-radius, shared by the class":"· border-radius, משותף ל-class",
+"No colour — just a div":"בלי צבע — רק div",
 /* the Layout tab's cards: a question each, and what it means */
 "Where":"איפה","Inside what, and where in it":"בתוך מה, ואיפה בתוכו",
 "Size":"גודל","How wide and how tall":"כמה רחב וכמה גבוה",

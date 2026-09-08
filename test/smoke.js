@@ -2862,6 +2862,47 @@ async function ev(expr) {
   check("the safe area is padded once, so the tabs sit on the bottom edge",
     WIDE.padB === '0px', JSON.stringify(WIDE));
 
+  /* A box with no colour: a <div> that only holds other boxes, which is
+     what most of a page's divs are. It paints nothing, says so in the
+     code, keeps its border if it has one, and is still findable in the
+     editor — traced, not painted. */
+  const CLEAR = JSON.parse(await ev(`(()=>{
+    const box=o=>Object.assign({cls:0,pid:0,x:10,y:10,w:60,h:40,r:10,a:0,c:-1,
+      pad:0,mg:0,bw:0,bc:15,lay:0,gap:0,jus:0,ali:0,org:0},o);
+    const ink=(parts,edit)=>{const cv=document.createElement('canvas');cv.width=cv.height=80;
+      const g=cv.getContext('2d'); const bx=CC_WEAR.box.hat, k=80/bx.w;
+      g.setTransform(k,0,0,k,-bx.x*k,-bx.y*k); CC_WEAR.parts(g,'hat',parts,null,{},edit);
+      const d=g.getImageData(0,0,80,80).data; let n=0; for(let i=3;i<d.length;i+=4)if(d[i]>40)n++; return n;};
+    const out={};
+    out.plain=ink([box({})],false);                   /* nothing */
+    out.traced=ink([box({})],true);                   /* the editor's dashed trace */
+    out.ring=ink([box({bw:6})],false);                /* a border, with a hole */
+    out.solid=ink([box({bw:6,c:3})],false);
+    out.code=CC_CODE.code({name:'n',root:{},parts:[box({})]},'hat');
+    out.cls=CC_CODE.classNames([box({})])[0];
+    out.kept=CC_WEAR.clean([{id:'my:z1',slot:'hat',name:'x',kind:'parts',parts:[{cls:0,pid:0,x:1,y:1,w:9,h:9,c:-1}]}])[0].parts[0].c;
+    out.dropped=CC_WEAR.clean([{id:'my:z2',slot:'hat',name:'x',kind:'parts',parts:[{cls:0,pid:0,x:1,y:1,w:9,h:9,c:-7}]}])[0].parts[0].c;
+    /* and the way in: the first swatch of the palette */
+    mgState=null; mgRobot=null; player.myWear=[]; player.level=20; player.feTut=null;
+    makerOpen('hat',null); mkParts=[]; renderMaker(); mkAddPart();
+    const none=document.querySelector('#makerBody .mk-pal .mk-dot');
+    out.first=none&&none.classList.contains('none');
+    none.click();
+    out.set=mkParts[0].c;
+    out.chip=!!document.querySelector('#makerBody .mk-part .pd.none');
+    player.myWear=[]; makerExit();
+    return JSON.stringify(out);
+  })()`));
+  check("a box with no colour paints nothing, and keeps its border as a ring",
+    CLEAR.plain === 0 && CLEAR.ring > 40 && CLEAR.ring < CLEAR.solid, JSON.stringify(CLEAR));
+  check("in the editor it is traced so it can still be found",
+    CLEAR.traced > 20, JSON.stringify(CLEAR));
+  check("the code says background: transparent, and the class says clear",
+    /background: transparent;/.test(CLEAR.code) && CLEAR.cls === 'clear-tile', JSON.stringify({code:CLEAR.code.slice(-200),cls:CLEAR.cls}));
+  check("a save keeps -1 and nothing below it", CLEAR.kept === -1 && CLEAR.dropped === -1, JSON.stringify(CLEAR));
+  check("the palette offers no colour first, and it lands on the box",
+    CLEAR.first === true && CLEAR.set === -1 && CLEAR.chip === true, JSON.stringify(CLEAR));
+
   /* The tour of the front end. Every step is a predicate over the piece,
      so nothing here can be clicked through — a step is done when the piece
      actually has the thing. */

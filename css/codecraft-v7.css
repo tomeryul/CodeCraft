@@ -88,6 +88,13 @@
 #maker .mk-dot{flex:0 0 auto;width:46px;height:46px;padding:0;border-radius:14px;
   border:2px solid transparent;font-family:inherit;font-size:15px;color:var(--ink2);}
 #maker .mk-dot.on{border-color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.35);}
+/* no colour: a dashed empty square that says what it is */
+#maker .mk-dot.none,#maker .mk-insdot.none,#maker .mk-part .pd.none{
+  background:transparent;border:2px dashed rgba(255,255,255,.4);
+  display:flex;align-items:center;justify-content:center;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;font-weight:700;color:var(--ink2);}
+#maker .mk-part .pd.none{font-size:8px;border-width:1.5px;border-radius:6px;}
+#maker .mk-dot.none.on,#maker .mk-insdot.none.on{border-style:dashed;border-color:#fff;color:var(--ink);}
 
 /* name it, keep it */
 #maker .mk-row{display:flex;gap:8px;margin:14px 0 0;padding-top:12px;

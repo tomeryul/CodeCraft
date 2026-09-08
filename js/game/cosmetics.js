@@ -375,10 +375,10 @@ const PART_RAD=[0,15,40,50];
 /* border-radius in percent is per-axis — 50% of the width across and 50%
    of the height down — so a wide box rounds into an ellipse, not a
    stadium. arcTo cannot do that; four elliptical arcs can. */
-function rrEl(g,x,y,w,h,rx,ry){
+function rrEl(g,x,y,w,h,rx,ry){ g.beginPath(); rrElSub(g,x,y,w,h,rx,ry); }
+function rrElSub(g,x,y,w,h,rx,ry){
   rx=Math.min(rx,w/2); ry=Math.min(ry,h/2);
   const P=Math.PI;
-  g.beginPath();
   g.moveTo(x+rx,y);
   g.lineTo(x+w-rx,y);
   g.ellipse(x+w-rx,y+ry,rx,ry,0,-P/2,0);
@@ -521,7 +521,11 @@ function layoutParts(parts,root){
    it — in place, so the stacking order a player built is still what they
    see. It is how the component screen keeps the rest of the piece visible
    without letting it compete. */
-function paintParts(g,box,parts,focus,root){
+/* A box with c === -1 has no colour: it is a <div> that only holds other
+   boxes, the way most of a real page's divs do. It paints nothing — a
+   border ring if it has one — and in the editor (`edit`) it is traced
+   with a faint dashed line so it can still be found and dragged. */
+function paintParts(g,box,parts,focus,root,edit){
   if(!Array.isArray(parts))return;
   const a0=g.globalAlpha;
   const L=layoutParts(parts,root), K=box.w/100;
@@ -535,24 +539,36 @@ function paintParts(g,box,parts,focus,root){
        code and the canvas have to mean the same thing by rotate() */
     const a=pt.a|0;
     if(a){ g.save(); g.translate(x+w/2,y+h/2); g.rotate(a*Math.PI/180); g.translate(-x-w/2,-y-h/2); }
-    const bw=bf(pt,"bw")*K;
+    const bw=bf(pt,"bw")*K, clear=(pt.c|0)<0;
     if(bw>0){
       /* a border is a ring: the border colour fills the whole box and the
          background fills what is left inside it, which is exactly the order
-         a browser paints them in */
+         a browser paints them in — unless there is no background, when the
+         ring has to be cut out rather than painted over */
+      const iw=Math.max(0,w-bw*2), ih=Math.max(0,h-bw*2);
       rrEl(g,x,y,w,h,w*pt.r/100,h*pt.r/100);
       g.fillStyle=WEAR_PAL[bf(pt,"bc")]||WEAR_PAL[15];
-      g.fill();
-      const iw=Math.max(0,w-bw*2), ih=Math.max(0,h-bw*2);
-      if(iw>0&&ih>0){
-        rrEl(g,x+bw,y+bw,iw,ih,iw*pt.r/100,ih*pt.r/100);
-        g.fillStyle=WEAR_PAL[pt.c]||WEAR_PAL[0];
+      if(clear&&iw>0&&ih>0){
+        rrElSub(g,x+bw,y+bw,iw,ih,iw*pt.r/100,ih*pt.r/100);
+        g.fill("evenodd");
+      }else{
         g.fill();
+        if(iw>0&&ih>0){
+          rrEl(g,x+bw,y+bw,iw,ih,iw*pt.r/100,ih*pt.r/100);
+          g.fillStyle=WEAR_PAL[pt.c]||WEAR_PAL[0];
+          g.fill();
+        }
       }
-    }else{
+    }else if(!clear){
       rrEl(g,x,y,w,h,w*pt.r/100,h*pt.r/100);
       g.fillStyle=WEAR_PAL[pt.c]||WEAR_PAL[0];
       g.fill();
+    }
+    if(clear&&edit){
+      rrEl(g,x,y,w,h,w*pt.r/100,h*pt.r/100);
+      /* body units: the canvas is scaled, so this is a hairline on screen */
+      g.save();g.setLineDash([1.4,1.4]);g.lineWidth=0.35;
+      g.strokeStyle="rgba(255,255,255,.55)";g.stroke();g.restore();
     }
     if(a)g.restore();
   });
@@ -602,7 +618,7 @@ window.CC_WEAR={
   names:WEAR_NAME, rad:PART_RAD, partMax:PART_MAX,
   isCustom:isCustom,
   /* the maker's build canvas draws the working parts straight */
-  parts(g,slot,list,focus,root){const b=WEAR_BOX[slot]; if(b)paintParts(g,b,list,focus,root);},
+  parts(g,slot,list,focus,root,edit){const b=WEAR_BOX[slot]; if(b)paintParts(g,b,list,focus,root,edit);},
   /* one answer to "where is that box", shared by the paint, the drag and
      the box-model overlay */
   layout:layoutParts, rings:boxRings, lay:LAY, jus:JUS, ali:ALI, boxDefault:BOXF,
@@ -683,7 +699,7 @@ window.CC_WEAR={
             x:N(q&&q.x,-40,140,10), y:N(q&&q.y,-40,140,10),
             w:N(q&&q.w,1,160,30),   h:N(q&&q.h,1,160,30),
             r:N(q&&q.r,0,50,0),     a:N(q&&q.a,-180,180,0),
-            c:N(q&&q.c,0,WEAR_PAL.length-1,0),
+            c:N(q&&q.c,-1,WEAR_PAL.length-1,0),
             pad:N(q&&q.pad,0,40,0), mg:N(q&&q.mg,0,40,0),
             bw:N(q&&q.bw,0,20,0),   bc:N(q&&q.bc,0,WEAR_PAL.length-1,15),
             lay:N(q&&q.lay,0,LAY.length-1,0), gap:N(q&&q.gap,0,40,0),

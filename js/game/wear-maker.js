@@ -165,7 +165,7 @@ function mkDraw(){
   const b=CC_WEAR.box[mkSlot], k=W/b.w;
   g.save();
   g.setTransform(d*k,0,0,d*k,-b.x*k*d,-b.y*k*d);
-  CC_WEAR.parts(g,mkSlot,mkParts,mkFocus,mkRoot);
+  CC_WEAR.parts(g,mkSlot,mkParts,mkFocus,mkRoot,true);
   g.restore();
   mkHandles(g,W,H);
 }
@@ -382,10 +382,14 @@ function mkOutfitPanel(body){
 function mkPalette(){
   const pal=document.createElement("div");pal.className="mk-pal";
   const sel=mkParts[mkSel];
-  for(let i=0;i<CC_WEAR.pal.length;i++){
+  /* -1 first: no colour at all. A box that only holds other boxes is what
+     most of a page's divs are, and it should not have to pretend to be
+     the colour of whatever is behind it. */
+  for(let i=-1;i<CC_WEAR.pal.length;i++){
     const b=document.createElement("button");b.type="button";
-    b.className="mk-dot"+((!!sel&&sel.c===i)?" on":"");
-    b.style.background=CC_WEAR.pal[i];b.setAttribute("aria-label",CC_WEAR.names[i]);
+    b.className="mk-dot"+(i<0?" none":"")+((!!sel&&sel.c===i)?" on":"");
+    if(i<0){ b.textContent="div"; b.setAttribute("aria-label","No colour — just a div"); }
+    else{ b.style.background=CC_WEAR.pal[i]; b.setAttribute("aria-label",CC_WEAR.names[i]); }
     b.addEventListener("click",()=>{
       mkColor=i;
       if(mkParts[mkSel]){ mkGroup(p=>{p.c=i;}); mkDraw(); }
@@ -873,8 +877,9 @@ function mkBuildUI(body){
     const b=document.createElement("button");b.type="button";
     b.className="mk-part"+(i===mkSel?" on":"");
     const n=mkGroupSize(p.cls);
-    b.innerHTML='<span class="pd" style="background:'+CC_WEAR.pal[p.c]+
-      '"></span>'+(n>1?'<span class="px2">×'+n+'</span>':'');
+    b.innerHTML=((p.c|0)<0?'<span class="pd none">div</span>'
+      :'<span class="pd" style="background:'+CC_WEAR.pal[p.c]+'"></span>')+
+      (n>1?'<span class="px2">×'+n+'</span>':'');
     b.setAttribute("aria-label","."+cls[p.cls]);
     /* a second tap on the box you already have opens its component — the
        same idiom the Style row uses for a piece you are already wearing */
@@ -1160,11 +1165,13 @@ function mkInspectorStrip(){
     lab.textContent=mkVal.k==="bc"?"border-color":"background";
     box.appendChild(lab);
     const row=document.createElement("div");row.className="mk-inspal";
-    for(let i=0;i<CC_WEAR.pal.length;i++){
+    /* the background can be none; a border colour cannot (a border with
+       no colour is no border, and that is what border: 0px is for) */
+    for(let i=(mkVal.k==="c"?-1:0);i<CC_WEAR.pal.length;i++){
       const b=document.createElement("button");b.type="button";
-      b.className="mk-insdot"+(CC_WEAR.field(p,mkVal.k)===i?" on":"");
-      b.style.background=CC_WEAR.pal[i];
-      b.setAttribute("aria-label",CC_WEAR.names[i]);
+      b.className="mk-insdot"+(i<0?" none":"")+(CC_WEAR.field(p,mkVal.k)===i?" on":"");
+      if(i<0){ b.textContent="div"; b.setAttribute("aria-label","No colour — just a div"); }
+      else{ b.style.background=CC_WEAR.pal[i]; b.setAttribute("aria-label",CC_WEAR.names[i]); }
       b.addEventListener("click",()=>{
         const k=mkVal.k;
         for(const q of list)q[k]=i;
