@@ -193,7 +193,10 @@ function drawBot(g,px,py,cs,dir){
 function drawGrid(){
   const p=mgState.proj, cv=$("mgCanvas");
   lists(p);
-  const W=Math.max(180,cv.clientWidth||320), cs=W/p.gw, H=cs*p.gh;
+  if(window.mgFitBoard)mgFitBoard(p.gh/p.gw);
+  /* the floor was 180, which put the height back over the cap mgFitBoard
+     had just set — the plan view has to fit the room like everything else */
+  const W=Math.max(110,cv.clientWidth||320), cs=W/p.gw, H=cs*p.gh;
   const dpr=(typeof DPR!=="undefined"?DPR:Math.min(3,window.devicePixelRatio||1));
   cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);cv.style.height=Math.round(H)+"px";
   const g=cv.getContext("2d");

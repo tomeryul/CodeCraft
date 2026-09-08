@@ -350,18 +350,74 @@ function mgStepArg(d){
   else mgState.brickNum=mgState.brickNum==null?null:(mgState.brickNum<=1?null:mgState.brickNum-1);
   mgCreatorUI();
 }
-/* The tools dock to the bottom of the board tab. position:sticky never
-   leaves its parent, and their parent was the creator bar, which now sits
-   below the board — so with the board on screen the tools were not. As a
-   direct child of the panel, last in order, they stick to the foot of the
-   scroll for as long as any of the panel is in view. Done once, at load. */
+/* ---- the board tab, in two parts ------------------------------------
+   It was one 272px scroller holding up to 654px of column, so on a
+   half-height sheet the board itself was cut off at the bottom and
+   everything under it — the 3D rotate buttons, the Academy's lesson, the
+   hint — was below a fold nothing announced. The board is what is being
+   looked at, so it is pinned: goal, board, and the board's own status bar.
+   Everything that is READING goes into #mgRead underneath, which is the
+   one thing that scrolls and always shows a line of itself, so it reads as
+   a place to scroll rather than an edge.
+
+   The creator's tools dock to the bottom of that reading area:
+   position:sticky never leaves its parent, and their parent used to be a
+   bar that sits below the board. Done once, at load. */
 (function(){
   const panel=$("mgPanel"), tools=$("mgTools"), stp=$("mgBrickStp");
   if(!panel||!tools||!stp||$("mgDock"))return;
   const dock=document.createElement("div");dock.id="mgDock";
   dock.appendChild(stp);dock.appendChild(tools);
-  panel.appendChild(dock);
+  const read=document.createElement("div");read.id="mgRead";
+  panel.appendChild(read);
+  /* order matters: the creator bar sits above what it edits, the hint last */
+  for(const id of ["mgCreatorBar","mgVars","mgCost","mgLesson","mgBoardHint"]){
+    const el=$(id); if(el)read.appendChild(el);
+  }
+  read.appendChild(dock);
 })();
+
+/* The board fits the space there is. All three drawers — the flat board,
+   the Tower plan view and the 3D scene — size themselves from the canvas's
+   own width, so capping the width is the one lever that fits all three.
+   Rechecked a few times a second rather than per frame: the 3D loop runs
+   at 60fps and layout is not a per-frame question. */
+let mgFitAt=0, mgFitW=0;
+function mgFitBoard(aspect){
+  const cv=$("mgCanvas"), panel=cv&&cv.parentNode; if(!panel)return;
+  const t=Date.now();
+  if(t-mgFitAt<250&&mgFitW)return;
+  mgFitAt=t;
+  /* the panel takes its natural height now, so the room to fit into is the
+     scrollport's — the visible part of the board tab */
+  const ph=(panel.parentNode&&panel.parentNode.clientHeight)||panel.clientHeight;
+  if(ph<40)return;
+  let used=0;
+  for(const el of panel.children){
+    if(el===cv||el.id==="mgRead"||!el.offsetParent)continue;
+    used+=el.getBoundingClientRect().height;
+  }
+  /* What is left after the fixed rows is shared. The reading area keeps a
+     line of itself on screen — but only as much as it actually has to say,
+     so a Tower level with nothing but the hint under it does not hand the
+     board's height to an empty panel, and never more than its share, so a
+     191px board tab on a small phone does not end up with an 8px scroller
+     under a board too tall to fit beside it. */
+  const room=Math.max(60,ph-used-8);
+  /* a strip of what is under the board stays in view, so the scroll
+     announces itself — but only as much as there is to say, and never more
+     than its share, so a board is not handed to an empty panel */
+  const read=$("mgRead");
+  const want=Math.min(read?(read.scrollHeight||0):0,Math.round(room*.30),64);
+  const capH=Math.max(72,room-want);
+  /* no floor under the width: a floor here would put the height back over
+     the cap it was just given, which is the whole point of the cap */
+  const capW=Math.floor(capH/Math.max(.2,aspect));
+  if(capW!==mgFitW){ mgFitW=capW; cv.style.maxWidth=capW+"px"; }
+}
+window.mgFitBoard=mgFitBoard;
+/* a size change (⛶, rotation, focus) has to re-fit before the next draw */
+window.mgFitReset=()=>{mgFitAt=0;mgFitW=0;};
 function mgToolsUI(){
   const el=$("mgTools");if(!el)return;
   const cur=mgState.paintMode, list=mgToolList();
@@ -1650,6 +1706,7 @@ function mgDraw(){
   if(!mgState)return;
   if($("boardTab").style.display==="none")return; // board hidden — nothing to draw
   const cv=$("mgCanvas"),st=mgState,p=st.proj;
+  mgFitBoard(p.gh/p.gw);
   const cw=cv.clientWidth||300;
   const cell=Math.floor(cw/p.gw);
   const CW=p.gw*cell, CH=p.gh*cell;

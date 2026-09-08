@@ -123,6 +123,9 @@ const HE={
    rest are identifiers and stay as written, and an entry that maps a word
    to itself is the shape that froze the game once already. */
 "Boxes":"קופסאות","Code":"קוד","Layout":"פריסה",
+"More":"עוד","Less":"פחות",
+"Tap blocks below to write your program.":"לחץ על בלוקים למטה כדי לכתוב את התוכנית שלך.",
+"Then press ▶ to run it on the board.":"אחר כך לחץ ▶ כדי להריץ אותה על הלוח.",
 "· back to front, tap twice to open one":"· מאחור לפנים, לחץ פעמיים כדי לפתוח אחת",
 "· this component's, back to front":"· של הקונפוננטה הזאת, מאחור לפנים",
 "Shape":"צורה","· border-radius, shared by the class":"· border-radius, משותף ל-class",
@@ -845,6 +848,8 @@ const HE_N={
   "{n} <div>s wear this class — one rule paints them all.":
     "{n} <div> לובשים את ה-class הזה — כלל אחד צובע את כולם.",
   "It holds {n} boxes.":"היא מחזיקה {n} קופסאות.",
+  "{n} blocks is the whole budget — a 🔁 Repeat is how a short program does a long job.":
+    "{n} בלוקים זה כל התקציב — 🔁 חזור זה איך שתוכנית קצרה עושה עבודה ארוכה.",
   "You already have {n} of these. Delete one to make another.":
     "כבר יש לך {n} כאלה. תמחק אחד כדי להכין עוד."
 };

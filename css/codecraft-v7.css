@@ -526,10 +526,18 @@ body.sheets-full #maker.sized,
    of the scroll) and the rest. A tool is an icon with its name under it,
    the way the build bar in the world already does it, so the legend that
    used to be a truncated paragraph is the row itself. */
-#boardTab #mgPanel{display:flex;flex-direction:column;}
-#boardTab #mgGoal{order:-3;}
-#boardTab #mgCases{order:-2;}
-#boardTab #mgCanvas{order:-1;}
+/* The board tab keeps one scroller — nesting a second one starved the
+   creator on a small phone, where the goal, the board and the tool dock
+   genuinely do not fit at once and something has to scroll. What changed
+   is the ORDER and the board's SIZE: the board and its own status bar come
+   first and are sized to fit the visible area (see mgFitBoard in
+   js/game/challenges.js), so what scrolls below is only ever reading. */
+#boardTab{display:flex;flex-direction:column;}
+#boardTab #mgPanel{flex:0 0 auto;display:flex;flex-direction:column;}
+#boardTab #mgCanvas{flex:0 0 auto;margin:6px auto 0;}
+#boardTab #mgRead{display:block;padding-top:8px;}
+/* the board's own status bar belongs to the board, not to the reading */
+#boardTab #t3Bar{flex:0 0 auto;margin:7px auto 0;}
 #mgCreatorBar .cb-row.tools{gap:4px;padding:5px;}
 #mgCreatorBar .tool{width:auto;min-width:52px;height:50px;padding:0 6px;border-radius:12px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
@@ -540,7 +548,7 @@ body.sheets-full #maker.sized,
 #mgCreatorBar .tool.on .tl-lb{color:var(--accent2);}
 /* the tools and their stepper dock to the foot of the board's scroll —
    see the note above mgToolsUI in js/game/challenges.js */
-#mgDock{display:none;order:99;position:sticky;bottom:0;z-index:3;flex-direction:column;gap:5px;
+#mgDock{display:none;position:sticky;bottom:0;z-index:3;flex-direction:column;gap:5px;
   margin-top:8px;padding-top:4px;background:var(--panel);}
 #mgCreatorBar.on ~ #mgDock{display:flex;}
 #mgDock .cb-row.tools{position:static;display:flex;align-items:center;flex-wrap:nowrap;
@@ -565,8 +573,25 @@ body.sheets-full #maker.sized,
 #mgDock .tool .tl-lb{font-size:9px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
   color:var(--ink2);white-space:nowrap;}
 #mgDock .tool.on .tl-lb{color:var(--accent2);}
-/* three lines before the goal folds: two cut the creator's one sentence */
-#mgGoal{-webkit-line-clamp:3;}
+/* three lines before the goal folds: two cut the creator's one sentence.
+   A folded goal says so — it used to be silently clamped, so the rest of a
+   Tower level's instructions simply did not exist as far as a player could
+   tell. The chevron is a sibling, because ::after inside a -webkit-box is
+   clamped away with everything else. */
+/* two lines, not three: MORE is right there, and on a small phone the
+   third line is the one the tool dock needed */
+#boardTab #mgGoal{flex:0 0 auto;-webkit-line-clamp:2;margin:0;}
+/* two ids beat #mgGoal.open in styles.css, so the unfold has to be named
+   here too or MORE would flip its label and unfold nothing. An unfolded
+   goal scrolls rather than eating the board it is describing. */
+#boardTab #mgGoal.open{-webkit-line-clamp:unset;max-height:38vh;overflow-y:auto;}
+#mgMore{display:none;align-items:center;gap:6px;margin:0;padding:4px 8px 4px 2px;
+  border:none;border-radius:10px;background:transparent;font-family:inherit;
+  font-size:11.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--accent2);}
+#mgMore.on{display:inline-flex;}
+#mgMore i{width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;
+  transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s;}
+#mgGoal.open+#mgMore i{transform:rotate(-135deg) translate(-2px,-2px);}
 /* the actions fill their row instead of huddling at its right edge */
 #mgCreatorBar .cb-act .spacer{display:none;}
 #mgCreatorBar .cb-act #mgAddStage,#mgCreatorBar .cb-act #mgPublish{flex:1;min-width:0;}

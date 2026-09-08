@@ -2740,6 +2740,83 @@ async function ev(expr) {
   check("...and the code says so with translate(-50%, -50%)",
     ANCH.cssCentre === true && ANCH.cssCorner === true, JSON.stringify(ANCH));
 
+  /* The board tab, in two parts. It was one 272px scroller holding up to
+     654px of column, so on a half-height sheet the board was cut off at
+     the bottom and the 3D rotate buttons never appeared at all. */
+  const BOARD = JSON.parse(await ev(`(async()=>{
+    if(typeof mgFitBoard!=='function')return JSON.stringify({missing:true});
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    mgState=null; player.level=20;
+    document.querySelectorAll('.sheet.open').forEach(x=>x.classList.remove('open'));
+    /* half height is where it went wrong, so half height is what is checked */
+    if($('editor').classList.contains('max'))$('edMax').click();
+    await wait(350);
+    const out={};
+    const box=s=>{const e=document.querySelector(s); if(!e||!e.offsetParent)return null;
+      const r=e.getBoundingClientRect(); return {top:Math.round(r.top),bot:Math.round(r.bottom)};};
+    const fold=()=>Math.round($('boardTab').getBoundingClientRect().bottom);
+    academyEnter(TUTS.findIndex(t=>t.id==='t_loop'));
+    await wait(700);
+    out.flatFits=box('#mgCanvas').bot<=fold();
+    /* the reading area is a scroller that shows a line of itself, not an
+       edge: the lesson has to start above the fold and continue past it */
+    const ls=box('#mgLesson');
+    out.lessonStarts=!!ls&&ls.top<fold()&&ls.bot>fold();
+    out.readScrolls=$('boardTab').scrollHeight>$('boardTab').clientHeight;
+    mgExit(false); await wait(300);
+    /* the 3D level: its board AND its rotate bar are what you look at */
+    t3Enter(TOWER_LEVELS[0]);
+    await wait(900);
+    out.t3Fits=box('#mgCanvas').bot<=fold();
+    const bar=box('#t3Bar');
+    out.t3BarSeen=!!bar&&bar.bot<=fold();
+    out.t3Rot=!!$('t3RotL')&&!!$('t3RotR');
+    /* the board and its own status bar come before anything that is only
+       reading, so what scrolls away is never the thing being looked at */
+    out.order=[...$('mgPanel').children].filter(e=>e.offsetParent).map(e=>e.id)
+      .filter(id=>['mgGoal','mgCanvas','t3Bar','mgRead'].indexOf(id)>=0);
+    /* a folded goal says so, and saying so unfolds it. The prose is set
+       here rather than taken from a level, so the check is of the fold and
+       not of how long somebody's sentence happens to be today. */
+    const g=$('mgGoal');
+    g.textContent=("Height is new. Build drops a brick on the tile in front of you, "+
+      "but never higher than your own shoulder. Climb steps up onto a brick "+
+      "exactly one level high. Build the three-step staircase and stand on top.");
+    await wait(250);
+    out.clamped=g.scrollHeight>g.clientHeight+2;
+    out.moreShown=$('mgMore').classList.contains('on');
+    $('mgMore').click(); await wait(250);
+    out.unfolded=g.scrollHeight<=g.clientHeight+2&&g.classList.contains('open');
+    out.lessLabel=$('mgMoreT').textContent;
+    $('mgMore').click(); await wait(200);
+    /* the empty program offered the WORLD's blocks — Walk To, Chop, Drop —
+       on a Tower level whose palette is Move, Turn, Build and Climb. The
+       program belongs to the robot and outlives a level, so it is cleared. */
+    R().program=[]; selBlock=null;
+    setTab('blocks'); renderProgram();
+    out.empty=$('programEl').textContent;
+    out.budget=mgState.proj.maxBlocks;
+    mgExit(false); player.level=20;
+    return JSON.stringify(out);
+  })()`));
+  check("the board fits above the fold, flat and in 3D",
+    !BOARD.missing && BOARD.flatFits === true && BOARD.t3Fits === true &&
+    JSON.stringify(BOARD));
+  check("the 3D rotate bar is on screen, where the thing it turns is",
+    BOARD.t3BarSeen === true && BOARD.t3Rot === true, JSON.stringify(BOARD));
+  check("what is left to read scrolls, and shows a line of itself",
+    BOARD.lessonStarts === true && BOARD.readScrolls === true, JSON.stringify(BOARD));
+  check("the board and its status bar come before anything that is only reading",
+    JSON.stringify(BOARD.order) === JSON.stringify(['mgGoal','mgCanvas','t3Bar','mgRead']),
+    JSON.stringify(BOARD.order));
+  check("a folded goal says so, and saying so unfolds it",
+    BOARD.clamped === true && BOARD.moreShown === true &&
+    BOARD.unfolded === true && BOARD.lessLabel === 'Less', JSON.stringify(BOARD));
+  /* the recipe it used to offer names three blocks a challenge does not have */
+  check("an empty challenge program is told its budget, not the world's blocks",
+    typeof BOARD.empty === 'string' && BOARD.empty.indexOf('Walk To') < 0 &&
+    BOARD.empty.indexOf(String(BOARD.budget) + ' blocks') >= 0, JSON.stringify(BOARD.empty));
+
   /* The Layout tab. It exists because justify-content had nowhere to be
      found: it was a token inside a rule you had to write before you could
      tap it. It is the rule asked as questions — Where, Size, Shape, Space

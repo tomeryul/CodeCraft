@@ -45,7 +45,31 @@ $("mgResetBtn").addEventListener("click",()=>{
 });
 $("mgExitBtn").addEventListener("click",()=>mgExit(true));
 $("mgSetup").addEventListener("click",()=>{$("mgCreatorBar").classList.toggle("setup");sfx(520,.03);});
-$("mgGoal").addEventListener("click",()=>$("mgGoal").classList.toggle("open"));
+/* The goal folds at three lines. It was silently clamped, so a Tower
+   level's instructions simply did not exist as far as a player could tell.
+   The button appears only when something is actually folded away. */
+(function(){
+  const g=$("mgGoal"); if(!g||$("mgMore"))return;
+  const b=document.createElement("button");
+  b.type="button";b.id="mgMore";
+  b.innerHTML='<i></i><span id="mgMoreT">More</span>';
+  g.parentNode.insertBefore(b,g.nextSibling);
+  const sync=()=>{
+    const open=g.classList.contains("open");
+    b.classList.toggle("on",open||g.scrollHeight>g.clientHeight+2);
+    $("mgMoreT").textContent=open?"Less":"More";
+  };
+  const flip=()=>{ g.classList.toggle("open"); sync(); if(window.mgFitReset)mgFitReset(); if(typeof mgDraw==="function")mgDraw(); };
+  g.addEventListener("click",flip);
+  b.addEventListener("click",flip);
+  /* the goal is rewritten whenever a level opens, and a new one folds by
+     a different amount */
+  new MutationObserver(()=>{
+    if(g.classList.contains("open"))return;   /* a class write of our own */
+    sync();
+  }).observe(g,{childList:true,characterData:true,subtree:true});
+  window.mgGoalSync=sync;
+})();
 $("projClose").addEventListener("click",()=>$("projects").classList.remove("open"));
 $("mgGuide").addEventListener("click",()=>{$("mgCreatorBar").classList.remove("setup");openGuide();});
 $("guideClose").addEventListener("click",()=>closeGuide());

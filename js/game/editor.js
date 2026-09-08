@@ -180,13 +180,33 @@ function editParams(id){
   f.params=t.split(",").map(x=>x.trim().replace(/\W+/g,"_").slice(0,10)).filter(Boolean).slice(0,4);
   sfx(560,.04); programChanged();
 }
+/* What to write, when nothing is written yet. In the world that is a
+   recipe from the blocks the world uses; in a challenge those blocks are
+   not in the palette at all — it offered Walk To and Chop on a Tower level
+   whose whole palette is Move, Turn, Build and Climb — so a challenge is
+   told what it actually has: its budget, and that the budget is the
+   puzzle. Two text nodes, not one glued sentence: js/game/i18n.js looks a
+   text node up whole. */
+function emptyMain(r){
+  const d=document.createElement("div");d.className="empty";
+  const line=t=>{const p=document.createElement("div");p.textContent=t;d.appendChild(p);};
+  if(typeof mgState!=="undefined"&&mgState&&mgState.proj){
+    line("Tap blocks below to write your program.");
+    const n=mgState.proj.maxBlocks|0;
+    line(n?n+" blocks is the whole budget — a 🔁 Repeat is how a short program does a long job."
+          :"Then press ▶ to run it on the board.");
+  }else{
+    line("Tap blocks below to program "+r.name+"!");
+    line("Try: 🚶 Walk To 🌳 → 🪓 Chop → 🚶 Walk To 🏪 → ⤵️ Drop.");
+  }
+  return d.outerHTML;
+}
 function renderProgram(){
   const r=R(), root=$("programEl");
   renderRoutineTabs();
   root.innerHTML="";
   if(!curList().length){
-    root.innerHTML=edTarget==="main"
-      ? '<div class="empty">🧩 Tap blocks below to program <b>'+esc(r.name)+'</b>!<br>Try: <b>🚶 Walk To 🌳</b> → <b>🪓 Chop</b> → <b>🚶 Walk To 🏪</b> → <b>⤵️ Drop</b>.</div>'
+    root.innerHTML=edTarget==="main"?emptyMain(r)
       : '<div class="empty">🔧 Routine <b>'+edTarget+'</b> is empty.<br>Put the steps you repeat in here, then 🔧 Call it from your main program.</div>';
   }else renderList(curList(),root);
   updateSelUI();
