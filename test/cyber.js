@@ -79,7 +79,9 @@ async function toWorld(pg,he){
     if(!s)return null;
     return { title:s.querySelector('.t3title').textContent,
              prog:s.querySelector('.t3prog').textContent,
-             cards:[...s.querySelectorAll('.t3card')].map(c=>({
+             /* the built-in eleven only: a level you designed is .mine and
+                the way in to design one is .t3new */
+             cards:[...s.querySelectorAll('.t3card.cy-card:not(.mine)')].map(c=>({
                name:c.querySelector('.t3name').textContent,
                locked:c.classList.contains('locked') })) };
   });
@@ -92,7 +94,7 @@ async function toWorld(pg,he){
      so it says what opens it. */
   const gate = await pg.evaluate(async ()=>{
     const lv=CC_CYBER.levels[2];
-    document.querySelectorAll('.t3sec.cy-sec .t3card')[2].click();
+    document.querySelectorAll('.t3sec.cy-sec .t3card.cy-card:not(.mine)')[2].click();
     await new Promise(r=>setTimeout(r,250));
     const t=document.querySelector('#toasts .toast');
     /* ui-icons.js lifts the 🔒 into a span of its own, so the lock is in the
@@ -413,6 +415,236 @@ async function toWorld(pg,he){
   ck('it opens at zero, and says how many keypads are still shut',
      /0/.test(strip.text) && /0\/1/.test(strip.text), strip.text);
   ck('and it leaves with the level', strip.goneAfterExit, strip);
+
+  // ---------------------------------------------- designing one yourself
+  /* A Cyber level IS a flat challenge board, so the designer is the
+     creator the player already knows with four more tiles, a flag and one
+     setting. What has to be true is that the mode really switches, that a
+     code really lands on the tile, and that Save stays shut until the
+     board is a level somebody could finish. */
+  const mode = await pg.evaluate(async ()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    if(mgState)mgExit(false); await wait(200);
+    cyDesign(); await wait(400);
+    const p=mgState.proj;
+    return { cyber:!!p.cyber, creator:!!mgState.creator, goalType:p.goalType,
+             tools:[...document.querySelectorAll('#mgTools .tl-lb')].map(e=>e.textContent),
+             tryCode:(p.allowed||[]).indexOf('tryCode')>=0,
+             bar:!!document.getElementById('cyBar'),
+             strikes:document.querySelectorAll('#cyStrikes .t3chip').length,
+             addLevel:document.getElementById('mgAddStage').style.display,
+             blank:mgRobot.program.length===0 };
+  });
+  ck('the creator switches into Cyber mode with its own tools',
+     mode.cyber && mode.creator && mode.goalType==='reach' &&
+     mode.tools.join()==='Flag,Start,Wall,Keypad,Keypad + Key,Key,Note,Sealed note,Erase', mode);
+  ck('🔢 Try Code is in the palette it hands out, and the counter is under the board',
+     mode.tryCode && mode.bar, mode);
+  ck('and ⛔ Strikes is a setting with four values', mode.strikes===4, mode);
+  /* ➕ Add level banks a FLAT stage into a multi-level pack, which a Cyber
+     board is not — the depth here is the inputs instead */
+  ck('➕ Add level is not offered, because a design is one level',
+     mode.addLevel==='none', mode);
+
+  /* The code is what a keypad IS. It used to paint as 0, because the
+     creator only knew how to carry a colour or a direction onto a tile. */
+  const painted = await pg.evaluate(()=>{
+    const p=mgState.proj;
+    mgState.paintMode='lock'; mgState.tileNum=58; mgPaintTile(3,1);
+    mgState.paintMode='snote'; mgState.tileNum=58; mgPaintTile(2,1);
+    mgState.paintMode='flag'; mgPaintTile(5,1);
+    mgState.paintMode='bot'; mgPaintTile(1,1);
+    return { tiles:p.tiles.map(t=>t[2]+':'+t[3]), goal:p.goal, start:[p.start.x,p.start.y],
+             has:mgHasDesign(p) };
+  });
+  ck('a keypad and a note keep the number they were painted with',
+     painted.tiles.join()==='lock:58,snote:58', painted.tiles);
+  ck('the flag is a place on the board, and the design counts as drawn',
+     painted.goal.join()==='5,1' && painted.has===true, painted);
+
+  /* The checks are the point of the designer: an author must not be able
+     to publish a lock nobody can open. */
+  const guard = await pg.evaluate(()=>{
+    const p=mgState.proj, out={};
+    const first=()=>{const v=CC_CYED.check(p);return v.errs[0]||null;};
+    const g=p.goal; p.goal=null; out.noFlag=first(); p.goal=g;
+    p.strikes=2;
+    const note=p.tiles.find(t=>t[2]==='snote'); note[3]=11;   // the note no longer says the code
+    out.jamNoNote=first();
+    note[3]=58; p.strikes=0;
+    const lock=p.tiles.find(t=>t[2]==='lock'); lock[3]=4821; note[3]=11;
+    out.unfindable=first();
+    lock[3]=58; note[3]=58;
+    mgState.paintMode='lockk'; mgState.tileNum=58; mgPaintTile(3,1);
+    out.lockkNoKey=first();
+    mgState.paintMode='lock'; mgState.tileNum=58; mgPaintTile(3,1);
+    out.clean=first();
+    /* Save is shut until the author has solved it themselves */
+    mgState.solved=false;
+    const before=(player.myChallenges||[]).filter(x=>x.cy).length;
+    saveMyChallenge();
+    out.savedUnproven=(player.myChallenges||[]).filter(x=>x.cy).length-before;
+    return out;
+  });
+  ck('a board with no flag is not a level', /flag/.test(guard.noFlag||''), guard);
+  ck('a jamming keypad whose code is written nowhere is refused',
+     /nobody can open it/.test(guard.jamNoNote||''), guard);
+  ck('and so is a long code with no note to find it on',
+     /more steps than a run has/.test(guard.unfindable||''), guard);
+  ck('a 🗝️ Keypad + Key with no key on the board is refused',
+     /needs a 🔑 key/.test(guard.lockkNoKey||''), guard);
+  ck('a board that is a level passes clean', guard.clean===null, guard);
+  ck('Save stays shut until the author has solved it themselves',
+     guard.savedUnproven===0, guard);
+
+  /* The creator's inputs work here unchanged, and they are the best thing
+     an author can reach for: two boards with two codes, and a program
+     that writes the number into itself passes one and fails the other.
+     The hard built-in levels are made of exactly this. */
+  const inputs = await pg.evaluate(async ()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    if(mgState)mgExit(false); await wait(200);
+    cyDesign(); await wait(300);
+    const p=mgState.proj;
+    mgSetSize(-2,-2);
+    const board=code=>{
+      mgState.paintMode='bot';  mgPaintTile(1,1);
+      mgState.paintMode='wall'; mgPaintTile(3,0); mgPaintTile(3,2); mgPaintTile(3,3);
+      mgState.paintMode='lock'; mgState.tileNum=code; mgPaintTile(3,1);
+      mgState.paintMode='note'; mgState.tileNum=code; mgPaintTile(2,1);
+    };
+    board(58);
+    mgState.paintMode='flag'; mgPaintTile(5,1);
+    mgAddCase(); await wait(200);          // the board becomes input 1
+    mgAddCase(); await wait(200);          // and input 2 gets a code of its own
+    board(71);
+    const B=t=>newBlock(t);
+    const rd=n=>{const b=B('read');b.name=n;b.src='ahead';return b;};
+    const tc=v=>{const b=B('tryCode');b.val=v;return b;};
+    const run=async prog=>{
+      mgRobot.program=prog; renderProgram(); mgRun();
+      for(let i=0;i<3000;i++){ if(!(mgState&&mgState.running))break; await wait(12); }
+      await wait(350);
+      const r=(mgState.results||[]).slice(), ok=!!mgState.solved;
+      const c=document.querySelector('#ccCele .cc-cta'); if(c)c.click();
+      await wait(250);
+      return {r,ok};
+    };
+    const codes=(p.cases||[]).map(c=>(c.tiles||[]).filter(t=>t[2]==='lock').map(t=>t[3]).join());
+    const reads=await run([rd('x'),B('move'),tc({k:'var',name:'x'}),B('move'),B('move'),B('move')]);
+    const remembers=await run([B('move'),tc({k:'num',n:58}),B('move'),B('move'),B('move')]);
+    if(mgState)mgExit(false); await wait(200);
+    return {cases:(p.cases||[]).length, codes, reads, remembers};
+  });
+  ck('an author can split their level into inputs with a code each',
+     inputs.cases===2 && inputs.codes.join()==='58,71', inputs);
+  ck('a program that reads the note passes both',
+     inputs.reads.ok && inputs.reads.r.join()==='true,true', inputs.reads);
+  /* the per-input verdicts, not mgState.solved: a level stays proven once
+     it has been proven, so a later experiment that fails does not un-prove
+     it — which is right, and is why the claim here is about the inputs */
+  ck('and one that remembers the first code passes one and fails the other',
+     inputs.remembers.r.join()==='true,false', inputs.remembers);
+
+  /* Prove it, save it, and play it back the way a player would. */
+  const mine = await pg.evaluate(async ()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    /* its own board: the section before this one closed the designer, and
+       a check that depends on where an earlier check happened to leave the
+       page is a check that breaks the moment one is inserted above it */
+    if(mgState)mgExit(false); await wait(200);
+    cyDesign(); await wait(300);
+    const p=mgState.proj;
+    mgSetSize(-2,-2);
+    mgState.paintMode='bot';   mgPaintTile(1,1);
+    mgState.paintMode='wall';  mgPaintTile(3,0); mgPaintTile(3,2); mgPaintTile(3,3);
+    mgState.paintMode='lock';  mgState.tileNum=58; mgPaintTile(3,1);
+    mgState.paintMode='snote'; mgState.tileNum=58; mgPaintTile(2,1);
+    mgState.paintMode='flag';  mgPaintTile(5,1);
+    p.strikes=2; p.name='My Lock'; p.desc2='Read the note. Do not guess.';
+    const B=t=>newBlock(t);
+    const rd=n=>{const b=B('read');b.name=n;b.src='ahead';return b;};
+    const tc=v=>{const b=B('tryCode');b.val=v;return b;};
+    const prog=()=>[rd('x'),B('move'),tc({k:'var',name:'x'}),B('move'),B('move'),B('move')];
+    mgRobot.program=prog();
+    renderProgram(); mgRun();
+    for(let i=0;i<2000;i++){ if(!(mgState&&mgState.running))break; await wait(12); }
+    await wait(300);
+    let c=document.querySelector('#ccCele .cc-cta'); if(c)c.click(); await wait(250);
+    const proven=!!mgState.solved;
+    saveMyChallenge();
+    const e=(player.myChallenges||[]).filter(x=>x.cy)[0]||null;
+    mgExit(false); await wait(250);
+    if(!e)return {proven,saved:null};
+    mgEnter(e); await wait(400);
+    const played={cyber:!!mgState.proj.cyber, strikes:mgState.proj.strikes|0,
+                  goal:(mgState.proj.goal||[]).join(), bar:!!document.getElementById('cyBar'),
+                  brief:document.getElementById('mgGoal').textContent,
+                  creator:!!mgState.creator, blank:mgRobot.program.length===0};
+    mgRobot.program=prog(); renderProgram(); mgRun();
+    for(let i=0;i<2000;i++){ if(!(mgState&&mgState.running))break; await wait(12); }
+    await wait(300);
+    played.won=!!document.querySelector('#ccCele');
+    c=document.querySelector('#ccCele .cc-cta'); if(c)c.click(); await wait(250);
+    if(mgState)mgExit(false); await wait(200);
+    return {proven, saved:{id:e.id,cy:!!e.cy,strikes:e.strikes|0,goal:(e.goal||[]).join(),
+                           tiles:(e.tiles||[]).length, sol:(e.sol||[]).length}, played};
+  });
+  /* a failure earlier in the chain must not take the rest of the suite
+     down with it — a harness that dies on the first cascade hides every
+     check after it */
+  const played=mine.played||{};
+  ck('proving it opens Save, and what is saved is a Cyber level',
+     mine.proven && !!mine.saved && mine.saved.cy && mine.saved.goal==='5,1' &&
+     mine.saved.strikes===2 && mine.saved.tiles===5 && mine.saved.sol>0, mine);
+  ck('playing it back turns the mode on, with the strikes its author set',
+     played.cyber && played.strikes===2 && played.bar &&
+     played.creator===false, played);
+  ck("and the player reads the author's own words, not a stock line",
+     /Read the note/.test(played.brief||''), played.brief);
+  ck('the player starts with an empty program, and can win it',
+     played.blank && played.won, played);
+
+  /* Editing it back has to restore the board, the setting and the
+     author's own solution — an edit that loses the solution would make
+     them re-prove a level they already proved. */
+  const edit = await pg.evaluate(async ()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    const e=(player.myChallenges||[]).filter(x=>x.cy)[0];
+    mgEditMyChallenge(e); await wait(400);
+    const p=mgState.proj;
+    const out={cyber:!!p.cyber, creator:!!mgState.creator, sameId:mgState.editingId===e.id,
+               tiles:(p.tiles||[]).length, goal:(p.goal||[]).join(), strikes:p.strikes|0,
+               hint:p.desc2, prog:mgRobot.program.length};
+    /* and switching back to a flat board leaves nothing of it behind */
+    CC_CYED.setMode(false); await wait(250);
+    out.off={cyber:!!p.cyber, goal:p.goal||null, goalType:p.goalType||null,
+             tiles:(p.tiles||[]).length,
+             tool:[...document.querySelectorAll('#mgTools .tl-lb')].map(x=>x.textContent)[0]};
+    if(mgState)mgExit(false); await wait(200);
+    return out;
+  });
+  ck('editing a saved Cyber level reloads its board and its setting',
+     edit.cyber && edit.creator && edit.sameId && edit.tiles===5 &&
+     edit.goal==='5,1' && edit.strikes===2 && /Read the note/.test(edit.hint), edit);
+  ck("and the author's own solution comes back with it", edit.prog===6, edit);
+  ck('switching back to a flat board leaves nothing of the Cyber one behind',
+     edit.off.cyber===false && edit.off.goal===null && edit.off.goalType===null &&
+     edit.off.tiles===0 && edit.off.tool==='Target', edit.off);
+
+  /* The band is where a player finds it: their own levels, and the way in. */
+  await pg.evaluate(()=>hubPage('cyber')); await pg.waitForTimeout(600);
+  const yours = await pg.evaluate(()=>{
+    const sec=document.querySelector('.t3sec.cy-sec');
+    return { acts:[...sec.querySelectorAll('.cy-act-n')].map(e=>e.textContent),
+             mine:[...sec.querySelectorAll('.t3card.mine .t3name')].map(e=>e.textContent),
+             design:!!sec.querySelector('.t3card.t3new') };
+  });
+  ck('a level you built gets its own place in the band, under the eleven',
+     yours.acts.length===4 && yours.acts[3]==='Yours' &&
+     yours.mine.join()==='My Lock', yours);
+  ck('and there is a way in to build another', yours.design, yours);
+  await pg.evaluate(()=>{$('projects').classList.remove('open');});
 
   console.log('  pageerrors:', errs.length?errs.slice(0,3):'none');
   ck('no uncaught exceptions', errs.length===0, errs.slice(0,3));

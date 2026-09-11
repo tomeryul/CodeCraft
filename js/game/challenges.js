@@ -878,7 +878,12 @@ function mgPaintTile(x,y){
     // terrain: tapping the same type again removes it, a different type replaces it
     p.tiles=p.tiles||[];
     const def=CC_TILES.DEFS[tool];
-    const arg=def.arg==="colour"?(st.tileArg||1):def.arg==="dir"?(st.tileArg|0)%4:0;
+    /* a tile whose argument is a plain NUMBER — a keypad's code, the number
+       on a note (see js/game/cyber.js) — carries its value in its own field,
+       so switching between a coloured tool and a numbered one does not
+       scramble either */
+    const arg=def.arg==="colour"?(st.tileArg||1):def.arg==="dir"?(st.tileArg|0)%4
+             :def.arg==="num"?(st.tileNum|0):0;
     const i=p.tiles.findIndex(t=>t[0]===x&&t[1]===y);
     const had=i>=0?p.tiles[i]:null;
     if(i>=0)p.tiles.splice(i,1);

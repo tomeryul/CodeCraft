@@ -126,6 +126,33 @@ const HE={
 "More":"עוד","Less":"פחות",
 /* the level designer */
 "Setup":"הגדרות","Save":"לשמור","Brick":"לבנה","Ground":"קרקע","Pit":"בור","Start":"התחלה","Erase":"למחוק",
+/* the Cyber Lab's designer: its tools, its one setting, and what it says
+   when a board is not yet a level */
+"Flag":"דגל","Wall":"קיר","Key":"מפתח",
+"Strikes":"הזדמנויות","off":"כבוי","Code — tap to type":"קוד — לחץ כדי להקליד",
+"Number for this tile (0–9999):":"מספר למשבצת הזאת (0–9999):",
+"🔐 Cyber design — a keypad, something that says what its code is, and a 🚩 flag past it.":
+  "🔐 עיצוב סייבר — מקלדת קוד, משהו שאומר מה הקוד שלה, ו-🚩 דגל מעבר לה.",
+"✅ Solved — 💾 Save it, or 🌍 Publish it for everyone.":
+  "✅ נפתר — 💾 תשמור, או 🌍 תפרסם לכולם.",
+"No 🚩 flag yet — tap the Flag tool and put one where the robot has to get to.":
+  "עדיין אין 🚩 דגל — תבחר בכלי הדגל ותשים אחד במקום שהרובוט צריך להגיע אליו.",
+"The 🚩 flag is under the robot — it would win before it moved.":
+  "ה-🚩 דגל נמצא מתחת לרובוט — הוא היה מנצח לפני שזז.",
+"No 🔢 keypad on the board — this is a walking puzzle, not a Cyber level.":
+  "אין 🔢 מקלדת קוד על הלוח — זאת חידת הליכה, לא שלב סייבר.",
+"A 🗝️ Keypad + Key needs a 🔑 key somewhere on the board, or it never opens.":
+  "🗝️ מקלדת קוד + מפתח צריכה 🔑 מפתח איפשהו על הלוח, אחרת היא לא נפתחת לעולם.",
+"⛔ Strikes only matters when there is a keypad to jam.":
+  "⛔ הזדמנויות משנה רק כשיש מקלדת קוד שיכולה להיתקע.",
+"Every note is sealed, so 🔏 sealed note ahead can never tell two apart — add a plain 📝 note to make it a choice.":
+  "כל הפתקים חתומים, אז 🔏 פתק חתום לפנים לא יכול להבדיל בין שניים — תוסיף 📝 פתק רגיל כדי שתהיה בחירה.",
+"Your own keypad — set the code, prove it, publish it":
+  "מקלדת הקוד שלך — תקבע את הקוד, תוכיח אותה, תפרסם אותה",
+"Build a lock of your own and put it in front of everybody.":
+  "תבנה מנעול משלך ותשים אותו מול כולם.",
+"Your Cyber level is live for everyone who plays it!":"שלב הסייבר שלך באוויר לכל מי שמשחק!",
+"Players everywhere can now try to crack your keypad!":"שחקנים בכל מקום יכולים עכשיו לנסות לפצח את מקלדת הקוד שלך!",
 "🧩 Block budget":"🧩 תקציב בלוקים","↔️ Width":"↔️ רוחב","↕️ Height":"↕️ גובה",
 "Nothing on the board yet — pick a tool below and tap tiles.":
   "עדיין אין כלום על הלוח — תבחר כלי למטה ותלחץ על משבצות.",
@@ -1282,6 +1309,13 @@ const HE_RAW={
 "🧊 3D view":"🧊 תצוגה תלת-ממדית",
 "🧊 Tower design — tap a tile to raise it, hold to clear it.":
   "🧊 עיצוב מגדל — לחץ על משבצת כדי להגביה אותה, החזק כדי לנקות.",
+/* ---- Cyber Lab: its designer ---- */
+"Switch to 🔐 Cyber Lab mode?\n\nThe flat board and the program you've written are cleared — you design with keypads and notes instead.":
+  "לעבור למצב 🔐 מעבדת סייבר?\n\nהלוח השטוח והתוכנית שכתבת נמחקים — במקומם מעצבים עם מקלדות קוד ופתקים.",
+"Back to the flat 2D board?\n\nYour Cyber board is cleared.":
+  "לחזור ללוח הדו-ממדי השטוח?\n\nלוח הסייבר שלך נמחק.",
+"🔐 Open the keypad and reach the 🚩 flag — a Cyber level somebody built.":
+  "🔐 תפתח את מקלדת הקוד ותגיע ל-🚩 דגל — שלב סייבר שמישהו בנה.",
 /* ---- Cyber Lab ---- */
 "🔐 A keypad with a ONE-digit code stands between you and the 🚩 flag. You do not know the code — so try every one of them. 🔁 Count to 10, 🔢 Try Code the counter each time, then walk through.":
   "🔐 מקלדת קוד עם קוד בן ספרה אחת עומדת בינך לבין ה-🚩 דגל. אתה לא יודע את הקוד — אז תנסה את כולם. 🔁 תספור עד 10, 🔢 נסה קוד עם המונה בכל פעם, ואז תעבור.",
@@ -1511,6 +1545,14 @@ const HE_T={
 "🧊 Published “{s}”!":"🧊 „{1}” פורסם!",
 /* ---- Cyber Lab ---- */
 "🔒 Finish “{s}” first.":"🔒 קודם תסיים את „{1}”.",
+"The keypad at {n},{n} has code {n}, it jams on wrong codes, and no 📝 note says what it is — nobody can open it.":
+  "למקלדת הקוד ב-{1},{2} יש קוד {3}, היא נתקעת על קודים שגויים, ואין 📝 פתק שאומר מה הוא — אף אחד לא יכול לפתוח אותה.",
+"The keypad at {n},{n} has code {n} and no 📝 note says so. Guessing that far takes more steps than a run has — write it on a note.":
+  "למקלדת הקוד ב-{1},{2} יש קוד {3} ואין 📝 פתק שאומר את זה. לנחש עד לשם דורש יותר צעדים ממה שיש בהרצה — תכתוב אותו על פתק.",
+"Code {n} at {n},{n} is only findable by guessing — that is {n} tries. Fine for a brute-force lesson, slow for anything else.":
+  "קוד {1} ב-{2},{3} ניתן למציאה רק בניחוש — זה {4} ניסיונות. בסדר לשיעור על כוח גס, איטי לכל דבר אחר.",
+"The flag can't sit inside {s} — nobody could stand on it.":
+  "הדגל לא יכול לשבת בתוך {1} — אף אחד לא היה יכול לעמוד עליו.",
 /* ---- world, moderation, tower 3D, orders, shop ---- */
 "{s} — what to do?":"{1} — מה לעשות?",
 "🤖 Selected {s}":"🤖 נבחר {1}",
