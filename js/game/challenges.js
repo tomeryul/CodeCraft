@@ -1480,6 +1480,8 @@ function mgTick(){
     // to the flat-board rules. Answers false off 3D levels, and no-ops when the
     // file isn't loaded.
     if(window.T3Act&&T3Act(st,b)){}
+    // the Cyber Lab's keypad, same idea: answers false anywhere else
+    else if(window.CCAct&&CCAct(st,b)){}
     else if(b.t==="move"){
       const nx=rb.x+DX[rb.dir],ny=rb.y+DY[rb.dir];
       const oneWay=window.CC_TILES&&!CC_TILES.canLeave(rb,rb.x,rb.y,rb.dir);

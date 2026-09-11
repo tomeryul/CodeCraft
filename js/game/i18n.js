@@ -335,6 +335,31 @@ const HE={
   "התחבר כדי לשמור את העולם שלך בכל מכשיר. אפשר לייצא עותק בכל רגע.",
 "Tower Mode — 3D":"מצב מגדל — 3D",
 
+/* ---- Cyber Lab ----
+        The level names and the lessons on the celebration card carry no
+        emoji at all, so they live here rather than in HE_RAW. */
+"Cyber Lab":"מעבדת סייבר",
+"What makes a secret a secret — locks, codes and notes that lie.":
+  "מה עושה סוד לסוד — מנעולים, קודים ופתקים שמשקרים.",
+"Locks to open, notes that lie — and why a long password is a strong one.":
+  "מנעולים לפתוח, פתקים שמשקרים — ולמה סיסמה ארוכה היא סיסמה חזקה.",
+"security":"אבטחה","Cyber":"סייבר","codes tried":"קודים שנוסו",
+"Try Code":"נסה קוד",
+"Ten Codes":"עשרה קודים","One More Digit":"עוד ספרה אחת",
+"On a Sticky Note":"על פתק דביק","With a Key":"עם מפתח",
+"Never Trust a Note":"אף פעם אל תסמוך על פתק",
+"LOCK OPENED!":"המנעול נפתח!","Got it! 🎉":"הבנתי! 🎉",
+"A one-digit code has ten possibilities, and a loop went through all ten before you could blink. A real computer does it millions of times faster. That is the whole reason a short secret is not a secret.":
+  "לקוד בן ספרה אחת יש עשר אפשרויות, ולולאה עברה על כל העשר לפני שהספקת למצמץ. מחשב אמיתי עושה את זה מיליון פעמים יותר מהר. זאת כל הסיבה שסוד קצר הוא לא סוד.",
+"One more digit turned ten guesses into a hundred. Every digit you add multiplies the work by ten, so eight digits is a hundred million. That is why a long password is a strong one — not because it is clever, because it is long.":
+  "ספרה אחת נוספת הפכה עשרה ניחושים למאה. כל ספרה שאתה מוסיף מכפילה את העבודה בעשר, אז שמונה ספרות זה כבר מאה מיליון. בגלל זה סיסמה ארוכה היא סיסמה חזקה — לא כי היא חכמה, אלא כי היא ארוכה.",
+"Nobody guessed this code: it was written down next to the door it opens. Programs do exactly this — a password typed into the code itself, or left in a file that ships with the app. A secret anybody can read is not a secret, however long it is.":
+  "אף אחד לא ניחש את הקוד הזה: הוא היה כתוב ליד הדלת שהוא פותח. תוכניות עושות בדיוק את זה — סיסמה שנכתבה בתוך הקוד עצמו, או נשארה בקובץ שנשלח יחד עם האפליקציה. סוד שכל אחד יכול לקרוא הוא לא סוד, לא משנה כמה הוא ארוך.",
+"The note by itself was useless — it needed the key (+3) before it meant anything. That is encryption: a message anybody may see, that only the key turns back into the secret. Real keys are far bigger than 3, but the shape is exactly this.":
+  "הפתק לבדו לא היה שווה כלום — הוא היה צריך את המפתח (+3) כדי להגיד משהו. זאת הצפנה: הודעה שכל אחד יכול לראות, שרק המפתח הופך אותה בחזרה לסוד. מפתחות אמיתיים גדולים הרבה יותר מ-3, אבל הצורה היא בדיוק זאת.",
+"The note by the door said 5, and the door did not open. Anything handed to a program can be wrong — by mistake, or as a lie, from somebody who wants in. That is the rule underneath most of security: check what you are given before you act on it. A program that believes whatever it is handed is a program somebody else is driving.":
+  "הפתק ליד הדלת אמר 5, והדלת לא נפתחה. כל דבר שמוסרים לתוכנית יכול להיות שגוי — בטעות, או כשקר, ממישהו שרוצה להיכנס. זה הכלל שמתחת לרוב האבטחה: תבדוק מה נתנו לך לפני שאתה פועל לפיו. תוכנית שמאמינה לכל מה שמוסרים לה היא תוכנית שמישהו אחר נוהג בה.",
+
 /* ---- palette headings (CSS uppercases them, the DOM text is title case) ---- */
 "Basics":"בסיס","Loops":"לולאות","Logic":"לוגיקה","Smart":"חכם",
 "Memory":"זיכרון","Functions":"פונקציות","Teamwork":"עבודת צוות",
@@ -834,8 +859,20 @@ const STRIP=/[\p{Extended_Pictographic}\uFE0F\u200D\u20E3]/gu;
    the sentence alone. Leading and trailing separators are stripped for the
    lookup and put back around the Hebrew, exactly like the emoji. */
 const MARK="\\s\\u2013\\u2014\\u00b7:\\u2022\\u25cb\\u2713\\u2717";   // dashes, bullets, and the \u25CB \u2713 \u2717 a test row is prefixed with
-const EDGE=new RegExp("^["+MARK+"\\p{Extended_Pictographic}\\uFE0F\\u200D\\u20E3]*|["+
-  MARK+"\\p{Extended_Pictographic}\\uFE0F\\u200D\\u20E3]*$","gu");
+const DEC="["+MARK+"\\p{Extended_Pictographic}\\uFE0F\\u200D\\u20E3]*";
+const EDGE=new RegExp("^"+DEC+"|"+DEC+"$","gu");
+/* Stripping both ends at once is what EDGE is for, and it does that job.
+   Reading the two ends BACK off a string is a different job and EDGE is the
+   wrong tool for it: with /g the alternation always ends on a zero-length
+   match at the end of the string, so the last entry is "" and every
+   trailing emoji was silently dropped from the Hebrew — "Let’s try it! 🚀"
+   came out with no rocket, and a label followed by a <b> lost the space
+   between the words and the number. One anchored match per end, no /g. */
+const LEAD=new RegExp("^"+DEC,"u"), TAIL=new RegExp(DEC+"$","u");
+const ends=s=>{const l=(s.match(LEAD)||[""])[0];
+  /* a string that is nothing BUT decoration would otherwise be counted at
+     both ends and come back doubled */
+  return [l,(s.slice(l.length).match(TAIL)||[""])[0]];};
 const norm=s=>s.replace(STRIP,"").replace(/\s+/g," ").replace(EDGE,"").trim();
 
 /* Readouts carrying a live number cannot match as whole strings; their
@@ -847,6 +884,7 @@ const HE_N={
   "/min {n}":"{n} לדקה",
   "Lesson {n} of {n}":"שיעור {n} מתוך {n}",
   "{n}/{n} done":"{n}/{n} הושלמו",
+  "{n}/{n} open":"{n}/{n} פתוחים",
   "Bigger Bag +{n} — {n}":"תיק גדול יותר +{n} — {n}",
   "New Robot — {n}":"רובוט חדש — {n}",
   "Speed Boost — {n}":"האצה — {n}",
@@ -1220,6 +1258,17 @@ const HE_RAW={
 "🧊 3D view":"🧊 תצוגה תלת-ממדית",
 "🧊 Tower design — tap a tile to raise it, hold to clear it.":
   "🧊 עיצוב מגדל — לחץ על משבצת כדי להגביה אותה, החזק כדי לנקות.",
+/* ---- Cyber Lab ---- */
+"🔐 A keypad with a ONE-digit code stands between you and the 🚩 flag. You do not know the code — so try every one of them. 🔁 Count to 10, 🔢 Try Code the counter each time, then walk through.":
+  "🔐 מקלדת קוד עם קוד בן ספרה אחת עומדת בינך לבין ה-🚩 דגל. אתה לא יודע את הקוד — אז תנסה את כולם. 🔁 תספור עד 10, 🔢 נסה קוד עם המונה בכל פעם, ואז תעבור.",
+"🔐 The same keypad — but the code has TWO digits now. The same idea needs a bigger loop. Watch 🔢 codes tried under the board as it runs.":
+  "🔐 אותה מקלדת קוד — אבל עכשיו לקוד יש שתי ספרות. אותו רעיון צריך לולאה גדולה יותר. תסתכל על 🔢 קודים שנוסו מתחת ללוח בזמן שזה רץ.",
+"🔐 This code is far too big to guess. But somebody left a 📝 note on the floor in front of the door. 🧠 Read the “number ahead” into a box, then 🔢 Try Code that box.":
+  "🔐 הקוד הזה גדול מדי מכדי לנחש אותו. אבל מישהו השאיר 📝 פתק על הרצפה לפני הדלת. 🧠 קרא את „המספר שלפנים” לתוך קופסה, ואז 🔢 נסה קוד עם הקופסה הזאת.",
+"🔐 The 📝 note is scrambled this time: the real code is the number on it PLUS 3. Three is the key. 🧠 Read the note, ➕ Change it by 3, then 🔢 Try Code it.":
+  "🔐 הפעם ה-📝 פתק מבולבל: הקוד האמיתי הוא המספר שכתוב עליו ועוד 3. שלוש זה המפתח. 🧠 קרא את הפתק, ➕ שנה אותו ב-3, ואז 🔢 נסה קוד איתו.",
+"🔐 TWO 📝 notes, and only one of them is telling the truth. The one lying on the floor right by the door says 5. The other is up along the top of the room. Try the wrong one and the door simply does not care.":
+  "🔐 שני 📝 פתקים, ורק אחד מהם אומר את האמת. זה שמונח על הרצפה ממש ליד הדלת אומר 5. השני נמצא למעלה לאורך החלק העליון של החדר. תנסה את הלא-נכון, והדלת פשוט לא תתרגש.",
 /* ---- world, moderation, tower 3D, orders, shop ---- */
 "⛓️ Iron ore — mine it, worth 6🪙!":"⛓️ עפרת ברזל — תכרה אותה, שווה 6🪙!",
 "🌉 Bridges go on water.":"🌉 גשרים נבנים על מים.",
@@ -1424,6 +1473,8 @@ const HE_T={
   "✏️ אתה עורך את „{1}” — הפתרון שלך נטען. שנה אותו, תוכיח ▶, ואז 💾 שמור.",
 "💾 Saved “{s}” to My Challenges!":"💾 „{1}” נשמר לאתגרים שלי!",
 "🧊 Published “{s}”!":"🧊 „{1}” פורסם!",
+/* ---- Cyber Lab ---- */
+"🔒 Finish “{s}” first.":"🔒 קודם תסיים את „{1}”.",
 /* ---- world, moderation, tower 3D, orders, shop ---- */
 "{s} — what to do?":"{1} — מה לעשות?",
 "🤖 Selected {s}":"🤖 נבחר {1}",
@@ -1554,8 +1605,8 @@ function trWord(c){
   if(raw)return raw;
   const hit=IDX[core];
   if(!hit)return c;
-  const e=c.match(EDGE)||["",""];
-  return (e[0]||"")+hit+(e[e.length-1]||"");
+  const e=ends(c);
+  return e[0]+hit+e[1];
 }
 function fill(val,caps){
   caps=caps.map(c=>c==null?c:trWord(c));
@@ -1616,11 +1667,11 @@ function tr(s,el){
   if(!core)return null;
   if(el&&el.closest)for(const [sel,map] of SCOPED)
     if(map[core]&&el.closest(sel)){
-      const e=s.match(EDGE)||["",""];
-      return (e[0]||"")+map[core]+(e[e.length-1]||"");
+      const e=ends(s);
+      return e[0]+map[core]+e[1];
     }
-  const edges=s.match(EDGE)||["",""];
-  const lead=edges[0]||"", tail=edges[edges.length-1]||"";
+  const edges=ends(s);
+  const lead=edges[0], tail=edges[1];
   const raw=IDX_RAW[core];
   if(raw)return raw;
   const hit=IDX[core];

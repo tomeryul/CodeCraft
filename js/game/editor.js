@@ -244,6 +244,7 @@ function renderList(list,parent){
     if(b.t==="countLoop")inner+='<button class="pbtn" data-p="vname">'+esc(b.name)+'</button><span>1→</span><button class="pbtn" data-p="tdec">−</button><span class="num">'+b.to+'</span><button class="pbtn" data-p="tinc">＋</button>';
     if(b.t==="setVar")inner+='<button class="pbtn" data-p="vname">'+esc(b.name)+'</button><span>=</span>'+valCtl(b.val);
     if(b.t==="say")inner+=valCtl(b.val);
+    if(b.t==="tryCode")inner+=valCtl(b.val);
     if(b.t==="read")inner+='<button class="pbtn" data-p="vname">'+esc(b.name)+'</button><span>=</span><button class="pbtn" data-p="rsrc">'+(READ_LBL[b.src]||b.src)+'</button>';
     if(b.t==="if"||b.t==="whileLoop"){
       if(typeof b.cond==="object"){

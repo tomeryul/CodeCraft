@@ -29,7 +29,11 @@ async function toWorld(pg){
 const shownBands = () => [...document.getElementById('projList').children]
   .filter(n=>n.style.display!=='none')
   .filter(n=>(n.tagName==='H4'&&n.classList.contains('qsec'))||n.classList.contains('t3sec'))
-  .map(n=>n.classList.contains('t3sec')?'tower':n.textContent.trim());
+  /* Tower and the Cyber Lab share the .t3sec band shell, so the band each
+     one is has to be read off the class, not the shell. */
+  .map(n=>n.classList.contains('t3sec')
+    ?(n.classList.contains('cy-sec')?'cyber':'tower')
+    :n.textContent.trim());
 
 (async () => {
   const b = await chromium.launch({ executablePath: CHROME });
@@ -52,7 +56,7 @@ const shownBands = () => [...document.getElementById('projList').children]
   }));
   ck('the menu opens with all three groups', menu.open &&
      menu.groups.join()==='Play,Create,Your world', menu);
-  ck('every destination is on it', menu.tiles.length===16, menu.tiles);
+  ck('every destination is on it', menu.tiles.length===17, menu.tiles);
   ck('every tile carries a dimension tag', menu.tagged, menu.tiles);
   ck('"Next up" answers what to do, above the menu', menu.next, menu);
   ck('the old buttons are hidden, not deleted', menu.questInDom && menu.questHidden &&
@@ -62,7 +66,7 @@ const shownBands = () => [...document.getElementById('projList').children]
   const want = {
     academy  :['Academy'],       puzzles:['Puzzle'],
     builds   :['Build Projects'],tower  :['tower'],
-    community:['Community']
+    cyber    :['cyber'],         community:['Community']
   };
   for (const [page,frag] of Object.entries(want)) {
     await pg.evaluate(p=>hubPage(p), page); await pg.waitForTimeout(400);

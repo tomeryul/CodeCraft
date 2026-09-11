@@ -37,6 +37,7 @@ const PAGES={
   puzzles  :{em:"🧩",title:"Puzzle Chapters",sub:"A flat board and one new trick per chapter.",bands:["puzzles"]},
   builds   :{em:"🏗️",title:"Build Projects",sub:"A blueprint to fill in. What you finish appears in your world.",bands:["builds"]},
   tower    :{em:"🧊",title:"Tower Mode — 3D",sub:"The same board with height. Stack, climb, and rebuild the blueprint in 3D.",bands:["tower"]},
+  cyber    :{em:"🔐",title:"Cyber Lab",     sub:"What makes a secret a secret — locks, codes and notes that lie.",bands:["cyber"]},
   mine     :{em:"🛠️",title:"My Challenges",sub:"Levels you designed — flat boards and towers.",bands:["mine","tower"]},
   community:{em:"🌍",title:"Community",   sub:"Levels other players published.",bands:["community"]},
   account  :{em:"👤",title:"Account & save",sub:"Sign in to keep your world on every device. Export a copy any time.",bands:[],auth:true}
@@ -54,6 +55,9 @@ const GROUPS=[
     {em:"🧩",name:"Puzzle Chapters",tag:"2D",page:"puzzles"},
     {em:"🏗️",name:"Build Projects",tag:"2D",page:"builds",
      meta:()=>num(()=>PROJECTS.filter(p=>player.projects[p.id]).length+"/"+PROJECTS.length)},
+    {em:"🔐",name:"Cyber Lab",tag:"security",page:"cyber",
+     meta:()=>{const L=(window.CC_CYBER&&CC_CYBER.levels)||[];
+       return L.length?(L.filter(l=>player.projects[l.id]).length+"/"+L.length):null;}},
     {em:"🧊",name:"Tower Mode",tag:"3D",page:"tower",
      meta:()=>num(()=>TOWER_LEVELS.filter(l=>player.projects[l.id]).length+"/"+TOWER_LEVELS.length)},
     {em:"🌍",name:"Community",tag:"2D + 3D",page:"community",
@@ -143,7 +147,10 @@ function bandKey(t){
 function bands(){
   const el=$("projList"),out=[];let cur=null;
   for(const n of [...el.children]){
-    if(n.classList&&n.classList.contains("t3sec")){out.push({key:"tower",nodes:[n]});cur=null;continue;}
+    /* the bolted-on sections each build one .t3sec of their own, so which
+       one it is comes from the class beside it rather than from its text */
+    if(n.classList&&n.classList.contains("t3sec")){
+      out.push({key:n.classList.contains("cy-sec")?"cyber":"tower",nodes:[n]});cur=null;continue;}
     if(n.tagName==="H4"&&n.classList.contains("qsec")){
       cur={key:bandKey(n.textContent||""),nodes:[n]};out.push(cur);continue;
     }

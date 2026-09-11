@@ -215,6 +215,30 @@ async function boot(pg,he){
   ck('and the bold block name beside it is not flattened away',
      dash.bold!==null && dash.bold.length>0, dash);
 
+  /* Stripping the decoration off both ends and reading it back off are two
+     different jobs, and one regex was doing both. With /g the alternation
+     always finishes on a zero-length match at the end of the string, so the
+     trailing half came back "" — every trailing emoji was dropped from the
+     Hebrew, and a label followed by a <b> lost the space with it and glued
+     its words to the number. */
+  const tail = await pg.evaluate(async () => {
+    const host=document.createElement('div'); host.id='__tail';
+    host.style.position='absolute'; host.style.left='-9999px';
+    document.body.appendChild(host);
+    await new Promise(r=>setTimeout(r,60));
+    host.innerHTML='<span class="a">Let\u2019s try it! \ud83d\ude80</span>'+
+                   '<span class="b">Steps walked <b>7</b></span>';
+    await new Promise(r=>setTimeout(r,350));
+    const a=host.querySelector('.a'), bb=host.querySelector('.b');
+    return { emoji:[...a.querySelectorAll('.ui-emoji')].map(e=>e.getAttribute('data-e')),
+             aText:a.textContent,
+             label:bb.firstChild.nodeValue||'', bold:bb.querySelector('b').textContent };
+  });
+  ck('an emoji at the END of a sentence survives the translation',
+     HEB.test(tail.aText) && tail.emoji.indexOf('\ud83d\ude80')>=0, tail);
+  ck('and a label keeps the space between its words and the number beside it',
+     HEB.test(tail.label) && /\s$/.test(tail.label) && tail.bold==='7', tail);
+
   /* The goal line and the level's question are two nodes, not one joined
      string — a joined string exists nowhere in the source and so could
      never match. */

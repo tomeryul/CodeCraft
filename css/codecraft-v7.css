@@ -663,3 +663,23 @@ body:has(.sheet.open) #toasts .toast{max-width:88vw;}
 /* designing is not writing: the Blocks hint belongs to playing a level */
 #editor.mg #mgCreatorBar.on ~ #mgBoardHint,
 #mgRead #mgCreatorBar.on ~ #mgBoardHint{display:none;}
+
+/* =====================================================================
+   Cyber Lab — its own band, and the card that says what a level taught
+   ---------------------------------------------------------------------
+   It borrows Tower Mode's section shape because it IS the same shape: a
+   bolted-on track with its own levels. Only the accent differs, so the
+   two never read as one list.
+   ===================================================================== */
+.cy-sec{border-color:rgba(143,240,160,.28);background:rgba(84,214,106,.07);}
+.cy-ico{background:linear-gradient(180deg,#8ff0a0,#54d66a);color:#0b3d1c;}
+.cy-sec .t3prog{color:#8ff0a0;background:rgba(84,214,106,.16);}
+.cy-card:active{border-color:rgba(143,240,160,.6);}
+/* a level you have not opened yet says so, rather than looking broken */
+.cy-card.locked{opacity:.5;}
+.cy-card.locked .t3badge{filter:grayscale(1);}
+/* what the level was about, in the card the Academy's lessons use */
+.cy-why{font-size:13px;line-height:1.55;color:#e2dbf5;}
+#cyBar .t3tag{background:linear-gradient(180deg,#8ff0a0,#54d66a);color:#0b3d1c;}
+#cyBar .t3h b{color:var(--accent2);}
+#cyBar .t3key{color:var(--ink2);font-weight:700;}

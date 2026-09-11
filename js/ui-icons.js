@@ -162,6 +162,10 @@ const ICONS={/* ---- v3: the last of the UI emoji ---- */
 "🏗️":W('<rect x="4.4" y="6" width="15.2" height="12.4" rx="1.8" fill="#ff9d5a"/><path d="M4.4 10.2 h15.2 M4.4 14.2 h15.2 M9.5 6 v4.2 M14.5 10.2 v4 M9.5 14.2 v4.2" stroke="#e07840" stroke-width="1.7"/>'),
 "⚠️":W('<path d="M12 3.6 L21.2 19.6 H2.8 Z" fill="#ffd66b" stroke="#e8b23e" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 9.4 v4.6" stroke="#241b45" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.3" fill="#241b45"/>'),
 "🚀":W('<path d="M12 2.8 c3.2 2.2 4.6 6.2 3 11.2 l-3 2 -3-2 C7.4 9 8.8 5 12 2.8 Z" fill="#f6f3ff"/><circle cx="12" cy="9" r="1.9" fill="#5ab8ff"/><path d="M9 14.2 c-2 .6-3.1 2-3.6 4.6 2.6-.5 4.1-1.6 4.6-3.6 Z M15 14.2 c2 .6 3.1 2 3.6 4.6 -2.6-.5-4.1-1.6-4.6-3.6 Z" fill="#ff5d73"/><path d="M12 16.4 v3.6" stroke="#ffb830" stroke-width="2" stroke-linecap="round"/>'),
+/* ---- the Cyber Lab: a sticky note, and the siren on the level that
+   teaches you not to believe one ---- */
+"📝":W('<rect x="4.6" y="4.2" width="14.8" height="15.6" rx="2.2" fill="#ffe9a8" transform="rotate(-4 12 12)"/><path d="M8.4 9.4 H15.6 M8.4 12.6 H15.6 M8.4 15.8 H13" stroke="#b98a4e" stroke-width="1.9" stroke-linecap="round" transform="rotate(-4 12 12)"/>'),
+"🚨":W('<path d="M6.6 18.4 a5.4 5.4 0 0 1 10.8 0 Z" fill="#ff5d73"/><rect x="4.8" y="18.2" width="14.4" height="2.8" rx="1.4" fill="#e04a5f"/><circle cx="12" cy="6.6" r="1.8" fill="#ffd66b"/><path d="M12 2.6 v1.4 M6.2 5 l1 1 M17.8 5 l-1 1" stroke="#ffd66b" stroke-width="1.8" stroke-linecap="round"/>'),
 /* ---- v4: the glyphs the pack never covered, so these screens still showed
    raw system emoji next to real icons (guide, function library, palette,
    orders, moderation, creator tools) ---- */

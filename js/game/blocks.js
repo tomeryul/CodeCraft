@@ -42,6 +42,10 @@ const DEFS={
   drop:{cat:"basic",ic:"⤵️",lbl:"Drop"},
   pickUp:{cat:"basic",ic:"✊",lbl:"Lift"},   // challenge-only: lift a numbered brick to carry it
   build:{cat:"basic",ic:"🔨",lbl:"Build"},
+  /* Cyber Lab only: punch a number into the keypad in front. It is in DEFS
+     rather than in a CATS row because no world palette offers it — a level
+     hands it out through its own `allowed` list. */
+  tryCode:{cat:"basic",ic:"🔢",lbl:"Try Code"},
   rest:{cat:"basic",ic:"😴",lbl:"Rest"},
   wait:{cat:"basic",ic:"⏱️",lbl:"Wait"},
   repeat:{cat:"loops",ic:"🔁",lbl:"Repeat",container:true},
@@ -137,6 +141,7 @@ function newBlock(t){
   if(t==="changeVar"){b.name="x";b.n=1;}
   if(t==="countLoop"){b.name="i";b.to=5;b.body=[];}
   if(t==="say")b.val={k:"str",s:"Hello!"};
+  if(t==="tryCode")b.val={k:"num",n:1};
   return b;
 }
 // A comparison's right-hand side may be a bare number (old saves) or a value
