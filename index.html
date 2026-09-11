@@ -386,8 +386,11 @@
 <script src="./js/game/tower3d.js"></script>
 <script src="./js/game/tower-editor.js"></script>
 <script src="./js/game/cyber.js"></script>
-<script src="./js/game/cyber-editor.js"></script>
 <script src="./js/game/creator-guide.js"></script>
+<!-- after creator-guide.js on purpose: this file WRAPS renderGuide/openGuide,
+     and a classic script's function declaration would overwrite the wrapper
+     if it ran afterwards -->
+<script src="./js/game/cyber-editor.js"></script>
 <script src="./js/game/academy.js"></script>
 <script src="./js/game/chapters.js"></script>
 <script src="./js/game/economy.js"></script>

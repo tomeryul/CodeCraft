@@ -684,6 +684,23 @@ body:has(.sheet.open) #toasts .toast{max-width:88vw;}
 .cy-act-n{font-size:12px;font-weight:800;letter-spacing:.04em;color:#8ff0a0;text-transform:uppercase;}
 .cy-act-s{font-size:12px;color:var(--ink2);line-height:1.4;}
 .cy-sec .cy-act:first-of-type{padding-top:6px;}
+/* What the tool you just tapped actually does, under the tools rather
+   than above them — it explains the thing your finger is on. Two lines is
+   the cap: a paragraph here would push the board off a short sheet. */
+/* the guide's own prose lines, between its labelled rows */
+.gnote .gline{margin:0 0 10px;}
+.gnote .gline:last-child{margin-bottom:0;}
+.gnote .grule{padding:0;margin:0 0 10px;background:none;border:0;}
+.cy-tip{display:flex;align-items:flex-start;gap:7px;padding:5px 8px 1px;}
+.cy-tip .cy-tip-t{font-size:11px;line-height:1.42;color:var(--ink2);min-width:0;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;}
+.cy-tip b{color:#8ff0a0;font-weight:800;}
+/* the way into the guide, beside the tools — the only row of this panel
+   that is on screen on an untouched board */
+.cy-help{flex:0 0 auto;display:inline-flex;align-items:center;gap:3px;
+  font:800 11px/1 inherit;padding:5px 9px;border-radius:999px;cursor:pointer;
+  background:rgba(143,240,160,.16);border:1px solid rgba(143,240,160,.42);color:#8ff0a0;}
+.cy-help:active{background:rgba(143,240,160,.3);}
 /* the designer's ⛔ Strikes setting: four chips, sized like the block
    chips beside them so the row reads as one control */
 .cy-strk{display:flex;gap:4px;}

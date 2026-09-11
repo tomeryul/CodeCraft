@@ -129,6 +129,67 @@ const HE={
 /* the Cyber Lab's designer: its tools, its one setting, and what it says
    when a board is not yet a level */
 "Flag":"דגל","Wall":"קיר","Key":"מפתח",
+/* its guide: the sheet, its sections, and every line in it. Each one is
+   its own element with nothing inside it, so each matches whole-string —
+   which is why this mode is translated and the flat guide is not. */
+"Design a Cyber level":"לעצב שלב סייבר",
+"What every piece does, then four boards to start from.":
+  "מה כל חלק עושה, ואז ארבעה לוחות להתחיל מהם.",
+"Guide":"מדריך",
+"🧩 The pieces, and what each one does":"🧩 החלקים, ומה כל אחד עושה",
+"📝 The two kinds of note":"📝 שני סוגי הפתקים",
+"⛔ What Strikes does":"⛔ מה הזדמנויות עושה",
+"🪜 Build one from nothing, in six taps":"🪜 לבנות אחד מאפס, בשש לחיצות",
+"🔀 The hard version: several codes, one program":"🔀 הגרסה הקשה: כמה קודים, תוכנית אחת",
+"Tap one and it lands on your canvas, already working. Solve it, then change the numbers and the walls until it is yours.":
+  "תלחץ על אחד והוא נוחת על הלוח שלך, כבר עובד. תפתור אותו, ואז תשנה את המספרים ואת הקירות עד שהוא שלך.",
+/* the tools, as the guide and the strip both say them */
+"Where the robot has to get to. Every level needs exactly one — tap the flag again to take it away.":
+  "לאן שהרובוט צריך להגיע. כל שלב צריך בדיוק אחד — תלחץ על הדגל שוב כדי להוריד אותו.",
+"Where the robot begins, facing right. Put it on the far side of the keypad from the flag.":
+  "מאיפה הרובוט מתחיל, פונה ימינה. תשים אותו בצד של מקלדת הקוד שהוא לא צד הדגל.",
+"Nothing walks through it. The usual shape: a wall across the board with ONE gap, and the keypad in the gap.":
+  "שום דבר לא עובר דרכו. הצורה הרגילה: קיר לרוחב הלוח עם פתח אחד, ומקלדת הקוד בפתח.",
+"Clears whatever is on the tile you tap.":"מנקה כל מה שיש על המשבצת שתלחץ עליה.",
+/* the two notes */
+"Plain note":"פתק רגיל",
+"Anybody could have written it. It might be the code. It might be a lie.":
+  "כל אחד יכול היה לכתוב אותו. אולי זה הקוד. אולי זה שקר.",
+"It carries a wax seal, and the seal says who wrote it.":
+  "יש עליו חותם שעווה, והחותם אומר מי כתב אותו.",
+"Use one note":"תשתמש בפתק אחד",
+"Your level is about reading a secret somebody wrote down.":
+  "השלב שלך עוסק בקריאת סוד שמישהו רשם.",
+"Use two, one of them sealed":"תשתמש בשניים, אחד מהם חתום",
+"Your level is about not believing the wrong one.":
+  "השלב שלך עוסק בלא להאמין לזה הלא-נכון.",
+/* strikes */
+"1, 2 or 3":"1, 2 או 3",
+"A wrong code costs nothing. The player can guess forever, so keep the code under 20 or your level is a wall.":
+  "קוד שגוי לא עולה כלום. השחקן יכול לנחש לנצח, אז תשאיר את הקוד מתחת ל-20 או שהשלב שלך הוא קיר.",
+"That one setting decides what your level is about. With Strikes off a loop can guess its way in, so the level is about looping. With Strikes on guessing is dead, so the level is about finding out — and the code had better be written somewhere.":
+  "ההגדרה האחת הזאת קובעת במה השלב שלך עוסק. עם הזדמנויות כבוי, לולאה יכולה לנחש את דרכה פנימה, אז השלב עוסק בלולאות. עם הזדמנויות דלוק, ניחוש מת, אז השלב עוסק במציאה — וכדאי מאוד שהקוד יהיה כתוב איפשהו.",
+"The game checks this for you: a keypad that jams, with its code on no note, is refused before you can save it.":
+  "המשחק בודק את זה בשבילך: מקלדת קוד שנתקעת, שהקוד שלה לא על אף פתק, נדחית עוד לפני שתוכל לשמור.",
+/* six taps */
+"Tap the left end of the middle row.":"תלחץ על הקצה השמאלי של השורה האמצעית.",
+"Tap every tile of one column except the middle one.":
+  "תלחץ על כל משבצת בעמודה אחת חוץ מהאמצעית.",
+"Tap a tile in front of the keypad and give it the same number.":
+  "תלחץ על משבצת לפני מקלדת הקוד ותיתן לה את אותו מספר.",
+"Tap the far side of the wall.":"תלחץ על הצד הרחוק של הקיר.",
+"Write the program yourself and press ▶.":"תכתוב את התוכנית בעצמך ותלחץ ▶.",
+/* inputs */
+"This is the trick the three hardest built-in levels are made of, and it is two taps.":
+  "זה הטריק ששלושת השלבים המובנים הקשים ביותר עשויים ממנו, והוא שתי לחיצות.",
+"One program, every board":"תוכנית אחת, כל הלוחות",
+"A program that types 58 into the keypad passes the first board and fails the rest. Only a program that reads the note gets through all of them.":
+  "תוכנית שמקלידה 58 למקלדת עוברת את הלוח הראשון ונכשלת בכל השאר. רק תוכנית שקוראת את הפתק עוברת את כולם.",
+/* the four starter boards */
+"The simplest lock":"המנעול הפשוט ביותר","guessing":"ניחוש",
+"Write it on a note":"תכתוב את זה על פתק",
+"A code and a key":"קוד ומפתח","two factors":"שני גורמים",
+"One note is lying":"פתק אחד משקר",
 "Strikes":"הזדמנויות","off":"כבוי","Code — tap to type":"קוד — לחץ כדי להקליד",
 "Number for this tile (0–9999):":"מספר למשבצת הזאת (0–9999):",
 "🔐 Cyber design — a keypad, something that says what its code is, and a 🚩 flag past it.":
@@ -1310,6 +1371,51 @@ const HE_RAW={
 "🧊 Tower design — tap a tile to raise it, hold to clear it.":
   "🧊 עיצוב מגדל — לחץ על משבצת כדי להגביה אותה, החזק כדי לנקות.",
 /* ---- Cyber Lab: its designer ---- */
+"A door whose key is a NUMBER. Set its code below — tap the number to type one. It opens when the robot punches that exact code in with 🔢 Try Code, and then it stays open.":
+  "דלת שהמפתח שלה הוא מספר. תקבע את הקוד שלה למטה — תלחץ על המספר כדי להקליד אותו. היא נפתחת כשהרובוט מקליד בדיוק את הקוד הזה עם 🔢 נסה קוד, ואז היא נשארת פתוחה.",
+"The same door, but it wants a 🔑 key as well. The right code ALONE will not open it — something you know and something you carry.":
+  "אותה דלת, אבל היא רוצה גם 🔑 מפתח. הקוד הנכון לבדו לא יפתח אותה — משהו שאתה יודע ומשהו שאתה נושא.",
+"The robot picks it up just by walking over it, and keeps it. One key opens every 🗝️ keypad on the board.":
+  "הרובוט מרים אותו פשוט בכך שהוא עובר עליו, ושומר אותו. מפתח אחד פותח כל 🗝️ מקלדת קוד על הלוח.",
+"A number lying on the floor. The robot reads it with 🧠 Read “number ahead”. Put the keypad's code on it and your level is about reading — put a DIFFERENT number on it and your level is about a note that lies.":
+  "מספר שמונח על הרצפה. הרובוט קורא אותו עם 🧠 קרא „המספר שלפנים”. תשים עליו את הקוד של מקלדת הקוד והשלב שלך עוסק בקריאה — תשים עליו מספר אחר והשלב שלך עוסק בפתק שמשקר.",
+"The same note with a wax seal, which says WHO wrote it. A forgery copies the number perfectly and cannot copy the seal — ❓ If 🔏 sealed note ahead is how the robot tells two notes apart.":
+  "אותו פתק עם חותם שעווה, שאומר מי כתב אותו. זיוף מעתיק את המספר מושלם ולא יכול להעתיק את החותם — ❓ אם 🔏 פתק חתום לפנים זה איך שהרובוט מבדיל בין שני פתקים.",
+"Both notes are just a number lying on the floor, and the robot reads either one the same way: 🧠 Read “number ahead”.":
+  "שני הפתקים הם פשוט מספר שמונח על הרצפה, והרובוט קורא כל אחד מהם באותו אופן: 🧠 קרא „המספר שלפנים”.",
+"The numbers are not what tells them apart, and that is the whole point: a forgery copies a number perfectly. What it cannot copy is the seal. So ❓ If 🔏 sealed note ahead is the only honest way to choose between two notes — which is exactly what “check the sender, not the message” means.":
+  "המספרים הם לא מה שמבדיל ביניהם, וזאת כל הנקודה: זיוף מעתיק מספר מושלם. מה שהוא לא יכול להעתיק זה החותם. אז ❓ אם 🔏 פתק חתום לפנים היא הדרך הישרה היחידה לבחור בין שני פתקים — וזה בדיוק מה ש„תבדוק את השולח, לא את ההודעה” אומר.",
+"After that many wrong codes the keypad jams, and every code after it is refused until the robot ⏱ Waits.":
+  "אחרי כל כך הרבה קודים שגויים מקלדת הקוד נתקעת, וכל קוד אחריהם נדחה עד שהרובוט ⏱ מחכה.",
+"That is a finished level. 💾 Save only opens once you have solved it yourself, which is the one rule here: nobody publishes a lock they cannot open.":
+  "זה שלב גמור. 💾 שמור נפתח רק אחרי שפתרת אותו בעצמך, וזה הכלל האחד כאן: אף אחד לא מפרסם מנעול שהוא לא יכול לפתוח.",
+"🤖 Start":"🤖 התחלה","🧱 Wall":"🧱 קיר","🔢 Keypad":"🔢 מקלדת קוד",
+"📝 Note":"📝 פתק","🚩 Flag":"🚩 דגל","🧩 Blocks":"🧩 בלוקים",
+"⚙️ Split into inputs":"⚙️ פיצול לקלטים",
+"👁 Make the last one 🙈 secret":"👁 תהפוך את האחרון ל-🙈 סודי",
+"Tap the gap you left, then tap the number under the tools and type its code.":
+  "תלחץ על הפתח שהשארת, ואז תלחץ על המספר מתחת לכלים ותקליד את הקוד שלה.",
+"Your board becomes input 1. Add another, and give that board a different code on its keypad and on its note. Up to eight.":
+  "הלוח שלך הופך לקלט 1. תוסיף עוד אחד, ותיתן ללוח הזה קוד אחר על מקלדת הקוד ועל הפתק שלו. עד שמונה.",
+"The player never sees that board at all, so they cannot study it. That is a one-time code, built by you.":
+  "השחקן לא רואה את הלוח הזה בכלל, אז הוא לא יכול ללמוד אותו. זה קוד חד-פעמי, שאתה בנית.",
+/* the four starter boards' blurbs */
+"One keypad, a one-digit code, and no clue anywhere. The player writes a 🔢 Count loop that tries 1, 2, 3… until it opens. Start here — it is the level the whole section is built on.":
+  "מקלדת קוד אחת, קוד בן ספרה אחת, ואפס רמזים. השחקן כותב לולאת 🔢 ספירה שמנסה 1, 2, 3… עד שהיא נפתחת. תתחיל מכאן — זה השלב שכל הסקשן בנוי עליו.",
+"The code is far too big to guess, and somebody wrote it on a 📝 note lying in the corridor. The player reads the note into a box and tries that. Change the number on BOTH tiles to make it yours.":
+  "הקוד גדול מכדי לנחש, ומישהו כתב אותו על 📝 פתק שמונח במסדרון. השחקן קורא את הפתק לתוך קופסה ומנסה אותה. תשנה את המספר בשתי המשבצות כדי שיהיה שלך.",
+"A 🗝️ Keypad + Key: the right code is not enough on its own. The 🔑 key is behind the robot, so the player has to go back for it. Two kinds of proof, on one door.":
+  "🗝️ מקלדת קוד + מפתח: הקוד הנכון לא מספיק לבד. ה-🔑 מפתח נמצא מאחורי הרובוט, אז השחקן צריך לחזור לקחת אותו. שני סוגי הוכחה, על דלת אחת.",
+"Two notes with numbers that look almost the same, and only the 🔏 SEALED one is real. ⛔ Strikes is set to 1, so trying the forgery ends the run — the player has to check the seal before they act.":
+  "שני פתקים עם מספרים שנראים כמעט אותו דבר, ורק ה-🔏 חתום אמיתי. ⛔ הזדמנויות מוגדר ל-1, אז ניסיון הזיוף מסיים את ההרצה — השחקן חייב לבדוק את החותם לפני שהוא פועל.",
+"🔐 A ONE-digit code stands between you and the 🚩 flag. You do not know it — so try all ten.":
+  "🔐 קוד בן ספרה אחת עומד בינך לבין ה-🚩 דגל. אתה לא יודע אותו — אז תנסה את כל העשרה.",
+"🔐 Too big to guess — but somebody left a 📝 note on the floor. 🧠 Read it, then 🔢 Try Code it.":
+  "🔐 גדול מכדי לנחש — אבל מישהו השאיר 📝 פתק על הרצפה. 🧠 תקרא אותו, ואז 🔢 נסה קוד איתו.",
+"🔐 This keypad has a keyhole too. The 📝 note has the code; the 🔑 key is behind you.":
+  "🔐 למקלדת הקוד הזאת יש גם חור מנעול. ב-📝 פתק יש את הקוד; ה-🔑 מפתח נמצא מאחוריך.",
+"🔐 Two notes, and only the 🔏 sealed one is real. One wrong code and this keypad jams.":
+  "🔐 שני פתקים, ורק ה-🔏 חתום אמיתי. קוד שגוי אחד והמקלדת הזאת נתקעת.",
 "Switch to 🔐 Cyber Lab mode?\n\nThe flat board and the program you've written are cleared — you design with keypads and notes instead.":
   "לעבור למצב 🔐 מעבדת סייבר?\n\nהלוח השטוח והתוכנית שכתבת נמחקים — במקומם מעצבים עם מקלדות קוד ופתקים.",
 "Back to the flat 2D board?\n\nYour Cyber board is cleared.":
@@ -1551,6 +1657,10 @@ const HE_T={
   "למקלדת הקוד ב-{1},{2} יש קוד {3} ואין 📝 פתק שאומר את זה. לנחש עד לשם דורש יותר צעדים ממה שיש בהרצה — תכתוב אותו על פתק.",
 "Code {n} at {n},{n} is only findable by guessing — that is {n} tries. Fine for a brute-force lesson, slow for anything else.":
   "קוד {1} ב-{2},{3} ניתן למציאה רק בניחוש — זה {4} ניסיונות. בסדר לשיעור על כוח גס, איטי לכל דבר אחר.",
+"🛠️ “{s}” is on the board — solve it first, then make it yours!":
+  "🛠️ „{1}” על הלוח — קודם תפתור אותו, ואז תהפוך אותו לשלך!",
+"Replace the board you're working on with “{s}”?":
+  "להחליף את הלוח שאתה עובד עליו ב„{1}”?",
 "The flag can't sit inside {s} — nobody could stand on it.":
   "הדגל לא יכול לשבת בתוך {1} — אף אחד לא היה יכול לעמוד עליו.",
 /* ---- world, moderation, tower 3D, orders, shop ---- */

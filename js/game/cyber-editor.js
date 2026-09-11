@@ -36,16 +36,30 @@ window.__cyed=1;
 const CY=window.CC_CYBER;
 /* 🚩 and 🤖 are places, not terrain; the rest are tiles CC_TILES already
    knows how to draw, so painting them is the creator's own code. */
+/* Nine glyphs in a row and a number box is a puzzle of its own, and the
+   author is here to build a level rather than solve one — so every tool
+   says what it is, in the place you pick it up. `tip` is written for
+   somebody who has never seen a keypad tile before, because that is who
+   opens this the first time. */
 const TOOLS=[
-  {id:"flag",  em:"🚩", lbl:"Flag"},
-  {id:"bot",   em:"🤖", lbl:"Start"},
-  {id:"wall",  em:"🧱", lbl:"Wall"},
-  {id:"lock",  em:"🔢", lbl:"Keypad", num:true},
-  {id:"lockk", em:"🗝️", lbl:"Keypad + Key", num:true},
-  {id:"key",   em:"🔑", lbl:"Key"},
-  {id:"note",  em:"📝", lbl:"Note", num:true},
-  {id:"snote", em:"🔏", lbl:"Sealed note", num:true},
-  {id:"erase", em:"🧹", lbl:"Erase"}
+  {id:"flag",  em:"🚩", lbl:"Flag",
+   tip:"Where the robot has to get to. Every level needs exactly one — tap the flag again to take it away."},
+  {id:"bot",   em:"🤖", lbl:"Start",
+   tip:"Where the robot begins, facing right. Put it on the far side of the keypad from the flag."},
+  {id:"wall",  em:"🧱", lbl:"Wall",
+   tip:"Nothing walks through it. The usual shape: a wall across the board with ONE gap, and the keypad in the gap."},
+  {id:"lock",  em:"🔢", lbl:"Keypad", num:true,
+   tip:"A door whose key is a NUMBER. Set its code below — tap the number to type one. It opens when the robot punches that exact code in with 🔢 Try Code, and then it stays open."},
+  {id:"lockk", em:"🗝️", lbl:"Keypad + Key", num:true,
+   tip:"The same door, but it wants a 🔑 key as well. The right code ALONE will not open it — something you know and something you carry."},
+  {id:"key",   em:"🔑", lbl:"Key",
+   tip:"The robot picks it up just by walking over it, and keeps it. One key opens every 🗝️ keypad on the board."},
+  {id:"note",  em:"📝", lbl:"Note", num:true,
+   tip:"A number lying on the floor. The robot reads it with 🧠 Read “number ahead”. Put the keypad's code on it and your level is about reading — put a DIFFERENT number on it and your level is about a note that lies."},
+  {id:"snote", em:"🔏", lbl:"Sealed note", num:true,
+   tip:"The same note with a wax seal, which says WHO wrote it. A forgery copies the number perfectly and cannot copy the seal — ❓ If 🔏 sealed note ahead is how the robot tells two notes apart."},
+  {id:"erase", em:"🧹", lbl:"Erase",
+   tip:"Clears whatever is on the tile you tap."}
 ];
 const NUMTOOL=id=>!!(TOOLS.find(t=>t.id===id)||{}).num;
 /* which blocks an author may hand out, and the ones every level needs */
@@ -157,6 +171,7 @@ function chrome(){
     '<span class="t3stat">🔢 <b id="cyNLocks">0</b></span>'+
     '<span class="t3stat">📝 <b id="cyNNotes">0</b></span>';
   bar.insertBefore(row,act);
+
   const pane=bar.querySelector(".cb-panel"), stprow=pane.querySelector(".stprow");
   const hint=document.createElement("button");
   hint.id="cyHint";hint.className="rowbtn";
@@ -282,6 +297,7 @@ window.mgToolsUI=function(){
     b.addEventListener("click",()=>{mgState.paintMode=t.id;sfx(560,.03);mgCreatorUI();});
     el.appendChild(b);
   }
+  tipLine();
   const stp=$("mgBrickStp"), num=NUMTOOL(mgState.paintMode);
   if(stp){
     stp.style.display=num?"":"none";
@@ -292,6 +308,38 @@ window.mgToolsUI=function(){
     }
   }
 };
+/* Under the tools, not above them: it explains the thing you just tapped,
+   so it belongs on the same side of the strip your finger is on.
+
+   The 📘 rides here too. The flat creator keeps its guide two taps deep
+   inside ⚙️, and on an untouched 8×6 board the whole settings row is below
+   the fold — so the one question a stuck author has ("how do I even do
+   this?") had its answer off screen. The dock is the part of this panel
+   that is always visible, so that is where the way in goes. */
+function tipLine(){
+  let el=$("cyTip");
+  if(!el){
+    const dock=$("mgDock"); if(!dock)return;
+    el=document.createElement("div");el.id="cyTip";el.className="cy-tip";
+    el.innerHTML='<button class="cy-help" id="cyHelp">📘 <span>Guide</span></button>'+
+      '<span class="cy-tip-t"></span>';
+    dock.appendChild(el);
+    $("cyHelp").addEventListener("click",()=>{
+      $("mgCreatorBar").classList.remove("setup");
+      if(typeof openGuide==="function")openGuide();
+    });
+  }
+  el.style.display=editCy()?"":"none";
+  const t=TOOLS.find(x=>x.id===mgState.paintMode), tx=el.querySelector(".cy-tip-t");
+  if(!t||!tx)return;
+  /* separate nodes, never one glued string: the dictionary matches whole
+     text nodes, and a name welded to its sentence matches nothing */
+  tx.textContent="";
+  const b=document.createElement("b");b.textContent=t.em+" "+t.lbl;
+  tx.appendChild(b);
+  tx.appendChild(document.createTextNode(" — "));
+  tx.appendChild(document.createTextNode(t.tip));
+}
 
 /* 🚩 is a place on the board, not a tile, so it is the one tool this file
    has to paint itself. Everything else is CC_TILES terrain and goes
@@ -498,5 +546,162 @@ window.renderProjects=function(){
   sec.appendChild(h);sec.appendChild(grid);
 };
 
-window.CC_CYED={tools:TOOLS,check:check,setMode:setMode,levelFrom:levelFrom};
+/* ===================== 📘 the guide =====================
+   The flat creator has one, and it is the difference between a blank grid
+   and a level. This is the same sheet for this mode: what each piece IS,
+   how the two notes differ, the four shapes a Cyber level comes in, and
+   four boards that land on the canvas already working, so the first thing
+   an author does is CHANGE something rather than invent it.
+   ====================================================== */
+const CY_RECIPES=[
+  {id:"cy_r_guess", em:"🔓", name:"The simplest lock", teaches:"guessing",
+   blurb:"One keypad, a one-digit code, and no clue anywhere. The player writes a 🔢 Count loop that tries 1, 2, 3… until it opens. Start here — it is the level the whole section is built on.",
+   /* the keypad is DIRECTLY in front of the robot, like the first built-in
+      level: a first board should not also be a walking puzzle */
+   gw:5,gh:3,max:6,strikes:0,start:{x:1,y:1,dir:1},goal:[4,1],
+   tiles:[[2,0,"wall",0],[2,2,"wall",0],[2,1,"lock",7]],
+   hint:"🔐 A ONE-digit code stands between you and the 🚩 flag. You do not know it — so try all ten."},
+
+  {id:"cy_r_note", em:"📝", name:"Write it on a note", teaches:"🧠 Read",
+   blurb:"The code is far too big to guess, and somebody wrote it on a 📝 note lying in the corridor. The player reads the note into a box and tries that. Change the number on BOTH tiles to make it yours.",
+   gw:7,gh:3,max:7,strikes:0,start:{x:1,y:1,dir:1},goal:[6,1],
+   tiles:[[4,0,"wall",0],[4,2,"wall",0],[4,1,"lock",58],[2,1,"note",58]],
+   hint:"🔐 Too big to guess — but somebody left a 📝 note on the floor. 🧠 Read it, then 🔢 Try Code it."},
+
+  {id:"cy_r_2fa", em:"🗝️", name:"A code and a key", teaches:"two factors",
+   blurb:"A 🗝️ Keypad + Key: the right code is not enough on its own. The 🔑 key is behind the robot, so the player has to go back for it. Two kinds of proof, on one door.",
+   gw:6,gh:3,max:13,strikes:3,start:{x:1,y:1,dir:1},goal:[5,1],
+   tiles:[[3,0,"wall",0],[3,2,"wall",0],[3,1,"lockk",44],[2,1,"note",44],[0,1,"key",0]],
+   hint:"🔐 This keypad has a keyhole too. The 📝 note has the code; the 🔑 key is behind you."},
+
+  {id:"cy_r_fake", em:"🔏", name:"One note is lying", teaches:"🔏 the seal",
+   blurb:"Two notes with numbers that look almost the same, and only the 🔏 SEALED one is real. ⛔ Strikes is set to 1, so trying the forgery ends the run — the player has to check the seal before they act.",
+   gw:7,gh:3,max:10,strikes:1,start:{x:0,y:1,dir:1},goal:[6,1],
+   tiles:[[4,0,"wall",0],[4,2,"wall",0],[4,1,"lock",58],[1,1,"snote",58],[2,1,"note",53]],
+   hint:"🔐 Two notes, and only the 🔏 sealed one is real. One wrong code and this keypad jams."}
+];
+
+/* drop a recipe onto the canvas, exactly as the flat guide's boards do */
+function cyApply(r){
+  if(!r)return;
+  if(!editCy())cyDesign();
+  else if(tilesOf(mgState.proj).length&&
+          !confirm("Replace the board you're working on with “"+r.name+"”?"))return;
+  const p=mgState.proj;
+  p.name=r.name;p.gw=r.gw;p.gh=r.gh;p.maxBlocks=r.max;p.strikes=r.strikes|0;
+  p.start=JSON.parse(JSON.stringify(r.start));
+  p.goal=r.goal.slice();
+  p.tiles=JSON.parse(JSON.stringify(r.tiles));
+  p.cells=[];p.initial=[];p.cases=[];
+  p.desc2=r.hint;
+  mgState.solved=false;mgState.caseBase=null;mgState.caseEdit=null;
+  if(mgRobot){mgRobot.program=[];mgRobot.routines={A:{params:[],body:[]},B:{params:[],body:[]}};
+    mgRobot.hist=[];mgRobot.redoS=[];}
+  if(typeof edTarget!=="undefined")edTarget="main";
+  const rb=mgState.robot;rb.x=p.start.x;rb.y=p.start.y;rb.dir=p.start.dir;mgSeed(rb,p);
+  if(typeof closeGuide==="function")closeGuide();
+  renderPalette();renderProgram();renderPy();updateUndoBtns();mgUpdateCount();
+  mgCreatorUI();mgDraw();setTab("board");
+  toast("🛠️ “"+r.name+"” is on the board — solve it first, then make it yours!");
+}
+
+/* what each piece is, in the sheet as well as on the strip — somebody
+   reading the guide is usually not looking at the tool they need yet.
+
+   Every line here is its own element with no markup inside it, which is
+   not a style choice: the Hebrew dictionary matches WHOLE text nodes, and
+   a <b> in the middle of a sentence splits it into fragments that match
+   nothing. The flat guide is written as bolded prose and is translated a
+   shard at a time because of it. Short labelled rows read better anyway. */
+function cyGuideBody(el){
+  const sec=t=>{const h=document.createElement("h4");h.className="qsec";h.textContent=t;el.appendChild(h);};
+  const box=cls=>{const d=document.createElement("div");d.className=cls;el.appendChild(d);return d;};
+  const line=(par,t)=>{const p=document.createElement("p");p.className="gline";p.textContent=t;par.appendChild(p);};
+  const row=(par,badge,label,text)=>{
+    const d=document.createElement("div");d.className="grule";
+    const n=document.createElement("span");n.className="gnum";n.textContent=badge;
+    const w=document.createElement("div");
+    const b=document.createElement("b");b.textContent=label;
+    const p=document.createElement("p");p.textContent=text;
+    w.appendChild(b);w.appendChild(p);d.appendChild(n);d.appendChild(w);
+    par.appendChild(d);
+  };
+
+  sec("🧩 The pieces, and what each one does");
+  for(const t of TOOLS){
+    if(t.id==="erase")continue;
+    row(el,t.em,t.lbl,t.tip);
+  }
+
+  sec("📝 The two kinds of note");
+  const n1=box("gnote");
+  line(n1,"Both notes are just a number lying on the floor, and the robot reads either one the same way: 🧠 Read “number ahead”.");
+  row(n1,"📝","Plain note","Anybody could have written it. It might be the code. It might be a lie.");
+  row(n1,"🔏","Sealed note","It carries a wax seal, and the seal says who wrote it.");
+  line(n1,"The numbers are not what tells them apart, and that is the whole point: a forgery copies a number perfectly. What it cannot copy is the seal. So ❓ If 🔏 sealed note ahead is the only honest way to choose between two notes — which is exactly what “check the sender, not the message” means.");
+  row(n1,"1️⃣","Use one note","Your level is about reading a secret somebody wrote down.");
+  row(n1,"2️⃣","Use two, one of them sealed","Your level is about not believing the wrong one.");
+
+  sec("⛔ What Strikes does");
+  const n2=box("gnote alt");
+  row(n2,"🔓","off","A wrong code costs nothing. The player can guess forever, so keep the code under 20 or your level is a wall.");
+  row(n2,"⛔","1, 2 or 3","After that many wrong codes the keypad jams, and every code after it is refused until the robot ⏱ Waits.");
+  line(n2,"That one setting decides what your level is about. With Strikes off a loop can guess its way in, so the level is about looping. With Strikes on guessing is dead, so the level is about finding out — and the code had better be written somewhere.");
+  line(n2,"The game checks this for you: a keypad that jams, with its code on no note, is refused before you can save it.");
+
+  sec("🍳 Start from a board");
+  const p=document.createElement("div");p.className="gsub";
+  p.textContent="Tap one and it lands on your canvas, already working. Solve it, then change the numbers and the walls until it is yours.";
+  el.appendChild(p);
+  for(const r of CY_RECIPES){
+    ccCard(el,{em:r.em,name:esc(r.name),badge:"🛠️",
+      meta:'<i>teaches '+esc(r.teaches)+'</i> · '+r.gw+'×'+r.gh+' · 🧩 '+r.max+((r.strikes|0)?' · ⛔ '+(r.strikes|0):''),
+      desc:esc(r.blurb),
+      onTap:()=>cyApply(r)});
+  }
+
+  sec("🪜 Build one from nothing, in six taps");
+  const n3=box("gnote");
+  row(n3,"1","🤖 Start","Tap the left end of the middle row.");
+  row(n3,"2","🧱 Wall","Tap every tile of one column except the middle one.");
+  row(n3,"3","🔢 Keypad","Tap the gap you left, then tap the number under the tools and type its code.");
+  row(n3,"4","📝 Note","Tap a tile in front of the keypad and give it the same number.");
+  row(n3,"5","🚩 Flag","Tap the far side of the wall.");
+  row(n3,"6","🧩 Blocks","Write the program yourself and press ▶.");
+  line(n3,"That is a finished level. 💾 Save only opens once you have solved it yourself, which is the one rule here: nobody publishes a lock they cannot open.");
+
+  sec("🔀 The hard version: several codes, one program");
+  const n4=box("gnote alt");
+  line(n4,"This is the trick the three hardest built-in levels are made of, and it is two taps.");
+  row(n4,"1","⚙️ Split into inputs","Your board becomes input 1. Add another, and give that board a different code on its keypad and on its note. Up to eight.");
+  row(n4,"2","One program, every board","A program that types 58 into the keypad passes the first board and fails the rest. Only a program that reads the note gets through all of them.");
+  row(n4,"3","👁 Make the last one 🙈 secret","The player never sees that board at all, so they cannot study it. That is a one-time code, built by you.");
+}
+
+/* the flat guide's sheet, filled with this mode's contents instead */
+const _renderGuide=window.renderGuide;
+window.renderGuide=function(){
+  if(!editCy())return _renderGuide();
+  const el=$("guideBody"); if(!el)return;
+  el.innerHTML="";
+  cyGuideBody(el);
+  const head=document.querySelector("#guide .m-head h3"),
+        sub=document.querySelector("#guide .m-head p");
+  if(head)head.textContent="Design a Cyber level";
+  if(sub)sub.textContent="What every piece does, then four boards to start from.";
+};
+/* and the flat one puts its own words back when it renders */
+const _openGuide=window.openGuide;
+window.openGuide=function(){
+  if(!editCy()){
+    const head=document.querySelector("#guide .m-head h3"),
+          sub=document.querySelector("#guide .m-head p");
+    if(head)head.textContent="Design a great challenge";
+    if(sub)sub.textContent="Six rules, then five boards to start from.";
+  }
+  return _openGuide();
+};
+
+window.CC_CYED={tools:TOOLS,check:check,setMode:setMode,levelFrom:levelFrom,
+                recipes:CY_RECIPES,apply:cyApply};
 })();

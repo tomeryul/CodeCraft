@@ -39,6 +39,10 @@ async function toWorld(pg,he){
   const b = await chromium.launch({ executablePath: CHROME });
   const pg = await b.newPage({ viewport:{width:390,height:844} });
   const errs=[]; pg.on('pageerror', e=>errs.push(String(e)));
+  /* Playwright dismisses dialogs by default, which answers "no" to every
+     confirm() — and "replace the board you're working on?" is a question
+     the path under test says yes to. */
+  pg.on('dialog', d=>d.accept());
   await toWorld(pg,false);
 
   // ---------------------------------------------- it bolts on, it does not cut in
@@ -497,6 +501,140 @@ async function toWorld(pg,he){
   ck('Save stays shut until the author has solved it themselves',
      guard.savedUnproven===0, guard);
 
+  // ---------------------------------------------- saying what the pieces are
+  /* Nine glyphs and a number box is a puzzle of its own, and the author is
+     here to build a level rather than solve one. Every tool says what it
+     is where you pick it up, and the way into the guide rides beside them
+     — because on an untouched 8×6 board the settings row, where the flat
+     creator keeps its guide, is below the fold. */
+  const tips = await pg.evaluate(async ()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    if(mgState)mgExit(false); await wait(200);
+    cyDesign(); await wait(350);
+    const seen=[];
+    for(const t of CC_CYED.tools){
+      mgState.paintMode=t.id; mgCreatorUI();
+      seen.push((document.querySelector('#cyTip .cy-tip-t')||{}).textContent||'');
+    }
+    const help=document.getElementById('cyHelp');
+    const dock=document.getElementById('mgDock');
+    return { tools:CC_CYED.tools.length,
+             everyToolExplained:CC_CYED.tools.every(t=>t.tip&&t.tip.length>30),
+             saysTheName:seen.every((t,i)=>t.indexOf(CC_CYED.tools[i].lbl)>=0),
+             lock:seen[3], snote:seen[7],
+             helpInDock:!!(help&&dock&&dock.contains(help)) };
+  });
+  ck('every tool explains itself', tips.tools===9 && tips.everyToolExplained, tips);
+  ck('and the line under the tools names the one you picked', tips.saysTheName, tips);
+  ck('the keypad says its code is a number you set',
+     /NUMBER/.test(tips.lock) && /Try Code/.test(tips.lock), tips.lock);
+  ck('and the sealed note says the seal is who wrote it, not the number',
+     /wax seal/.test(tips.snote) && /sealed note ahead/.test(tips.snote), tips.snote);
+  /* the dock is the part of this panel that is always on screen */
+  ck('the way into the guide sits beside the tools, not in a settings panel',
+     tips.helpInDock, tips);
+
+  const guide = await pg.evaluate(async ()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    document.getElementById('cyHelp').click(); await wait(400);
+    const body=document.getElementById('guideBody');
+    const out={ open:document.getElementById('guide').classList.contains('open'),
+      head:document.querySelector('#guide .m-head h3').textContent,
+      secs:document.querySelectorAll('#guideBody h4.qsec').length,
+      rows:document.querySelectorAll('#guideBody .grule').length,
+      boards:[...document.querySelectorAll('#guideBody .pcard .pname')].map(e=>e.textContent),
+      /* Every line is its own element with no markup inside it — a <b> in
+         mid-sentence is what leaves the flat guide translated in shards.
+         ui-icons.js lifts each emoji into a span of its own, so those are
+         the children that do not count. */
+      welded:[...body.querySelectorAll('.grule p, .gline, .grule b')]
+        .filter(e=>[...e.children].some(c=>!c.classList.contains('ui-emoji'))).length };
+    closeGuide(); await wait(250);
+    return out;
+  });
+  ck('the 📘 opens this mode\'s own guide', guide.open && guide.head==='Design a Cyber level', guide);
+  ck('it covers the pieces, the notes, Strikes, the boards, a walkthrough and the inputs',
+     guide.secs===6, guide);
+  ck('with a labelled row for every piece and every step', guide.rows>=20, guide);
+  ck('and no line welds markup into the middle of a sentence', guide.welded===0, guide);
+  ck('four boards to start from', guide.boards.length===4, guide.boards);
+
+  /* A starter board is the shortest path from "what do I even build" to a
+     level: it has to land ready to prove, not ready to debug. */
+  const recipes = await pg.evaluate(async ()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    const out=[];
+    for(const r of CC_CYED.recipes){
+      CC_CYED.apply(r); await wait(250);
+      const p=mgState.proj;
+      out.push({id:r.id, name:p.name===r.name, errs:CC_CYED.check(p).errs.length,
+                tiles:(p.tiles||[]).length, goal:!!p.goal, hint:p.desc2===r.hint,
+                unproven:mgState.solved===false});
+    }
+    if(mgState)mgExit(false); await wait(200);
+    return out;
+  });
+  ck('every starter board lands as a level the checks already accept',
+     recipes.length===4 && recipes.every(r=>r.errs===0&&r.tiles>0&&r.goal&&r.name&&r.hint),
+     recipes);
+  ck('and lands unproven, so the author still has to solve it',
+     recipes.every(r=>r.unproven), recipes);
+
+  /* A starter board that cannot be solved is worse than no starter board:
+     an author loads it, cannot prove it, and concludes the mode is
+     broken. So each one is solved here, inside the budget it ships with. */
+  const recipeSolve = await pg.evaluate(async ()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    const B=t=>newBlock(t);
+    const loop=(n,body)=>{const b=B('countLoop');b.name='i';b.to=n;b.body=body;return b;};
+    const iff=(c,body)=>{const b=B('if');b.cond=c;b.body=body;return b;};
+    const tc=v=>{const b=B('tryCode');b.val=v;return b;};
+    const rd=n=>{const b=B('read');b.name=n;b.src='ahead';return b;};
+    const mv=k=>Array.from({length:k},()=>B('move'));
+    const V=n=>({k:'var',name:n});
+    const SOL={
+      cy_r_guess:[loop(10,[tc(V('i'))]),...mv(3)],
+      cy_r_note: [rd('x'),B('move'),B('move'),tc(V('x')),...mv(3)],
+      cy_r_2fa:  [rd('x'),B('turnL'),B('turnL'),B('move'),B('turnL'),B('turnL'),
+                  B('move'),B('move'),tc(V('x')),...mv(3)],
+      cy_r_fake: [loop(2,[iff('sealAhead',[rd('x')]),B('move')]),B('move'),
+                  tc(V('x')),...mv(3)]
+    };
+    const out=[];
+    for(const r of CC_CYED.recipes){
+      CC_CYED.apply(r); await wait(300);
+      mgRobot.program=SOL[r.id].slice(); renderProgram();
+      const size=progSize(mgRobot);
+      mgRun();
+      for(let i=0;i<3000;i++){ if(!(mgState&&mgState.running))break; await wait(12); }
+      await wait(300);
+      out.push({id:r.id, solved:!!mgState.solved, blocks:size, max:r.max});
+      const c=document.querySelector('#ccCele .cc-cta'); if(c)c.click(); await wait(250);
+    }
+    if(mgState)mgExit(false); await wait(200);
+    return out;
+  });
+  ck('every starter board can actually be solved',
+     recipeSolve.every(r=>r.solved), recipeSolve.filter(r=>!r.solved).map(r=>r.id));
+  ck('and inside the budget it ships with',
+     recipeSolve.every(r=>r.blocks<=r.max),
+     recipeSolve.map(r=>r.id+' '+r.blocks+'/'+r.max));
+
+  /* and the flat creator must still get the flat guide */
+  const flat = await pg.evaluate(async ()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    if(mgState)mgExit(false); await wait(200);
+    mgEnterCreator(); await wait(300);
+    openGuide(); await wait(350);
+    const out={ head:document.querySelector('#guide .m-head h3').textContent,
+                boards:[...document.querySelectorAll('#guideBody .pcard .pname')].map(e=>e.textContent) };
+    closeGuide(); await wait(200);
+    if(mgState)mgExit(false); await wait(200);
+    return out;
+  });
+  ck('a flat challenge still gets the guide it always had',
+     flat.head==='Design a great challenge' && flat.boards.indexOf('The Detour')>=0, flat);
+
   /* The creator's inputs work here unchanged, and they are the best thing
      an author can reach for: two boards with two codes, and a program
      that writes the number into itself passes one and fails the other.
@@ -657,6 +795,7 @@ async function toWorld(pg,he){
      the sentence, which is a different table from the rest. */
   const ph = await b.newPage({ viewport:{width:390,height:844} });
   const errsHe=[]; ph.on('pageerror', e=>errsHe.push(String(e)));
+  ph.on('dialog', d=>d.accept());
   await toWorld(ph,true);
   await ph.evaluate(()=>hubOpen()); await ph.waitForTimeout(600);
   const heMenu = await ph.evaluate(()=>{
@@ -709,6 +848,32 @@ async function toWorld(pg,he){
   ck('the lesson on the celebration card is Hebrew',
      HEB.test(heWhy.desc) && !/possibilities|secret/i.test(heWhy.desc), heWhy.desc.slice(0,60));
   ck('and so is the headline above it', HEB.test(heWhy.kick), heWhy.kick);
+
+  /* The guide is the part an author actually reads, so it is the part
+     that has to be readable. Every line of it is its own element with
+     nothing inside it, which is what lets a whole-string dictionary
+     translate the lot. */
+  const heGuide = await ph.evaluate(async ()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    if(mgState)mgExit(false); await wait(200);
+    cyDesign(); await wait(400);
+    const tip=(document.querySelector('#cyTip .cy-tip-t')||{}).textContent||'';
+    document.getElementById('cyHelp').click(); await wait(500);
+    const bits=[...document.querySelectorAll(
+      '#guideBody h4.qsec, #guideBody .grule b, #guideBody .grule p, '+
+      '#guideBody .gline, #guideBody .gsub, #guideBody .pcard .pname, #guideBody .pcard .pdesc')];
+    const eng=bits.map(e=>e.textContent.trim())
+      .filter(t=>t && !/[֐-׿]/.test(t) && /[A-Za-z]{3}/.test(t));
+    const out={ n:bits.length, english:eng.slice(0,6),
+                head:document.querySelector('#guide .m-head h3').textContent, tip };
+    closeGuide(); await wait(200);
+    if(mgState)mgExit(false); await wait(200);
+    return out;
+  });
+  ck('the whole designer guide is Hebrew, line by line',
+     heGuide.n>40 && heGuide.english.length===0 && HEB.test(heGuide.head), heGuide);
+  ck('and so is the line that explains the tool in your hand',
+     HEB.test(heGuide.tip) && !/keypad|note|robot/i.test(heGuide.tip), heGuide.tip);
 
   /* An entry that translates to itself makes walk() write a text node the
      value it already holds, which queues another mutation: the loop that
