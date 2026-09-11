@@ -162,10 +162,21 @@ const ICONS={/* ---- v3: the last of the UI emoji ---- */
 "🏗️":W('<rect x="4.4" y="6" width="15.2" height="12.4" rx="1.8" fill="#ff9d5a"/><path d="M4.4 10.2 h15.2 M4.4 14.2 h15.2 M9.5 6 v4.2 M14.5 10.2 v4 M9.5 14.2 v4.2" stroke="#e07840" stroke-width="1.7"/>'),
 "⚠️":W('<path d="M12 3.6 L21.2 19.6 H2.8 Z" fill="#ffd66b" stroke="#e8b23e" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 9.4 v4.6" stroke="#241b45" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.3" fill="#241b45"/>'),
 "🚀":W('<path d="M12 2.8 c3.2 2.2 4.6 6.2 3 11.2 l-3 2 -3-2 C7.4 9 8.8 5 12 2.8 Z" fill="#f6f3ff"/><circle cx="12" cy="9" r="1.9" fill="#5ab8ff"/><path d="M9 14.2 c-2 .6-3.1 2-3.6 4.6 2.6-.5 4.1-1.6 4.6-3.6 Z M15 14.2 c2 .6 3.1 2 3.6 4.6 -2.6-.5-4.1-1.6-4.6-3.6 Z" fill="#ff5d73"/><path d="M12 16.4 v3.6" stroke="#ffb830" stroke-width="2" stroke-linecap="round"/>'),
-/* ---- the Cyber Lab: a sticky note, and the siren on the level that
-   teaches you not to believe one ---- */
+/* ---- the Cyber Lab: the notes, the locks that fight back, and the
+   three hard levels at the end ---- */
 "📝":W('<rect x="4.6" y="4.2" width="14.8" height="15.6" rx="2.2" fill="#ffe9a8" transform="rotate(-4 12 12)"/><path d="M8.4 9.4 H15.6 M8.4 12.6 H15.6 M8.4 15.8 H13" stroke="#b98a4e" stroke-width="1.9" stroke-linecap="round" transform="rotate(-4 12 12)"/>'),
 "🚨":W('<path d="M6.6 18.4 a5.4 5.4 0 0 1 10.8 0 Z" fill="#ff5d73"/><rect x="4.8" y="18.2" width="14.4" height="2.8" rx="1.4" fill="#e04a5f"/><circle cx="12" cy="6.6" r="1.8" fill="#ffd66b"/><path d="M12 2.6 v1.4 M6.2 5 l1 1 M17.8 5 l-1 1" stroke="#ffd66b" stroke-width="1.8" stroke-linecap="round"/>'),
+// the same note with a wax seal — the one thing a forgery cannot copy
+"🔏":W('<rect x="4.6" y="4.2" width="14.8" height="15.6" rx="2.2" fill="#fff3d0" transform="rotate(-4 12 12)"/><path d="M8 10.6 H15.2 M8 13.8 H12.8" stroke="#b98a4e" stroke-width="1.9" stroke-linecap="round" transform="rotate(-4 12 12)"/><circle cx="16.6" cy="6.8" r="3.1" fill="#c0243a"/><circle cx="15.6" cy="5.8" r="1" fill="rgba(255,255,255,.6)"/>'),
+// the keypad has stopped listening
+"⛔":W('<circle cx="12" cy="12" r="8.6" fill="#ff5d73"/><rect x="6" y="10.4" width="12" height="3.2" rx="1.6" fill="#fff"/>'),
+"🗝️":W('<circle cx="7.6" cy="8.4" r="4" fill="none" stroke="#ffd66b" stroke-width="2.4"/><path d="M10.4 11.2 L19.6 20.4" stroke="#ffd66b" stroke-width="2.4" stroke-linecap="round"/><path d="M15.6 16.4 l2.4-2.4 M17.8 18.6 l2.2-2.2" stroke="#ffd66b" stroke-width="2.2" stroke-linecap="round"/>'),
+// phishing: the hook under the bait
+"🎣":W('<path d="M3.6 4.6 L14.4 15.4" stroke="#c98d4b" stroke-width="2.2" stroke-linecap="round"/><path d="M14.6 9.6 v5.2 a3.4 3.4 0 0 1 -6.8 0" fill="none" stroke="#9aa1b0" stroke-width="2.2" stroke-linecap="round"/><circle cx="17.4" cy="6.4" r="2.6" fill="#5ab8ff"/>'),
+// reading the log: the hat and the glass
+"🕵️":W('<path d="M4.4 11.6 c1.8-1 4.4-1.6 7.6-1.6 s5.8 .6 7.6 1.6" stroke="#6b7280" stroke-width="2.2" stroke-linecap="round" fill="none"/><path d="M7.6 10.6 c.5-4.2 1.6-6.2 4.4-6.2 s3.9 2 4.4 6.2 Z" fill="#4b5563"/><circle cx="14.6" cy="16.6" r="3.8" fill="none" stroke="#cfd4e0" stroke-width="2.2"/><path d="M11.8 19.4 L8.6 22" stroke="#cfd4e0" stroke-width="2.4" stroke-linecap="round"/>'),
+// one program, several boards
+"🔀":W('<path d="M3.4 7.6 h4.2 c3.4 0 5.4 8.8 8.8 8.8 h4.2 M3.4 16.4 h4.2 c3.4 0 5.4-8.8 8.8-8.8 h4.2" '+ST+' stroke-width="2.2"/><path d="M17.8 4.8 L20.8 7.6 L17.8 10.4 M17.8 13.6 L20.8 16.4 L17.8 19.2" '+ST+' stroke-width="2.2"/>'),
 /* ---- v4: the glyphs the pack never covered, so these screens still showed
    raw system emoji next to real icons (guide, function library, palette,
    orders, moderation, creator tools) ---- */

@@ -348,6 +348,18 @@ const HE={
 "Ten Codes":"עשרה קודים","One More Digit":"עוד ספרה אחת",
 "On a Sticky Note":"על פתק דביק","With a Key":"עם מפתח",
 "Never Trust a Note":"אף פעם אל תסמוך על פתק",
+"Three Strikes":"שלוש הזדמנויות","Two Kinds of Proof":"שני סוגי הוכחה",
+"The Open Window":"החלון שנשאר פתוח","Never the Same Twice":"אף פעם לא אותו הדבר",
+"The Lookalike":"הכפיל","Who Went Through":"מי עבר כאן",
+"I · Secrets":"א׳ · סודות",
+"What a secret is, and what breaks one.":"מה זה סוד, ומה שובר אותו.",
+"II · Locks that fight back":"ב׳ · מנעולים שנלחמים בחזרה",
+"What a lock worth the name does about all that.":"מה מנעול ששווה את שמו עושה עם כל זה.",
+"III · Never trust what you are told":"ג׳ · אף פעם אל תאמין למה שאומרים לך",
+"The program's own side of it — and the hard ones.":"הצד של התוכנית עצמה — ואלה הקשים.",
+"keypad jammed":"מקלדת הקוד נתקעה","sealed note ahead":"פתק חתום לפנים",
+"Keypad":"מקלדת קוד","Keypad + Key":"מקלדת קוד + מפתח",
+"Note":"פתק","Sealed note":"פתק חתום",
 "LOCK OPENED!":"המנעול נפתח!","Got it! 🎉":"הבנתי! 🎉",
 "A one-digit code has ten possibilities, and a loop went through all ten before you could blink. A real computer does it millions of times faster. That is the whole reason a short secret is not a secret.":
   "לקוד בן ספרה אחת יש עשר אפשרויות, ולולאה עברה על כל העשר לפני שהספקת למצמץ. מחשב אמיתי עושה את זה מיליון פעמים יותר מהר. זאת כל הסיבה שסוד קצר הוא לא סוד.",
@@ -359,6 +371,18 @@ const HE={
   "הפתק לבדו לא היה שווה כלום — הוא היה צריך את המפתח (+3) כדי להגיד משהו. זאת הצפנה: הודעה שכל אחד יכול לראות, שרק המפתח הופך אותה בחזרה לסוד. מפתחות אמיתיים גדולים הרבה יותר מ-3, אבל הצורה היא בדיוק זאת.",
 "The note by the door said 5, and the door did not open. Anything handed to a program can be wrong — by mistake, or as a lie, from somebody who wants in. That is the rule underneath most of security: check what you are given before you act on it. A program that believes whatever it is handed is a program somebody else is driving.":
   "הפתק ליד הדלת אמר 5, והדלת לא נפתחה. כל דבר שמוסרים לתוכנית יכול להיות שגוי — בטעות, או כשקר, ממישהו שרוצה להיכנס. זה הכלל שמתחת לרוב האבטחה: תבדוק מה נתנו לך לפני שאתה פועל לפיו. תוכנית שמאמינה לכל מה שמוסרים לה היא תוכנית שמישהו אחר נוהג בה.",
+"Nothing about the code got harder — the lock just stopped being polite. Three guesses and it makes you wait, so a million guesses would take years instead of a second. That is why a real login locks you out, and it is the cheapest defence there is.":
+  "שום דבר בקוד לא נעשה קשה יותר — המנעול פשוט הפסיק להיות נחמד. שלושה ניחושים והוא מכריח אותך לחכות, אז מיליון ניחושים ייקחו שנים במקום שנייה. בגלל זה התחברות אמיתית נועלת אותך בחוץ, וזאת ההגנה הכי זולה שיש.",
+"Two proofs, and they are different KINDS of proof: a code is something you know, a key is something you have. Steal one and you still have nothing. That is what the second step on your parents' phone is doing — and it is why it is worth the extra three seconds.":
+  "שתי הוכחות, והן מסוגים שונים: קוד זה משהו שאתה יודע, מפתח זה משהו שיש לך. תגנוב אחד ועדיין אין לך כלום. זה מה שהשלב השני בטלפון של ההורים שלך עושה — ובגלל זה הוא שווה את שלוש השניות הנוספות.",
+"The code was perfect and it did not matter, because nobody left the wall finished. Real break-ins look like this far more often than they look like guessing: the forgotten window, the account nobody switched off, the page that was never meant to be public. A lock is only as good as the wall it is in.":
+  "הקוד היה מושלם וזה לא עזר, כי אף אחד לא סיים לבנות את הקיר. פריצות אמיתיות נראות ככה הרבה יותר מאשר כמו ניחושים: החלון ששכחו, החשבון שאף אחד לא סגר, הדף שלא היה אמור להיות פומבי. מנעול שווה בדיוק כמו הקיר שהוא נמצא בו.",
+"Your program never knew the code and opened every door anyway — because it asked instead of remembering. That is a one-time code: the six digits your parents' phone shows for thirty seconds and then throws away. A secret that is different every time cannot be stolen once and used forever.":
+  "התוכנית שלך אף פעם לא ידעה את הקוד ובכל זאת פתחה כל דלת — כי היא שאלה במקום לזכור. זה קוד חד-פעמי: שש הספרות שהטלפון של ההורים שלך מראה לשלושים שניות ואז זורק. סוד שהוא אחר בכל פעם אי אפשר לגנוב פעם אחת ולהשתמש בו לנצח.",
+"The forgery copied the number almost perfectly — 53 for 58 — because that is the easy part. What it could not copy was the seal: WHO the note came from. This is phishing, and it is how most people actually get caught: a message that looks right, from an address that is one letter wrong. Read the sender, not the message.":
+  "הזיוף העתיק את המספר כמעט מושלם — 53 במקום 58 — כי זה החלק הקל. מה שהוא לא הצליח להעתיק זה החותם: מי כתב את הפתק. זה פישינג, וככה רוב האנשים באמת נתפסים: הודעה שנראית נכון, מכתובת ששגויה באות אחת. תקרא את השולח, לא את ההודעה.",
+"Nobody told you where to look — you found it because one line did not match the rest. That is what reading a log is, and it is most of how break-ins are actually caught: not a siren, just an entry at a strange hour from a place nobody has ever logged in from. In real logs the odd one is not always the biggest, but looking for the one that does not fit always is the job.":
+  "אף אחד לא אמר לך איפה לחפש — מצאת את זה כי שורה אחת לא התאימה לשאר. זה מה שקריאת יומן היא, וככה רוב הפריצות באמת נתפסות: לא צופר, פשוט רישום בשעה מוזרה ממקום שאף אחד מעולם לא התחבר ממנו. ביומנים אמיתיים החריג הוא לא תמיד הגדול ביותר, אבל לחפש את זה שלא מתאים — זאת תמיד העבודה.",
 
 /* ---- palette headings (CSS uppercases them, the DOM text is title case) ---- */
 "Basics":"בסיס","Loops":"לולאות","Logic":"לוגיקה","Smart":"חכם",
@@ -1267,8 +1291,20 @@ const HE_RAW={
   "🔐 הקוד הזה גדול מדי מכדי לנחש אותו. אבל מישהו השאיר 📝 פתק על הרצפה לפני הדלת. 🧠 קרא את „המספר שלפנים” לתוך קופסה, ואז 🔢 נסה קוד עם הקופסה הזאת.",
 "🔐 The 📝 note is scrambled this time: the real code is the number on it PLUS 3. Three is the key. 🧠 Read the note, ➕ Change it by 3, then 🔢 Try Code it.":
   "🔐 הפעם ה-📝 פתק מבולבל: הקוד האמיתי הוא המספר שכתוב עליו ועוד 3. שלוש זה המפתח. 🧠 קרא את הפתק, ➕ שנה אותו ב-3, ואז 🔢 נסה קוד איתו.",
-"🔐 TWO 📝 notes, and only one of them is telling the truth. The one lying on the floor right by the door says 5. The other is up along the top of the room. Try the wrong one and the door simply does not care.":
-  "🔐 שני 📝 פתקים, ורק אחד מהם אומר את האמת. זה שמונח על הרצפה ממש ליד הדלת אומר 5. השני נמצא למעלה לאורך החלק העליון של החדר. תנסה את הלא-נכון, והדלת פשוט לא תתרגש.",
+"🔐 TWO 📝 notes, and only one of them is telling the truth. The one lying on the floor right by the door says 5. The other is up along the top of the room. Try the wrong one and the door simply does not care — and after three wrong codes it stops listening altogether.":
+  "🔐 שני 📝 פתקים, ורק אחד מהם אומר את האמת. זה שמונח על הרצפה ממש ליד הדלת אומר 5. השני נמצא למעלה לאורך החלק העליון של החדר. תנסה את הלא-נכון, והדלת פשוט לא תתרגש — ואחרי שלושה קודים שגויים היא מפסיקה להקשיב בכלל.",
+"🔐 One digit again — but this keypad COUNTS. Three wrong codes and it jams: every code after that is refused until you ⏱ Wait for it to cool down. Put ❓ If ⛔ jammed → ⏱ Wait at the top of your loop.":
+  "🔐 שוב ספרה אחת — אבל מקלדת הקוד הזאת סופרת. שלושה קודים שגויים והיא נתקעת: כל קוד אחרי זה נדחה עד ש-⏱ תחכה שהיא תתקרר. שים ❓ אם ⛔ נתקעה ← ⏱ חכה בראש הלולאה.",
+"🔐 This keypad has a keyhole beside it: the right code is not enough on its own. The 📝 note ahead has the code, and the 🔑 key is behind you. It jams after three wrong codes, like the last one — so read the note, go back for the key, then come and 🔢 Try Code.":
+  "🔐 למקלדת הקוד הזאת יש חור מנעול לידה: הקוד הנכון לא מספיק לבד. ב-📝 פתק שלפניך יש את הקוד, וה-🔑 מפתח נמצא מאחוריך. היא נתקעת אחרי שלושה קודים שגויים, כמו הקודמת — אז תקרא את הפתק, תחזור לקחת את המפתח, ואז תבוא ו-🔢 נסה קוד.",
+"🔐 A FOUR-digit code — ten thousand possibilities, and ten blocks to do it in. Do not even start. Walk the whole wall first and look at it properly: something about this room is not like the others.":
+  "🔐 קוד בן ארבע ספרות — עשרת אלפים אפשרויות, ועשרה בלוקים לעשות את זה. אל תתחיל בכלל. תלך לאורך כל הקיר קודם ותסתכל עליו טוב: משהו בחדר הזה לא כמו באחרים.",
+"🔐 FOUR different doors, one program, and the code is different behind every one of them — including a 🙈 secret door you never get to look at. These keypads jam on the FIRST wrong code, so guessing is over. Writing the number into your program will pass the first door and fail the rest — 🧠 Read it, every single time.":
+  "🔐 ארבע דלתות שונות, תוכנית אחת, והקוד שונה מאחורי כל אחת מהן — כולל 🙈 דלת סודית שאתה אף פעם לא רואה. מקלדות הקוד האלה נתקעות על הקוד השגוי הראשון, אז נגמרו הניחושים. אם תכתוב את המספר בתוך התוכנית היא תעבור את הדלת הראשונה ותיכשל בכל השאר — 🧠 תקרא אותו, בכל פעם מחדש.",
+"🔐 Two notes on the floor, and their numbers look almost the same. Only one is real: the 🔏 SEALED one. The other is a forgery, and this keypad jams on the first wrong code. Walk past both — ❓ If 🔏 sealed note ahead → 🧠 Read it — then try what you read.":
+  "🔐 שני פתקים על הרצפה, והמספרים שלהם נראים כמעט אותו דבר. רק אחד אמיתי: ה-🔏 חתום. השני זיוף, ומקלדת הקוד הזאת נתקעת על הקוד השגוי הראשון. תעבור ליד שניהם — ❓ אם 🔏 פתק חתום לפנים ← 🧠 תקרא אותו — ואז תנסה את מה שקראת.",
+"🔐 The door keeps a 📝 log: every code it was shown today, in order. Almost all of them are the same ordinary number — and one is not. The odd one out is who got in, and it is the code — and the keypad jams on a wrong one, so you have to actually find it. 🧠 Read the first into a box, then walk the log keeping anything BIGGER.":
+  "🔐 הדלת מנהלת 📝 יומן: כל קוד שהוצג לה היום, לפי הסדר. כמעט כולם אותו מספר רגיל — ואחד לא. החריג הוא מי שנכנס, והוא הקוד — ומקלדת הקוד נתקעת על קוד שגוי, אז באמת צריך למצוא אותו. 🧠 תקרא את הראשון לתוך קופסה, ואז תלך לאורך היומן ותשמור כל מה שגדול יותר.",
 /* ---- world, moderation, tower 3D, orders, shop ---- */
 "⛓️ Iron ore — mine it, worth 6🪙!":"⛓️ עפרת ברזל — תכרה אותה, שווה 6🪙!",
 "🌉 Bridges go on water.":"🌉 גשרים נבנים על מים.",

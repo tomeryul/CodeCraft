@@ -49,21 +49,28 @@ async function toWorld(pg,he){
      category row, so only a level's own `allowed` list hands it out. */
   const reg = await pg.evaluate(()=>({
     loaded:!!window.CC_CYBER,
-    lock:!!(CC_TILES.DEFS.lock&&CC_TILES.DEFS.lock.draw&&CC_TILES.DEFS.lock.solid),
-    note:!!(CC_TILES.DEFS.note&&CC_TILES.DEFS.note.draw),
-    inPalette:CC_TILES.TYPES.filter(t=>t==='lock'||t==='note'),
+    lock:['lock','lockk','note','snote'].every(t=>CC_TILES.DEFS[t]&&CC_TILES.DEFS[t].draw),
+    note:!!(CC_TILES.DEFS.lock.solid&&CC_TILES.DEFS.lockk.solid),
+    inPalette:CC_TILES.TYPES.filter(t=>['lock','lockk','note','snote'].indexOf(t)>=0),
     block:!!DEFS.tryCode,
     inCats:CATS.filter(c=>c.types.indexOf('tryCode')>=0).map(c=>c.id),
     inAllowed:CC_CYBER.blocks.indexOf('tryCode')>=0,
-    levels:CC_CYBER.levels.length
+    levels:CC_CYBER.levels.length, acts:CC_CYBER.acts.length,
+    /* every level belongs to an act, or the band would silently drop it */
+    orphans:CC_CYBER.levels.filter(l=>!CC_CYBER.acts.some(a=>a.id===l.act)).map(l=>l.id),
+    /* and the chain is one line with no forks and no gaps */
+    chain:CC_CYBER.levels.map((l,i)=>l.needs===(i?CC_CYBER.levels[i-1].id:undefined))
   }));
-  ck('the keypad and the note register themselves as tiles',
+  ck('the keypads and the notes register themselves as tiles',
      reg.loaded && reg.lock && reg.note, reg);
-  ck('and neither one turns up as a creator tool',
+  ck('and none of them turns up as a creator tool',
      reg.inPalette.length===0, reg.inPalette);
+  ck('every level sits in an act, and each one unlocks the next',
+     reg.orphans.length===0 && reg.chain.every(Boolean), reg);
   ck('🔢 Try Code exists but sits in no palette category',
      reg.block && reg.inCats.length===0 && reg.inAllowed, reg);
-  ck('there are five levels', reg.levels===5, reg.levels);
+  ck('there are eleven levels in three acts',
+     reg.levels===11 && reg.acts===3, reg);
 
   // ---------------------------------------------- the band
   await pg.evaluate(()=>hubPage('cyber')); await pg.waitForTimeout(600);
@@ -77,7 +84,7 @@ async function toWorld(pg,he){
                locked:c.classList.contains('locked') })) };
   });
   ck('the Cyber Lab has a band of its own', band && band.title==='Cyber Lab', band);
-  ck('nothing is solved yet, and it says so', band && band.prog==='0/5', band&&band.prog);
+  ck('nothing is solved yet, and it says so', band && band.prog==='0/11', band&&band.prog);
   ck('only the first level is open — each one unlocks the next',
      band && !band.cards[0].locked && band.cards.slice(1).every(c=>c.locked),
      band&&band.cards);
@@ -140,61 +147,236 @@ async function toWorld(pg,he){
      note.onNote===note.real && note.real===58, note);
   ck('and reads nothing where there is no note', note.onNothing!==58, note);
 
+  // ---------------------------------------------- two proofs, one door
+  /* The 2FA keypad is one tile on purpose: two doors in a row is two
+     locks, not two factors. So the right code on its own has to leave it
+     exactly as shut as no code at all. */
+  const twofa = await pg.evaluate(async ()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    CC_CYBER.enter(CC_CYBER.levels.find(l=>l.id==='cy_2fa'));
+    await wait(350);
+    const st=mgState, rb=st.robot;
+    const ahead=()=>CC_TILES.solid(rb,(rb.x+DX[rb.dir])+'_'+(rb.y+DY[rb.dir]));
+    const punch=n=>{const b=newBlock('tryCode');b.val={k:'num',n:n};CCAct(st,b);};
+    rb.x=2;rb.y=1;rb.dir=1;                 // standing in front of the keypad
+    punch(44);                               // the code, and nothing else
+    const codeOnly={solid:ahead(),cracked:rb.cracked.size};
+    rb.keys.add(0);                          // now carrying the key too
+    const both={solid:ahead()};
+    mgExit(false); await wait(200);
+    return {codeOnly,both};
+  });
+  ck('the right code alone does not open a keypad that wants a key too',
+     twofa.codeOnly.cracked===1 && twofa.codeOnly.solid===true, twofa);
+  ck('and it opens the moment the robot is carrying one', twofa.both.solid===false, twofa);
+
+  // ---------------------------------------------- the seal, and the jam
+  /* A forgery copies the number perfectly; what it cannot copy is who
+     wrote the note. 🔏 sealed note ahead is the only sensor that can tell
+     the two apart, and it has to be wrong about neither. */
+  const sensors = await pg.evaluate(async ()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    CC_CYBER.enter(CC_CYBER.levels.find(l=>l.id==='cy_phish'));
+    await wait(350);
+    const st=mgState, rb=st.robot;
+    const at=(x,y)=>{rb.x=x;rb.y=y;rb.dir=1;return mgCond(st,'sealAhead');};
+    const real=at(0,1), forged=at(1,1), floor=at(3,1);
+    /* one wrong code and this keypad is done listening */
+    rb.x=3;rb.y=1;rb.dir=1;
+    const wrong=newBlock('tryCode');wrong.val={k:'num',n:99};CCAct(st,wrong);
+    const jam={on:mgCond(st,'jammed'), tries:rb.tries|0};
+    const right=newBlock('tryCode');right.val={k:'num',n:58};CCAct(st,right);
+    const refused={cracked:rb.cracked.size, tries:rb.tries|0};
+    const w=newBlock('wait');CCAct(st,w);    // ⏱ Wait is what talks it round
+    const cooled=mgCond(st,'jammed');
+    mgExit(false); await wait(200);
+    return {real,forged,floor,jam,refused,cooled};
+  });
+  ck('the seal sensor tells the real note from the forgery',
+     sensors.real===true && sensors.forged===false && sensors.floor===false, sensors);
+  ck('one wrong code jams a keypad that only allows one',
+     sensors.jam.on===true && sensors.jam.tries===1, sensors);
+  ck('and a jammed keypad refuses even the RIGHT code, without counting it',
+     sensors.refused.cracked===0 && sensors.refused.tries===1, sensors);
+  ck('⏱ Wait is what clears it', sensors.cooled===false, sensors);
+
+  // ---------------------------------------------- nothing leaks outward
+  /* Both sensors answer false off a Cyber level, and neither is offered by
+     a board that could not make it true — a sensor a player cannot use is
+     a sensor that should not be in their list. */
+  const leak = await pg.evaluate(async ()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    CC_CYBER.enter(CC_CYBER.levels[0]);      // no strikes, no sealed notes
+    await wait(320);
+    const plain={jam:mgCond(mgState,'jammed'), seal:mgCond(mgState,'sealAhead'),
+                 list:mgCondList().filter(c=>c==='jammed'||c==='sealAhead')};
+    mgExit(false); await wait(200);
+    CC_CYBER.enter(CC_CYBER.levels.find(l=>l.id==='cy_phish'));
+    await wait(320);
+    const phish=mgCondList().filter(c=>c==='jammed'||c==='sealAhead').sort();
+    mgExit(false); await wait(200);
+    return {plain, phish, world:mgCondList===undefined?null:CONDS.indexOf('jammed')};
+  });
+  ck('neither sensor is true, or offered, on a level that cannot use it',
+     leak.plain.jam===false && leak.plain.seal===false && leak.plain.list.length===0, leak);
+  ck('and both are offered on the level that needs them',
+     leak.phish.join()==='jammed,sealAhead', leak.phish);
+  ck('the world palette never hears about them', leak.world===-1, leak.world);
+
   // ---------------------------------------------- every level is solvable, in budget
   /* A level that cannot be finished inside its own block budget is not a
      lesson, it is a wall. Each solution here is the intended one, so the
-     block count is also the claim the card makes on the player. */
-  const solved = await pg.evaluate(async ()=>{
+     block count is also the claim the card makes on the player — and on a
+     level with several inputs the SAME program has to pass all of them,
+     hidden one included. */
+  const solved = await pg.evaluate(async () => {
     const wait=ms=>new Promise(r=>setTimeout(r,ms));
     const B=t=>newBlock(t);
     const loop=(n,body)=>{const b=B('countLoop');b.name='i';b.to=n;b.body=body;return b;};
+    const rep=(n,body)=>{const b=B('repeat');b.n=n;b.body=body;return b;};
+    const iff=(c,body)=>{const b=B('if');b.cond=c;b.body=body;return b;};
     const tc=v=>{const b=B('tryCode');b.val=v;return b;};
     const rd=n=>{const b=B('read');b.name=n;b.src='ahead';return b;};
     const ch=(n,k)=>{const b=B('changeVar');b.name=n;b.n=k;return b;};
+    const set=(n,v)=>{const b=B('setVar');b.name=n;b.val=v;return b;};
     const mv=k=>Array.from({length:k},()=>B('move'));
+    const V=n=>({k:'var',name:n});
     const SOL={
-      cy_ten:  [loop(10,[tc({k:'var',name:'i'})]),...mv(3)],
-      cy_two:  [loop(100,[tc({k:'var',name:'i'})]),...mv(3)],
-      cy_note: [rd('x'),B('move'),tc({k:'var',name:'x'}),...mv(4)],
-      cy_shift:[rd('x'),ch('x',3),B('move'),tc({k:'var',name:'x'}),...mv(4)],
+      cy_ten:  [loop(10,[tc(V('i'))]),...mv(3)],
+      cy_two:  [loop(100,[tc(V('i'))]),...mv(3)],
+      cy_note: [rd('x'),B('move'),tc(V('x')),...mv(4)],
+      cy_shift:[rd('x'),ch('x',3),B('move'),tc(V('x')),...mv(4)],
+      /* the loop from level 1 no longer works: three wrong codes jam the
+         keypad, so the program has to notice and ⏱ Wait it off */
+      cy_jam:  [loop(10,[iff('jammed',[B('wait')]),tc(V('i'))]),...mv(3)],
+      cy_2fa:  [rd('x'),B('turnL'),B('turnL'),B('move'),B('turnL'),B('turnL'),
+                B('move'),B('move'),tc(V('x')),...mv(3)],
+      /* the keypad is never touched at all — that is the level */
+      cy_hole: [B('turnL'),rep(2,[B('move')]),B('turnR'),rep(6,[B('move')]),
+                B('turnR'),rep(2,[B('move')])],
       cy_trust:[B('turnL'),B('move'),B('move'),B('turnR'),rd('x'),B('turnR'),
-                B('move'),B('move'),B('turnL'),B('move'),tc({k:'var',name:'x'}),...mv(3)]
+                B('move'),B('move'),B('turnL'),B('move'),tc(V('x')),...mv(3)],
+      cy_otp:  [rd('x'),B('move'),B('move'),tc(V('x')),...mv(3)],
+      /* read the SEALED note, whichever of the two it is this time */
+      cy_phish:[loop(2,[iff('sealAhead',[rd('x')]),B('move')]),B('move'),
+                tc(V('x')),...mv(3)],
+      /* the log, and the entry that does not fit */
+      cy_log:  [rd('c'),B('move'),
+                loop(4,[rd('x'),iff({var:'x',op:'>',val:V('c')},[set('c',V('x'))]),B('move')]),
+                tc(V('c')),...mv(2)]
     };
     const out=[];
     for(const lv of CC_CYBER.levels){
       delete player.projects[lv.id];
       CC_CYBER.enter(lv); await wait(320);
       mgRobot.program=SOL[lv.id].slice();
-      renderProgram(); mgRun();
+      renderProgram();
+      /* counted BEFORE the run: finishing a level tears the run down, and
+         the block count is a claim about the program, not about the robot */
+      const size=progSize(mgRobot);
+      mgRun();
       let tries=0, cele=null;
-      for(let i=0;i<900;i++){
+      for(let i=0;i<3000;i++){
         if(mgState&&mgState.robot)tries=mgState.robot.tries|0;
         if(!(mgState&&mgState.running))break;
-        await wait(25);
+        await wait(12);
       }
       await wait(250);
       const card=document.querySelector('#ccCele .cc-desc');
       if(card)cele=card.textContent;
       out.push({id:lv.id, done:!!player.projects[lv.id], tries,
-                blocks:SOL[lv.id].length, max:lv.maxBlocks, cele,
-                why:lv.why, kick:(document.querySelector('#ccCele .cc-kick')||{}).textContent});
+                blocks:size, max:lv.maxBlocks, cele,
+                inputs:(lv.cases||[]).length, why:lv.why,
+                kick:(document.querySelector('#ccCele .cc-kick')||{}).textContent});
       const c=document.querySelector('#ccCele .cc-cta'); if(c)c.click();
       await wait(300); if(mgState)mgExit(false); await wait(200);
     }
     return out;
   });
+  const by=id=>solved.find(r=>r.id===id)||{};
   ck('every level can be finished', solved.every(r=>r.done),
-     solved.map(r=>r.id+':'+r.done));
+     solved.filter(r=>!r.done).map(r=>r.id));
   ck('and each one inside the block budget its card promises',
      solved.every(r=>r.blocks<=r.max), solved.map(r=>r.id+' '+r.blocks+'/'+r.max));
-  /* The whole arc, in two numbers: a one-digit code falls in ten tries and
-     the same program needs a hundred for two digits. Nothing else on the
-     screen would ever say what a digit costs. */
-  ck('one digit costs ten tries', solved[0].tries===10, solved[0].tries);
+  /* The whole of act I, in two numbers: a one-digit code falls in ten
+     tries and the same program needs a hundred for two digits. Nothing
+     else on the screen would ever say what a digit costs. */
+  ck('one digit costs ten tries', by('cy_ten').tries===10, by('cy_ten').tries);
   ck('and two digits cost a hundred — the lesson, in the counter',
-     solved[1].tries===100, solved[1].tries);
+     by('cy_two').tries===100, by('cy_two').tries);
   ck('a code that was written down costs one try',
-     solved[2].tries===1 && solved[3].tries===1, solved.map(r=>r.tries));
+     by('cy_note').tries===1 && by('cy_shift').tries===1,
+     [by('cy_note').tries,by('cy_shift').tries]);
+  /* Three Strikes: the same ten guesses as level one, and that is the
+     point — nothing about the CODE got harder. What changed is that the
+     loop now has to notice it has been shut out and wait its way back in. */
+  ck('a keypad that jams still falls to a loop that waits it out',
+     by('cy_jam').done && by('cy_jam').tries===10, by('cy_jam').tries);
+  /* and the level is worth nothing unless the loop from level one, the one
+     the player already has, actually loses on it */
+  const naive = await pg.evaluate(async ()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    const B=t=>newBlock(t);
+    const lv=CC_CYBER.levels.find(l=>l.id==='cy_jam');
+    delete player.projects[lv.id];
+    CC_CYBER.enter(lv); await wait(320);
+    const loop=B('countLoop');loop.name='i';loop.to=10;
+    const t=B('tryCode');t.val={k:'var',name:'i'};loop.body=[t];
+    mgRobot.program=[loop,B('move'),B('move'),B('move')];
+    renderProgram(); mgRun();
+    for(let i=0;i<3000;i++){ if(!(mgState&&mgState.running))break; await wait(12); }
+    await wait(300);
+    const out={done:!!player.projects[lv.id],
+               jam:!!(mgState&&mgState.robot&&mgState.robot.jam),
+               tries:mgState&&mgState.robot?mgState.robot.tries|0:-1};
+    const c=document.querySelector('#ccCele .cc-cta'); if(c)c.click();
+    await wait(250); if(mgState)mgExit(false); await wait(200);
+    return out;
+  });
+  ck('the plain guessing loop from level one now loses',
+     naive.done===false && naive.jam===true, naive);
+  ck('and it stops after three, instead of racking up ten',
+     naive.tries===3, naive.tries);
+  /* The Open Window: the keypad is never touched. */
+  ck('the level about the hole in the wall is won without a single code',
+     by('cy_hole').done && by('cy_hole').tries===0, by('cy_hole').tries);
+  /* The hard levels ship four boards each, one of them hidden. */
+  ck('the three hardest levels each run one program over four boards',
+     ['cy_otp','cy_phish','cy_log'].every(id=>by(id).inputs===4),
+     ['cy_otp','cy_phish','cy_log'].map(id=>id+':'+by(id).inputs));
+  const hidden = await pg.evaluate(()=>CC_CYBER.levels
+    .filter(l=>(l.cases||[]).length)
+    .map(l=>({id:l.id,hid:(l.cases||[]).filter(c=>c.hidden).length})));
+  ck('and each keeps one of them hidden from the player',
+     hidden.length===3 && hidden.every(h=>h.hid===1), hidden);
+
+  // ---------------------------------------------- a memorised secret is not a rule
+  /* The point of shipping four boards is that a program which writes the
+     code into itself passes the board in front of it and fails the next.
+     If that program were to pass, the level would teach the opposite of
+     what it says. */
+  const cheat = await pg.evaluate(async ()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    const B=t=>newBlock(t);
+    const tc=n=>{const b=B('tryCode');b.val={k:'num',n:n};return b;};
+    const lv=CC_CYBER.levels.find(l=>l.id==='cy_otp');
+    delete player.projects[lv.id];
+    CC_CYBER.enter(lv); await wait(320);
+    /* 31 is the code on the FIRST board, and on that board alone */
+    mgRobot.program=[B('move'),B('move'),tc(31),B('move'),B('move'),B('move')];
+    renderProgram(); mgRun();
+    for(let i=0;i<3000;i++){ if(!(mgState&&mgState.running))break; await wait(12); }
+    await wait(300);
+    const res=(mgState&&mgState.results)||[];
+    const out={done:!!player.projects[lv.id], first:res[0], later:res.slice(1)};
+    const c=document.querySelector('#ccCele .cc-cta'); if(c)c.click();
+    await wait(250); if(mgState)mgExit(false); await wait(200);
+    return out;
+  });
+  ck('a program that remembers the code passes the board it was written for',
+     cheat.first===true, cheat);
+  ck('and fails every other one, so the level cannot be memorised',
+     cheat.done===false && cheat.later.some(r=>r===false), cheat);
 
   // ---------------------------------------------- the idea is the reward
   /* The player already stops to read the celebration card, so the lesson

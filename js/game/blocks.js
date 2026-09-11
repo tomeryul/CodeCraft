@@ -5,7 +5,10 @@ const COND_LBL={treeAhead:"tree ahead 🌳",rockAhead:"rock ahead 🪨",ironAhea
   taken:"another robot called it 🤝",
   // challenge-board sensors (see CHALLENGE_CONDS in challenges.js)
   wallAhead:"wall ahead 🧱",pitAhead:"pit ahead 🕳️",brickHere:"block under me 🟧",onTarget:"on a target 🎯",holding:"carrying a block ✊",
-  doorAhead:"locked door ahead 🚪",keyAhead:"key ahead 🔑",gateAhead:"closed gate ahead 🚧",onPlate:"on a plate 🔘"};
+  doorAhead:"locked door ahead 🚪",keyAhead:"key ahead 🔑",gateAhead:"closed gate ahead 🚧",onPlate:"on a plate 🔘",
+  /* Cyber Lab sensors (see js/game/cyber.js). They are offered only by a
+     board that could make them true, so they never turn up in the world. */
+  jammed:"keypad jammed ⛔",sealAhead:"sealed note ahead 🔏"};
 /* ---- negation ----
    A sensor condition is a name; the same name with a "!" in front is that
    sensor answered the other way round. Keeping it inside the string rather
