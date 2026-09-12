@@ -4332,6 +4332,42 @@ async function ev(expr) {
   check("every emoji in the source has icon art", wanted.length > 40, "scanned " + wanted.length);
   check("no emoji renders as a raw system glyph", IM.length === 0, IM.join(" "));
 
+  // ---------------------------------------------- the app's own icon
+  /* Nothing in the game renders these, so nothing else would notice a
+     renamed file, a manifest that still points at the old one, or a
+     maskable icon with transparent corners — which some Android launchers
+     draw as a black wedge. The service worker has to precache every one of
+     them too, or an installed app loses its icon offline. */
+  {
+    const fs = require("fs"), path = require("path");
+    const ROOT2 = path.resolve(__dirname, "..");
+    const man = JSON.parse(fs.readFileSync(path.join(ROOT2, "manifest.json"), "utf8"));
+    const sw  = fs.readFileSync(path.join(ROOT2, "sw.js"), "utf8");
+    const html= fs.readFileSync(path.join(ROOT2, "index.html"), "utf8");
+    const file = s => s.split("?")[0];
+    const icons = man.icons.map(i => file(i.src));
+    const all = icons.concat(["apple-touch-icon.png"]);
+    check("every icon the manifest names is really there",
+      icons.every(f => fs.existsSync(path.join(ROOT2, f))), icons.join(" "));
+    check("and the Apple one too", fs.existsSync(path.join(ROOT2, "apple-touch-icon.png")));
+    check("the service worker precaches all of them",
+      all.every(f => sw.indexOf('"./' + f + '"') >= 0), all.join(" "));
+    check("the page links the icon and the manifest",
+      /rel="apple-touch-icon"[^>]*apple-touch-icon\.png/.test(html) &&
+      /rel="icon"[^>]*icon-192\.png/.test(html) &&
+      /rel="manifest"/.test(html));
+    /* a maskable icon is cropped to the launcher's own shape, so a
+       transparent corner is a hole in whatever it draws */
+    const mask = man.icons.filter(i => (i.purpose || "").indexOf("maskable") >= 0);
+    check("there is a maskable icon, and it is not the plain one",
+      mask.length === 1 && file(mask[0].src) !== "icon-512.png",
+      mask.map(m => m.src).join(" "));
+    const png = fs.readFileSync(path.join(ROOT2, file(mask[0].src)));
+    /* PNG colour type lives at byte 25 of the IHDR: 6 is RGBA, 2 is RGB */
+    check("the maskable icon is opaque — no transparency to leave a hole",
+      png[25] === 2, "colour type " + png[25]);
+  }
+
   check("no uncaught exceptions during entire run", exceptions.length === 0, exceptions.join(" | "));
 
   console.log(`\n${passed} passed, ${failed} failed`);
