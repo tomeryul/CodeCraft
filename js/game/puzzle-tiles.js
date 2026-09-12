@@ -358,6 +358,9 @@
       else if(t.t==="plate")drawPlate(g,px,py,cell,n,rs.bricks.has(k)||(rs.x+"_"+rs.y)===k);
       else if(t.t==="gate")drawGate(g,px,py,cell,n,platesPressed(rs,t.a));
       else if(t.t==="arrow")drawArrow(g,px,py,cell,t.a|0);
+      /* a type registered from another file brings its own art with it —
+         see js/game/cyber.js, which adds the keypad and the note */
+      else if(DEFS[t.t]&&DEFS[t.t].draw)DEFS[t.t].draw(g,px,py,cell,t,rs,k);
     }
   }
 

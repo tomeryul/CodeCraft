@@ -183,7 +183,14 @@ async function loadCommunity(){
     const rows=all.filter(r=>!(typeof isBlocked==="function"&&isBlocked(r.author))
                           && !(typeof wasReported==="function"&&wasReported(r.id)));
     el.innerHTML="";
-    if(!rows.length){el.innerHTML='<div class="authnote">No challenges yet — be the first to publish one! ✏️</div>';return;}
+    if(!rows.length){
+      el.innerHTML='<div class="authnote">No challenges yet — be the first to publish one! ✏️</div>';
+      const b=document.createElement("button");b.type="button";b.className="ord-go ord-code";
+      b.textContent="✏️ Publish yours";
+      b.addEventListener("click",()=>{ document.querySelectorAll(".sheet.open").forEach(x=>x.classList.remove("open")); mgEnterCreator(); });
+      el.appendChild(b);
+      return;
+    }
     const myUid=(sbUser&&sbUser.uid)||null;
     for(const row of rows){
       const solved=!!player.projects["cc_"+row.id];
@@ -210,7 +217,7 @@ async function loadCommunity(){
 }
 function mgEnterCreator(){
   mgEnter({id:"custom",em:"✏️",name:"My Challenge",diff:1,coins:0,xp:0,maxBlocks:12,gw:8,gh:6,
-    desc:"Design mode — pick a tool: 🖌️ target tiles · 🤖 the robot's start · 🔢 pre-placed blocks · 🧱 walls to route around · 🕳️ pits (⤵️ Drop a block in to bridge one) · 🔑 keys and 🚪 doors of the same colour · 🌀 a pair of portals · 🔘 plates that open 🚧 gates (the robot — or a block left behind — holds one down) · ➡️ one-way tiles · 🧹 erase. Then write a program and press ▶ to PROVE the level is solvable — only then do 💾 Save / ➕ Add level / 🌍 Publish open up. Build several levels for a multi-level minigame.",
+    desc:"Pick a tool under the board and tap tiles to design a level.",
     allowed:CREATOR_BLOCKS,start:{x:0,y:0,dir:1},cells:[],initial:[],tiles:[],cases:[],preset:null});
   // Every creator session shares player.projPrograms["custom"], so a new challenge
   // used to open with the PREVIOUS one's program — which could then be run with ▶ and
@@ -317,6 +324,20 @@ function mgSelectFirstCase(){
   else mgState.caseEdit=null;
   mgState.robot={x:p.start.x,y:p.start.y,dir:p.start.dir};mgSeed(mgState.robot,p);
 }
+/* Where the design is, in one line: nothing yet, something unproven, or
+   proven and ready to keep. The 3D designer's strip is the same idea and
+   the same three colours — see check() in js/game/tower-editor.js. */
+function mgStatus(has,solved,banked){
+  const el=$("mgStatus"); if(!el)return;
+  if(typeof on3d==="function"&&on3d()){ el.style.display="none"; return; }
+  el.style.display="";
+  if(!has&&!banked){ el.className="t3warn bad";
+    el.textContent="Nothing on the board yet — pick a tool below and tap tiles."; return; }
+  if(!solved&&has){ el.className="t3warn hmm";
+    el.textContent="Now write it in 🧩 Blocks and press ▶ — a level counts as a level once you have solved it yourself."; return; }
+  el.className="t3warn ok";
+  el.textContent="✅ Solved — 💾 Save it, ➕ Add another level, or 🌍 Publish it.";
+}
 function mgSetBtn(id,on){const b=$(id);if(!b)return;b.style.opacity=on?"":".4";b.classList.toggle("locked",!on);}
 // The creator's tool strip: the fixed board tools plus one chip per terrain type,
 // so adding a tile type in puzzle-tiles.js adds its tool here automatically.
@@ -343,14 +364,87 @@ function mgStepArg(d){
   else mgState.brickNum=mgState.brickNum==null?null:(mgState.brickNum<=1?null:mgState.brickNum-1);
   mgCreatorUI();
 }
+/* ---- the board tab, in two parts ------------------------------------
+   It was one 272px scroller holding up to 654px of column, so on a
+   half-height sheet the board itself was cut off at the bottom and
+   everything under it — the 3D rotate buttons, the Academy's lesson, the
+   hint — was below a fold nothing announced. The board is what is being
+   looked at, so it is pinned: goal, board, and the board's own status bar.
+   Everything that is READING goes into #mgRead underneath, which is the
+   one thing that scrolls and always shows a line of itself, so it reads as
+   a place to scroll rather than an edge.
+
+   The creator's tools dock to the bottom of that reading area:
+   position:sticky never leaves its parent, and their parent used to be a
+   bar that sits below the board. Done once, at load. */
+(function(){
+  const panel=$("mgPanel"), tools=$("mgTools"), stp=$("mgBrickStp");
+  if(!panel||!tools||!stp||$("mgDock"))return;
+  const dock=document.createElement("div");dock.id="mgDock";
+  dock.appendChild(stp);dock.appendChild(tools);
+  const read=document.createElement("div");read.id="mgRead";
+  panel.appendChild(read);
+  /* order matters: the creator bar sits above what it edits, the hint last */
+  for(const id of ["mgCreatorBar","mgVars","mgCost","mgLesson","mgBoardHint"]){
+    const el=$(id); if(el)read.appendChild(el);
+  }
+  read.appendChild(dock);
+})();
+
+/* The board fits the space there is. All three drawers — the flat board,
+   the Tower plan view and the 3D scene — size themselves from the canvas's
+   own width, so capping the width is the one lever that fits all three.
+   Rechecked a few times a second rather than per frame: the 3D loop runs
+   at 60fps and layout is not a per-frame question. */
+let mgFitAt=0, mgFitW=0;
+function mgFitBoard(aspect){
+  const cv=$("mgCanvas"), panel=cv&&cv.parentNode; if(!panel)return;
+  const t=Date.now();
+  if(t-mgFitAt<250&&mgFitW)return;
+  mgFitAt=t;
+  /* the panel takes its natural height now, so the room to fit into is the
+     scrollport's — the visible part of the board tab */
+  const ph=(panel.parentNode&&panel.parentNode.clientHeight)||panel.clientHeight;
+  if(ph<40)return;
+  let used=0;
+  for(const el of panel.children){
+    if(el===cv||el.id==="mgRead"||!el.offsetParent)continue;
+    used+=el.getBoundingClientRect().height;
+  }
+  /* What is left after the fixed rows is shared. The reading area keeps a
+     line of itself on screen — but only as much as it actually has to say,
+     so a Tower level with nothing but the hint under it does not hand the
+     board's height to an empty panel, and never more than its share, so a
+     191px board tab on a small phone does not end up with an 8px scroller
+     under a board too tall to fit beside it. */
+  const room=Math.max(60,ph-used-8);
+  /* a strip of what is under the board stays in view, so the scroll
+     announces itself — but only as much as there is to say, and never more
+     than its share, so a board is not handed to an empty panel */
+  const read=$("mgRead");
+  const want=Math.min(read?(read.scrollHeight||0):0,Math.round(room*.30),64);
+  const capH=Math.max(72,room-want);
+  /* no floor under the width: a floor here would put the height back over
+     the cap it was just given, which is the whole point of the cap */
+  const capW=Math.floor(capH/Math.max(.2,aspect));
+  if(capW!==mgFitW){ mgFitW=capW; cv.style.maxWidth=capW+"px"; }
+}
+window.mgFitBoard=mgFitBoard;
+/* a size change (⛶, rotation, focus) has to re-fit before the next draw */
+window.mgFitReset=()=>{mgFitAt=0;mgFitW=0;};
 function mgToolsUI(){
   const el=$("mgTools");if(!el)return;
   const cur=mgState.paintMode, list=mgToolList();
   el.innerHTML="";
   for(const t of list){
+    /* the name under the icon: eleven unlabelled glyphs in a row was the
+       one part of the creator that needed the guide open beside it */
     const b=document.createElement("button");
     b.className="tool"+(t.id===cur?" on":"");
-    b.textContent=t.em;b.title=t.lbl;
+    b.title=t.lbl;
+    const em=document.createElement("span");em.className="tl-em";em.textContent=t.em;
+    const lb=document.createElement("span");lb.className="tl-lb";lb.textContent=t.lbl;
+    b.appendChild(em);b.appendChild(lb);
     b.addEventListener("click",()=>{mgState.paintMode=t.id;sfx(560,.03);mgCreatorUI();});
     el.appendChild(b);
   }
@@ -361,15 +455,32 @@ function mgToolsUI(){
     stp.style.display=on?"":"none";
     if(on){
       const lab=stp.querySelector(".clab");
-      if(lab)lab.textContent=t.dir?"🧭 Way":t.colour?"🎨 Colour":"🔢 No.";
+      if(lab)lab.textContent=t.dir?"🧭 Direction":t.colour?"🎨 Colour":"🔢 Block number";
       $("mgBrickN").textContent=t.dir?DIR_EM[(mgState.tileArg|0)%4]
         :t.colour?(mgState.tileArg||1)
         :(mgState.brickNum==null?"—":mgState.brickNum);
     }
   }
 }
+/* The action row was four icons in 34px squares: a cube, a gear the icon
+   pack draws as a sun, a floppy disk and a plus. Nothing said which was
+   Setup and which was Save, and the two that were greyed out gave no
+   reason. They say their names now, the way the tool row does. */
+function mgActLabels(){
+  const say=(id,txt)=>{
+    const b=$(id); if(!b||b.dataset.lb)return;
+    b.dataset.lb="1";
+    const em=b.textContent.trim();
+    b.textContent="";
+    const e=document.createElement("span");e.className="tl-em";e.textContent=em;
+    const l=document.createElement("span");l.className="tl-lb";l.textContent=txt;
+    b.appendChild(e);b.appendChild(l);
+  };
+  say("mgSetup","Setup"); say("mgSave","Save");
+}
 function mgCreatorUI(){
   if(!mgState||!mgState.creator)return;
+  mgActLabels();
   mgToolsUI();
   const p=mgState.proj;
   $("mgBudget").textContent=p.maxBlocks;
@@ -396,6 +507,10 @@ function mgCreatorUI(){
   // ---- gate Save / Add / Publish behind proving the level solvable ----
   const curHas=mgHasDesign(p);
   const solved=!!mgState.solved;
+  /* Save was greyed out and nothing said why. The 3D designer has had a
+     strip that says where you are since it was written; the flat one is
+     the same three states, so it gets the same strip. */
+  mgStatus(curHas,solved,banked);
   const canSaveCur=curHas&&solved;               // current design proven
   mgSetBtn("mgAddStage",canSaveCur);             // must prove before banking
   mgSetBtn("mgSave",canSaveCur||(banked>0&&!curHas)); // proven current, or already-proven banked levels
@@ -763,7 +878,12 @@ function mgPaintTile(x,y){
     // terrain: tapping the same type again removes it, a different type replaces it
     p.tiles=p.tiles||[];
     const def=CC_TILES.DEFS[tool];
-    const arg=def.arg==="colour"?(st.tileArg||1):def.arg==="dir"?(st.tileArg|0)%4:0;
+    /* a tile whose argument is a plain NUMBER — a keypad's code, the number
+       on a note (see js/game/cyber.js) — carries its value in its own field,
+       so switching between a coloured tool and a numbered one does not
+       scramble either */
+    const arg=def.arg==="colour"?(st.tileArg||1):def.arg==="dir"?(st.tileArg|0)%4
+             :def.arg==="num"?(st.tileNum|0):0;
     const i=p.tiles.findIndex(t=>t[0]===x&&t[1]===y);
     const had=i>=0?p.tiles[i]:null;
     if(i>=0)p.tiles.splice(i,1);
@@ -1024,19 +1144,49 @@ function mgEnter(proj0){
     applyProg(mgRobot,proj.preset);
   const rs={x:proj.start.x,y:proj.start.y,dir:proj.start.dir};mgSeed(rs,proj);
   mgState={proj,robot:rs,
-    steps:0,running:false,frames:null,timer:null,prevMax:$("editor").classList.contains("max")};
+    steps:0,running:false,frames:null,timer:null};
   $("projects").classList.remove("open");
   tutSet(0); // dismiss the onboarding coach — it doesn't belong over a challenge
-  $("editor").classList.add("open","max");
+  /* The size the player chose is a preference, not something a challenge
+     gets to set. Opening one used to force full screen and leaving used to
+     restore whatever it was before, so the choice reset every time you went
+     in and out of code. */
+  $("editor").classList.add("open");
   $("boardTabBtn").style.display="";
+  $("editor").classList.add("mg");    // reveals RESET/STEP in the bottom action bar
   $("mgTitle").textContent=proj.em+" "+proj.name;
-  $("mgGoal").textContent=proj.desc+(proj.question?"  ❓ "+proj.question:"");
+  /* Two nodes, not one string. Joining the goal to its question made a
+     sentence that exists nowhere in the source, so the Hebrew dictionary —
+     which matches whole strings — could never hit either half. Built as
+     text nodes so a published challenge's own words still cannot inject
+     markup. */
+  (function(){
+    const g=$("mgGoal"); g.textContent="";
+    g.appendChild(document.createTextNode(proj.desc||""));
+    if(proj.question){
+      const q=document.createElement("span");
+      q.className="mg-q";
+      q.textContent="❓ "+proj.question;
+      g.appendChild(q);
+    }
+  })();
+  // Academy stages carry their own teaching card (what each new block does,
+  // and the steps to take). Everything else clears it.
+  if(typeof renderLessonCard==="function"){
+    $("mgLesson").classList.remove("hid");
+    if(typeof lessonBtn==="function")lessonBtn(false);
+    renderLessonCard(proj);
+  }
   selBlock=null;elseSel=null;
   renderPalette();updateChips();renderProgram();renderPy();updateUndoBtns();
   mgUpdateCount();
   // a multi-input level shows its FIRST input, and the verdict strip up front, so
   // it's obvious from the start that one program has to handle all of them
   mgState.cases=mgCases(proj);mgState.ci=0;mgState.results=[];mgState.failAt=-1;mgState.costs=[];
+  // A single-board level never calls mgApplyCase, so its expected answer was
+  // never picked up and an "answer" goal could not be won at all — it always
+  // reported "this level is missing its expected answer". Seed it here.
+  mgState.caseExpect=proj.expect;
   if(mgState.cases.length>1)mgApplyCase(mgState.cases[0]);
   mgCaseStrip();mgVarsUI();
   $("mgCost").innerHTML="";
@@ -1047,12 +1197,11 @@ function mgExit(reopen){
   if(!mgState)return;
   mgStop();
   player.projPrograms[mgState.proj.id]=packProg(mgRobot);
-  const wasMax=mgState.prevMax;
   mgState=null;mgRobot=null;
   $("boardTabBtn").style.display="none";
+  $("editor").classList.remove("mg");
   $("mgCreatorBar").classList.remove("on");
   setTab("blocks");
-  if(!wasMax)$("editor").classList.remove("max");
   selBlock=null;elseSel=null;
   renderPalette();updateChips();renderProgram();renderPy();updateUndoBtns();
   saveSoon();
@@ -1095,7 +1244,13 @@ function mgApplyCase(c){
   // (mgClearTile/mgSetSize/mgEditStage all reassign), so holding references went stale.
   if(!st.caseBase)st.caseBase=JSON.parse(JSON.stringify(
     {initial:p.initial,start:p.start,cells:p.cells,tiles:p.tiles,gw:p.gw,gh:p.gh,goal:p.goal||null}));
-  const b=st.caseBase, pick=k=>JSON.parse(JSON.stringify((c&&c[k])?c[k]:b[k]));
+  // A level need not define every field (a counting level has no tiles, a
+  // reach level has no cells). JSON.stringify(undefined) is undefined, and
+  // JSON.parse(undefined) throws — so entering such a level crashed outright.
+  const b=st.caseBase, pick=k=>{
+    const v=(c&&c[k])?c[k]:b[k];
+    return v===undefined?undefined:JSON.parse(JSON.stringify(v));
+  };
   p.initial=pick("initial");p.start=pick("start");p.cells=pick("cells");p.tiles=pick("tiles");
   // a case may also resize the board and move the goal — that's how "escape ANY maze"
   // can hand the same program four mazes of different shapes
@@ -1330,6 +1485,8 @@ function mgTick(){
     // to the flat-board rules. Answers false off 3D levels, and no-ops when the
     // file isn't loaded.
     if(window.T3Act&&T3Act(st,b)){}
+    // the Cyber Lab's keypad, same idea: answers false anywhere else
+    else if(window.CCAct&&CCAct(st,b)){}
     else if(b.t==="move"){
       const nx=rb.x+DX[rb.dir],ny=rb.y+DY[rb.dir];
       const oneWay=window.CC_TILES&&!CC_TILES.canLeave(rb,rb.x,rb.y,rb.dir);
@@ -1415,6 +1572,7 @@ function mgCond(st,c){
     const v=Number(mgRobot.vars[c.var])||0, w=condRhs(mgRobot,c);
     return c.op===">"?v>w:c.op==="<"?v<w:c.op==="!="?v!==w:v===w;
   }
+  if(condNeg(c))return !mgCond(st,condBase(c));
   const rb=st.robot, ax=rb.x+DX[rb.dir], ay=rb.y+DY[rb.dir];
   const ka=ax+"_"+ay, kh=rb.x+"_"+rb.y, T=window.CC_TILES;
   switch(c){
@@ -1590,6 +1748,7 @@ function mgDraw(){
   if(!mgState)return;
   if($("boardTab").style.display==="none")return; // board hidden — nothing to draw
   const cv=$("mgCanvas"),st=mgState,p=st.proj;
+  mgFitBoard(p.gh/p.gw);
   const cw=cv.clientWidth||300;
   const cell=Math.floor(cw/p.gw);
   const CW=p.gw*cell, CH=p.gh*cell;
@@ -1662,7 +1821,12 @@ function mgDraw(){
   if(st.robot.items)for(const k of st.robot.items){const q=k.split("_");spr("💎",+q[0],+q[1],.6,Math.sin(T/300+(+q[0]))*2);}
   // ---- robot — the open-world look ----
   const rb=st.robot;
-  drawBoardRobot(g,rb.x*cell+cell/2,rb.y*cell+cell/2,cell*.72,rb.dir,ROBOT_COLORS[0],!!mgState.running,T);
+  /* the board robot wears what the player's own robot wears, so a hat you
+     just unlocked shows up in the Academy too. Not mgRobot: that is a scratch
+     robot made for this board and never wears anything. */
+  const rw=(typeof robots!=="undefined"&&robots[selRobot])||null;
+  drawBoardRobot(g,rb.x*cell+cell/2,rb.y*cell+cell/2,cell*.72,rb.dir,ROBOT_COLORS[0],!!mgState.running,T,
+    rw?{hat:rw.hat,outfit:rw.outfit,shoes:rw.shoes}:null);
   // brick being carried, floating above the robot's head
   if(rb.held!=null){
     const hs=cell*0.52, cxp=rb.x*cell+cell/2, hy=rb.y*cell+cell/2-cell*.55-hs+Math.sin(T/260)*2;

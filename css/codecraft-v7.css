@@ -1,0 +1,716 @@
+/* =====================================================================
+   CodeCraft — v7: the Style sheet
+   ---------------------------------------------------------------------
+   Linked AFTER css/codecraft-v6.css. Companion to renderStyle() in
+   js/game/shop.js.
+
+   Style used to be a 130px right-aligned wrap of tiny buttons inside one
+   shop row. Three slots × sixteen pieces do not fit there, so it became a
+   sheet of its own. The sheet itself is nothing new — it reuses .sheet and
+   .m-head like #orders — and every colour below already exists in
+   styles.css. What is new is the slot row.
+   ===================================================================== */
+
+/* ---- the sheets scroll, and the size control works on them ----
+   Both of these bodies were laid out as plain flex children, so anything
+   past the sheet's own height was simply unreachable: the maker overflowed
+   its 78vh by 59px before Build mode existed and by far more with it, and
+   the Save button was what fell off the end. css/codecraft-v5.css already
+   carries the note for the last three bodies this happened to — "survivable
+   while the sheet grew to fit them and is not once its height is fixed" —
+   and these two are named in its size lists now, so it is fixed for them
+   too and the ⛶ in their header finally does something. */
+#styleBody,.mk-body{flex:1 1 0;min-height:0;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;padding:0 2px 10px;}
+
+/* ---- the live preview ---- */
+#styleBody .st-prev{display:flex;align-items:center;justify-content:center;
+  margin:14px 0 2px;border-radius:18px;background:rgba(255,255,255,.04);
+  border:1px solid var(--hair);overflow:hidden;}
+#styleBody .st-prev canvas{display:block;width:100%;max-width:330px;height:150px;}
+#styleBody .st-modes{display:flex;gap:6px;justify-content:center;margin:8px 0 0;}
+/* 44px is the floor for anything tappable, and these are chips, not labels */
+/* three of them now, so they share the row rather than each claiming 88px */
+#styleBody .st-mode{padding:0 13px;min-width:0;flex:1;max-width:120px;min-height:44px;border-radius:999px;border:none;
+  font-family:inherit;font-size:12.5px;font-weight:700;
+  background:transparent;color:var(--ink2);}
+#styleBody .st-mode.on{background:var(--accent);color:#241b45;}
+
+/* ---- which robot you are dressing ---- */
+#styleBody .st-crew{display:flex;gap:6px;overflow-x:auto;padding:2px 0;margin:12px 0 0;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+#styleBody .st-crew::-webkit-scrollbar{width:0;height:0;}
+
+/* ---- the slot rows ---- */
+#styleBody .st-slot{display:flex;flex-direction:column;gap:9px;margin:16px 0 0;}
+#styleBody .st-lab{display:flex;align-items:baseline;gap:8px;font-size:13px;font-weight:700;}
+#styleBody .st-lab i{flex:1;font-style:normal;font-size:12.5px;color:var(--ink2);}
+#styleBody .st-lab b{font-size:11px;color:#8f83b8;}
+/* seven 52px swatches do not fit 354px of sheet: the row scrolls, and the
+   right edge fades so it says so */
+#styleBody .st-row{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;
+  padding:2px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  mask-image:linear-gradient(90deg,#000 86%,rgba(0,0,0,.15));
+  -webkit-mask-image:linear-gradient(90deg,#000 86%,rgba(0,0,0,.15));}
+#styleBody .st-row::-webkit-scrollbar{width:0;height:0;}
+#styleBody .st-sw{position:relative;flex:0 0 auto;width:52px;height:52px;padding:0;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  border-radius:15px;background:rgba(255,255,255,.06);border:1px solid var(--hair);}
+#styleBody .st-sw.on{background:rgba(255,184,48,.18);border:2px solid var(--accent);}
+#styleBody .st-sw.locked{opacity:.5;}
+#styleBody .st-sw .lk{position:absolute;left:0;right:0;bottom:0;padding:2px 0 3px;
+  font-size:10px;font-weight:800;background:rgba(23,17,48,.82);color:var(--accent2);}
+#styleBody .st-sw canvas{display:block;width:46px;height:46px;}
+/* the "no piece" swatch: the only one that is a glyph rather than art */
+#styleBody .st-sw .none{font-size:17px;color:var(--ink2);font-weight:700;}
+
+/* =====================================================================
+   Make a piece — boxes, and the HTML they mean
+   ---------------------------------------------------------------------
+   The canvas is a drawing surface, not a control: it is one canvas with
+   pointer handlers, so there are no 24px buttons on it to fail a tap
+   target. Everything that IS a control — the colours, the shapes, the
+   actions — is 44px or more.
+   ===================================================================== */
+/* the robot's box, on the Outfit tab: it fills whatever the dock has, so
+   the robot is read at a size a child can actually judge */
+#maker .mk-prev{position:relative;width:100%;border-radius:18px;
+  background:rgba(255,255,255,.04);border:1px solid var(--hair);overflow:hidden;}
+#maker .mk-prev canvas{position:absolute;inset:0;display:block;width:100%;height:100%;}
+#maker .mk-poses{margin:0;}
+/* touch-action is what stops the sheet scrolling out from under a drag */
+#maker .mk-pad{width:100%;margin:0 auto;}
+#maker .mk-pad canvas{display:block;width:100%;aspect-ratio:1;touch-action:none;
+  border-radius:16px;background:rgba(255,255,255,.05);border:1px solid var(--hair);}
+
+/* colours: sixteen squares that wrap, as the design draws them */
+#maker .mk-pal{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0;margin:0;}
+#maker .mk-dot{flex:0 0 auto;width:46px;height:46px;padding:0;border-radius:14px;
+  border:2px solid transparent;font-family:inherit;font-size:15px;color:var(--ink2);}
+#maker .mk-dot.on{border-color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.35);}
+/* no colour: a dashed empty square that says what it is */
+#maker .mk-dot.none,#maker .mk-insdot.none,#maker .mk-part .pd.none{
+  background:transparent;border:2px dashed rgba(255,255,255,.4);
+  display:flex;align-items:center;justify-content:center;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;font-weight:700;color:var(--ink2);}
+#maker .mk-part .pd.none{font-size:8px;border-width:1.5px;border-radius:6px;}
+#maker .mk-dot.none.on,#maker .mk-insdot.none.on{border-style:dashed;border-color:#fff;color:var(--ink);}
+
+/* name it, keep it */
+#maker .mk-row{display:flex;gap:8px;margin:14px 0 0;padding-top:12px;
+  border-top:1px solid rgba(255,255,255,.07);}
+#maker .mk-rowsel{flex:0 0 auto;align-self:center;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;font-weight:700;color:#b184ff;}
+#maker .mk-row input{flex:1;min-width:0;min-height:46px;border-radius:14px;
+  border:1px solid var(--hair);background:var(--panel2);color:var(--ink);
+  font-family:inherit;font-size:14px;padding:0 12px;}
+#maker .mk-acts{display:flex;gap:8px;margin:10px 0 4px;}
+#maker .mk-btn{min-height:46px;padding:0 18px;border-radius:14px;border:none;
+  font-family:inherit;font-size:14px;font-weight:700;background:var(--panel2);color:var(--ink);}
+#maker .mk-acts .mk-btn{flex:1;}
+#maker .mk-btn.go{background:linear-gradient(180deg,#43b862,#2e9e4a);color:#fff;}
+#maker .mk-btn.danger{background:rgba(224,74,95,.22);color:#ff8fa0;}
+
+/* ---- the Style row: your own pieces, and the tile that makes one ---- */
+/* a made piece is marked, because tapping the one you are wearing opens it
+   for repainting and nothing else in the row does that */
+#styleBody .st-sw.mine::after{content:"";position:absolute;top:4px;right:4px;
+  width:6px;height:6px;border-radius:50%;background:var(--accent2);}
+#styleBody .st-sw.add{border-style:dashed;border-color:rgba(255,184,48,.55);}
+#styleBody .st-sw.add .pl{font-size:21px;font-weight:700;color:var(--accent2);line-height:1;}
+
+/* the pose switch: a segment of three */
+#maker .mk-seg{display:flex;gap:4px;flex:1;min-width:0;padding:3px;border-radius:16px;
+  background:var(--panel2);}
+/* 44px inside the segment's own 3px, so the pill clears the tap floor */
+#maker .mk-sm{flex:1;min-width:0;min-height:44px;border-radius:13px;border:none;
+  font-family:inherit;font-size:13px;font-weight:700;background:transparent;color:var(--ink2);}
+#maker .mk-sm.on{background:var(--accent);color:#241b45;}
+
+/* =====================================================================
+   Build mode — boxes, and the HTML they mean
+   ===================================================================== */
+/* the boxes, in draw order: left is behind */
+#maker .mk-parts{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0;margin:0;}
+#maker .mk-part{position:relative;flex:0 0 auto;width:46px;height:46px;padding:0;
+  display:flex;align-items:center;justify-content:center;border-radius:14px;
+  background:rgba(255,255,255,.06);border:2px solid transparent;font-family:inherit;}
+#maker .mk-part.on{border-color:var(--accent);background:rgba(255,184,48,.16);}
+#maker .mk-part .pd{width:20px;height:20px;border-radius:6px;}
+/* the ×2 is the whole component lesson in two characters: this look is
+   shared, and the stylesheet underneath shows one rule for both */
+#maker .mk-part .px2{position:absolute;right:3px;bottom:2px;font-size:10px;
+  font-weight:800;color:var(--accent2);}
+#maker .mk-part.add{border:1px dashed rgba(255,184,48,.55);}
+#maker .mk-part.add .pl{font-size:20px;font-weight:700;color:var(--accent2);line-height:1;}
+
+/* the four corner radii, named the way the class name names them: outlined
+   chips, sized to their word, the way the design draws every choice that
+   is one of a few */
+#maker .mk-shapes{display:flex;flex-wrap:wrap;gap:6px;margin:0;}
+#maker .mk-shape{flex:0 0 auto;min-height:44px;padding:0 17px;border-radius:12px;
+  border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);
+  font-family:inherit;font-size:13px;font-weight:700;color:var(--ink2);}
+#maker .mk-shape.on{border-color:var(--accent);background:rgba(255,184,48,.18);color:var(--accent2);}
+
+/* a section label: the name in small capitals, then the one thing worth
+   knowing about it. #8d82b8 on the panel is 4.6:1 — the dimmer purples an
+   earlier draft used are not, and are not used. */
+#maker .mk-sec{display:flex;align-items:baseline;gap:5px;flex-wrap:wrap;margin:14px 1px 7px;}
+#maker .mk-sec:first-child,#maker .mk-was+.mk-sec{margin-top:6px;}
+#maker .mk-sect{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  color:#8d82b8;}
+#maker .mk-secd{font-size:11.5px;font-weight:600;color:var(--ink2);}
+#maker .mk-was{margin:6px 2px 0;padding:9px 11px;border-radius:13px;
+  background:rgba(255,184,48,.10);border:1px solid rgba(255,184,48,.3);color:var(--ink);}
+
+#maker .mk-hint{margin:12px 2px 0;font-size:12.5px;line-height:1.5;color:var(--ink2);}
+
+/* the code the piece means */
+#maker .mk-code{margin:14px 0 0;}
+#maker .mk-code pre{margin:0;padding:12px;border-radius:14px;overflow-x:auto;
+  background:rgba(10,6,26,.5);border:1px solid var(--hair);
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.75;
+  color:#dfe3ec;white-space:pre-wrap;overflow-wrap:anywhere;}
+/* a chip of the colour beside its hex: the fastest way to learn that
+   #5ab8ff IS the blue */
+#maker .mk-code pre .hexsw{display:inline-block;width:9px;height:9px;border-radius:3px;
+  margin-right:4px;vertical-align:-1px;border:1px solid rgba(255,255,255,.25);}
+#maker .pynote{margin:8px 2px 0;font-size:12px;line-height:1.5;color:var(--ink2);}
+
+/* ---- every value in the code is a control ----
+   A token cannot be 44px tall inside a 12px stylesheet, and it does not
+   need to be: the tap only chooses, and the strip below does the precise
+   work with buttons that are. The padding still buys about 22px of target,
+   and the dotted underline is what says "this one is yours to change". */
+/* A dashed underline was not enough of a signal: nothing about it said
+   "press me", and a child who never presses one never finds the precision
+   this whole screen is for. So a value is a chip — filled, outlined, the
+   same shape as every other control in the game — and it looks pressable
+   at a glance instead of after an explanation. */
+#maker .mk-code pre .val{display:inline-block;padding:1px 6px;margin:0 1px;
+  border:1px solid rgba(255,184,48,.5);background:rgba(255,184,48,.14);
+  font:inherit;border-radius:8px;line-height:1.35;}
+#maker .mk-code pre .val:active{transform:scale(.95);}
+#maker .mk-code pre .val.on{background:var(--accent);color:#241b45 !important;
+  border-color:var(--accent);box-shadow:0 0 0 2px rgba(255,184,48,.3);}
+#maker .mk-code pre .val.col{border-color:rgba(143,240,160,.5);background:rgba(143,240,160,.12);}
+/* the selector is a way in, not a value to nudge, so it is marked as a link */
+#maker .mk-code pre .val[data-k="name"]{border-color:rgba(177,132,255,.55);
+  background:rgba(177,132,255,.16);}
+
+/* the hint, above the code where it will be read */
+#maker .mk-tip{display:flex;align-items:center;gap:8px;margin:0 2px 7px;}
+#maker .mk-tipk{flex:0 0 auto;padding:1px 6px;border-radius:8px;
+  border:1px solid rgba(255,184,48,.5);background:rgba(255,184,48,.14);
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--accent2);}
+#maker .mk-tipt{font-size:12px;font-weight:700;color:var(--ink2);}
+
+/* the class name, on the shared name row: a selector is monospace and
+   purple wherever it appears, so the row says which of the two names it is
+   editing without a word of explanation */
+#maker .cp-input{flex:1;min-width:0;min-height:44px;border-radius:12px;
+  border:1px solid var(--hair);background:var(--panel2);color:var(--ink);
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;padding:0 10px;}
+
+/* The strip that edits whatever token is chosen. The property reads in
+   the sky blue the code uses for a property name, the value in amber like
+   a number, and the words of a keyword go green when chosen, like the
+   keyword token they are — so the strip is the code, spelled larger. */
+#maker .mk-ins{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0;}
+#maker .mk-inslab{flex:0 0 auto;padding:0 4px 0 2px;font-family:ui-monospace,Menlo,Consolas,monospace;
+  font-size:12px;font-weight:700;color:#5ab8ff;}
+#maker .mk-insval{flex:0 0 auto;min-width:58px;text-align:center;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;font-weight:800;color:var(--accent2);}
+#maker .mk-step{flex:0 0 auto;min-width:44px;min-height:44px;padding:0 8px;border-radius:11px;border:none;
+  font-family:inherit;font-size:13px;font-weight:800;background:var(--panel3);color:var(--ink);}
+#maker .mk-insx{flex:0 0 auto;width:36px;height:36px;margin-left:auto;padding:0;border:none;
+  border-radius:10px;background:rgba(255,255,255,.08);color:var(--ink2);font-size:13px;font-weight:700;}
+#maker .mk-step:active{transform:scale(.96);}
+#maker .mk-insname{flex:1;min-width:0;min-height:44px;border-radius:13px;
+  border:1px solid var(--hair);background:var(--panel2);color:var(--ink);
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;padding:0 10px;}
+#maker .mk-inspal{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;padding:2px 0;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+#maker .mk-inspal::-webkit-scrollbar{width:0;height:0;}
+#maker .mk-insdot{flex:0 0 auto;width:44px;height:44px;padding:0;border-radius:13px;
+  border:2px solid transparent;}
+#maker .mk-insdot.on{border-color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.35);}
+#maker .mk-copy{display:block;width:100%;margin:10px 0 0;}
+
+/* ---- the box model, and the words a layout is made of ---- */
+/* a keyword is a word, not a number, so the strip offers the words */
+#maker .mk-inskw{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;padding:2px 0;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+#maker .mk-inskw::-webkit-scrollbar{width:0;height:0;}
+#maker .mk-kw{flex:0 0 auto;min-height:44px;padding:0 12px;border-radius:11px;
+  border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;font-weight:700;
+  color:var(--ink2);white-space:nowrap;}
+#maker .mk-kw.on{border-color:#8ff0a0;background:rgba(143,240,160,.16);color:#8ff0a0;}
+#maker .mk-kw:disabled{opacity:.4;}
+/* a keyword token in the code reads green, like the value it is */
+#maker .mk-code pre .val.kw{border-color:rgba(143,240,160,.5);background:rgba(143,240,160,.12);}
+
+/* the box-model key, so the four colours on the canvas mean something */
+#maker .mk-key{display:flex;flex-wrap:wrap;gap:4px 12px;margin:8px 2px 0;}
+#maker .mk-key span{display:flex;align-items:center;gap:5px;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--ink2);}
+#maker .mk-key i{width:11px;height:11px;border-radius:3px;display:block;}
+
+/* the sentence under whatever is being edited */
+#maker .mk-inswrap{margin:0;}
+#maker .mk-instip{margin:7px 4px 0;font-size:12.5px;line-height:1.5;color:var(--ink2);}
+
+/* =====================================================================
+   How a web page is built — the lesson banner
+   ---------------------------------------------------------------------
+   It sits at the top of whichever screen you are on and never covers the
+   work: a step is finished by the piece having the thing, so the banner is
+   something to read, not something to press.
+   ===================================================================== */
+#maker .fe-offer{margin:14px 0 0;}
+#maker .fe-go{display:block;width:100%;
+  background:rgba(84,214,106,.16);border:1px solid rgba(84,214,106,.45);color:#b6f0c2;}
+#maker .fe-bar{margin:14px 0 0;padding:11px 12px 10px;border-radius:17px;
+  background:rgba(84,214,106,.10);border:1px solid rgba(84,214,106,.38);}
+#maker .fe-head{display:flex;align-items:center;gap:8px;}
+#maker .fe-n{flex:0 0 auto;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;
+  background:rgba(84,214,106,.22);color:#b6f0c2;}
+#maker .fe-title{flex:1;min-width:0;font-size:14px;font-weight:800;color:var(--ink);
+  font-family:ui-monospace,Menlo,Consolas,monospace;}
+#maker .fe-x{flex:0 0 auto;width:30px;height:30px;padding:0;border:none;border-radius:10px;
+  background:transparent;color:var(--ink2);font-size:13px;}
+#maker .fe-say{margin:6px 1px 0;font-size:13px;line-height:1.55;color:var(--ink);}
+#maker .fe-say code,#maker .fe-title{font-family:ui-monospace,Menlo,Consolas,monospace;}
+#maker .fe-dots{display:flex;gap:4px;margin:9px 1px 0;}
+#maker .fe-dot{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.13);display:block;}
+#maker .fe-dot.got{background:#54d66a;}
+#maker .fe-dot.now{background:var(--accent);}
+
+/* what this component is, in a sentence — at the top of the Layout tab */
+#maker .cp-what{margin:10px 2px 0;font-size:12.5px;line-height:1.55;color:var(--ink2);}
+#maker .cp-what span{display:inline;}
+#maker .cp-what span+span::before{content:" ";}
+
+/* =====================================================================
+   The maker's frame — a pinned stage, a dock, and the tabs at the foot
+   ---------------------------------------------------------------------
+   Everything above was one scrolling column, and three things followed
+   from that every single time: the canvas scrolled away while you edited
+   the code that describes it; the inspector — the strip that changes the
+   number you just tapped — appeared below the whole stylesheet, so tapping
+   a value moved the thing you were looking at off screen; and a component
+   needed a second sheet to show a subset of the first.
+
+   Four regions instead. The head is fixed, the stage is fixed, the dock is
+   the only thing that scrolls with the inspector pinned to its foot, and
+   the tabs sit at the very bottom the way the code page's do.
+
+   This is the one sheet whose height is not a preference: a pinned canvas
+   and a dock with something in it do not fit in 56vh at any width, so the
+   maker is always the tall sheet. The ⛶ in its header still sets the size
+   every OTHER screen opens at.
+   ===================================================================== */
+body:not(.sheets-full) #maker.sized,
+body.sheets-full #maker.sized,
+#maker{height:var(--sheet-full);max-height:var(--sheet-full);
+  display:flex;flex-direction:column;background:var(--bg);
+  /* .sheet pads itself by the safe area and the tab bar pads by it again,
+     so without this the home-indicator zone was counted twice and the tabs
+     floated a strip of sheet above the bottom of the screen */
+  padding-bottom:0;}
+
+/* Wide: the canvas gives most of its height to the dock, the way Focus in
+   the code sheet gives the program the rows that are not the program. The
+   canvas stays — a box is still dragged there — at the size a thumbnail
+   needs, and the key and the lesson offer step aside; a lesson in progress
+   does not, because it is the one thing being read. */
+#maker.wide .mk-stage-fixed .mk-pad{height:132px;min-height:96px;}
+#maker.wide .mk-stage-fixed .mk-key,
+#maker.wide .mk-stage-fixed .fe-offer{display:none;}
+/* the icon says what pressing it does: grow the dock, or give the canvas back */
+#maker .m-head .iconbtn.size .ic-min{display:none;}
+#maker .m-head .iconbtn.size .ic-max{display:block;}
+#maker.wide .m-head .iconbtn.size .ic-max{display:none;}
+#maker.wide .m-head .iconbtn.size .ic-min{display:block;}
+#maker .m-head{background:transparent;}
+
+/* Save belongs in the head, where it is reachable from every tab without
+   scrolling. 40px is the height of Back and Exit either side of it. */
+#maker .mk-save{flex:0 0 auto;height:40px;padding:0 15px;border:none;border-radius:12px;
+  font-family:inherit;font-size:13.5px;font-weight:800;
+  background:#54d66a;color:#0b3d1c;}
+#maker .mk-save:active{transform:scale(.95);}
+/* The breadcrumb IS the title here. Every other sheet says its name in the
+   header; a pinned stage pays for that title in canvas, and what the header
+   has to say is which piece, and which component of it is open. */
+#maker .mk-crumb{display:flex;align-items:center;justify-content:center;gap:2px;
+  overflow-x:auto;scrollbar-width:none;}
+#maker .mk-crumb::-webkit-scrollbar{width:0;height:0;}
+#maker .mk-crumb-b{flex:0 0 auto;height:32px;padding:0 10px;border:none;border-radius:10px;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;font-weight:700;
+  background:transparent;color:var(--ink2);white-space:nowrap;}
+#maker .mk-crumb-b.on{background:rgba(255,184,48,.18);color:var(--accent2);}
+#maker .mk-crumb-s{flex:0 0 auto;color:var(--ink2);font-size:13px;font-weight:700;}
+
+/* The stage: the canvas, the key and the lesson. It never scrolls — but on
+   a short screen it gives ground, because a dock with nothing visible in
+   it is worse than a slightly smaller canvas. */
+#maker .mk-stage-fixed{flex:0 1 auto;min-height:0;display:flex;flex-direction:column;
+  padding:6px 12px 8px;}
+/* square, centred, and as big as the room allows: with the robot on its
+   own tab the canvas no longer shares the stage with anything */
+#maker .mk-stage-fixed .mk-pad{flex:0 1 auto;height:256px;min-height:110px;
+  display:flex;justify-content:center;}
+#maker .mk-stage-fixed .mk-pad canvas{width:auto;height:100%;max-width:100%;}
+#maker .mk-stage-fixed .mk-key{justify-content:center;margin:6px 2px 0;}
+
+/* the dock: a raised panel with one scroller and the inspector at its foot */
+#maker .mk-dock{flex:1 1 0;min-height:180px;display:flex;flex-direction:column;
+  padding:0 12px;background:var(--panel);border-radius:20px 20px 0 0;
+  border-top:1px solid var(--hair);box-shadow:0 -8px 22px rgba(0,0,0,.28);}
+#maker .mk-dock .mk-body{padding:8px 0 12px;}
+/* the inspector is docked to the bottom of the dock, not appended to the
+   end of the scroll: tapping a number now moves nothing */
+#maker .mk-insdock{flex:0 0 auto;margin:0 -12px;}
+#maker .mk-insdock .mk-inswrap{padding:8px 12px 10px;border-top:1px solid rgba(255,255,255,.09);
+  background:rgba(255,255,255,.04);}
+#maker .mk-insdock .mk-inswrap[hidden]{display:none;}
+
+/* The tabs, at the foot — the same row the code page keeps its Blocks,
+   Python and Board in, in the same place, so a thumb that has learned one
+   screen already knows the other. Outfit is the whole robot. */
+#maker .mk-tabbar{flex:0 0 auto;display:flex;gap:6px;
+  padding:8px 12px calc(10px + var(--sab));
+  border-top:1px solid var(--hair);background:rgba(26,19,50,.86);}
+#maker .mk-dtab{flex:1;min-height:44px;padding:0;border:none;border-radius:14px;
+  font-family:inherit;font-size:10.5px;font-weight:800;letter-spacing:.04em;
+  text-transform:uppercase;background:none;color:var(--ink-dim,var(--ink2));}
+#maker .mk-dtab.on{background:var(--glass-on);color:var(--ink);}
+
+/* the Outfit tab: the robot, as tall as the dock will let it be */
+#maker .mk-outfit{height:100%;min-height:220px;display:flex;flex-direction:column;gap:6px;}
+#maker .mk-outfit .mk-prev{flex:1 1 auto;min-height:180px;}
+/* the pose chips sit inside the box along its bottom edge, and the robot
+   is drawn ABOVE them rather than behind them — floated over the picture
+   they covered the legs, which are exactly what the walk and the shoes are
+   there to show. A canvas is a replaced element, so its size is stated. */
+#maker .mk-outfit .mk-prev canvas{height:calc(100% - 44px);}
+#maker .mk-outfit .mk-poses{position:absolute;left:8px;right:8px;bottom:6px;margin:0;z-index:2;}
+#maker .mk-outfit .mk-poses .mk-seg{background:rgba(23,17,48,.72);padding:2px;}
+#maker .mk-outfit .mk-poses .mk-sm{min-height:32px;font-size:12px;}
+#maker .mk-cap{flex:0 0 auto;text-align:center;font-size:11px;font-weight:600;color:var(--ink2);}
+
+/* the piece name and the class name share one row, so there is one place
+   to look for "what is this called" */
+#maker .mk-rowlab{flex:0 0 auto;align-self:center;font-size:12.5px;font-weight:700;
+  color:var(--ink2);}
+
+/* =====================================================================
+   The Layout tab — the rule, asked as questions
+   ---------------------------------------------------------------------
+   One card per question — Where, Size, Shape, Space around, Boxes inside,
+   The piece. A folded card shows its values in the header in the code's
+   own colours, so the whole rule reads at a glance; the open card is the
+   one being edited. A number is a slider between − and +.
+   ===================================================================== */
+#maker .mk-lname{display:flex;align-items:center;gap:8px;margin:6px 1px 0;}
+#maker .mk-lname.small{margin:0 0 6px;}
+#maker .mk-lsel{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;
+  font-weight:800;color:#b184ff;}
+#maker .mk-lname.small .mk-lsel{font-size:12px;}
+/* what this component is, in a card the colour of a property name */
+#maker .cp-what{margin:6px 0 10px;padding:9px 11px;border-radius:13px;font-size:12.5px;line-height:1.55;
+  background:rgba(90,184,255,.09);border:1px solid rgba(90,184,255,.18);color:var(--ink);}
+#maker .cp-what span{display:inline;}
+#maker .cp-what span+span::before{content:" ";}
+
+/* the card */
+#maker .mk-lgrp{margin:8px 0 0;border-radius:16px;background:rgba(255,255,255,.04);
+  border:1px solid var(--hair);overflow:hidden;}
+#maker .mk-lgrp.open{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);}
+#maker .mk-lgh{display:flex;align-items:center;gap:9px;width:100%;min-height:56px;padding:8px 10px 8px 11px;
+  border:none;background:transparent;text-align:left;font-family:inherit;color:var(--ink);}
+#maker .mk-lgi{flex:0 0 auto;font-size:18px;line-height:1;}
+#maker .mk-lgi .ui-emoji{width:20px;height:20px;vertical-align:0;}
+#maker .mk-lgtw{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+#maker .mk-lgt{font-size:13.5px;font-weight:800;color:var(--ink);letter-spacing:0;text-transform:none;}
+#maker .mk-lgm{font-size:11px;font-weight:600;color:var(--ink2);line-height:1.3;}
+/* the values while folded: property in blue, value in amber, like the code */
+#maker .mk-lgs{flex:0 1 auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:3px 6px;
+  max-width:46%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;font-weight:700;}
+#maker .mk-lgrp.open .mk-lgs{display:none;}
+#maker .mk-lgsv{color:var(--accent2);white-space:nowrap;}
+#maker .mk-lgsv i{font-style:normal;color:#5ab8ff;margin-right:3px;}
+#maker .mk-lgv{flex:0 0 auto;width:10px;height:10px;margin:0 4px;
+  border-right:2px solid var(--ink2);border-bottom:2px solid var(--ink2);
+  transform:rotate(-45deg);transition:transform .15s;}
+#maker .mk-lgrp.open .mk-lgv{transform:rotate(45deg);}
+#maker .mk-lgb{padding:2px 11px 12px;}
+#maker .mk-lgb[hidden]{display:none;}
+
+/* a row: property and value on one line, the control under it */
+#maker .mk-lrow{margin:8px 0 0;}
+#maker .mk-lrh{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+/* the property name is the button that says what the property does — a
+   value you can change and cannot name is a slider, not a lesson */
+#maker .mk-lprop{flex:0 1 auto;min-height:32px;padding:0 6px;margin:0 0 0 -6px;
+  border:none;border-radius:9px;background:transparent;text-align:left;
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;font-weight:700;
+  color:#5ab8ff;white-space:nowrap;}
+#maker .mk-lprop::after{content:"?";font-size:10px;color:var(--ink2);}
+#maker .mk-lprop.on{background:rgba(90,184,255,.14);}
+#maker .mk-ldot{width:10px;height:10px;border-radius:3px;display:inline-block;}
+#maker .mk-lval{flex:0 0 auto;min-width:0;text-align:right;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;font-weight:800;
+  color:var(--accent2);}
+#maker .mk-lval.kw{color:#8ff0a0;}
+#maker .mk-lctl{display:flex;align-items:center;gap:6px;margin:4px 0 0;}
+#maker .mk-lctl.words{flex-wrap:wrap;gap:6px;}
+#maker .mk-lb{flex:0 0 44px;width:44px;height:44px;padding:0;border:none;border-radius:12px;
+  font-family:inherit;font-size:20px;font-weight:800;background:var(--panel3);color:var(--ink);line-height:1;}
+#maker .mk-lb:active{transform:scale(.94);}
+/* the slider: a track the height of a finger, a thumb the size of one */
+#maker .mk-rng{flex:1;min-width:0;height:44px;margin:0;background:transparent;-webkit-appearance:none;appearance:none;}
+#maker .mk-rng::-webkit-slider-runnable-track{height:8px;border-radius:4px;background:rgba(255,255,255,.14);}
+#maker .mk-rng::-moz-range-track{height:8px;border-radius:4px;background:rgba(255,255,255,.14);}
+#maker .mk-rng::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:28px;height:28px;margin-top:-10px;
+  border-radius:50%;background:var(--accent);border:3px solid #241b45;box-shadow:0 2px 6px rgba(0,0,0,.35);}
+#maker .mk-rng::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--accent);
+  border:3px solid #241b45;box-shadow:0 2px 6px rgba(0,0,0,.35);}
+#maker .mk-lctl .mk-kw{padding:0 12px;}
+#maker .mk-lnote{margin:8px 0 0;padding:9px 11px;border-radius:12px;font-size:12px;line-height:1.5;
+  color:var(--ink2);background:rgba(0,0,0,.18);}
+#maker .mk-lgo{display:block;width:100%;margin:8px 0 0;
+  background:rgba(177,132,255,.16);border:1px solid rgba(177,132,255,.4);color:#d9ccff;}
+#maker .mk-lgrp .mk-instip{margin:4px 2px 0;}
+
+/* =====================================================================
+   The review pass — the code page gets its room, and the rest follows
+   ---------------------------------------------------------------------
+   Twenty-eight screens walked at phone size. What follows is every place
+   the walk found, in the order they matter.
+   ===================================================================== */
+
+/* ---- 1. THE EDITOR: the program had 90px on a screen named after it ----
+   Two rows above the program said the same thing twice: "Robo-1" in the
+   header and "Robo-1" again in a chip row under it, with undo/redo beside.
+   The chips ARE the title of the world editor, so they take its slot; a
+   challenge keeps its own name there and hides them. Undo/redo — controls
+   on the program — sit at the end of the routine row, where the cost
+   button already lives. The run row loses 22px it never used. */
+#editor .v5-head #robotChips{flex:1;min-width:0;margin:0;padding:2px 0;gap:6px;}
+#editor.mg .v5-head #robotChips{display:none;}
+#editor:not(.mg) .v5-head .v5-title{display:none;}
+#editor .v5-head .rchip{min-height:40px;padding:0 12px;font-size:13px;}
+#blocksTab .v5-edrow{display:flex;align-items:center;gap:8px;margin:0 0 8px;}
+#blocksTab .v5-edrow #routineTabs{flex:1;min-width:0;margin:0;flex-wrap:nowrap;
+  overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:2px 0;}
+#blocksTab .v5-edrow #routineTabs::-webkit-scrollbar{display:none;}
+#blocksTab .v5-edrow #routineTabs .rtab{flex:0 0 auto;min-height:36px;}
+#blocksTab .v5-edrow .ed-btns{
+  display:flex;flex:0 0 auto;gap:3px;padding:3px;
+  border-radius:12px;background:rgba(0,0,0,.24);border:1px solid var(--hair);}
+#blocksTab .v5-edrow .ed-btns button{width:36px;height:36px;border-radius:9px;}
+/* the run row: 58px of Run inside 23px of padding was a third of the
+   program's height. 50 is still the biggest thing on the sheet. */
+#actionBar{padding:7px 12px 9px;gap:8px;}
+#actionBar #runBtn,#actionBar #stopBtn{height:50px;font-size:17px;}
+#actionBar .ibtn,#actionBar #mgSpeedBtn{width:48px;height:48px;}
+
+/* ---- 2. THE CREATOR: the board first, and tools that say their name ----
+   At half height the creator showed one row of the board under two bars
+   of controls: the goal, the canvas, THEN the tools (sticky, at the foot
+   of the scroll) and the rest. A tool is an icon with its name under it,
+   the way the build bar in the world already does it, so the legend that
+   used to be a truncated paragraph is the row itself. */
+/* The board tab keeps one scroller — nesting a second one starved the
+   creator on a small phone, where the goal, the board and the tool dock
+   genuinely do not fit at once and something has to scroll. What changed
+   is the ORDER and the board's SIZE: the board and its own status bar come
+   first and are sized to fit the visible area (see mgFitBoard in
+   js/game/challenges.js), so what scrolls below is only ever reading. */
+#boardTab{display:flex;flex-direction:column;}
+#boardTab #mgPanel{flex:0 0 auto;display:flex;flex-direction:column;}
+#boardTab #mgCanvas{flex:0 0 auto;margin:6px auto 0;}
+#boardTab #mgRead{display:block;padding-top:8px;}
+/* the board's own status bar belongs to the board, not to the reading */
+#boardTab #t3Bar{flex:0 0 auto;margin:7px auto 0;}
+#mgCreatorBar .cb-row.tools{gap:4px;padding:5px;}
+#mgCreatorBar .tool{width:auto;min-width:52px;height:50px;padding:0 6px;border-radius:12px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
+#mgCreatorBar .tool .tl-em{font-size:18px;line-height:1;}
+#mgCreatorBar .tool .tl-em .ui-emoji{width:19px;height:19px;vertical-align:0;}
+#mgCreatorBar .tool .tl-lb{font-size:9px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
+  color:var(--ink2);white-space:nowrap;}
+#mgCreatorBar .tool.on .tl-lb{color:var(--accent2);}
+/* the tools and their stepper dock to the foot of the board's scroll —
+   see the note above mgToolsUI in js/game/challenges.js */
+#mgDock{display:none;position:sticky;bottom:0;z-index:3;flex-direction:column;gap:5px;
+  margin-top:8px;padding-top:4px;background:var(--panel);}
+#mgCreatorBar.on ~ #mgDock{display:flex;}
+#mgDock .cb-row.tools{position:static;display:flex;align-items:center;flex-wrap:nowrap;
+  overflow-x:auto;scrollbar-width:none;background:rgba(26,19,50,.86);
+  border:1px solid var(--hair);border-radius:16px;}
+#mgDock .cb-row.tools::-webkit-scrollbar{display:none;}
+/* the stepper belongs to the tool it edits: a full row above the tools,
+   not a pill floating right above the actions */
+#mgDock .stp{position:static;display:flex;align-items:center;gap:2px;align-self:stretch;
+  justify-content:center;padding:3px;border-radius:999px;
+  background:rgba(0,0,0,.22);backdrop-filter:none;border:none;}
+#mgDock .stp .clab{font-size:11px;font-weight:800;color:var(--ink2);margin:0 4px 0 8px;white-space:nowrap;}
+#mgDock .stp button{width:36px;height:36px;padding:0;border-radius:999px;font-size:15px;
+  background:rgba(255,255,255,.07);color:var(--ink);border:none;}
+#mgDock .num{min-width:24px;text-align:center;font-weight:900;font-size:13.5px;}
+#mgDock .tool{width:auto;min-width:52px;height:50px;padding:0 6px;border-radius:12px;border:none;
+  background:transparent;color:var(--ink);font-family:inherit;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
+#mgDock .tool.on{background:rgba(255,184,48,.2);box-shadow:inset 0 0 0 1.5px rgba(255,214,107,.7);}
+#mgDock .tool .tl-em{font-size:18px;line-height:1;}
+#mgDock .tool .tl-em .ui-emoji{width:19px;height:19px;vertical-align:0;}
+#mgDock .tool .tl-lb{font-size:9px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
+  color:var(--ink2);white-space:nowrap;}
+#mgDock .tool.on .tl-lb{color:var(--accent2);}
+/* three lines before the goal folds: two cut the creator's one sentence.
+   A folded goal says so — it used to be silently clamped, so the rest of a
+   Tower level's instructions simply did not exist as far as a player could
+   tell. The chevron is a sibling, because ::after inside a -webkit-box is
+   clamped away with everything else. */
+/* two lines, not three: MORE is right there, and on a small phone the
+   third line is the one the tool dock needed */
+#boardTab #mgGoal{flex:0 0 auto;-webkit-line-clamp:2;margin:0;}
+/* two ids beat #mgGoal.open in styles.css, so the unfold has to be named
+   here too or MORE would flip its label and unfold nothing. An unfolded
+   goal scrolls rather than eating the board it is describing. */
+#boardTab #mgGoal.open{-webkit-line-clamp:unset;max-height:38vh;overflow-y:auto;}
+#mgMore{display:none;align-items:center;gap:6px;margin:0;padding:4px 8px 4px 2px;
+  border:none;border-radius:10px;background:transparent;font-family:inherit;
+  font-size:11.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--accent2);}
+#mgMore.on{display:inline-flex;}
+#mgMore i{width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;
+  transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s;}
+#mgGoal.open+#mgMore i{transform:rotate(-135deg) translate(-2px,-2px);}
+/* the actions fill their row instead of huddling at its right edge */
+#mgCreatorBar .cb-act .spacer{display:none;}
+#mgCreatorBar .cb-act #mgAddStage,#mgCreatorBar .cb-act #mgPublish{flex:1;min-width:0;}
+#mgCreatorBar .cb-act .ibtn{width:40px;height:40px;}
+
+/* ---- 3. TOASTS over an open sheet ----
+   A banner about the world ("New order!") sat in the middle of the dimmed
+   world behind whatever sheet was open, and read as something stuck. With
+   a sheet open a toast is a notification, so it comes up from the bottom,
+   over the sheet, the way one does everywhere else on the phone. */
+body:has(.sheet.open) #toasts{top:auto;bottom:calc(var(--sab) + 18px);}
+body:has(.sheet.open) #toasts .toast{max-width:88vw;}
+
+/* ---- 5. EMPTY STATES point at the next thing ---- */
+.ord-code{display:block;margin:14px auto 0;align-self:center;
+  background:var(--glass-hi);color:var(--ink);border:1px solid var(--hair);}
+#ccList .ord-code,#funcLibBody .ord-code{margin:10px auto 0;}
+#pyCode{min-height:0;}
+
+/* ---- 6. QUESTS: the totals are one strip at the top, not a quarter of
+   the sheet pinned to its foot ---- */
+#quests{display:flex;flex-direction:column;}
+#quests .m-head{order:-2;}
+#statsBox{order:-1;display:flex;gap:6px;padding:8px 14px 2px;}
+#statsBox div{flex:1;min-width:0;padding:7px 4px 6px;text-align:center;font-size:10px;line-height:1.25;
+  border-radius:11px;}
+#statsBox b{display:block;font-size:14px;margin:0 0 2px;}
+#statsBox b .ui-emoji{width:13px;height:13px;vertical-align:-1px;}
+#questList{order:0;}
+
+/* ---- 6. STYLE: the poses sit inside the preview, as in the maker ---- */
+#styleBody .st-prev{position:relative;}
+#styleBody .st-prev canvas{height:186px;}
+#styleBody .st-modes{position:absolute;left:8px;right:8px;bottom:6px;margin:0;
+  padding:2px;border-radius:14px;background:rgba(23,17,48,.72);}
+#styleBody .st-mode{min-height:36px;max-width:none;border-radius:12px;font-size:12px;}
+
+/* ---- 6. AGE GATE: "not yet" is grey, not a faded green that reads as an
+   error ---- */
+#ageGo:disabled{opacity:1;background:rgba(255,255,255,.08);color:var(--ink2);
+  border:1px solid var(--hair);border-bottom-color:var(--hair);box-shadow:none;}
+
+/* ---- the level designer says what each of its controls is ----
+   The action row was four icons in 34px squares — a cube, a gear the icon
+   pack draws as a sun, a floppy disk and a plus — and the two that were
+   greyed out gave no reason for it. They carry their names now, the way
+   the tool row does, and the strip above them says where the design is.
+   ===================================================================== */
+#mgCreatorBar .cb-act{gap:6px;flex-wrap:nowrap;}
+#mgCreatorBar .cb-act .ibtn{width:auto;min-width:56px;height:50px;padding:0 8px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
+#mgCreatorBar .cb-act .ibtn .tl-em{font-size:16px;line-height:1;}
+#mgCreatorBar .cb-act .ibtn .tl-em .ui-emoji{width:17px;height:17px;vertical-align:0;}
+#mgCreatorBar .cb-act .ibtn .tl-lb{font-size:9px;font-weight:800;letter-spacing:.03em;
+  text-transform:uppercase;color:var(--ink2);}
+#mgCreatorBar .cb-act #t3Btn{width:auto;min-width:56px;height:50px;font-size:12px;}
+#mgCreatorBar .cb-act #mgAddStage,#mgCreatorBar .cb-act #mgPublish{
+  flex:1;min-width:0;height:50px;font-size:12.5px;}
+/* a locked button is a question, so it does not look like a hole */
+#mgCreatorBar button.locked{filter:none;opacity:.5;}
+/* the status strip leads the row it explains */
+#mgStatus{margin:0 0 2px;}
+#mgStatus:empty{display:none;}
+/* the setup steppers said 🧩 12 and nothing else — three numbers with no
+   names. The label is the point of a number nobody can guess. */
+#mgCreatorBar .stprow{gap:6px;}
+#mgCreatorBar .stprow .stp{flex:1 1 auto;justify-content:space-between;}
+#mgCreatorBar .stp .clab{white-space:nowrap;}
+/* designing is not writing: the Blocks hint belongs to playing a level */
+#editor.mg #mgCreatorBar.on ~ #mgBoardHint,
+#mgRead #mgCreatorBar.on ~ #mgBoardHint{display:none;}
+
+/* =====================================================================
+   Cyber Lab — its own band, and the card that says what a level taught
+   ---------------------------------------------------------------------
+   It borrows Tower Mode's section shape because it IS the same shape: a
+   bolted-on track with its own levels. Only the accent differs, so the
+   two never read as one list.
+   ===================================================================== */
+.cy-sec{border-color:rgba(143,240,160,.28);background:rgba(84,214,106,.07);}
+.cy-ico{background:linear-gradient(180deg,#8ff0a0,#54d66a);color:#0b3d1c;}
+.cy-sec .t3prog{color:#8ff0a0;background:rgba(84,214,106,.16);}
+.cy-card:active{border-color:rgba(143,240,160,.6);}
+/* a level you have not opened yet says so, rather than looking broken */
+.cy-card.locked{opacity:.5;}
+.cy-card.locked .t3badge{filter:grayscale(1);}
+/* Eleven cards in one grid is a wall, so the band is three acts with a
+   line each. The heading is a label, not a card: no border, no tap. */
+.cy-act{display:flex;flex-direction:column;gap:1px;padding:12px 4px 6px;}
+.cy-act-n{font-size:12px;font-weight:800;letter-spacing:.04em;color:#8ff0a0;text-transform:uppercase;}
+.cy-act-s{font-size:12px;color:var(--ink2);line-height:1.4;}
+.cy-sec .cy-act:first-of-type{padding-top:6px;}
+/* What the tool you just tapped actually does, under the tools rather
+   than above them — it explains the thing your finger is on. Two lines is
+   the cap: a paragraph here would push the board off a short sheet. */
+/* the guide's own prose lines, between its labelled rows */
+.gnote .gline{margin:0 0 10px;}
+.gnote .gline:last-child{margin-bottom:0;}
+.gnote .grule{padding:0;margin:0 0 10px;background:none;border:0;}
+.cy-tip{display:flex;align-items:flex-start;gap:7px;padding:5px 8px 1px;}
+.cy-tip .cy-tip-t{font-size:11px;line-height:1.42;color:var(--ink2);min-width:0;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;}
+.cy-tip b{color:#8ff0a0;font-weight:800;}
+/* the way into the guide, beside the tools — the only row of this panel
+   that is on screen on an untouched board */
+.cy-help{flex:0 0 auto;display:inline-flex;align-items:center;gap:3px;
+  font:800 11px/1 inherit;padding:5px 9px;border-radius:999px;cursor:pointer;
+  background:rgba(143,240,160,.16);border:1px solid rgba(143,240,160,.42);color:#8ff0a0;}
+.cy-help:active{background:rgba(143,240,160,.3);}
+/* the designer's ⛔ Strikes setting: four chips, sized like the block
+   chips beside them so the row reads as one control */
+.cy-strk{display:flex;gap:4px;}
+.cy-strk .t3chip{min-width:34px;justify-content:center;padding:3px 8px;}
+.cy-strk-l{white-space:nowrap;}
+#cyEdRow{flex-wrap:wrap;row-gap:6px;}
+/* the keypad has stopped listening — a pill, so it can come and go
+   mid-run without moving anything beside it */
+#cyBar .cy-jam{font-size:11px;font-weight:800;padding:2px 7px;border-radius:999px;
+  background:rgba(255,93,115,.18);color:#ff9db0;white-space:nowrap;}
+#cyBar .t3tag{background:linear-gradient(180deg,#8ff0a0,#54d66a);color:#0b3d1c;}
+#cyBar .t3h b{color:var(--accent2);}
+#cyBar .t3key{color:var(--ink2);font-weight:700;}

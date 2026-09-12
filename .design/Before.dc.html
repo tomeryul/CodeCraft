@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: "Fredoka", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    a { color: #ffd66b; } a:hover { color: #ffb830; }
+    .pin { position: absolute; display: flex; align-items: center; gap: 7px; }
+    .pin i { flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; background: #ff5d73; color: #fff;
+             font-size: 11px; font-weight: 700; font-style: normal; display: flex; align-items: center; justify-content: center; }
+    .pin span { font-size: 11.5px; font-weight: 700; color: #fff; background: rgba(226,59,87,.92);
+                padding: 4px 9px; border-radius: 8px; white-space: nowrap; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: #2c7fb8; color: #f6f3ff">
+
+  <!-- the same world, so the two artboards compare like for like -->
+  <div style="position: absolute; left: 0; right: 0; top: 214px; height: 470px; background:
+        repeating-linear-gradient(90deg, #56a83f 0 65px, #5cb045 65px 130px)"></div>
+  <div style="position: absolute; left: 0; width: 130px; top: 214px; height: 130px; background: #ead9a8"></div>
+  <div style="position: absolute; left: 130px; width: 195px; top: 214px; height: 96px; background: #3f93cf"></div>
+  <div style="position: absolute; left: 168px; top: 470px; width: 52px; height: 52px; border-radius: 15px;
+              background: linear-gradient(180deg,#ffd066,#ffb830); border-bottom: 5px solid #c47d10"></div>
+
+  <!-- ==== the HUD as it stands ==== -->
+  <div style="position: absolute; top: 12px; left: 10px; display: flex; align-items: center; padding: 3px;
+              border-radius: 999px; background: rgba(26,19,50,.8); border: 1px solid rgba(255,255,255,.1)">
+    <span style="padding: 5px 12px; font-size: 13.5px; font-weight: 700">&#9733; 1</span>
+    <span style="padding: 5px 12px; font-size: 13.5px; font-weight: 700">&#9679; 0</span>
+    <span style="padding: 5px 12px; font-size: 13.5px; font-weight: 700">0/8</span>
+    <span style="padding: 5px 12px; font-size: 13.5px; font-weight: 700">100</span>
+  </div>
+  <div style="position: absolute; top: 62px; left: 10px; padding: 7px 14px; border-radius: 999px;
+              background: rgba(26,19,50,.8); border: 1px solid rgba(255,255,255,.1); font-size: 13.5px; font-weight: 700">
+    &#8599; /min 0
+  </div>
+
+  <div style="position: absolute; top: 12px; right: 10px; display: flex; flex-direction: column; gap: 7px; padding: 5px;
+              border-radius: 18px; background: rgba(26,19,50,.8); border: 1px solid rgba(255,255,255,.1)">
+    <span style="width: 44px; height: 44px; border-radius: 13px; background: rgba(255,255,255,.06)"></span>
+    <span style="width: 44px; height: 44px; border-radius: 13px; background: rgba(255,255,255,.06)"></span>
+    <span style="width: 44px; height: 44px; border-radius: 13px; background: rgba(255,255,255,.06)"></span>
+    <span style="width: 44px; height: 44px; border-radius: 13px; background: rgba(255,255,255,.06)"></span>
+  </div>
+
+  <div style="position: absolute; left: 14px; right: 14px; bottom: 96px; padding: 14px 16px; border-radius: 16px;
+              background: #2f2456; border: 1px solid #ffb830">
+    <div style="font-size: 15.5px; font-weight: 700; margin-bottom: 3px">Finish the Starter Academy</div>
+    <div style="font-size: 12.5px; color: #b9aee0; line-height: 1.45">Six short lessons. They teach every block you need to start.</div>
+  </div>
+
+  <div style="position: absolute; left: 14px; right: 14px; bottom: 14px; display: flex; align-items: flex-end; gap: 10px">
+    <span style="padding: 15px 24px; border-radius: 999px; background: linear-gradient(180deg,#9b6bff,#7a4dff);
+                 font-size: 16.5px; font-weight: 700; border-bottom: 4px solid #4c2bb0">Code</span>
+    <span style="padding: 15px 20px; border-radius: 14px; background: #241b45; border: 1px solid rgba(255,255,255,.14);
+                 font-size: 16.5px; font-weight: 700; border-bottom: 4px solid #191036">Build</span>
+    <span style="flex: 1"></span>
+    <span style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(180deg,#7fe28f,#37c85c);
+                 border-bottom: 5px solid #1e8a3c"></span>
+  </div>
+
+  <!-- ==== what is wrong, marked on the thing itself ==== -->
+  <!-- Bands drawn at the measured heights, not for effect: the top cluster
+       occupies 0-96px and the bottom cluster 666-844px at 390x844. -->
+  <div style="position: absolute; inset: 0; background:
+        linear-gradient(rgba(226,59,87,.13), rgba(226,59,87,.13)) 0 0/100% 96px no-repeat,
+        linear-gradient(rgba(226,59,87,.13), rgba(226,59,87,.13)) 0 100%/100% 178px no-repeat"></div>
+
+  <div class="pin" style="top: 104px; left: 10px"><i>1</i><span>Status wraps to a second row</span></div>
+  <div class="pin" style="top: 222px; right: 10px"><i>2</i><span>228px of the right edge</span></div>
+  <div class="pin" style="bottom: 186px; left: 14px"><i>3</i><span>A card, not a line &mdash; over the map</span></div>
+  <div class="pin" style="bottom: 88px; left: 14px"><i>4</i><span>Two button shapes, no hierarchy</span></div>
+
+  <div style="position: absolute; top: 372px; left: 22px; right: 22px; padding: 13px 16px; border-radius: 13px;
+              background: rgba(226,59,87,.92); font-size: 12.5px; font-weight: 600; line-height: 1.55">
+    <b style="font-size: 14px">13 floating boxes, in 5 clusters.</b><br>
+    Only 16.5% of the screen is covered &mdash; the problem is not how much,
+    it is how scattered. A new player has five places to look.
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: "Fredoka", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    a { color: #ffd66b; } a:hover { color: #ffb830; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: #2c7fb8; color: #f6f3ff">
+
+  <!-- ============ the world, drawn behind everything ============ -->
+  <div style="position: absolute; inset: 0; background:
+        linear-gradient(#2c7fb8, #2c7fb8) 0 0/100% 100% no-repeat">
+    <div style="position: absolute; left: 0; right: 0; top: 214px; height: 470px; background:
+          repeating-linear-gradient(90deg, #56a83f 0 65px, #5cb045 65px 130px),
+          repeating-linear-gradient(0deg, rgba(0,0,0,.05) 0 65px, rgba(255,255,255,.04) 65px 130px)"></div>
+    <div style="position: absolute; left: 0; width: 130px; top: 214px; height: 130px; background: #ead9a8"></div>
+    <div style="position: absolute; left: 130px; width: 195px; top: 214px; height: 96px; background: #3f93cf"></div>
+    <!-- a few props so occlusion is visible, not theoretical -->
+    <div style="position: absolute; left: 26px; top: 402px; width: 34px; height: 40px">
+      <div style="width: 34px; height: 26px; border-radius: 50% 50% 42% 42%; background: #2f9e56"></div>
+      <div style="width: 7px; height: 15px; margin: -3px auto 0; background: #8a5a2a; border-radius: 3px"></div></div>
+    <div style="position: absolute; left: 214px; top: 372px; width: 40px; height: 40px">
+      <div style="width: 40px; height: 30px; border-radius: 50% 50% 42% 42%; background: #37b061"></div>
+      <div style="width: 8px; height: 13px; margin: -3px auto 0; background: #8a5a2a; border-radius: 3px"></div></div>
+    <div style="position: absolute; left: 296px; top: 486px; width: 38px; height: 34px; border-radius: 8px;
+                background: linear-gradient(180deg,#ff8fa6,#ff5d73); box-shadow: inset 0 3px 0 rgba(255,255,255,.28)"></div>
+    <!-- the robot: the thing the player must never lose sight of -->
+    <div style="position: absolute; left: 168px; top: 470px; width: 52px; height: 60px">
+      <div style="width: 6px; height: 13px; margin: 0 auto; background: #8a6210; border-radius: 3px"></div>
+      <div style="width: 11px; height: 11px; margin: -18px auto 6px; border-radius: 50%; background: #54d66a;
+                  box-shadow: 0 0 8px rgba(84,214,106,.8)"></div>
+      <div style="width: 52px; height: 44px; border-radius: 15px; background: linear-gradient(180deg,#ffd066,#ffb830);
+                  border-bottom: 5px solid #c47d10; display: flex; align-items: center; justify-content: center; gap: 8px;
+                  box-shadow: inset 0 3px 0 rgba(255,255,255,.4), 0 10px 22px rgba(0,0,0,.3)">
+        <div style="width: 13px; height: 14px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center">
+          <div style="width: 6px; height: 7px; border-radius: 50%; background: #241b45"></div></div>
+        <div style="width: 13px; height: 14px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center">
+          <div style="width: 6px; height: 7px; border-radius: 50%; background: #241b45"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TOP: one bar, one row, never wraps ============ -->
+  <div style="position: absolute; top: 12px; left: 10px; right: 10px; display: flex; align-items: center; gap: 8px">
+
+    <div style="display: flex; align-items: center; padding: 3px; border-radius: 999px; background: rgba(26,19,50,.8);
+                backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,.1);
+                box-shadow: 0 6px 18px rgba(0,0,0,.34); flex: 1 1 auto; min-width: 0">
+      <div style="display: flex; align-items: center; gap: 5px; padding: 5px 11px; font-size: 13.5px; font-weight: 700">
+        <svg viewBox="0 0 24 24" width="15" height="15" style="flex: 0 0 auto"><path d="M12 3.2l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.7l6.1-.9z" fill="#ffb830"/></svg>
+        <span>1</span>
+        <span style="width: 26px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.16); overflow: hidden">
+          <span style="display: block; width: 40%; height: 100%; background: #ffd66b"></span></span>
+      </div>
+      <span style="width: 1px; height: 16px; background: rgba(255,255,255,.12)"></span>
+      <div style="display: flex; align-items: center; gap: 5px; padding: 5px 11px; font-size: 13.5px; font-weight: 700">
+        <svg viewBox="0 0 24 24" width="15" height="15"><circle cx="12" cy="12" r="8.4" fill="#ffb830"/><circle cx="12" cy="12" r="5.6" fill="#e8a520"/></svg>
+        <span>240</span>
+        <span style="font-size: 10.5px; font-weight: 700; color: #54d66a">+12</span>
+      </div>
+      <span style="width: 1px; height: 16px; background: rgba(255,255,255,.12)"></span>
+      <div style="display: flex; align-items: center; gap: 5px; padding: 5px 11px; font-size: 13.5px; font-weight: 700">
+        <svg viewBox="0 0 24 24" width="15" height="15"><path d="M6 8.5h12l-1.1 11a2 2 0 0 1-2 1.8H9.1a2 2 0 0 1-2-1.8z" fill="#c98d4b"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5" fill="none" stroke="#8a5a2a" stroke-width="2"/></svg>
+        <span>3<span style="color: #b9aee0">/8</span></span>
+      </div>
+      <span style="width: 1px; height: 16px; background: rgba(255,255,255,.12)"></span>
+      <div style="display: flex; align-items: center; gap: 4px; padding: 5px 11px; font-size: 13.5px; font-weight: 700">
+        <svg viewBox="0 0 24 24" width="15" height="15"><path d="M13.4 2.4L5.6 13.2h5l-.8 8.4 8-11h-5z" fill="#ffd66b"/></svg>
+        <span>100</span>
+      </div>
+    </div>
+
+    <button style="flex: 0 0 auto; width: 44px; height: 44px; border-radius: 14px; border: 1px solid rgba(255,255,255,.14);
+                   border-bottom: 4px solid #191036; background: linear-gradient(180deg,#453a77,#2f2456);
+                   display: flex; align-items: center; justify-content: center; padding: 0; position: relative">
+      <svg viewBox="0 0 24 24" width="21" height="21"><circle cx="5" cy="6" r="1.8" fill="#b9aee0"/><circle cx="5" cy="12" r="1.8" fill="#b9aee0"/><circle cx="5" cy="18" r="1.8" fill="#b9aee0"/><path d="M10 6h9M10 12h9M10 18h9" stroke="#f6f3ff" stroke-width="2.1" stroke-linecap="round"/></svg>
+      <span style="position: absolute; top: 5px; right: 5px; width: 9px; height: 9px; border-radius: 50%; background: #ff5d73"></span>
+    </button>
+  </div>
+
+  <!-- ============ RIGHT RAIL: four tools, thumb-height, off the play centre ============ -->
+  <div style="position: absolute; right: 10px; top: 68px; display: flex; flex-direction: column; gap: 7px; padding: 5px;
+              border-radius: 18px; background: rgba(26,19,50,.8); backdrop-filter: blur(16px);
+              border: 1px solid rgba(255,255,255,.1); box-shadow: 0 6px 18px rgba(0,0,0,.34)">
+    <button style="width: 44px; height: 44px; border-radius: 13px; border: 0; background: rgba(255,255,255,.06);
+                   display: flex; align-items: center; justify-content: center; padding: 0; position: relative">
+      <svg viewBox="0 0 24 24" width="21" height="21"><rect x="5" y="3.4" width="14" height="17.2" rx="2.4" fill="#cfd4e0"/><path d="M8.4 8h7.2M8.4 11.6h7.2M8.4 15.2h4.4" stroke="#8a91a4" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span style="position: absolute; top: 4px; right: 4px; min-width: 16px; height: 16px; border-radius: 999px;
+                   background: #ff5d73; color: #fff; font-size: 10px; font-weight: 700; line-height: 16px">2</span>
+    </button>
+    <button style="width: 44px; height: 44px; border-radius: 13px; border: 0; background: rgba(255,255,255,.06);
+                   display: flex; align-items: center; justify-content: center; padding: 0">
+      <svg viewBox="0 0 24 24" width="21" height="21"><path d="M3.6 4.6h2.8l2.4 10.6h8.9" fill="none" stroke="#f6f3ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.4 7.4h13l-1.9 6.2H8.6z" fill="#ffb830"/><circle cx="10" cy="19.2" r="1.7" fill="#f6f3ff"/><circle cx="17" cy="19.2" r="1.7" fill="#f6f3ff"/></svg>
+    </button>
+    <button style="width: 44px; height: 44px; border-radius: 13px; border: 0; background: rgba(255,255,255,.06);
+                   display: flex; align-items: center; justify-content: center; padding: 0">
+      <svg viewBox="0 0 24 24" width="21" height="21"><path d="M12 3.2a6.2 6.2 0 0 1 3.6 11.2v2.2H8.4v-2.2A6.2 6.2 0 0 1 12 3.2z" fill="#ffd66b"/><rect x="9" y="18" width="6" height="2.6" rx="1.3" fill="#9aa1b0"/></svg>
+    </button>
+    <span style="height: 1px; background: rgba(255,255,255,.1); margin: 0 6px"></span>
+    <button style="width: 44px; height: 44px; border-radius: 13px; border: 0; background: rgba(255,255,255,.06);
+                   display: flex; align-items: center; justify-content: center; padding: 0">
+      <svg viewBox="0 0 24 24" width="21" height="21"><circle cx="12" cy="12" r="6.4" fill="none" stroke="#54d66a" stroke-width="2.2"/><circle cx="12" cy="12" r="2" fill="#54d66a"/><path d="M12 2.6v3.2M12 18.2v3.2M2.6 12h3.2M18.2 12h3.2" stroke="#54d66a" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <!-- ============ BOTTOM: one dock. Next step, then the three actions ============ -->
+  <div style="position: absolute; left: 10px; right: 10px; bottom: 12px; display: flex; flex-direction: column; gap: 8px">
+
+    <!-- the next step: one line, tappable, never a card over the map -->
+    <button style="display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 12px; border-radius: 14px;
+                   background: rgba(26,19,50,.8); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,.1);
+                   box-shadow: 0 6px 18px rgba(0,0,0,.34); text-align: left">
+      <svg viewBox="0 0 24 24" width="18" height="18" style="flex: 0 0 auto"><path d="M12 3.6L22 8.4l-10 4.8L2 8.4z" fill="#ffd66b"/><path d="M6.4 11.4v4.2c0 1.8 2.5 3.2 5.6 3.2s5.6-1.4 5.6-3.2v-4.2" fill="none" stroke="#ffb830" stroke-width="2"/></svg>
+      <span style="flex: 1 1 auto; min-width: 0; font-size: 13px; font-weight: 700; white-space: nowrap;
+                   overflow: hidden; text-overflow: ellipsis">Next: finish the Starter Academy</span>
+      <span style="flex: 0 0 auto; display: flex; align-items: center; gap: 6px">
+        <span style="width: 44px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.16); overflow: hidden">
+          <span style="display: block; width: 45%; height: 100%; background: #ffb830"></span></span>
+        <span style="font-size: 11.5px; font-weight: 700; color: #ffd66b">4/9</span>
+      </span>
+    </button>
+
+    <!-- three actions, one row, one obvious primary -->
+    <div style="display: flex; align-items: center; gap: 10px">
+      <button style="flex: 1 1 0; height: 54px; border-radius: 999px; border: 0; border-bottom: 4px solid #4c2bb0;
+                     background: linear-gradient(180deg,#9b6bff,#7a4dff); color: #f6f3ff; font-size: 16.5px; font-weight: 700;
+                     display: flex; align-items: center; justify-content: center; gap: 8px;
+                     box-shadow: inset 0 2px 0 rgba(255,255,255,.3), 0 8px 24px rgba(122,77,255,.45)">
+        <svg viewBox="0 0 24 24" width="19" height="19"><path d="M9.4 4.6h5.2a1.8 1.8 0 0 1 1.8 1.8v1.4h1.4a1.8 1.8 0 0 1 1.8 1.8v5.2a1.8 1.8 0 0 1-1.8 1.8h-1.4v1.4a1.8 1.8 0 0 1-1.8 1.8H9.4a1.8 1.8 0 0 1-1.8-1.8v-1.4H6.2a1.8 1.8 0 0 1-1.8-1.8V9.6a1.8 1.8 0 0 1 1.8-1.8h1.4V6.4a1.8 1.8 0 0 1 1.8-1.8z" fill="#f6f3ff"/></svg>
+        Code
+      </button>
+      <button style="flex: 1 1 0; height: 54px; border-radius: 999px; border: 0; border-bottom: 4px solid #7c4c0e;
+                     background: linear-gradient(180deg,#d8912f,#b06f1a); color: #fff; font-size: 16.5px; font-weight: 700;
+                     display: flex; align-items: center; justify-content: center; gap: 8px;
+                     box-shadow: inset 0 2px 0 rgba(255,255,255,.28), 0 8px 24px rgba(176,111,26,.35)">
+        <svg viewBox="0 0 24 24" width="19" height="19"><path d="M14.6 3.4a4.6 4.6 0 0 0-1.3 7.6L5.6 18.7a1.8 1.8 0 0 0 2.5 2.5l7.7-7.7a4.6 4.6 0 0 0 5.4-6.3l-2.6 2.6-2.4-.6-.6-2.4z" fill="#fff"/></svg>
+        Build
+      </button>
+      <button style="flex: 0 0 auto; width: 64px; height: 64px; border-radius: 50%; border: 0; border-bottom: 5px solid #1e8a3c;
+                     background: linear-gradient(180deg,#7fe28f,#37c85c); color: #0b3d1c; padding: 0;
+                     display: flex; align-items: center; justify-content: center;
+                     box-shadow: inset 0 2px 0 rgba(255,255,255,.45), 0 8px 24px rgba(55,200,92,.45)">
+        <svg viewBox="0 0 24 24" width="26" height="26"><path d="M8.4 5.2l11 6.8-11 6.8z" fill="#0b3d1c"/></svg>
+      </button>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

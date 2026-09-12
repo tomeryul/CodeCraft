@@ -1,0 +1,379 @@
+/* =====================================================================
+   CodeCraft — v4 layout pass
+   Linked AFTER css/styles.css. It changes WHERE controls live, not what
+   they look like: every colour, radius, bevel and shadow below is a token
+   that already exists in styles.css.
+
+   Three rules:
+     1. Status reads at the top. Tools sit top-right. Everything you press
+        lives in one bar at the bottom.
+     2. Green means Run, and there is exactly one green button per screen.
+        Amber means build / progress. Everything else is glass.
+     3. Nothing tappable is smaller than 40px, and nothing tappable sits
+        above 640px on a 390x844 screen.
+
+   Companion DOM changes (index.html + 4 JS lines) are listed in
+   handoff/README.md.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   A. World: the run button is a labelled pill, not a mystery circle
+   The glyph is swapped to an SVG by js/ui-icons.js; ::after adds the word.
+   ------------------------------------------------------------------ */
+#fabRun{width:auto;min-width:64px;height:56px;padding:0 22px;border-radius:999px;
+  display:flex;align-items:center;justify-content:center;gap:9px;font-size:17px;font-weight:700;}
+#fabRun::after{content:"Run";font-family:inherit;font-weight:700;font-size:17px;}
+#fabRun.running::after{content:"Stop";}
+#fabRun .ui-emoji{width:21px;height:21px;}
+#bottombar{align-items:center;gap:10px;}
+#bottombar #codeBtn,#bottombar #buildBtn{height:56px;}
+
+/* ---------------------------------------------------------------------
+   B. Top row: three values, four tools — they have to fit in 390px
+   Four chips plus four tools wrap, and the tool tray drops underneath the
+   status bar. Energy is the one value that only matters when it is
+   spendable, so it appears below full only (hud.js toggles .low).
+   ------------------------------------------------------------------ */
+#stats #energyChip{display:none;}
+#stats #energyChip.low{display:flex;opacity:1;}
+#stats .chip{padding:5px 11px;}
+#stats #lvlChip{padding-bottom:11px;}
+#stats #xpBar{left:11px;right:11px;}
+#topbar #tbBtns .iconbtn{width:38px;height:38px;}
+
+/* ---------------------------------------------------------------------
+   C. One bottom action bar, in every mode
+   Run / Stop is the only primary and it never moves, so "make it stop" is
+   always the same tap in the same place. Reset and Step join it for
+   challenges (#editor.mg). Leaving and speed stay up in the header, out of
+   thumb range, where they cannot be hit by accident mid-run.
+   ------------------------------------------------------------------ */
+#actionBar{flex:0 0 auto;display:flex;align-items:center;gap:9px;
+  padding:11px 12px calc(12px + var(--sab));
+  border-top:1px solid var(--hair);background:rgba(26,19,50,.86);backdrop-filter:blur(16px);}
+#actionBar .ibtn{flex:0 0 auto;width:52px;height:52px;padding:0;border:none;border-radius:15px;
+  background:var(--glass-hi);color:var(--ink2);box-shadow:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  font-family:inherit;font-size:9px;font-weight:800;letter-spacing:.03em;
+  transition:transform .08s,background .12s;}
+#actionBar .ibtn i{font-style:normal;}
+#actionBar .ibtn .ui-emoji{width:20px;height:20px;}
+#actionBar .ibtn:active{transform:scale(.94);background:var(--glass-on);border-bottom-width:0;}
+/* reset + step are challenge controls: hidden in the plain world editor */
+#actionBar #mgResetBtn,#actionBar #mgStepBtn{display:none;}
+#editor.mg #actionBar #mgResetBtn,#editor.mg #actionBar #mgStepBtn{display:flex;}
+
+#actionBar #runBtn,#actionBar #stopBtn{flex:1 1 auto;width:auto;height:58px;padding:0 20px;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  border:none;border-radius:999px;font-family:inherit;font-size:18px;font-weight:700;
+  transition:transform .1s,border-bottom-width .1s;}
+#actionBar #runBtn{background:linear-gradient(180deg,#7fe28f,#37c85c);color:var(--green-text);
+  border-bottom:5px solid var(--green-deep);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 8px 24px rgba(55,200,92,.4);}
+#actionBar #stopBtn{background:linear-gradient(180deg,#ff7d90,#e04a5f);color:#fff;
+  border-bottom:5px solid #a02535;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.3), 0 8px 24px rgba(255,93,115,.4);}
+#actionBar #runBtn::after{content:"Run";}
+#actionBar #stopBtn::after{content:"Stop";}
+#actionBar #runBtn .ui-emoji,#actionBar #stopBtn .ui-emoji{width:22px;height:22px;}
+#actionBar #runBtn:active,#actionBar #stopBtn:active{transform:translateY(2px);border-bottom-width:2px;}
+/* one primary at a time: Run flips to Stop in place (hud.js toggles .running) */
+#actionBar #stopBtn{display:none;}
+#editor.running #actionBar #runBtn{display:none;}
+#editor.running #actionBar #stopBtn{display:flex;}
+/* the sheet needs the height back that the bar takes — phone only. Above
+   920px styles.css turns #editor into a full-height side panel (height:auto,
+   max-height:none); a plain #editor{height} here would land after that rule
+   and squash the panel to 56% of the viewport. */
+@media (max-width:919px){
+  #editor{height:56vh;}
+  #editor.max{height:var(--sheet-full);max-height:var(--sheet-full);}
+}
+/* .sheet pads itself by var(--sab) and #actionBar pads by calc(12px + sab)
+   on top of it, so on a phone with a home indicator the two stacked into
+   80px of dead space under Run. The bar clears the indicator on its own. */
+#editor{padding-bottom:0;}
+
+/* ---------------------------------------------------------------------
+   D. Editor header: only what you press between runs
+   Run and Stop have left this tray; what stays is expand, undo, redo,
+   close — four 32px glass squares.
+   ------------------------------------------------------------------ */
+.ed-head{padding:4px 12px 2px;}
+/* these were 32px glass squares, under the 40px everything else keeps.
+   Exit lives here, so it is not a tool you can afford to miss. */
+.ed-btns button{width:40px;height:40px;}
+.ed-btns button svg{width:19px;height:19px;}
+.ed-btns .go,.ed-btns .halt{display:none;}   /* safety net if the DOM move is skipped */
+
+/* ---------------------------------------------------------------------
+   E. Minigame header: one row instead of two stacked bars
+   ------------------------------------------------------------------ */
+#mgPanel{background:none;padding:0;margin:0 0 8px;}
+.mg-top{gap:10px;padding:0 0 2px;}
+.mg-top b{font-size:16.5px;font-weight:700;}
+.mg-top #mgCount{background:none;padding:0;font-size:11.5px;font-weight:600;color:var(--ink2);}
+.mg-top .ibtn{width:40px;height:40px;border-radius:13px;background:var(--glass-hi);
+  border:none;box-shadow:none;color:var(--ink2);}
+.mg-top .ibtn:active{transform:scale(.94);background:var(--glass-on);border-bottom-width:0;}
+.mg-top .ibtn.wide{width:auto;min-width:44px;padding:0 12px;font-size:13.5px;font-weight:800;}
+/* the goal leads the board — it is the first thing a player has to read */
+#mgGoal{margin:2px 0 10px;font-size:13px;line-height:1.5;color:#e2dbf5;}
+#mgGoal b{color:var(--accent2);}
+/* the level question, now its own node so it can be translated on its own */
+#mgGoal .mg-q{margin-inline-start:8px;color:var(--accent2);}
+#mgCanvas{border-radius:16px;border:1px solid var(--hair);}
+#mgBoardHint{margin-top:9px;font-size:12px;color:var(--ink2);}
+#mgCases{gap:6px;margin:0 0 9px;}
+#mgVars{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 0;}
+
+/* ---------------------------------------------------------------------
+   F. Creator: the tool tray docks to the bottom of the board
+   position:sticky keeps tools in the thumb while #boardTab scrolls, so the
+   board is never buried under four stacked bars. Rare controls stay behind
+   Setup; Publish is amber, because green is reserved for Run.
+   ------------------------------------------------------------------ */
+#mgCreatorBar{gap:9px;margin-top:9px;}
+#mgCreatorBar .cb-row.tools{position:sticky;bottom:0;z-index:3;gap:6px;padding:5px;
+  border-radius:16px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;
+  background:rgba(26,19,50,.86);backdrop-filter:blur(16px);border:1px solid var(--hair);}
+#mgCreatorBar .cb-row.tools::-webkit-scrollbar{display:none;}
+#mgCreatorBar .tool{width:40px;height:40px;border-radius:12px;}
+#mgCreatorBar .tool.on{background:rgba(255,184,48,.2);border-bottom:none;
+  box-shadow:inset 0 0 0 1.5px rgba(255,214,107,.7);}
+#mgBrickStp{position:sticky;bottom:0;z-index:3;align-self:flex-end;
+  background:rgba(26,19,50,.86);backdrop-filter:blur(12px);border:1px solid var(--hair);}
+#mgCreatorBar .cb-act{gap:8px;}
+#mgCreatorBar .cb-act #mgPublish{background:linear-gradient(180deg,var(--accent2),var(--accent));
+  color:var(--accent-text);border-bottom-color:#8a5709;}
+#mgCreatorBar .cb-act #mgAddStage{background:var(--glass-hi);color:var(--ink);border-bottom:none;}
+#mgLevels{gap:6px;}
+
+/* ---------------------------------------------------------------------
+   G. Sheets: one header, one close button, always in the same place
+   ------------------------------------------------------------------ */
+.m-head{gap:12px;padding:6px 16px 12px;}
+.m-head h3{font-size:16.5px;}
+.m-head p{font-size:11.5px;}
+
+/* ---------------------------------------------------------------------
+   H. Legibility pass
+   Five things the reorganisation left readable-in-theory. No new colours:
+   every value below is an existing token or a size change.
+   ------------------------------------------------------------------ */
+
+/* H1. Run is a button, not a banner. flex:1 with no cap stretched the pill
+   to the full 700px of the expanded panel, where a primary that wide stops
+   reading as something you press. Cap it and centre the group. */
+#actionBar{justify-content:center;}
+#actionBar #runBtn,#actionBar #stopBtn{max-width:320px;}
+
+/* H2. Python ran off the panel edge with no scrollbar and no wrap, so a long
+   line was simply cut. `#pyTab pre` in styles.css outranks a bare `#pyCode`,
+   hence the doubled id. */
+#pyTab #pyCode{white-space:pre-wrap;overflow-wrap:anywhere;}
+
+/* H4. The status icons are drawn art (coin, backpack), not glyphs — at
+   1.18em of 13.5px they were 16px and read as coloured dots. */
+#stats .chip{gap:6px;}
+#stats .chip .ui-emoji{width:1.42em;height:1.42em;vertical-align:-.32em;}
+
+/* H5. The XP bar is the only progress the world screen shows, at 3px inside
+   a dark capsule. Same colours, one pixel taller, track and fill separated. */
+#stats #xpBar{height:4px;background:rgba(255,255,255,.2);}
+
+/* ---------------------------------------------------------------------
+   I. Layer separation — the polish pass
+   styles.css already turned the chrome into flat glass on hairlines. These
+   are the three places that pass left unfinished. No new colours.
+   ------------------------------------------------------------------ */
+
+/* I1. Sheets opened over a fully lit world. Glass and hairlines need
+   something dark behind them or they read as mud over the canvas. The scrim
+   is a pseudo-element on the sheet itself — no markup, no JS — and stays
+   pointer-events:none, so what a tap on the world does is unchanged. */
+/* The scrim moved to #scrim in index.html — see css/codecraft-v5.css.
+   As a ::before on .sheet it sat inside the sheet's own stacking context
+   (z-index:40 + position:fixed), where a z-index:-1 child paints above
+   that element's background rather than behind it. The result was every
+   sheet dimmed by 52% black: #241b45 rendering as #150e2e. */
+
+/* I2. Every other surface in the v3 language sits on a hairline; the sheet
+   was the one that didn't, so its top edge died into the scrim. */
+.sheet{border-top:1px solid var(--hair);}
+
+/* I3. Keyboard focus was invisible everywhere. One ring, accent, on the
+   controls that take it — visible to keyboard users, absent for taps. */
+button:focus-visible,input:focus-visible,.blk:focus-visible{outline:2px solid var(--accent);
+  outline-offset:2px;}
+
+/* ---------------------------------------------------------------------
+   J. The menu — one door to everything
+   The game had eleven destinations and no map: four icon buttons up top,
+   one chip on the ticker, Export inside the Shop, and seven kinds of
+   content in one Projects scroll. See js/game/hub.js.
+   ------------------------------------------------------------------ */
+
+/* J1. The menu button. Same glass as Code|Build, its own rounded square to
+   the left of them — a destination opener, not part of the segmented pair. */
+#bottombar #hubBtn{pointer-events:auto;flex:0 0 auto;width:48px;height:48px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:16px;color:var(--ink);background:var(--glass);backdrop-filter:blur(16px);
+  border:1px solid var(--hair);box-shadow:var(--lift);transition:background .14s;}
+#bottombar #hubBtn:active{background:var(--glass-on);}
+#bottombar #hubBtn svg{width:22px;height:22px;}
+/* the claimable-reward badge, moved off the hidden #questBtn */
+#bottombar #hubBtn{position:relative;}
+#bottombar #hubBtn.badge::after{content:"";position:absolute;top:8px;right:8px;
+  width:8px;height:8px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 0 2px var(--glass);}
+#tbBtns .iconbtn[hidden]{display:none;}
+
+/* J1b. The menu button costs the bottom row 48px it did not have to spend.
+   At 390 everything still fits; below that Run was pushed past the bar and
+   fell back to its 64px min-width, and at 320 it left the screen entirely.
+   Buy the room back from the paddings rather than from Run — Run is the
+   primary and the only control here that has to keep its word. */
+@media (max-width:389px){
+  #bottombar{gap:8px;}
+  #bottombar #hubBtn{width:44px;height:44px;}
+  #bottombar #hubBtn svg{width:20px;height:20px;}
+  #bottombar #codeBtn,#bottombar #buildBtn{padding:0 12px;}
+  #fabRun{flex:0 0 auto;padding:0 16px;}
+}
+/* 320px (SE) has 292px of row for four controls. Code|Build close up into
+   the single segmented pair styles.css already draws them as — shared
+   radius, no border between them — which is where most of the room comes
+   from. Every label stays; nothing here drops below 40px. */
+@media (max-width:359px){
+  #bottombar{gap:6px;}
+  #bottombar #hubBtn{width:42px;height:42px;}
+  #bottombar #codeBtn,#bottombar #buildBtn{padding:0 9px;font-size:14px;gap:6px;}
+  #bottombar #buildBtn{margin-left:-6px;}
+  #fabRun{padding:0 13px;font-size:16px;}
+  #fabRun::after{font-size:16px;}
+}
+
+#hubBody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:2px 16px calc(18px + var(--sab));}
+
+/* J2. "Next up" — the journey's current step, above the menu. The hub is
+   where you come when you don't know what to do, so the answer is not a
+   fourteenth tile competing with the other thirteen.
+   Every journey rule in styles.css is scoped `#journey .j-btn`, so the
+   copy here inherits nothing and needs the layout restated. Same values,
+   same amber border — it is the same object in a different place. */
+/* --ink-dim: a third step of ink, below --ink2 (#b9aee0). The hub needs three
+   levels — tile name, dimension tag, group heading — and styles.css stops at
+   two. Derived from --ink2, not a new hue. */
+:root{--ink-dim:#8f83b8;}
+
+.hub-next{margin:0 0 16px;}
+.hub-nlab{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-dim);margin:0 0 7px 2px;}
+.hub-next .j-btn{display:flex;align-items:center;gap:10px;width:100%;
+  padding:11px 13px;border-radius:16px;text-align:left;cursor:pointer;color:inherit;font:inherit;
+  background:linear-gradient(180deg,rgba(58,44,104,.96),rgba(43,32,80,.96));
+  border:1px solid rgba(255,214,107,.42);
+  box-shadow:0 6px 20px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.10);}
+.hub-next .j-btn:active{transform:scale(.985);}
+.hub-next .j-em{font-size:22px;line-height:1;flex:0 0 auto;}
+.hub-next .j-em .ui-emoji{width:24px;height:24px;vertical-align:0;}
+.hub-next .j-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.hub-next .j-tx b{font-size:14px;font-weight:800;color:var(--ink);}
+.hub-next .j-tx small{font-size:11px;font-weight:600;color:var(--ink2);line-height:1.35;}
+.hub-next .j-go{flex:0 0 auto;font-size:11px;font-weight:800;color:#2b1c40;
+  background:var(--accent2);border-radius:999px;padding:3px 9px;
+  font-variant-numeric:tabular-nums;}
+
+/* J3. Three groups: play something, make something, or deal with your
+   world. The group heading is the only text at this level. */
+h4.hub-sec{margin:18px 0 9px 2px;font-size:10.5px;font-weight:800;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink-dim);}
+h4.hub-sec:first-child{margin-top:2px;}
+.hub-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+
+/* J4. A tile names the place, then the two things you want to know before
+   you tap: which kind it is (2D / 3D / lessons) and how far in you are. */
+.hub-tile{display:flex;flex-direction:column;align-items:flex-start;gap:0;
+  min-height:92px;padding:12px 13px;border-radius:16px;text-align:left;cursor:pointer;
+  color:inherit;font:inherit;background:var(--glass-hi);border:1px solid var(--hair);
+  transition:background .14s,transform .09s;}
+.hub-tile:active{transform:scale(.975);background:var(--glass-on);}
+.ht-em{font-size:23px;line-height:1;}
+.ht-em .ui-emoji{width:25px;height:25px;vertical-align:0;}
+.ht-name{margin-top:8px;font-size:14.5px;font-weight:700;line-height:1.2;}
+.ht-foot{display:flex;align-items:baseline;gap:6px;margin-top:auto;padding-top:6px;}
+.ht-tag{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--ink-dim);font-style:normal;}
+/* the count is the only figure on the tile, so it gets the accent */
+.ht-n{margin-left:auto;font-size:11.5px;font-weight:800;font-style:normal;
+  color:var(--accent);font-variant-numeric:tabular-nums;}
+
+/* J5. Back on the left, Exit on the right, on every header. The two were
+   the same ✕ glyph in the same corner before, doing different things.
+   Exit is navigation now, not a dismiss, so it gets the 40px the rest of
+   the UI keeps instead of the 36px it had as a corner affordance. */
+.m-head .x,.iconbtn.x{width:40px;height:40px;flex:0 0 auto;}
+.m-head .iconbtn.back{flex:0 0 auto;align-self:center;}
+.m-head .iconbtn.back svg{width:20px;height:20px;}
+.mg-top .ibtn.back svg{width:19px;height:19px;}
+/* nothing sits behind the world editor, so it offers no way back */
+#editor:not(.mg) #mgExitBtn{display:none;}
+
+@media (max-width:359px){
+  .hub-grid{grid-template-columns:1fr;}
+  .hub-tile{min-height:0;flex-direction:row;align-items:center;gap:11px;}
+  .hub-tile .ht-name{margin-top:0;flex:1;}
+  .hub-tile .ht-foot{margin:0;padding:0;}
+  .hub-tile .ht-tag{display:none;}
+}
+
+/* ---------------------------------------------------------------------
+   I. Splash: the screen has one job, and it is Play
+   The sign-in card used to sit between the pitch and the button, so the
+   first thing a new player met was an email field. index.html now orders it
+   pitch -> Play -> status -> sign-in -> features; the rules below give that
+   order its weight. Same palette, same card, less of it.
+   ------------------------------------------------------------------ */
+/* content taller than the viewport was unreachable: centred, no scroll.
+   `safe center` keeps the top edge in view once it overflows. */
+#splash{justify-content:safe center;overflow-y:auto;}
+#splash .tag{margin-bottom:22px;}
+
+/* the primary gets the space it earns */
+#playBtn{padding:18px 62px;font-size:22px;}
+#splashStatus{margin-top:10px;}
+
+/* sign-in is secondary: same card, quieter glass, tighter type */
+#splashAuth{width:min(320px,84vw);margin:14px 0 0;}
+#splashAuth .sp-card{background:rgba(20,14,45,.44);border-color:rgba(255,255,255,.1);
+  padding:12px;gap:7px;}
+#splashAuth .sp-h{font-size:12.5px;font-weight:600;color:#bdb2e4;}
+#splashAuth input{padding:10px 12px;font-size:14px;}
+
+/* the feature row read as five dead toggles: a strong pill with an
+   unreadable 12px sprite in front of the label. Quieter pill, legible icon. */
+#splash .feats{gap:7px;margin-top:24px;max-width:360px;}
+#splash .feats>span{display:flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.08);
+  padding:6px 13px;font-size:12px;color:#cec2ee;}
+#splash .feats span .ui-emoji{width:1.4em;height:1.4em;vertical-align:-.3em;}
+
+/* a short viewport (landscape phone, small laptop) pushed Play and the
+   features below the fold. Compress the vertical rhythm instead. */
+@media (max-height:700px){
+  #splash{padding:16px;}
+  #splash .bot{font-size:56px;}
+  #splash h1{font-size:38px;margin:4px 0 0;}
+  #splash .tag{font-size:14px;margin-bottom:16px;}
+  #playBtn{padding:15px 52px;font-size:19px;}
+  #splashAuth{margin-top:10px;}
+  #splash .feats{margin-top:16px;}
+}
+
+/* ---------------------------------------------------------------------
+   J. Editor: the empty program should look like a place, not a gap
+   ------------------------------------------------------------------ */
+#programWrap .empty{margin:6px 0;padding:30px 18px;
+  border:1.5px dashed rgba(255,255,255,.13);border-radius:16px;font-size:13.5px;}

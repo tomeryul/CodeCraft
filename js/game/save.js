@@ -6,8 +6,8 @@ const GROW_MS=20000;
 let saveOwner=null;
 // serialize the whole game into a plain object (used for both localStorage and the cloud)
 function buildSave(){
-  return {v:2,owner:(typeof sbUser!=="undefined"&&sbUser)?sbUser.uid:saveOwner,savedAt:Date.now(),seed,coins,stash,totals,unlocks,muted,selRobot,tutDone:tut.done,player,skills,
-    robots:robots.map(r=>({x:r.x,y:r.y,dir:r.dir,name:r.name,color:r.color,inv:r.inv,cap:r.cap,speed:r.speed,energy:r.energy,program:packProg(r),vars:r.vars,hat:r.hat})),
+  return {v:2,owner:(typeof sbUser!=="undefined"&&sbUser)?sbUser.uid:saveOwner,savedAt:Date.now(),seed,coins,stash,totals,unlocks,muted,musicOff,sheetFull,lang,selRobot,tutDone:tut.done,player,skills,
+    robots:robots.map(r=>({x:r.x,y:r.y,dir:r.dir,name:r.name,color:r.color,inv:r.inv,cap:r.cap,speed:r.speed,energy:r.energy,program:packProg(r),vars:r.vars,hat:r.hat,outfit:r.outfit,shoes:r.shoes})),
     objects:[...objects.entries()].map(([k2,o])=>{
       const c={...o};
       if(c.growAt!==undefined){c.growIn=Math.max(0,c.growAt-now);delete c.growAt;} // timers as ms-remaining
@@ -40,6 +40,21 @@ function scheduleCloud(data){
   cloudT=setTimeout(()=>{cloudSave(data||buildSave()).catch(()=>{});},4000);
 }
 // rebuild live game state from a save object (localStorage OR cloud). Returns true on success.
+/* ---- language: a device preference, stored beside the save ---- */
+function langStored(){
+  try{ return localStorage.getItem(LANG_KEY); }catch(_){ return null; }
+}
+function langSet(v){
+  lang=(v==="he")?"he":"en";
+  try{ localStorage.setItem(LANG_KEY,lang); }catch(_){}
+  if(typeof i18nApply==="function")i18nApply();
+}
+function langInit(){
+  const v=langStored();
+  if(v)langSet(v);
+}
+langInit();
+
 function applySave(d){
   // a different save is a different starting point: record where THIS
   // player already is without celebrating steps they finished days ago
@@ -52,10 +67,28 @@ function applySave(d){
     coins=d.coins;stash=Object.assign({wood:0,stone:0,iron:0,crystal:0,water:0},d.stash);totals=d.totals;
     unlocks=Object.assign({loops:false,logic:false,smart:false,vars:false,team:false},d.unlocks);
     muted=!!d.muted;
+    musicOff=!!d.musicOff;
+    /* the sheet size is a preference like sound: it holds until the player
+       presses the control again, across sessions included */
+    sheetFull=!!d.sheetFull;
+    $("editor").classList.toggle("max",sheetFull);
+    /* Not from the save. Loading one used to set the language from its lang
+       field, so signing in — which hands this function the cloud save —
+       turned Hebrew off for anyone whose cloud save was written before the
+       feature existed or on a device set to English. The text already on
+       screen stayed Hebrew (it was replaced in place) while everything
+       drawn afterwards came out English, which is exactly the half-and-half
+       screen this looked like. A save carrying a language it wrote earlier
+       is honoured only when the device has no choice of its own yet. */
+    if(!langStored()&&d.lang)langSet(d.lang);
     tut.done=d.v===1?true:!!d.tutDone;
     player=Object.assign({xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{},myChallenges:[],academy:{},funcLib:[]},d.player||{});
     if(!player.academy)player.academy={};
     if(!player.funcLib)player.funcLib=[];
+    /* pieces the player painted. A save can come from a file somebody else
+       wrote, and these are both drawn and named on screen, so they are
+       re-encoded from the allowed alphabet rather than trusted. */
+    player.myWear=window.CC_WEAR?CC_WEAR.clean(player.myWear):[];
     market=freshMarket();
     if(d.market){
       market.prices=Object.assign(market.prices,d.market.prices||{});
@@ -68,8 +101,12 @@ function applySave(d){
     skills=freshSkills();
     if(d.skills)for(const k in skills)if(d.skills[k])skills[k]=d.skills[k];
     robots=d.robots.map(rd=>{
-      const r=makeRobot(rd.x,rd.y,rd.name);
-      Object.assign(r,{dir:rd.dir,color:rd.color,cap:rd.cap,speed:rd.speed,vars:rd.vars||{},hat:rd.hat||null,
+      /* A save can arrive from a file someone else wrote, and the name and
+         colour are both rendered. They are cleaned here, where untrusted
+         data enters the game, as well as escaped where it is drawn. */
+      const r=makeRobot(rd.x,rd.y,safeText(rd.name,24));
+      Object.assign(r,{dir:rd.dir,color:safeColor(rd.color),cap:rd.cap,speed:rd.speed,
+        vars:rd.vars||{},hat:rd.hat||null,outfit:rd.outfit||null,shoes:rd.shoes||null,
         inv:Object.assign({wood:0,stone:0,iron:0,crystal:0,water:0},rd.inv),
         energy:rd.energy==null?100:rd.energy});
       applyProg(r,rd.program); // an array (old saves) or {main,routines} — both load

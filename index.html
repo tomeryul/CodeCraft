@@ -3,18 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <!-- The page ships zero inline scripts and zero inline handlers, so
+       script-src can stay strict: an injected <img onerror> or a
+       <script> smuggled through innerHTML simply does not run. GitHub
+       Pages cannot send headers, hence the meta form.
+       style-src needs 'unsafe-inline' because the game builds style
+       attributes through innerHTML; those values are escaped and
+       colour-validated at the source instead. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self' data:; connect-src 'self' https://tqeswkurpznpwefbdoig.supabase.co; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#3b2f63">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <!-- full-bleed under the iOS status bar; the paint layers are IN-FLOW (not
      position:fixed) because fixed layers get clipped to the short standalone
      layout viewport and can never reach the bottom of the screen -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="./manifest.json?v=3">
-<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=3">
-<link rel="icon" href="./icon-192.png?v=3">
+<link rel="manifest" href="./manifest.json?v=4">
+<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=4">
+<link rel="icon" href="./icon-192.png?v=4">
 <meta name="description" content="CodeCraft — an open-world game where kids learn programming by automating robots, building factories and shaping a living world.">
 <title>CodeCraft — Program Your World</title>
 <link rel="stylesheet" href="./css/styles.css">
+<link rel="stylesheet" href="./css/codecraft-v4.css">
+  <link rel="stylesheet" href="./css/codecraft-v5.css">
+  <link rel="stylesheet" href="./css/codecraft-v6.css">
+  <link rel="stylesheet" href="./css/codecraft-v7.css">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -26,9 +38,15 @@
     <div class="chip" id="bagChip">🎒 <span id="bagEl">0/8</span></div>
     <div class="chip" id="energyChip"><span id="energyEl">⚡100</span></div>
   </div>
+  <!-- Only the two controls that act on THIS screen. Quests and the Shop are
+       destinations, so they moved into the ☰ menu with the other eleven.
+       Both buttons stay in the DOM, hidden: boot.js, shop.js and
+       engagement.js each address them by id, and engagement.js puts the
+       "reward waiting" badge on #questBtn — hub.js mirrors that badge onto
+       the menu button, so the signal still reaches the player. -->
   <div id="tbBtns">
-    <button class="iconbtn" id="questBtn" title="Quests">📜</button>
-    <button class="iconbtn" id="shopBtn" title="Shop">🛒</button>
+    <button class="iconbtn" id="questBtn" title="Quests" hidden>📜</button>
+    <button class="iconbtn" id="shopBtn" title="Shop" hidden>🛒</button>
     <button class="iconbtn" id="mentorBtn" title="AI Mentor">💡</button>
     <button class="iconbtn" id="centerBtn" title="Find my robot">🎯</button>
   </div>
@@ -38,6 +56,9 @@
 <div id="journey"></div>
 <div id="buildBar"></div>
 <div id="bottombar">
+  <button id="hubBtn" title="Menu — everything in the game" aria-label="Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
   <button id="codeBtn">🧩 Code</button>
   <button id="buildBtn">🔨 Build</button>
   <div class="spacer"></div>
@@ -46,7 +67,6 @@
 
 <!-- ============ CODE EDITOR ============ -->
 <div class="sheet" id="editor">
-  <div class="grab"></div>
   <div class="ed-head">
     <div id="robotChips"></div>
     <div class="ed-btns">
@@ -56,8 +76,6 @@
       </button>
       <button id="undoBtn" title="Undo">↺</button>
       <button id="redoBtn" title="Redo">↻</button>
-      <button class="go" id="runBtn" title="Run">▶</button>
-      <button class="halt" id="stopBtn" title="Stop">⏹</button>
       <button id="edClose" title="Close">✕</button>
     </div>
   </div>
@@ -68,16 +86,16 @@
   </div>
   <div class="tabbody" id="boardTab" style="display:none">
     <div id="mgPanel">
-      <div class="mg-top"><b id="mgTitle"></b><span id="mgCount"></span><span class="spacer"></span>
-        <button id="mgStepBtn" class="ibtn" title="Run one action at a time">⏭</button>
-        <button id="mgSpeedBtn" class="ibtn wide" title="Playback speed">1×</button>
-        <button id="mgResetBtn" class="ibtn" title="Reset the board">↺</button>
-        <button id="mgExitBtn" class="ibtn" title="Leave challenge">✕</button></div>
+      <div class="mg-top"><button id="mgExitBtn" class="ibtn" title="Back to the list">✕</button>
+        <b id="mgTitle"></b><span id="mgCount"></span><span class="spacer"></span>
+        <button id="mgSpeedBtn" class="ibtn wide" title="Playback speed">1×</button></div>
       <div id="mgCreatorBar">
         <div class="cb-row tools" id="mgTools"></div>
+        <span class="stp" id="mgBrickStp"><span class="clab">🔢</span><button id="mgBrickDec">−</button><span id="mgBrickN" class="num"></span><button id="mgBrickInc">＋</button></span>
+        <!-- where the design is, in one line: nothing yet, unproven, or
+             ready. The 3D designer has had one since it was written. -->
+        <div id="mgStatus" class="t3warn"></div>
         <div class="cb-row cb-act">
-          <span class="stp" id="mgBrickStp"><span class="clab">🔢</span><button id="mgBrickDec">−</button><span id="mgBrickN" class="num"></span><button id="mgBrickInc">＋</button></span>
-          <span class="spacer"></span>
           <button id="mgSetup" class="ibtn" title="Level setup">⚙️</button>
           <button id="mgSave" class="ibtn" title="Save to My Challenges">💾</button>
           <button id="mgAddStage" title="Prove the level, then bank it and start the next">➕ Add level</button>
@@ -94,9 +112,9 @@
           <div class="cb-row" id="mgCaseEdit" style="display:none"></div>
           <button id="mgDiff" class="rowbtn" title="Difficulty">⭐ Easy</button>
           <div class="stprow">
-            <span class="stp"><span class="clab">🧩</span><button id="mgBudDec">−</button><span id="mgBudget" class="num"></span><button id="mgBudInc">＋</button></span>
-            <span class="stp"><span class="clab">↔️</span><button id="mgWDec">−</button><span id="mgW" class="num"></span><button id="mgWInc">＋</button></span>
-            <span class="stp"><span class="clab">↕️</span><button id="mgHDec">−</button><span id="mgH" class="num"></span><button id="mgHInc">＋</button></span>
+            <span class="stp"><span class="clab">🧩 Block budget</span><button id="mgBudDec">−</button><span id="mgBudget" class="num"></span><button id="mgBudInc">＋</button></span>
+            <span class="stp"><span class="clab">↔️ Width</span><button id="mgWDec">−</button><span id="mgW" class="num"></span><button id="mgWInc">＋</button></span>
+            <span class="stp"><span class="clab">↕️ Height</span><button id="mgHDec">−</button><span id="mgH" class="num"></span><button id="mgHInc">＋</button></span>
           </div>
         </div>
         <div class="cb-row" id="mgLevels" style="display:none"></div>
@@ -107,6 +125,7 @@
       <canvas id="mgCanvas"></canvas>
       <div id="mgVars"></div>
       <div id="mgCost"></div>
+      <div id="mgLesson"></div>
       <div id="mgBoardHint">✏️ Tap <b>🧩 Blocks</b> to write your program, then press ▶ to run it here.</div>
     </div>
   </div>
@@ -124,14 +143,21 @@
     <pre id="pyCode"></pre>
     <div class="pynote">🐍 This is your block program written in Python — the same language real engineers use! Your blocks and this code always match.</div>
   </div>
+  <!-- ONE action bar, bottom of the sheet, every mode. Run/Stop is the only
+       primary and never moves; RESET and STEP appear for challenges only. -->
+  <div id="actionBar">
+    <button class="ibtn" id="mgResetBtn" title="Reset the board">↺<i>RESET</i></button>
+    <button class="ibtn" id="mgStepBtn" title="Run one action at a time">⏭<i>STEP</i></button>
+    <button class="go" id="runBtn" title="Run">▶</button>
+    <button class="halt" id="stopBtn" title="Stop">⏹</button>
+  </div>
 </div>
 
 <!-- ============ AI MENTOR ============ -->
 <div class="sheet" id="mentor">
-  <div class="grab"></div>
   <div class="m-head">
     <div class="face">🦉</div>
-    <div><h3>Byte — your AI mentor</h3><p>Ask me anything about coding or your robots!</p></div>
+    <div><h3>Byte — your AI mentor</h3></div>
     <button class="iconbtn x" id="mClose">✕</button>
   </div>
   <div id="chat"></div>
@@ -144,22 +170,37 @@
 
 <!-- ============ QUESTS ============ -->
 <div class="sheet" id="quests">
-  <div class="grab"></div>
   <div class="m-head">
     <div class="face">📜</div>
-    <div><h3>Quests &amp; Progress</h3><p>Finish goals, claim rewards, level up!</p></div>
+    <div><h3>Quests &amp; Progress</h3></div>
     <button class="iconbtn x" id="qClose">✕</button>
   </div>
   <div id="questList"></div>
   <div id="statsBox"></div>
 </div>
 
-<!-- ============ BUILD PROJECTS ============ -->
-<div class="sheet" id="projects">
-  <div class="grab"></div>
+<!-- ============ MENU / HUB ============
+     One door to every destination, grouped. The tiles are built in
+     js/game/hub.js so the counts stay live. -->
+<div class="sheet" id="hub">
   <div class="m-head">
-    <div class="face">🏗️</div>
-    <div><h3>Build Projects</h3><p>Harder coding challenges — finished builds appear in your world!</p></div>
+    <div class="face">🧭</div>
+    <div><h3>Everything in the game</h3><p>Pick where to go. Your world keeps running.</p></div>
+    <button class="iconbtn x" id="hubClose">✕</button>
+  </div>
+  <div id="hubBody"></div>
+</div>
+
+<!-- ============ ONE DESTINATION AT A TIME ============
+     Was a single scroll holding Academy, Puzzle Chapters, Build Projects,
+     Tower Mode (3D), My Challenges and Community. Same markup, but the hub
+     now shows one band at a time and retitles the header to match. -->
+<div class="sheet" id="projects">
+  <div class="m-head">
+    <button class="iconbtn back" id="projBack" title="Back to the menu" aria-label="Back to the menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <div><h3 id="projTitle">Build Projects</h3><p id="projSub">Harder coding challenges — finished builds appear in your world!</p></div>
     <button class="iconbtn x" id="projClose">✕</button>
   </div>
   <div id="authBox"></div>
@@ -168,7 +209,6 @@
 
 <!-- ============ DESIGN GUIDE ============ -->
 <div class="sheet" id="guide">
-  <div class="grab"></div>
   <div class="m-head">
     <div class="face">📘</div>
     <div><h3>Design a great challenge</h3><p>Six rules, then five boards to start from.</p></div>
@@ -179,7 +219,6 @@
 
 <!-- ============ MY FUNCTIONS ============ -->
 <div class="sheet" id="funcLib">
-  <div class="grab"></div>
   <div class="m-head">
     <div class="face">📚</div>
     <div><h3>My Functions</h3><p>Save a function once — use it in every world and minigame.</p></div>
@@ -190,7 +229,6 @@
 
 <!-- ============ MARKET ORDERS ============ -->
 <div class="sheet" id="orders">
-  <div class="grab"></div>
   <div class="m-head">
     <div class="face">📋</div>
     <div><h3>Market Orders</h3><p>A job on a clock. Deliver it before time runs out.</p></div>
@@ -199,9 +237,41 @@
   <div id="ordBody"></div>
 </div>
 
+<!-- ============ STYLE ============ -->
+<div class="sheet" id="style">
+  <div class="m-head">
+    <div class="face">🎩</div>
+    <div><h3>Style</h3><p>New pieces unlock as you level up.</p></div>
+    <button class="iconbtn x" id="styleClose">✕</button>
+  </div>
+  <div id="styleBody"></div>
+</div>
+
+<!-- ============ MAKE A PIECE ============ -->
+<!-- Four regions, not one column: the head says where you are and keeps
+     Save reachable, the stage is pinned so the canvas never scrolls away
+     from the code that describes it, the dock owns the only scrollbar with
+     the inspector docked to its foot, and the tabs sit at the bottom the
+     way the code page's do. A component is this same editor filtered to
+     one class, so there is no second sheet; the slot was chosen on the
+     Style page, so there is nothing to switch up here. -->
+<div class="sheet" id="maker">
+  <div class="m-head">
+    <div class="face">🎨</div>
+    <div><div class="mk-crumb" id="mkCrumb"></div></div>
+    <button class="mk-save" id="mkSaveBtn" type="button">Save</button>
+    <button class="iconbtn x" id="makerClose">✕</button>
+  </div>
+  <div class="mk-stage-fixed" id="mkStage"></div>
+  <div class="mk-dock">
+    <div id="makerBody" class="mk-body"></div>
+    <div class="mk-insdock" id="mkInsDock"></div>
+  </div>
+  <div class="mk-tabbar" id="mkTabs"></div>
+</div>
+
 <!-- ============ REPORT ============ -->
 <div class="sheet" id="report">
-  <div class="grab"></div>
   <div class="m-head">
     <div class="face">🚩</div>
     <div><h3>Report a challenge</h3><p id="repTitle"></p></div>
@@ -225,7 +295,6 @@
 
 <!-- ============ DELETE ACCOUNT (App Store 5.1.1(v)) ============ -->
 <div class="sheet" id="delacc">
-  <div class="grab"></div>
   <div class="m-head">
     <div class="face">🗑</div>
     <div><h3>Delete your account</h3><p id="delWho"></p></div>
@@ -238,6 +307,23 @@
     <button class="authbtn danger" id="delGo">Delete everything</button>
   </div>
   <div id="delMsg"></div>
+</div>
+
+<!-- One scrim for every sheet. It used to be a ::before on .sheet itself,
+     but a z-index:-1 child paints ABOVE its own stacking context's
+     background, so it dimmed each sheet by 52% instead of the world
+     behind it. -->
+<div id="scrim"></div>
+
+<!-- ============ SETTINGS ============
+     Split out of the Shop. Nothing in here costs coins, and nothing the
+     Shop sells is a setting — they only shared a sheet. -->
+<div class="sheet" id="settings">
+  <div class="m-head">
+    <div><h3>Settings</h3></div>
+    <button class="iconbtn x" id="setClose">✕</button>
+  </div>
+  <div id="settingsList"></div>
 </div>
 
 <!-- ============ SHOP ============ -->
@@ -273,9 +359,11 @@
   <div class="bot"><div class="mascot"><i class="ant"></i><i class="antlight"></i><div class="mbody"><span class="eye"><i></i></span><span class="eye"><i></i></span></div><div class="mshadow"></div></div></div>
   <h1>CodeCraft</h1>
   <div class="tag">A living open world where <b>everything runs on your code</b>.<br>Program robots. Automate everything. Build your empire.</div>
-  <div id="splashAuth"></div>
+  <!-- Play first. Signing in is optional and saves your world to an account,
+       so it sits BELOW the button, not between the pitch and the game. -->
   <button id="playBtn">▶ Play</button>
   <div id="splashStatus"></div>
+  <div id="splashAuth"></div>
   <div class="feats"><span>🌍 Open world</span><span>🧩 Block coding</span><span>🐍 Real Python</span><span>⚙️ Automation</span><span>🦉 AI mentor</span></div>
 </div>
 
@@ -297,7 +385,12 @@
 <script src="./js/game/challenges.js"></script>
 <script src="./js/game/tower3d.js"></script>
 <script src="./js/game/tower-editor.js"></script>
+<script src="./js/game/cyber.js"></script>
 <script src="./js/game/creator-guide.js"></script>
+<!-- after creator-guide.js on purpose: this file WRAPS renderGuide/openGuide,
+     and a classic script's function declaration would overwrite the wrapper
+     if it ran afterwards -->
+<script src="./js/game/cyber-editor.js"></script>
 <script src="./js/game/academy.js"></script>
 <script src="./js/game/chapters.js"></script>
 <script src="./js/game/economy.js"></script>
@@ -310,14 +403,24 @@
 <script src="./js/game/input.js"></script>
 <script src="./js/game/decor-tiles.js"></script>
 <script src="./js/game/build.js"></script>
+<script src="./js/game/cosmetics.js"></script>
+<script src="./js/game/wear-code.js"></script>
+<script src="./js/game/wear-maker.js"></script>
+<script src="./js/game/wear-tutor.js"></script>
 <script src="./js/game/render.js"></script>
 <script src="./js/game/loop.js"></script>
 <script src="./js/game/moderation.js"></script>
 <script src="./js/game/orders.js"></script>
+<script src="./js/game/music.js"></script>
 <script src="./js/game/journey.js"></script>
+<script src="./js/game/hub.js"></script>
+<script src="./js/game/settings.js"></script>
+<script src="./js/game/nav.js"></script>
+<script src="./js/game/i18n.js"></script>
 <script src="./js/game/agegate.js"></script>
 <script src="./js/game/account.js"></script>
 <script src="./js/game/save.js"></script>
 <script src="./js/game/boot.js"></script>
+<script src="./js/game/v5-ui.js"></script>
 </body>
 </html>

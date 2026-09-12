@@ -36,15 +36,18 @@ const ALL=ACTS.concat(CTRL);
 const LOCKED={move:1,turnL:1,turnR:1,build:1};   // a level without these is unplayable
 const DEF_ALLOWED=["move","turnL","turnR","build","climb","repeat"];
 
+/* `sh` is the word under the icon, `lbl` the sentence it holds on a
+   long press — a label has to fit a 52px button */
 const TOOLS=[
-  {id:"plan",   em:"🧱", lbl:"Blueprint — tap to add a level, hold to clear"},
-  {id:"ground", em:"⛰️", lbl:"Ground — raise the terrain the robot starts on"},
-  {id:"pit",    em:"🕳️", lbl:"Pit — a hole to jump across"},
-  {id:"bot",    em:"🤖", lbl:"Start — tap the same tile again to turn"},
-  {id:"erase",  em:"🧹", lbl:"Erase everything on the tile"}
+  {id:"plan",   em:"🧱", sh:"Brick",  lbl:"Blueprint — tap to add a level, hold to clear"},
+  {id:"ground", em:"⛰️", sh:"Ground", lbl:"Ground — raise the terrain the robot starts on"},
+  {id:"pit",    em:"🕳️", sh:"Pit",    lbl:"Pit — a hole to jump across"},
+  {id:"bot",    em:"🤖", sh:"Start",  lbl:"Start — tap the same tile again to turn"},
+  {id:"erase",  em:"🧹", sh:"Erase",  lbl:"Erase everything on the tile"}
 ];
 
 const on3  =()=>!!(mgState&&mgState.proj&&mgState.proj.mode3d);
+window.on3d=on3;
 const edit3=()=>!!(mgState&&mgState.creator&&on3());
 
 /* ---------------- the level data ----------------
@@ -193,7 +196,10 @@ function drawBot(g,px,py,cs,dir){
 function drawGrid(){
   const p=mgState.proj, cv=$("mgCanvas");
   lists(p);
-  const W=Math.max(180,cv.clientWidth||320), cs=W/p.gw, H=cs*p.gh;
+  if(window.mgFitBoard)mgFitBoard(p.gh/p.gw);
+  /* the floor was 180, which put the height back over the cap mgFitBoard
+     had just set — the plan view has to fit the room like everything else */
+  const W=Math.max(110,cv.clientWidth||320), cs=W/p.gw, H=cs*p.gh;
   const dpr=(typeof DPR!=="undefined"?DPR:Math.min(3,window.devicePixelRatio||1));
   cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);cv.style.height=Math.round(H)+"px";
   const g=cv.getContext("2d");
@@ -445,9 +451,14 @@ window.mgToolsUI=function(){
   const el=$("mgTools"); if(!el)return;
   el.innerHTML="";
   for(const t of TOOLS){
+    /* the name under the icon, exactly as the flat designer's tools do it —
+       five unlabelled glyphs is five things to guess */
     const b=document.createElement("button");
     b.className="tool"+(t.id===mgState.paintMode?" on":"");
-    b.textContent=t.em;b.title=t.lbl;
+    b.title=t.lbl;
+    const em=document.createElement("span");em.className="tl-em";em.textContent=t.em;
+    const lb=document.createElement("span");lb.className="tl-lb";lb.textContent=t.sh||t.lbl;
+    b.appendChild(em);b.appendChild(lb);
     b.addEventListener("click",()=>{mgState.paintMode=t.id;sfx(560,.03);mgCreatorUI();});
     el.appendChild(b);
   }

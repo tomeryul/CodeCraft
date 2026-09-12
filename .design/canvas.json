@@ -1,0 +1,19 @@
+{
+  "artboards": [
+    { "file": "Before.dc.html",   "x": 0,    "y": 0, "w": 390, "h": 844, "title": "Now" },
+    { "file": "Main.dc.html",     "x": 500,  "y": 0, "w": 390, "h": 844, "title": "World HUD" },
+    { "file": "Minigame.dc.html", "x": 1000, "y": 0, "w": 390, "h": 844, "title": "Minigame HUD" },
+    { "file": "System.dc.html",   "x": 1500, "y": 0, "w": 560, "h": 900, "title": "Rules" }
+  ],
+  "annotations": [
+    { "id": "brief", "x": 0, "y": -150, "w": 390,
+      "text": "The problem, measured on the real app at 390x844: 13 floating boxes in 5 clusters. Only 16.5% of the screen is covered - the trouble is scatter, not coverage." },
+    { "id": "world", "x": 500, "y": -150, "w": 390,
+      "text": "Proposed world HUD. Three docks: status (top), tools (right), actions (bottom). Every colour and size lifted from css/styles.css - this reorganises, it does not repaint." },
+    { "id": "mini", "x": 1000, "y": -150, "w": 390,
+      "text": "Proposed minigame HUD. Today the title and the controls each appear twice in two stacked bars; here it is one header, one tab row, one control bar - and Run is the only primary." },
+    { "id": "rules", "x": 1500, "y": -150, "w": 560,
+      "text": "The rules that make it hold together as the game grows: where things dock, what each colour is allowed to mean, and what each button shape promises." }
+  ],
+  "launch": { "view": "canvas" }
+}

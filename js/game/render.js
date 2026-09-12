@@ -271,6 +271,9 @@ function draw(t){
     const pk=1+r.pop*.22;
     ctx.translate(0,18);ctx.scale(sqx*pk,sqy*pk);ctx.translate(0,-18);
     const limbDk=(function(hex){try{const n=parseInt(hex.slice(1),16);const f=c=>Math.max(0,Math.round(c*.72));return "rgb("+f(n>>16&255)+","+f(n>>8&255)+","+f(n&255)+")";}catch(e){return hex;}})(r.color);
+    // ---- back piece (capes) — before the legs, so it reads as behind the
+    // robot, and inside the tree, so it leans and trails with the gait
+    if(window.CC_WEAR&&r.outfit&&CC_WEAR.back[r.outfit])CC_WEAR.back(ctx,r.outfit,swayDeg,gp);
     // ---- legs (drawn behind body) — hips at (±5.53,13.28); thigh rotates at
     // the hip, foot rounded-rect at the leg end counter-rotates to stay flat.
     // Planted straight during tool actions (SVG tool groups don't animate legs).
@@ -280,7 +283,11 @@ function draw(t){
         ctx.strokeStyle=limbDk;ctx.lineWidth=5;ctx.lineCap="round";
         ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,len);ctx.stroke();
         ctx.translate(0,len);ctx.rotate(footDeg*D2R);
-        ctx.fillStyle=limbDk;rr(ctx,-3.5,-1,7,4.5,2.2);ctx.fill();
+        // the foot anchor: a shoe drawn here inherits the thigh swing, the leg
+        // shortening and the foot's counter-rotation, which is the same reason
+        // the plain foot below never slides
+        if(window.CC_WEAR&&r.shoes)CC_WEAR.shoe(ctx,r.shoes,limbDk,moving,t);
+        else{ctx.fillStyle=limbDk;rr(ctx,-3.5,-1,7,4.5,2.2);ctx.fill();}
         ctx.restore();
       };
       if(TL){draw(-5.53,0,5.53,0);draw(5.53,0,5.53,0);}
@@ -288,9 +295,15 @@ function draw(t){
     })();
     // body — toy bevel
     const grd=ctx.createLinearGradient(0,-s2/2,0,s2/2);
-    grd.addColorStop(0,window.CC_EXTRAS?CC_EXTRAS.lighten(r.color,.3):r.color);grd.addColorStop(1,r.color);
+    /* the colour reaches the canvas as well as the DOM, and an unparseable
+       one throws inside the draw loop */
+    const rc=safeColor(r.color);
+    grd.addColorStop(0,window.CC_EXTRAS?CC_EXTRAS.lighten(rc,.3):rc);grd.addColorStop(1,rc);
     ctx.fillStyle=grd;rr(ctx,-s2/2,-s2/2,s2,s2,11);ctx.fill();
     ctx.save();rr(ctx,-s2/2,-s2/2,s2,s2,11);ctx.clip();
+    // the torso anchor: painted inside the body's own clip, so an outfit
+    // squashes with the body and the bevel paints over it
+    if(window.CC_WEAR&&r.outfit)CC_WEAR.outfit(ctx,r.outfit,rc);
     ctx.fillStyle="rgba(0,0,0,.25)";ctx.fillRect(-s2/2,s2/2-6,s2,6);
     ctx.fillStyle="rgba(255,255,255,.35)";rr(ctx,-s2/2+4,-s2/2+3,s2-8,4.5,2.5);ctx.fill();
     ctx.restore();
@@ -385,6 +398,17 @@ function draw(t){
     }
     // smile
     ctx.strokeStyle="#1c1638";ctx.lineWidth=2;ctx.beginPath();ctx.arc(ex*.5,4+ey*.5,5,.2*Math.PI,.8*Math.PI);ctx.stroke();
+    /* the head anchor. The hat used to be drawn AFTER ctx.restore(), in world
+       space, hand-fed two of the seven values the body uses — so it missed the
+       sway pivot, the squash, the pop, the move lunge, the turn and, during
+       every tool action, the body lean entirely. Drawn here it inherits all of
+       them. 4.75 is where the sprite grid's brim line (y≈34 of 48, at the
+       TILE*.5 the hat is drawn at) lands on the body top, a quarter-pixel into
+       the bevel so it reads as resting on it. */
+    if(r.hat&&!(window.CC_WEAR&&CC_WEAR.hat(ctx,r.hat))){
+      const hp=sprite(r.hat,TILE*.5);
+      ctx.drawImage(hp,-hp.lw/2,-s2/2-4.75-hp.lw/2,hp.lw,hp.lw);
+    }
     ctx.restore();
     // sleepy Zzz while resting
     if(atype==="rest"){
@@ -393,15 +417,6 @@ function draw(t){
       ctx.globalAlpha=.8*(1-zp);ctx.fillText("z",cx+s2*.42,cy-s2*.6-zp*11);
       ctx.globalAlpha=.6*(1-zp2);ctx.fillText("z",cx+s2*.56,cy-s2*.74-zp2*11);
       ctx.globalAlpha=1;
-    }
-    // hat — bounces with the body and tilts with the step wobble
-    if(r.hat){
-      const hp=sprite(r.hat,TILE*.5);
-      ctx.save();
-      ctx.translate(cx+2,cy+bobY-s2*.62-6);
-      if(!TL)ctx.rotate(swayDeg*Math.PI/180*.5);
-      ctx.drawImage(hp,-hp.lw/2,-hp.lw/2,hp.lw,hp.lw);
-      ctx.restore();
     }
     // name
     ctx.fillStyle="rgba(20,14,45,.75)";
@@ -424,6 +439,33 @@ function draw(t){
     }
     if(r.blocked){
       const sp=sprite(r.tired?"😴":"💢",r.tired?16:14);ctx.drawImage(sp,cx+s2*.35,cy-s2*.85,sp.lw,sp.lw);
+    }
+    /* v5: the action badge — what the robot is doing, and what it is
+       doing it TO, drawn from the same SVG art as the UI (CC_SPRITES)
+       instead of the device's emoji font. */
+    if(atype){
+      const A={chop:"🪓",mine:"⛏️",scoop:"🪣",collect:"✋",drop:"⤵️",build:"🔨",pickUp:"✊"};
+      const ae=A[atype];
+      if(ae){
+        let te=null;
+        try{
+          const tx=r.x+DX[r.dir], ty=r.y+DY[r.dir];
+          const o=objects.get(key(tx,ty));
+          if(o)te=(o.type==="tree")?"🌳":(OBJ_EM[o.type]||null);
+          else if(terrain[key(tx,ty)]===T_WATER)te="💧";
+        }catch(_){}
+        const ic=16, pad=5, gap=te?4:0, w=pad*2+ic+(te?ic+gap:0), h=ic+pad*2;
+        const bx=cx-w/2, by=cy-s2*.95-38;
+        ctx.fillStyle="rgba(23,17,48,.86)";rr(ctx,bx,by,w,h,h/2);ctx.fill();
+        ctx.strokeStyle="rgba(255,255,255,.14)";ctx.lineWidth=1.5;
+        rr(ctx,bx,by,w,h,h/2);ctx.stroke();
+        const s1=sprite(ae,ic);
+        ctx.drawImage(s1,bx+pad+ic/2-s1.lw/2,by+h/2-s1.lw/2,s1.lw,s1.lw);
+        if(te){
+          const s3=sprite(te,ic);
+          ctx.drawImage(s3,bx+pad+ic+gap+ic/2-s3.lw/2,by+h/2-s3.lw/2,s3.lw,s3.lw);
+        }
+      }
     }
     // energy bar under the robot when not full
     const en=r.energy==null?100:r.energy;
@@ -480,7 +522,17 @@ function draw(t){
     ctx.font='bold 15px "Fredoka",sans-serif';ctx.textAlign="center";
     ctx.fillStyle="#fff";ctx.strokeStyle="rgba(0,0,0,.55)";ctx.lineWidth=3;
     const px=(p.x+.5)*TILE, py=(p.y+.2)*TILE-age*26;
-    ctx.strokeText(p.txt,px,py);ctx.fillText(p.txt,px,py);
+    /* v5: the resource in a pop is drawn art, not an emoji glyph */
+    const mm=p.txt.match(/^(\S+?)\s*([+\-−]?\s*\d.*)$/);
+    if(mm&&window.CC_SPRITES&&CC_SPRITES.has(mm[1])){
+      const sp=sprite(mm[1],16), tw2=ctx.measureText(mm[2]).width;
+      ctx.drawImage(sp,px-tw2/2-sp.lw*.9,py-sp.lw/2,sp.lw,sp.lw);
+      ctx.textAlign="left";
+      ctx.strokeText(mm[2],px-tw2/2+3,py);ctx.fillText(mm[2],px-tw2/2+3,py);
+      ctx.textAlign="center";
+    }else{
+      ctx.strokeText(p.txt,px,py);ctx.fillText(p.txt,px,py);
+    }
     ctx.globalAlpha=1;
   }
   // screen-space: day tint + confetti
@@ -593,28 +645,132 @@ function drawTeamLayer(t,x0,y0,x1,y1){
     ctx.restore();
   }
 }
-function drawBoardRobot(g,cx,cy,s2,dir,color,running,t){
-  const RS=TILE*0.72, k=s2/RS;
+/* The three poses a preview can strike, sampled from the same tables the
+   world robot animates on — GAIT for the walk, the idle keyframes for
+   standing, ACT_TL.chop for the swing. It is one object of numbers, so the
+   preview and the world cannot drift into two different-looking robots. */
+function boardPose(pose,t){
+  const P={bob:0,sway:0,sqx:1,sqy:1,legL:0,legR:0,lenL:5.53,lenR:5.53,
+           footL:0,footR:0,armL:10,armR:-10,ant:0,rot:0,TL:null,ap:0};
+  if(pose==="work"){
+    const TL=ACT_TL.chop, ap=((t/900)%1+1)%1;
+    P.TL=TL; P.ap=ap;
+    P.bob=kf(TL.ty,TL.t,ap);
+    const kx=kf(TL.sx,TL.t,ap); P.sqx=kx; P.sqy=2-kx;
+    P.ant=kf(TL.ant,TL.t,ap); P.rot=kf(TL.rot,TL.t,ap);
+    return P;
+  }
+  if(pose==="walk"){
+    const gp=((t/760)%1+1)%1, G=k=>kf(GAIT.walk[k],KT9,gp);
+    P.bob=G("bob");P.sway=G("sway");P.sqx=G("sx");P.sqy=G("sy");
+    P.legL=G("legL");P.legR=G("legR");P.lenL=G("lenL");P.lenR=G("lenR");
+    P.footL=G("footL");P.footR=G("footR");
+    P.armL=G("armL");P.armR=G("armR");P.ant=G("ant");
+    return P;
+  }
+  const ip=((t/2600)%1+1)%1;
+  P.bob=kf([0,-1.6,0],KT3,ip);P.sway=kf([-3,3,-3],KT3,ip);
+  P.sqx=kf([1,.99,1],KT3,ip);P.sqy=kf([1,1.01,1],KT3,ip);
+  P.armL=kf([10,16,10],KT3,ip);P.armR=kf([-10,-16,-10],KT3,ip);
+  return P;
+}
+
+/* `wear` is optional: {hat,outfit,shoes}, the same three fields a robot
+   carries. `pose` is optional too, and it is what turns this from a board
+   token into a real preview: without it the robot stands still with a
+   simple bob and no legs, exactly as the Academy board has always drawn it;
+   with it, it walks or chops on the world robot's own transform tree. */
+function drawBoardRobot(g,cx,cy,s2,dir,color,running,t,wear,pose){
+  const RS=TILE*0.72, k=s2/RS, D2R=Math.PI/180;
   g.save();g.translate(cx,cy);g.scale(k,k);
-  const S=RS;
-  g.fillStyle="rgba(0,0,0,.22)";g.beginPath();g.ellipse(0,S*.42,S*.42,S*.16,0,0,7);g.fill();
-  const bob=running?Math.sin(t/120)*1.6:0; g.translate(0,bob);
+  const S=RS, W=wear||{};
+  const P=pose?boardPose(pose,t):null;
+  const limbDk=(function(hex){try{const n=parseInt(String(hex).slice(1),16);const f=c=>Math.max(0,Math.round(c*.72));return "rgb("+f(n>>16&255)+","+f(n>>8&255)+","+f(n&255)+")";}catch(e){return hex;}})(color);
+  const shS=P?1+P.bob*.012:1;
+  g.fillStyle="rgba(0,0,0,.22)";g.beginPath();g.ellipse(0,S*.42,S*.42*shS,S*.16*shS,0,0,7);g.fill();
+  if(P){
+    /* the same seven-step tree the world robot uses, in the same order */
+    g.translate(0,P.bob);
+    if(P.TL)g.rotate(P.rot*D2R);
+    else{g.translate(0,10);g.rotate(P.sway*D2R);g.translate(0,-10);}
+    g.translate(0,18);g.scale(P.sqx,P.sqy);g.translate(0,-18);
+  }else{
+    const bob=running?Math.sin(t/120)*1.6:0; g.translate(0,bob);
+  }
+  // back piece, then legs + shoes — same anchors as the world robot
+  if(window.CC_WEAR&&W.outfit&&CC_WEAR.back[W.outfit])CC_WEAR.back(g,W.outfit,P?P.sway:0,P&&pose==="walk"?((t/760)%1+1)%1:0);
+  if(P){
+    const leg=(hx,rot,len,fd)=>{
+      g.save();g.translate(hx,13.28);g.rotate(rot*D2R);
+      g.strokeStyle=limbDk;g.lineWidth=5;g.lineCap="round";
+      g.beginPath();g.moveTo(0,0);g.lineTo(0,len);g.stroke();
+      g.translate(0,len);g.rotate(fd*D2R);
+      if(window.CC_WEAR&&W.shoes)CC_WEAR.shoe(g,W.shoes,limbDk,pose==="walk",t);
+      else{g.fillStyle=limbDk;rr(g,-3.5,-1,7,4.5,2.2);g.fill();}
+      g.restore();
+    };
+    /* legs stay planted through a tool swing, as they do in the world */
+    if(P.TL){leg(-5.53,0,5.53,0);leg(5.53,0,5.53,0);}
+    else{leg(-5.53,P.legL,P.lenL,P.footL);leg(5.53,P.legR,P.lenR,P.footR);}
+  }
+  else if(window.CC_WEAR&&W.shoes){
+    [-5.53,5.53].forEach(hx=>{
+      g.save();g.translate(hx,13.28);
+      g.strokeStyle=limbDk;g.lineWidth=5;g.lineCap="round";
+      g.beginPath();g.moveTo(0,0);g.lineTo(0,5.53);g.stroke();
+      g.translate(0,5.53);
+      CC_WEAR.shoe(g,W.shoes,limbDk,false,t);
+      g.restore();
+    });
+  }
   // body — toy bevel
   const grd=g.createLinearGradient(0,-S/2,0,S/2);
   grd.addColorStop(0,window.CC_EXTRAS?CC_EXTRAS.lighten(color,.3):color);grd.addColorStop(1,color);
   g.fillStyle=grd;rr(g,-S/2,-S/2,S,S,11);g.fill();
   g.save();rr(g,-S/2,-S/2,S,S,11);g.clip();
+  if(window.CC_WEAR&&W.outfit)CC_WEAR.outfit(g,W.outfit,color);
   g.fillStyle="rgba(0,0,0,.25)";g.fillRect(-S/2,S/2-6,S,6);
   g.fillStyle="rgba(255,255,255,.35)";rr(g,-S/2+4,-S/2+3,S-8,4.5,2.5);g.fill();
   g.restore();
+  // arms — the swing while walking or standing, the jointed tool arm on a chop
+  if(P&&P.TL){
+    const TL=P.TL, ap=P.ap;
+    g.lineCap="round";g.strokeStyle=limbDk;g.fillStyle=limbDk;
+    g.save();g.translate(-16.6,5.2);g.rotate(kf(TL.larm,TL.t,ap)*D2R);
+    g.lineWidth=3.8;g.beginPath();g.moveTo(0,0);g.lineTo(0,5.6);g.stroke();
+    g.beginPath();g.arc(0,5.6,2.5,0,7);g.fill();g.restore();
+    g.beginPath();g.arc(-16.6,5.2,2.3,0,7);g.fill();
+    g.save();g.translate(16.6,5.2);g.rotate(kf(TL.upper,TL.t,ap)*D2R);
+    g.lineWidth=3.8;g.beginPath();g.moveTo(0,0);g.lineTo(0,4.6);g.stroke();
+    g.beginPath();g.arc(0,4.6,2.5,0,7);g.fill();
+    g.translate(0,4.6);g.rotate(kf(TL.fore,TL.t,ap)*D2R);
+    g.beginPath();g.moveTo(0,0);g.lineTo(0,5);g.stroke();
+    g.beginPath();g.arc(0,5,2.5,0,7);g.fill();
+    g.translate(0,5);g.rotate(90*D2R);
+    g.strokeStyle="#8a5a2c";g.lineWidth=4.5;
+    g.beginPath();g.moveTo(-3,0);g.lineTo(16,0);g.stroke();
+    g.fillStyle="#cfd4e0";
+    g.beginPath();g.moveTo(15,-9);g.quadraticCurveTo(24,0,15,9);g.lineTo(12,5);g.lineTo(12,-5);g.closePath();g.fill();
+    g.strokeStyle="rgba(28,22,56,.45)";g.lineWidth=1.6;g.stroke();
+    g.restore();
+  }else if(P){
+    const arm=(sx,rot)=>{
+      g.save();g.translate(sx,5.2);g.rotate(rot*D2R);
+      g.strokeStyle=limbDk;g.lineWidth=4.5;g.lineCap="round";
+      g.beginPath();g.moveTo(0,0);g.lineTo(0,6.2);g.stroke();
+      g.fillStyle=limbDk;g.beginPath();g.arc(0,6.2,3,0,7);g.fill();g.restore();
+    };
+    arm(-16.6,P.armL);arm(16.6,P.armR);
+  }
   // antenna + status light (green glow while running, gold when idle)
-  g.strokeStyle="#8a6210";g.lineWidth=2.5;g.beginPath();g.moveTo(0,-S/2);g.lineTo(0,-S/2-7);g.stroke();
+  g.save();g.translate(0,-S/2);if(P)g.rotate(P.ant*D2R);
+  g.strokeStyle="#8a6210";g.lineWidth=2.5;g.beginPath();g.moveTo(0,0);g.lineTo(0,-7);g.stroke();
   if(running){g.fillStyle="#54d66a";g.shadowColor="#54d66a";g.shadowBlur=4+5*Math.abs(Math.sin(t/160));}
   else g.fillStyle="#ffd66b";
-  g.beginPath();g.arc(0,-S/2-9,3.5,0,7);g.fill();g.shadowBlur=0;
+  g.beginPath();g.arc(0,-9,3.5,0,7);g.fill();g.shadowBlur=0;g.restore();
   // eyes look toward the facing direction (occasional idle blink when stopped)
   const ex=DX[dir]*2.5, ey=DY[dir]*2.5;
-  const shut=!running&&((t+cx*7)%3400)<110;
+  const shut=!running&&!P&&((t+cx*7)%3400)<110;
   g.fillStyle="#fff";
   g.beginPath();g.arc(-6.5,-3,5,0,7);g.moveTo(11.5,-3);g.arc(6.5,-3,5,0,7);g.fill();
   if(shut){
@@ -626,6 +782,11 @@ function drawBoardRobot(g,cx,cy,s2,dir,color,running,t){
   }
   // smile
   g.strokeStyle="#1c1638";g.lineWidth=2;g.beginPath();g.arc(ex*.5,4+ey*.5,5,.2*Math.PI,.8*Math.PI);g.stroke();
+  // head anchor — inside the transform, exactly as in the world
+  if(W.hat&&!(window.CC_WEAR&&CC_WEAR.hat(g,W.hat))){
+    const hp=sprite(W.hat,TILE*.5);
+    g.drawImage(hp,-hp.lw/2,-S/2-4.75-hp.lw/2,hp.lw,hp.lw);
+  }
   g.restore();
 }
 function drawBoardBrick(g,px,py,cell,onPlan,no){

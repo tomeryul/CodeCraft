@@ -1,23 +1,32 @@
 "use strict";
 /* ---------------- HUD ---------------- */
+/* updateHud runs on every world tick, and these strings carry emoji that
+   ui-icons.js swaps for inline SVG. Assigning textContent unconditionally
+   replaced the text node 60x a second, so the observer rebuilt every chip
+   icon each frame. Write only when the string actually changed. */
+function setTxt(el,s){s=String(s);if(el.textContent!==s)el.textContent=s;}
 function updateHud(){
-  $("coinsEl").textContent=coins;
-  $("lvlEl").textContent=player.level;
+  setTxt($("coinsEl"),coins);
+  setTxt($("lvlEl"),player.level);
   $("xpFill").style.width=Math.min(100,Math.round(player.xp/xpNeed(player.level)*100))+"%";
   const r=R();
-  const parts=Object.keys(r.inv).filter(res=>r.inv[res]>0).sort((a,b)=>r.inv[b]-r.inv[a]);
-  let inv="";
-  parts.slice(0,2).forEach(res=>{inv+=" "+RES[res].em+r.inv[res];});
-  if(parts.length>2)inv+=" +";
-  $("bagEl").textContent=bagCount(r)+"/"+r.cap+inv;
+  // was: the top-2 inventory emoji appended here, so the chip's width changed
+  // on every collect and the row it sits in could not hold a fixed shape. The
+  // bag's contents live in the 🎒 sheet.
+  setTxt($("bagEl"),bagCount(r)+"/"+r.cap);
   const en=Math.round(r.energy==null?100:r.energy);
-  $("energyEl").textContent=(r.tired?"😴":"⚡")+en;
-  $("energyChip").style.opacity=en<100?"1":".7";
+  setTxt($("energyEl"),(r.tired?"😴":"⚡")+en);
+  /* .low is still what the 359px-and-under rule keys on, where the row is
+     too narrow to carry energy unless it is worth acting on */
+  $("energyChip").classList.toggle("low",en<100);
 }
 function updateFab(){
   const r=R(), f=$("fabRun");
-  if(r.running){f.textContent="⏹";f.classList.add("running");}
-  else{f.textContent="▶";f.classList.remove("running");}
+  if(r.running){setTxt(f,"⏹");f.classList.add("running");}
+  else{setTxt(f,"▶");f.classList.remove("running");}
+  // the bottom action bar shows exactly one primary: Run, or Stop while running
+  const live=(typeof mgState!=="undefined"&&mgState)?!!mgState.running:!!r.running;
+  $("editor").classList.toggle("running",live);
 }
 $("fabRun").addEventListener("click",()=>{
   if(mgState){mgState.running?mgStop():mgRun();return;}
@@ -36,7 +45,31 @@ $("mgResetBtn").addEventListener("click",()=>{
 });
 $("mgExitBtn").addEventListener("click",()=>mgExit(true));
 $("mgSetup").addEventListener("click",()=>{$("mgCreatorBar").classList.toggle("setup");sfx(520,.03);});
-$("mgGoal").addEventListener("click",()=>$("mgGoal").classList.toggle("open"));
+/* The goal folds at three lines. It was silently clamped, so a Tower
+   level's instructions simply did not exist as far as a player could tell.
+   The button appears only when something is actually folded away. */
+(function(){
+  const g=$("mgGoal"); if(!g||$("mgMore"))return;
+  const b=document.createElement("button");
+  b.type="button";b.id="mgMore";
+  b.innerHTML='<i></i><span id="mgMoreT">More</span>';
+  g.parentNode.insertBefore(b,g.nextSibling);
+  const sync=()=>{
+    const open=g.classList.contains("open");
+    b.classList.toggle("on",open||g.scrollHeight>g.clientHeight+2);
+    $("mgMoreT").textContent=open?"Less":"More";
+  };
+  const flip=()=>{ g.classList.toggle("open"); sync(); if(window.mgFitReset)mgFitReset(); if(typeof mgDraw==="function")mgDraw(); };
+  g.addEventListener("click",flip);
+  b.addEventListener("click",flip);
+  /* the goal is rewritten whenever a level opens, and a new one folds by
+     a different amount */
+  new MutationObserver(()=>{
+    if(g.classList.contains("open"))return;   /* a class write of our own */
+    sync();
+  }).observe(g,{childList:true,characterData:true,subtree:true});
+  window.mgGoalSync=sync;
+})();
 $("projClose").addEventListener("click",()=>$("projects").classList.remove("open"));
 $("mgGuide").addEventListener("click",()=>{$("mgCreatorBar").classList.remove("setup");openGuide();});
 $("guideClose").addEventListener("click",()=>closeGuide());
@@ -107,9 +140,13 @@ $("edClose").addEventListener("click",()=>{
 });
 $("edMax").addEventListener("click",()=>{
   const on=$("editor").classList.toggle("max");
+  sheetFull=on; saveSoon();
   $("edMax").title=on?"Shrink editor":"Expand editor";
   sfx(on?620:460,.05);
-  if(on&&!mentorFlags.dblTap){mentorFlags.dblTap=true;toast("💡 Tip: in full-screen mode, double-tap a block to delete it!");}
+  /* Every sheet's size control routes through this button now, so the tip
+     has to check that the thing it describes is actually on screen. */
+  if(on&&$("editor").classList.contains("open")&&!mentorFlags.dblTap){
+    mentorFlags.dblTap=true;toast("💡 Tip: in full-screen mode, double-tap a block to delete it!");}
 });
 $("centerBtn").addEventListener("click",()=>{follow=true;toast("🎯 Following "+R().name);});
 document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{

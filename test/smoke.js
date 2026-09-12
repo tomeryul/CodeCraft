@@ -403,6 +403,124 @@ async function ev(expr) {
   await ev(`mgExit(false); document.getElementById('editor').classList.remove('open','max'); 'ok'`);
   check("Board tab hidden after leaving a challenge", await ev(`document.getElementById('boardTabBtn').style.display==='none'`) === true);
 
+  console.log("▶ 📈 ⏱ two chips, two screens");
+  /* The clock used to be a span inside the market handle: one pill, and
+     tapping its right half opened the Orders sheet while its left half
+     opened the price panel. Two buttons now, and each must open only its
+     own screen. */
+  const twoChips = await ev(`(()=>{
+    const out={};
+    if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+    document.querySelectorAll('.sheet.open').forEach(x=>x.classList.remove('open'));
+    document.getElementById('ticker').classList.remove('open');
+    market.order={need:{wood:41},got:{},until:now+110000,reward:298,shape:'bulk'};
+    renderMarket();
+    const q=s=>document.querySelector(s);
+    out.buttons=document.querySelectorAll('#ticker button').length;
+    if(!q('#ticker .tk-ord'))return JSON.stringify({missing:true});
+
+    q('#ticker .tk-btn').click();
+    out.marketOpensPanel=!!q('#ticker .tk-panel');
+    out.marketLeavesOrders=!document.getElementById('orders').classList.contains('open');
+    q('#ticker .tk-btn').click();
+
+    q('#ticker .tk-ord').click();
+    out.orderOpensSheet=document.getElementById('orders').classList.contains('open');
+    out.orderLeavesPanel=!q('#ticker .tk-panel');
+    ordersClose();
+
+    /* the panel's own order row is the second way in, and still works */
+    q('#ticker .tk-btn').click();
+    const row=q('#ticker .tk-order');
+    out.panelRow=!!row;
+    if(row){ row.click(); out.rowOpensSheet=document.getElementById('orders').classList.contains('open'); ordersClose(); }
+    document.getElementById('ticker').classList.remove('open');
+    market.order=null; renderMarket();
+    out.noOrderOneButton=document.querySelectorAll('#ticker button').length;
+    return JSON.stringify(out);
+  })()`);
+  const CH = JSON.parse(twoChips);
+  check("the market handle and the order clock are two buttons",
+    CH.buttons === 2, twoChips);
+  check("the 📈 chip opens the price panel and nothing else",
+    CH.marketOpensPanel === true && CH.marketLeavesOrders === true, twoChips);
+  check("the ⏱ chip opens the Orders sheet and nothing else",
+    CH.orderOpensSheet === true && CH.orderLeavesPanel === true, twoChips);
+  check("the panel's own order row still opens the sheet too",
+    CH.panelRow === true && CH.rowOpensSheet === true, twoChips);
+  check("with no order running there is just the one chip",
+    CH.noOrderOneButton === 1, twoChips);
+
+  console.log("▶ ❗ is / is not: the switch in the block");
+  const negUi = await ev(`(()=>{
+    const out={};
+    unlocks.logic=true; unlocks.loops=true;
+    const r=R();
+    const w=newBlock('whileLoop'); w.cond='blocked'; w.body.push(newBlock('move'));
+    r.program=[w];
+    document.getElementById('editor').classList.add('open');
+    setTab('blocks'); renderProgram();
+    const blk=()=>document.querySelector('#programEl .blk');
+    /* A missing switch is the thing under test, so report it rather than
+       throwing: a TypeError here aborts the whole run and every check after
+       this point goes unreported. */
+    const btn=p=>{ const b=blk(); return b?b.querySelector('[data-p="'+p+'"]'):null; };
+    if(!btn('cneg')){
+      r.program=[]; renderProgram();
+      document.getElementById('editor').classList.remove('open');
+      return JSON.stringify({missing:true});
+    }
+    out.startLbl=btn('cneg').innerText.trim();
+    out.startOn=btn('cneg').classList.contains('on');
+    btn('cneg').click(); renderProgram();
+    out.afterCond=r.program[0].cond;
+    out.afterLbl=btn('cneg').innerText.trim();
+    out.afterOn=btn('cneg').classList.contains('on');
+    /* cycling the sensor must not quietly drop the player's "not" */
+    btn('cond').click(); renderProgram();
+    out.keptNeg=condNeg(r.program[0].cond) && condBase(r.program[0].cond)!=='blocked';
+    btn('cneg').click(); renderProgram();
+    out.backOff=!condNeg(r.program[0].cond);
+    r.program=[]; renderProgram();
+    document.getElementById('editor').classList.remove('open');
+    return JSON.stringify(out);
+  })()`);
+  const NU = JSON.parse(negUi);
+  check("the block shows an is/is-not switch in front of the sensor",
+    NU.startLbl === 'is' && NU.startOn === false, negUi);
+  check("tapping it negates the condition and colours the switch",
+    NU.afterCond === '!blocked' && NU.afterLbl === 'is not' && NU.afterOn === true, negUi);
+  check("cycling the sensor afterwards keeps the not", NU.keptNeg === true, negUi);
+  check("tapping again takes it off", NU.backOff === true, negUi);
+
+  console.log("▶ ❗ is / is not on a challenge board");
+  /* The board has its own sensors and its own interpreter, so it needs the
+     same answer the world got — a wall-follower is a challenge idea before
+     it is a world one. */
+  const mgNeg = await ev(`(()=>{
+    const out={};
+    mgEnter(PROJECTS[0]);
+    const rb=mgState.robot;
+    /* point the robot off the edge of the board: reliably blocked, whatever
+       the project's own layout happens to be */
+    rb.x=0; rb.y=0; rb.dir=3;                       // facing left, off the grid
+    out.offYes = mgCond(mgState,'blocked');
+    out.offNo  = mgCond(mgState,'!blocked');
+    rb.dir=1;                                       // facing back onto the board
+    out.onYes  = mgCond(mgState,'blocked');
+    out.onNo   = mgCond(mgState,'!blocked');
+    out.list   = mgCondList().every(c=>c.charAt(0)!=='!');   // the list is plain sensors
+    mgExit(false);
+    document.getElementById('editor').classList.remove('open','max');
+    return JSON.stringify(out);
+  })()`);
+  const MN = JSON.parse(mgNeg);
+  check("a challenge board negates its sensors too",
+    MN.offYes === true && MN.offNo === false &&
+    MN.onYes === false && MN.onNo === true, mgNeg);
+  check("the sensor list itself stays unnegated, so cycling is unaffected",
+    MN.list === true, mgNeg);
+
   console.log("▶ mini-game: numbered bricks + lift/drop sorting");
   const sortRes = await ev(`(()=>{
     mgEnter(PROJECTS.find(p=>p.id==='sort'));
@@ -808,6 +926,88 @@ async function ev(expr) {
   check("...and 'blocked 🚧' senses it, so programs can route around", SO.wallSensed === true && SO.pathRoutesAround === true, solid);
   check("paths, floors and doorways stay walkable", SO.pathWalkable === true && SO.doorWalkable === true, solid);
   check("the solid flag lives beside cost, not inside it", SO.costClean === true && SO.solidIds === 20, solid);
+
+  console.log("▶ ❗ is / is not: negating a sensor");
+  /* Half of what a program wants to say is negative — "keep going while the
+     way is NOT blocked" is the shape of every wall-follower — and the sensors
+     could only be asked the positive way. Negation lives inside the sensor
+     name as a leading "!", so it costs no block and every save ever written
+     still loads. */
+  const neg = await ev(`(()=>{
+    const out={};
+    /* same reason as the switch above: report the absence, do not throw it */
+    if(typeof condFlip!=="function")return JSON.stringify({missing:true});
+    objects=new Map();
+    const r=R(); r.x=homePos.x-4; r.y=homePos.y+5; r.rx=r.x; r.ry=r.y; r.dir=1; r.energy=100;
+    const at=(dx,dy)=>key(r.x+dx,r.y+dy);
+    terrain[at(1,0)]=T_GRASS;
+
+    // nothing in the way
+    out.clearYes = evalCond(r,'blocked');
+    out.clearNo  = evalCond(r,'!blocked');
+    // a wall in the way
+    objects.set(at(1,0),{type:'decor',deco:'wall',em:'🧱'});
+    out.wallYes = evalCond(r,'blocked');
+    out.wallNo  = evalCond(r,'!blocked');
+    objects=new Map();
+
+    // the helpers themselves
+    out.flipOn  = condFlip('blocked');
+    out.flipOff = condFlip('!blocked');
+    out.base    = condBase('!blocked');
+    out.isNeg   = condNeg('!blocked') && !condNeg('blocked');
+    // an unknown sensor from someone else's save shows its name, not "undefined"
+    out.strayLbl = condLbl('!nosuchsensor');
+    // and the label of a negated sensor is the sensor's own
+    out.lblSame = condLbl('!blocked')===condLbl('blocked');
+
+    // Python says it out loud
+    const w=newBlock('whileLoop'); w.cond='!blocked'; w.body.push(newBlock('move'));
+    out.py = toPy([w],'').trim();
+
+    // negating costs nothing: the same one block either way
+    const a=newBlock('if'); a.cond='blocked';
+    const b2=newBlock('if'); b2.cond='!blocked';
+    out.sameCost = countBlocks([a])===countBlocks([b2]);
+
+    // a save carries it through unchanged, and an old un-negated save still reads
+    const rr=R(); const keep=packProg(rr);
+    rr.program=[w]; const packed=JSON.parse(JSON.stringify(packProg(rr)));
+    rr.program=[]; applyProg(rr,packed);
+    out.roundTrip = rr.program[0].cond==='!blocked';
+    applyProg(rr,keep);
+    return JSON.stringify(out);
+  })()`);
+  const NG = JSON.parse(neg);
+  check("a sensor and its negation answer opposite, with the way clear",
+    NG.clearYes === false && NG.clearNo === true, neg);
+  check("...and with a wall in the way", NG.wallYes === true && NG.wallNo === false, neg);
+  check("the is/is-not switch flips one way and back",
+    NG.flipOn === '!blocked' && NG.flipOff === 'blocked' &&
+    NG.base === 'blocked' && NG.isNeg === true, neg);
+  check("a negated sensor keeps the sensor's own label",
+    NG.lblSame === true && NG.strayLbl === 'nosuchsensor', neg);
+  check("Python writes the negation out: while not robot.is_blocked()",
+    /^while not robot\.is_blocked\(\):/.test(NG.py), NG.py);
+  check("negating costs no extra block", NG.sameCost === true, neg);
+  check("a negated condition survives a save and load", NG.roundTrip === true, neg);
+
+  // the VM actually walks it: forward until something stops the robot
+  await ev(`(()=>{
+    objects=new Map();
+    const r=R(); r.x=homePos.x-6; r.y=homePos.y+7; r.rx=r.x; r.ry=r.y; r.dir=1; r.energy=100;
+    terrain[key(r.x+1,r.y)]=T_GRASS; terrain[key(r.x+2,r.y)]=T_GRASS;
+    terrain[key(r.x+3,r.y)]=T_GRASS;
+    objects.set(key(r.x+3,r.y),{type:'decor',deco:'wall',em:'🧱'});
+    const w=newBlock('whileLoop'); w.cond='!blocked'; w.body.push(newBlock('move'));
+    r.program=[w]; unlocks.loops=true; unlocks.logic=true; startRobot(r);
+    window.__negStart=r.x; return 'ok';
+  })()`);
+  await sleep(2600);
+  check("'while is not blocked → move' walks up to the wall and stops",
+    await ev("R().x - window.__negStart") === 2 && await ev("R().running") === false,
+    await ev("JSON.stringify([R().x, window.__negStart, R().running])"));
+  await ev(`objects=new Map(); R().program=[]; 'ok'`);
 
   console.log("▶ 📈 the living market: prices move, and the program can read them");
   const mkt = await ev(`(()=>{ try{
@@ -2106,6 +2306,824 @@ async function ev(expr) {
   check("applySave restores coins/level/skills/hat/inventory", RT.ok && RT.coins===777 && RT.lvl===9 && RT.wood===4 && RT.hat==='🎩' && RT.inv===5, rt);
   check("cloud helpers exist (cloudSave/cloudLoad)", await ev("typeof cloudSave==='function' && typeof cloudLoad==='function'") === true);
 
+  console.log("▶ cosmetics survive a save round-trip");
+  const wear = await ev(`(()=>{
+    if(typeof OUTFITS==='undefined'||typeof SHOES==='undefined')return JSON.stringify({missing:true});
+    mgState=null; mgRobot=null;
+    R().hat='🎩'; R().outfit='vest'; R().shoes='rockets';
+    const snap=JSON.parse(JSON.stringify(buildSave()));
+    R().hat=null; R().outfit=null; R().shoes=null;
+    applySave(JSON.parse(JSON.stringify(snap)));
+    const after={hat:R().hat, outfit:R().outfit, shoes:R().shoes};
+    /* a save written before this feature existed carries neither key */
+    const old=JSON.parse(JSON.stringify(snap));
+    old.robots.forEach(rd=>{delete rd.outfit; delete rd.shoes;});
+    applySave(old);
+    const legacy={hat:R().hat, outfit:R().outfit, shoes:R().shoes};
+    R().hat=null;
+    return JSON.stringify({after, legacy,
+      outfits:OUTFITS.length, shoes:SHOES.length,
+      wear:(typeof CC_WEAR==='object'&&typeof CC_WEAR.outfit==='function'&&
+            typeof CC_WEAR.shoe==='function'&&typeof CC_WEAR.back==='function')});
+  })()`);
+  const WEAR = JSON.parse(wear);
+  check("outfit and shoes survive buildSave → applySave",
+    !WEAR.missing && WEAR.after && WEAR.after.hat==='🎩' && WEAR.after.outfit==='vest' && WEAR.after.shoes==='rockets', wear);
+  check("a save written before cosmetics loads with outfit and shoes null",
+    !WEAR.missing && WEAR.legacy && WEAR.legacy.hat==='🎩' && WEAR.legacy.outfit===null && WEAR.legacy.shoes===null, wear);
+  check("six outfits and four shoes are catalogued", WEAR.outfits===6 && WEAR.shoes===4, wear);
+  check("CC_WEAR exposes outfit/back/shoe painters", WEAR.wear === true, wear);
+  check("every hat emoji resolves to drawn art, not an emoji glyph",
+    await ev("HATS.every(h=>CC_SPRITES.has(h.em))") === true);
+  /* The bug this replaces: the hat was drawn AFTER ctx.restore(), in world
+     space, hand-fed two of the seven transforms the body uses — so it sat
+     upright while the body leaned through a chop. Its address is the fix, so
+     the address is what is asserted. */
+  const CC_FIELD_HI = 160;  // js/game/wear-code.js FIELD.w.hi
+  const CC_PAD_TIP = "Space INSIDE, between its border and whatever it is holding."; // js/game/wear-code.js FIELD.pad.tip
+  const RENDER_SRC = fs.readFileSync(path.resolve(__dirname, "..", "js", "game", "render.js"), "utf8");
+  check("the hat is drawn inside the robot's transform tree",
+    /if\(r\.hat[\s\S]{0,80}?\)\{[\s\S]{0,220}?ctx\.restore\(\);/.test(RENDER_SRC) &&
+    !/ctx\.translate\(cx\+2,cy\+bobY/.test(RENDER_SRC));
+  /* the pieces reach the canvas: a dressed robot must not paint the same
+     pixels as a bare one */
+  const px = await ev(`(()=>{
+    if(typeof CC_WEAR!=='object')return JSON.stringify({missing:true});
+    const shot=w=>{const c=document.createElement('canvas');c.width=c.height=90;
+      const g=c.getContext('2d');drawBoardRobot(g,45,45,40,'E','#ffb830',false,0,w);
+      return c.getContext('2d').getImageData(0,0,90,90).data.join(',');};
+    const bare=shot(null);
+    return JSON.stringify({
+      outfit: shot({outfit:'vest'})!==bare,
+      shoes:  shot({shoes:'rockets'})!==bare,
+      cape:   shot({outfit:'cape'})!==bare,
+      none:   shot({hat:null,outfit:null,shoes:null})===bare });
+  })()`);
+  const PX = JSON.parse(px);
+  check("an outfit paints on the board robot", PX.outfit === true, px);
+  check("shoes paint on the board robot", PX.shoes === true, px);
+  check("a cape paints behind the board robot", PX.cape === true, px);
+  check("an undressed robot is unchanged by the new code path", PX.none === true, px);
+
+  console.log("▶ pieces the player builds");
+  const MADE = JSON.parse(await ev(`(()=>{
+    if(typeof makerOpen!=='function'||!window.CC_WEAR||!CC_WEAR.isCustom)return JSON.stringify({missing:true});
+    mgState=null; mgRobot=null;
+    player.myWear=[]; player.level=20;
+    const out={};
+    /* build a brim and keep it */
+    makerOpen('hat',null);
+    const id=mkId;
+    out.pre=CC_WEAR.isCustom(id);
+    mkAddPart(); Object.assign(mkParts[0],{x:8,y:60,w:84,h:15,r:40,c:1});
+    mkName='Test Lid'; mkSave();
+    out.saved=player.myWear.length;
+    out.worn=robots[selRobot].hat===id;
+    out.name=(player.myWear[0]||{}).name;
+    out.len=((player.myWear[0]||{}).parts||[]).length;
+    /* it reaches the canvas: a robot wearing it must not paint like a bare one */
+    const shot=w=>{const c=document.createElement('canvas');c.width=c.height=90;
+      const g=c.getContext('2d');drawBoardRobot(g,45,45,40,'E','#ffb830',false,0,w);
+      return g.getImageData(0,0,90,90).data.join(',');};
+    out.paints = shot({hat:id})!==shot(null);
+    /* it survives the trip through a save */
+    const snap=JSON.parse(JSON.stringify(buildSave()));
+    player.myWear=[]; robots[selRobot].hat=null;
+    applySave(snap);
+    out.rt = player.myWear.length===1 && player.myWear[0].id===id && robots[selRobot].hat===id;
+    /* a piece with nothing in it is not a piece */
+    makerOpen('outfit',null); mkSave();
+    out.emptyRejected = player.myWear.length===1;
+    makerExit();
+    /* deleting one takes it off the robot it was on */
+    makerOpen('hat',id); mkDelete();
+    out.deleted = player.myWear.length===0 && robots[selRobot].hat===null;
+    /* a save someone else wrote is re-encoded, never trusted */
+    const dirty=JSON.parse(JSON.stringify(buildSave()));
+    dirty.player.myWear=[
+      {id:'my:a1',slot:'hat',name:'<img src=x onerror=1>',px:'<<<<'},
+      {id:'notmine',slot:'hat',name:'x',px:'0'},
+      {id:'my:b2',slot:'trousers',name:'x',px:'0'}];
+    applySave(dirty);
+    out.clean=player.myWear.map(p=>p.id+'|'+p.name+'|'+p.px.length+'|'+p.px.replace(/\\./g,'').length);
+    player.myWear=[];
+    return JSON.stringify(out);
+  })()`));
+  check("the maker mints a custom id and saves the piece",
+    !MADE.missing && MADE.pre === true && MADE.saved === 1 && MADE.name === 'Test Lid' && MADE.len === 1, JSON.stringify(MADE));
+  check("saving a piece puts it on the robot", MADE.worn === true, JSON.stringify(MADE));
+  check("a built piece reaches the canvas", MADE.paints === true, JSON.stringify(MADE));
+  check("a built piece survives buildSave → applySave", MADE.rt === true, JSON.stringify(MADE));
+  check("a piece with nothing in it is not saved", MADE.emptyRejected === true, JSON.stringify(MADE));
+  check("deleting a piece takes it off the robot wearing it", MADE.deleted === true, JSON.stringify(MADE));
+  /* the grid is the only thing a made piece can carry: a foreign save gets
+     its markup stripped, its unknown slots dropped and its grid re-encoded
+     to exactly 144 palette characters */
+  /* the piece is stored as cells and DRAWN as curves, so the two looks must
+     actually differ on the canvas — and both must survive the save */
+  const LOOK = JSON.parse(await ev(`(()=>{
+    if(!window.CC_WEAR||typeof CC_WEAR.swatch!=='function')return JSON.stringify({missing:true});
+    const N=CC_WEAR.cells, g0=new Array(N*N).fill('.');
+    for(let r=0;r<6;r++)for(let x=6-r;x<=5+r;x++){const i=(r+3)*N+x; if(x>=0&&x<N)g0[i]='0';}
+    const px=g0.join('');
+    const shot=sm=>{const c=document.createElement('canvas');c.width=c.height=80;
+      const g=c.getContext('2d');CC_WEAR.swatch(g,'outfit',{px:px,sm:sm},80);
+      return g.getImageData(0,0,80,80).data;};
+    const a=shot(true), b=shot(false);
+    let diff=0; for(let i=3;i<a.length;i+=4)if((a[i]>128)!==(b[i]>128))diff++;
+    /* a lone cell is the shape a tolerance that flattens staircases can wipe
+       out, so it gets its own check */
+    const dot=new Array(N*N).fill('.'); dot[5*N+5]='0';
+    const c2=document.createElement('canvas');c2.width=c2.height=80;
+    const g2=c2.getContext('2d');CC_WEAR.swatch(g2,'outfit',{px:dot.join(''),sm:true},80);
+    let ink=0; const d2=g2.getImageData(0,0,80,80).data;
+    for(let i=3;i<d2.length;i+=4)if(d2[i]>128)ink++;
+    /* the brush is gone from the maker, but a piece painted before it went
+       is still a piece: it still renders, and its finish still survives a
+       save — that is what keeps an old player's hat on their robot */
+    mgState=null; mgRobot=null;
+    const stripe=new Array(N*N).fill('.'); for(let x=2;x<10;x++)stripe[7*N+x]='0';
+    player.myWear=[{id:'my:oldhat',slot:'hat',name:'Blocky one',px:stripe.join(''),sm:false}];
+    const kept=JSON.parse(JSON.stringify(buildSave()));
+    player.myWear=[]; applySave(kept);
+    const back=player.myWear[0]||{};
+    player.myWear=[]; robots[selRobot].hat=null;
+    return JSON.stringify({diff:diff, dot:ink, sm:back.sm, name:back.name});
+  })()`));
+  check("curves and blocks are two different pictures of one grid",
+    !LOOK.missing && LOOK.diff > 100, JSON.stringify(LOOK));
+  check("a single painted cell survives the smoothing", LOOK.dot > 40, JSON.stringify(LOOK));
+  check("the blocky/smooth choice is saved with the piece",
+    LOOK.sm === false && LOOK.name === 'Blocky one', JSON.stringify(LOOK));
+
+  /* Build mode: a piece made of boxes, and the HTML+CSS it means. The
+     promise is the same one the Python tab makes about blocks — the code is
+     not a picture of the piece, it IS the piece. */
+  const BUILT = JSON.parse(await ev(`(()=>{
+    if(typeof makerOpen!=='function'||!window.CC_CODE)return JSON.stringify({missing:true});
+    mgState=null; mgRobot=null; player.myWear=[]; player.level=20;
+    makerOpen('hat',null);
+    mkParts=[]; renderMaker();
+    mkAddPart(); Object.assign(mkParts[mkSel],{x:8,y:60,w:84,h:15,r:40,c:1});
+    mkAddPart(); Object.assign(mkParts[mkSel],{x:30,y:36,w:13,h:13,r:50,c:0});
+    /* Copy is the component: the twin shares the class, so one rule paints
+       both and only their own style says where each stands */
+    const copy=[...document.querySelectorAll('#makerBody .mk-acts .mk-btn')]
+      .find(b=>b.textContent==='Copy');
+    if(copy)copy.click();
+    mkParts[mkSel].x=57;
+    const code=CC_CODE.code({name:'Cap',parts:mkParts},'hat');
+    const rules=(code.match(/^\\.[a-z]/gm)||[]).length;
+    const divs=(code.match(/<div class="gold-dot"/g)||[]).length;
+    mkName='Cap'; mkSave();
+    const snap=JSON.parse(JSON.stringify(buildSave()));
+    player.myWear=[]; robots[selRobot].hat=null; applySave(snap);
+    const p=player.myWear[0]||{};
+    const shot=w=>{const c=document.createElement('canvas');c.width=c.height=90;
+      const g=c.getContext('2d');drawBoardRobot(g,45,45,40,'E','#ffb830',false,0,w);
+      return g.getImageData(0,0,90,90).data.join(',');};
+    const paints=shot({hat:p.id})!==shot(null);
+    /* a hand-edited save cannot make a box the editor could not */
+    const dirty=JSON.parse(JSON.stringify(snap));
+    dirty.player.myWear=[{id:'my:z9',slot:'hat',name:'x',kind:'parts',
+      parts:[{cls:99,x:9e9,y:'nope',w:-4,h:5000,r:900,c:77}]}];
+    applySave(dirty);
+    const clamped=player.myWear[0].parts[0];
+    player.myWear=[]; robots[selRobot].hat=null; makerExit();
+    return JSON.stringify({rules, divs, kind:p.kind, n:(p.parts||[]).length,
+      worn:p.id?true:false, paints, clamped,
+      hasStyle:code.indexOf('<style>')>=0,
+      sharedHasNoLeft:/\\.gold-dot \\{[^}]*\\}/.test(code)&&!/\\.gold-dot \\{[^}]*left:/.test(code)});
+  })()`));
+  check("Build mode makes a piece out of boxes and saves it",
+    !BUILT.missing && BUILT.kind === 'parts' && BUILT.n === 3 && BUILT.paints === true, JSON.stringify(BUILT));
+  check("the piece comes out as HTML with a stylesheet",
+    BUILT.hasStyle === true && BUILT.rules === 3, JSON.stringify(BUILT));
+  check("two copies share one class, and only their positions differ",
+    BUILT.divs === 2 && BUILT.sharedHasNoLeft === true, JSON.stringify(BUILT));
+  check("a hand-edited parts save is clamped to what the editor can make",
+    BUILT.clamped && BUILT.clamped.cls === 13 && BUILT.clamped.x === 140 &&
+    BUILT.clamped.y === 10 && BUILT.clamped.w === 1 && BUILT.clamped.h === 160 &&
+    BUILT.clamped.r === 50 && BUILT.clamped.c === 15, JSON.stringify(BUILT.clamped));
+
+  /* Every value in the code is a control. Dragging roughs a box out; the
+     code is where a child says exactly 42%, which is what makes this a
+     programming lesson rather than a drawing one. */
+  const CODE = JSON.parse(await ev(`(()=>{
+    if(typeof mkPick!=='function'||!window.CC_CODE||!CC_CODE.field)return JSON.stringify({missing:true});
+    mgState=null; mgRobot=null; player.myWear=[]; player.level=20;
+    makerOpen('hat',null); mkParts=[]; renderMaker();
+    mkAddPart(); Object.assign(mkParts[mkSel],{x:8,y:60,w:84,h:15,r:40,c:1});
+    mkAddPart(); Object.assign(mkParts[mkSel],{x:30,y:36,w:13,h:13,r:50,c:0});
+    const copy=[...document.querySelectorAll('#makerBody .mk-acts .mk-btn')].find(b=>b.textContent==='Copy');
+    if(copy)copy.click();
+    mkName='Cap'; mkTab='code'; renderMaker();
+    const out={};
+    const tok=(k,g,i)=>[...document.querySelectorAll('#mkCode .val')].find(b=>
+      b.dataset.k===k &&
+      (g==null?b.dataset.g==null:b.dataset.g===String(g)) &&
+      (i==null?b.dataset.i==null:b.dataset.i===String(i)));
+    out.tokens=document.querySelectorAll('#mkCode .val').length;
+    /* a number: the strip names the CSS property and moves the real value */
+    tok('w',1).click();
+    out.prop=document.querySelector('#mkIns .mk-inslab').textContent;
+    const bump=t=>[...document.querySelectorAll('#mkIns .mk-step')].find(b=>b.textContent===t).click();
+    bump('+10'); bump('+1');
+    out.w=mkParts[1].w; out.shown=document.getElementById('mkInsVal').textContent;
+    out.marked=!!document.querySelector('#mkCode .val.on');
+    /* a value cannot be pushed past what the drag itself can produce */
+    for(let i=0;i<40;i++)bump('+10');
+    out.capped=mkParts[1].w;
+    /* rotate exists only in the code, and it moves both copies of a group */
+    tok('a',1).click(); bump('-15');
+    out.a=[mkParts[1].a,mkParts[2].a];
+    /* the two positions belong to the elements, not the rule */
+    tok('x',null,1).click(); bump('-1');
+    out.x=[mkParts[1].x,mkParts[2].x];
+    /* the piece's own rule is editable too: its tokens say "root" rather
+       than a class number, and that word once came through a unary plus as
+       NaN, leaving .hat { padding; display } as chips that opened nothing */
+    tok('lay','root').click();
+    out.rootWords=[...document.querySelectorAll('#mkIns .mk-kw')].map(b=>b.textContent);
+    const rowBtn=[...document.querySelectorAll('#mkIns .mk-kw')].find(b=>b.textContent==='row');
+    if(rowBtn)rowBtn.click();
+    out.rootLay=mkRoot.lay;
+    /* one strip, docked — not one in the dock and another under the code */
+    out.strips=document.querySelectorAll('#mkIns').length;
+    mkRoot.lay=0; mkVal=null; renderMaker();
+    /* the code the piece means and the code on screen are one text */
+    out.plainMatchesShown=CC_CODE.code({name:'Cap',parts:mkParts},'hat')
+      .replace(/\\s+/g,' ')===document.getElementById('mkCode').textContent.replace(/\\s+/g,' ');
+    /* a class name is a way in: tapping it filters this same editor down to
+       that one component — one screen, not a second sheet on top of it */
+    tok('name',1).click();
+    out.compOpen=document.getElementById('maker').classList.contains('open')
+      && !document.getElementById('comp') && mkFocus===1;
+    out.compCode=document.getElementById('mkCode').textContent;
+    /* renaming it renames it in the HTML at the same time, because there is
+       only one name. The name row is on the Boxes tab, and while a
+       component is focused it edits the class rather than the piece. */
+    mkTab='boxes'; renderMaker();
+    const inp=document.getElementById('mkName');
+    inp.value='stud'; inp.dispatchEvent(new Event('input'));
+    const src=CC_CODE.code({name:'Cap',parts:mkParts},'hat');
+    out.divs=(src.match(/class="stud"/g)||[]).length;
+    out.rules=(src.match(/^\\.stud \\{/gm)||[]).length;
+    inp.value='<script>'; inp.dispatchEvent(new Event('input'));
+    out.junkName=CC_CODE.classNames(mkParts)[1];
+    inp.value='!!!'; inp.dispatchEvent(new Event('input'));
+    out.emptyName=CC_CODE.classNames(mkParts)[1];
+    /* the rest of the piece is still on the canvas behind it, and the robot
+       beside it still wears everything */
+    out.othersDrawn=(()=>{
+      /* two boxes that do not overlap: with a focus set, the one outside it
+         must still reach the canvas, and must not reach it at full strength */
+      const two=[{cls:0,x:5,y:5,w:30,h:30,r:0,a:0,c:0},
+                 {cls:1,x:60,y:60,w:30,h:30,r:0,a:0,c:6}];
+      /* parts paint in body units, so the box has to be mapped onto the
+         canvas the way both editing screens map it */
+      const bx=CC_WEAR.box.hat, k=80/bx.w;
+      const shot=f=>{const c=document.createElement('canvas');c.width=c.height=80;
+        const g=c.getContext('2d');
+        g.setTransform(k,0,0,k,-bx.x*k,-bx.y*k);
+        CC_WEAR.parts(g,'hat',two,f);
+        return g.getImageData(0,0,80,80).data;};
+      const plain=shot(null), focused=shot(1);
+      let ghost=0, same=0;
+      for(let i=3;i<plain.length;i+=4){
+        if(plain[i]>200&&focused[i]>0&&focused[i]<200)ghost++;
+        if(plain[i]>200&&focused[i]===plain[i])same++;
+      }
+      return ghost>50&&same>50;   /* one group dimmed, the other untouched */
+    })();
+    /* the breadcrumb is the way out of a component now: .hat, un-focused */
+    document.querySelector('#mkCrumb .mk-crumb-b').click();
+    out.backInMaker=document.getElementById('maker').classList.contains('open')
+      && mkFocus===null;
+    /* rotation reaches the canvas */
+    const shot=a=>{const c=document.createElement('canvas');c.width=c.height=80;
+      const g=c.getContext('2d');
+      CC_WEAR.swatch(g,'outfit',{kind:'parts',parts:[{cls:0,x:20,y:40,w:60,h:14,r:0,a:a,c:0}]},80);
+      return g.getImageData(0,0,80,80).data.join(',');};
+    out.rotates=shot(0)!==shot(30);
+    mkVal=null; player.myWear=[]; makerExit();
+    return JSON.stringify(out);
+  })()`));
+  /* one group of one: name + x y w h r a c, the four box-model values and
+     the translate. One group of two: the same minus left/top, plus left/top
+     on each of the two elements. And the piece itself: padding and display. */
+  check("every value in the code is a control", !CODE.missing && CODE.tokens === 30, JSON.stringify(CODE));
+  check("the strip names the CSS property and moves the real value",
+    CODE.prop === 'width' && CODE.w === 24 && CODE.shown === '24%' && CODE.marked === true, JSON.stringify(CODE));
+  check("a value cannot be pushed past what the drag itself can produce",
+    CODE.capped === CC_FIELD_HI, JSON.stringify(CODE));
+  check("the piece's own rule opens the strip like any other",
+    JSON.stringify(CODE.rootWords) === JSON.stringify(['block','row','column']) && CODE.rootLay === 1 &&
+    CODE.strips === 1, JSON.stringify({rootWords:CODE.rootWords,rootLay:CODE.rootLay,strips:CODE.strips}));
+  check("rotate is a group's, and both copies turn together",
+    Array.isArray(CODE.a) && CODE.a[0] === -15 && CODE.a[1] === -15, JSON.stringify(CODE));
+  check("left belongs to the element, so only one copy moves",
+    Array.isArray(CODE.x) && CODE.x[0] === 29 && CODE.x[1] !== 29, JSON.stringify(CODE));
+  check("a class name filters the editor down to that component",
+    CODE.compOpen === true, JSON.stringify(CODE));
+  /* only that class: its own elements and its own rule, and no other */
+  check("a focused component shows that component's code and no other",
+    typeof CODE.compCode === 'string' &&
+    CODE.compCode.indexOf('.gold-dot') >= 0 &&
+    CODE.compCode.indexOf('sand-pill') < 0 &&
+    CODE.compCode.indexOf('.hat {') < 0 &&
+    (CODE.compCode.match(/<div /g)||[]).length === 2, JSON.stringify(CODE.compCode));
+  check("the rest of the piece stays on the canvas while one is focused, dimmed",
+    CODE.othersDrawn === true, JSON.stringify(CODE.othersDrawn));
+  check("renaming the class renames it in the HTML too",
+    CODE.divs === 2 && CODE.rules === 1, JSON.stringify(CODE));
+  check("the breadcrumb goes back to the whole piece", CODE.backInMaker === true, JSON.stringify(CODE));
+  /* whatever a child types, what reaches the stylesheet is an identifier —
+     stripped down to one where it can be, and the derived name where it
+     cannot. Nothing typed here can spell markup. */
+  check("a typed class name is stripped to a CSS identifier",
+    /^[a-z][a-z0-9-]{0,15}$/.test(CODE.junkName||'') && CODE.junkName === 'script', JSON.stringify(CODE));
+  check("a name with nothing left in it falls back to the derived one",
+    CODE.emptyName === 'gold-dot', JSON.stringify(CODE));
+  check("the code on screen is the code the piece means", CODE.plainMatchesShown === true, JSON.stringify(CODE));
+  check("rotate reaches the canvas", CODE.rotates === true, JSON.stringify(CODE));
+
+  /* The box model and the layout that uses it — the part of CSS that is
+     actually front-end work, and the part you cannot see by dragging. */
+  const BOXM = JSON.parse(await ev(`(()=>{
+    if(!CC_WEAR.layout)return JSON.stringify({missing:true});
+    const L=CC_WEAR.layout;
+    const box=o=>Object.assign({cls:0,pid:0,x:0,y:0,w:20,h:20,r:0,a:0,c:0,
+      pad:0,mg:0,bw:0,bc:15,lay:0,gap:0,jus:0,ali:0},o);
+    const out={};
+    /* padding on a container insets what is inside it */
+    const pad=[box({pid:0,x:0,y:0,w:100,h:100,pad:10}),box({cls:1,pid:1,pin:0,x:0,y:0,w:100,h:100})];
+    const r1=L(pad,{}).rect[1];
+    out.padInsets=Math.round(r1.x)===10&&Math.round(r1.w)===80;
+    /* justify-content: center puts the middle of the children on the
+       middle of the container, which is the answer to "where is the centre" */
+    const row=[box({pid:0,x:0,y:0,w:100,h:100,lay:1,jus:1,ali:1}),
+               box({cls:1,pid:1,pin:0,w:20,h:20}),box({cls:1,pid:2,pin:0,w:20,h:20})];
+    const a=L(row,{}).rect[1], b=L(row,{}).rect[2];
+    out.centred=Math.abs(((a.x+b.x+b.w)/2)-50)<0.6 && Math.abs((a.y+a.h/2)-50)<0.6;
+    /* flex-start is not centre, or the switch means nothing */
+    row[0].jus=0;
+    out.startDiffers=Math.round(L(row,{}).rect[1].x)!==Math.round(a.x);
+    /* margin pushes a box away from where it would otherwise sit */
+    row[0].jus=0; row[1].mg=6;
+    out.marginMoves=Math.round(L(row,{}).rect[1].x)===6;
+    /* a container that flows takes left and top out of its children's rule,
+       because it is placing them now */
+    const flow={name:"n",root:{},parts:[box({pid:0,x:10,y:10,w:60,h:60,lay:1}),
+                                        box({cls:1,pid:1,pin:0,w:30,h:30})]};
+    const withFlow=CC_CODE.code(flow,"hat");
+    flow.parts[0].lay=0;
+    const withFree=CC_CODE.code(flow,"hat");
+    /* the container itself is still placed by hand — it sits in the slot,
+       which places nothing. It is its CHILD that stops being positioned, so
+       the count is what says it: two rules positioned, then one. */
+    const abs=src=>(src.match(/position: absolute/g)||[]).length;
+    const lefts=src=>(src.match(/left: /g)||[]).length;
+    out.flowDropsLeft=abs(withFlow)===1&&abs(withFree)===2&&
+                      lefts(withFlow)===1&&lefts(withFree)===2;
+    out.flowHasFlex=withFlow.indexOf("display: flex")>=0 && withFree.indexOf("display: flex")<0;
+    /* the HTML nests the way the boxes do */
+    out.nests=/<div class="[^"]+">[\\s]*[\\n][\\s]+<div class="[^"]+"><[\\/]div>/.test(withFlow);
+    /* a save cannot describe a box inside itself: a pin has to name a box
+       already read, so a cycle is not representable */
+    const dirty=CC_WEAR.clean([{id:'my:c1',slot:'hat',name:'x',kind:'parts',
+      parts:[{pid:1,pin:2,x:0,y:0,w:9,h:9},{pid:2,pin:1,x:0,y:0,w:9,h:9}]}]);
+    out.noCycle=dirty[0].parts[0].pin===undefined && dirty[0].parts[1].pin===1;
+    /* and a piece written before any of this renders exactly as it did */
+    const oldPiece={kind:'parts',parts:[{cls:0,x:10,y:10,w:50,h:50,r:0,a:0,c:3}]};
+    const shot=pc=>{const cv=document.createElement('canvas');cv.width=cv.height=80;
+      const g=cv.getContext('2d');CC_WEAR.swatch(g,'outfit',pc,80);
+      return g.getImageData(0,0,80,80).data.join(',');};
+    out.oldStillRenders=shot(oldPiece)===shot({kind:'parts',root:{lay:0,pad:0,gap:0,jus:0,ali:0},
+      parts:[{cls:0,pid:0,x:10,y:10,w:50,h:50,r:0,a:0,c:3,pad:0,mg:0,bw:0,bc:15,lay:0,gap:0,jus:0,ali:0}]});
+    return JSON.stringify(out);
+  })()`));
+  check("padding on a container insets what is inside it",
+    !BOXM.missing && BOXM.padInsets === true, JSON.stringify(BOXM));
+  check("justify-content: center is what centre means",
+    BOXM.centred === true && BOXM.startDiffers === true, JSON.stringify(BOXM));
+  check("margin pushes a box away from where it would sit",
+    BOXM.marginMoves === true, JSON.stringify(BOXM));
+  /* the single most important thing on this screen: turning a container
+     into a flex container takes the hand-placement out of its children */
+  check("a flow container takes left and top out of its children's rule",
+    BOXM.flowDropsLeft === true && BOXM.flowHasFlex === true, JSON.stringify(BOXM));
+  check("the HTML nests the way the boxes do", BOXM.nests === true, JSON.stringify(BOXM));
+  check("a save cannot describe a box inside itself", BOXM.noCycle === true, JSON.stringify(BOXM));
+  check("a piece built before the box model renders exactly as it did",
+    BOXM.oldStillRenders === true, JSON.stringify(BOXM));
+
+  /* The other half of "where is the centre": left and top can name the
+     box's own middle instead of its corner, which is translate(-50%, -50%)
+     and the line every front-end developer writes. */
+  const ANCH = JSON.parse(await ev(`(()=>{
+    const box=o=>Object.assign({cls:0,pid:0,x:50,y:50,w:40,h:20,r:0,a:0,c:0,
+      pad:0,mg:0,bw:0,bc:15,lay:0,gap:0,jus:0,ali:0,org:0},o);
+    const tl=CC_WEAR.layout([box({})],{}).rect[0];
+    const ct=CC_WEAR.layout([box({org:1})],{}).rect[0];
+    const piece=o=>CC_CODE.code({name:"n",root:{},parts:[box(o)]},"hat");
+    return JSON.stringify({
+      /* top-left: the corner lands on 50,50. centre: the middle does. */
+      corner:tl.x===50&&tl.y===50,
+      middle:(ct.x+ct.w/2)===50&&(ct.y+ct.h/2)===50,
+      cssCentre:piece({org:1}).indexOf("translate(-50%, -50%)")>=0,
+      cssCorner:piece({}).indexOf("translate(0px, 0px)")>=0
+    });
+  })()`));
+  check("left and top can name the box's own middle",
+    ANCH.corner === true && ANCH.middle === true, JSON.stringify(ANCH));
+  check("...and the code says so with translate(-50%, -50%)",
+    ANCH.cssCentre === true && ANCH.cssCorner === true, JSON.stringify(ANCH));
+
+  /* The board tab, in two parts. It was one 272px scroller holding up to
+     654px of column, so on a half-height sheet the board was cut off at
+     the bottom and the 3D rotate buttons never appeared at all. */
+  const BOARD = JSON.parse(await ev(`(async()=>{
+    if(typeof mgFitBoard!=='function')return JSON.stringify({missing:true});
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    mgState=null; player.level=20;
+    document.querySelectorAll('.sheet.open').forEach(x=>x.classList.remove('open'));
+    /* half height is where it went wrong, so half height is what is checked */
+    if($('editor').classList.contains('max'))$('edMax').click();
+    await wait(350);
+    const out={};
+    const box=s=>{const e=document.querySelector(s); if(!e||!e.offsetParent)return null;
+      const r=e.getBoundingClientRect(); return {top:Math.round(r.top),bot:Math.round(r.bottom)};};
+    const fold=()=>Math.round($('boardTab').getBoundingClientRect().bottom);
+    academyEnter(TUTS.findIndex(t=>t.id==='t_loop'));
+    await wait(700);
+    out.flatFits=box('#mgCanvas').bot<=fold();
+    /* the reading area is a scroller that shows a line of itself, not an
+       edge: the lesson has to start above the fold and continue past it */
+    const ls=box('#mgLesson');
+    out.lessonStarts=!!ls&&ls.top<fold()&&ls.bot>fold();
+    out.readScrolls=$('boardTab').scrollHeight>$('boardTab').clientHeight;
+    mgExit(false); await wait(300);
+    /* the 3D level: its board AND its rotate bar are what you look at */
+    t3Enter(TOWER_LEVELS[0]);
+    await wait(900);
+    out.t3Fits=box('#mgCanvas').bot<=fold();
+    const bar=box('#t3Bar');
+    out.t3BarSeen=!!bar&&bar.bot<=fold();
+    out.t3Rot=!!$('t3RotL')&&!!$('t3RotR');
+    /* the board and its own status bar come before anything that is only
+       reading, so what scrolls away is never the thing being looked at */
+    out.order=[...$('mgPanel').children].filter(e=>e.offsetParent).map(e=>e.id)
+      .filter(id=>['mgGoal','mgCanvas','t3Bar','mgRead'].indexOf(id)>=0);
+    /* a folded goal says so, and saying so unfolds it. The prose is set
+       here rather than taken from a level, so the check is of the fold and
+       not of how long somebody's sentence happens to be today. */
+    const g=$('mgGoal');
+    g.textContent=("Height is new. Build drops a brick on the tile in front of you, "+
+      "but never higher than your own shoulder. Climb steps up onto a brick "+
+      "exactly one level high. Build the three-step staircase and stand on top.");
+    await wait(250);
+    out.clamped=g.scrollHeight>g.clientHeight+2;
+    out.moreShown=$('mgMore').classList.contains('on');
+    $('mgMore').click(); await wait(250);
+    out.unfolded=g.scrollHeight<=g.clientHeight+2&&g.classList.contains('open');
+    out.lessLabel=$('mgMoreT').textContent;
+    $('mgMore').click(); await wait(200);
+    /* the empty program offered the WORLD's blocks — Walk To, Chop, Drop —
+       on a Tower level whose palette is Move, Turn, Build and Climb. The
+       program belongs to the robot and outlives a level, so it is cleared. */
+    R().program=[]; selBlock=null;
+    setTab('blocks'); renderProgram();
+    out.empty=$('programEl').textContent;
+    out.budget=mgState.proj.maxBlocks;
+    mgExit(false); player.level=20;
+    return JSON.stringify(out);
+  })()`));
+  check("the board fits above the fold, flat and in 3D",
+    !BOARD.missing && BOARD.flatFits === true && BOARD.t3Fits === true &&
+    JSON.stringify(BOARD));
+  check("the 3D rotate bar is on screen, where the thing it turns is",
+    BOARD.t3BarSeen === true && BOARD.t3Rot === true, JSON.stringify(BOARD));
+  check("what is left to read scrolls, and shows a line of itself",
+    BOARD.lessonStarts === true && BOARD.readScrolls === true, JSON.stringify(BOARD));
+  check("the board and its status bar come before anything that is only reading",
+    JSON.stringify(BOARD.order) === JSON.stringify(['mgGoal','mgCanvas','t3Bar','mgRead']),
+    JSON.stringify(BOARD.order));
+  check("a folded goal says so, and saying so unfolds it",
+    BOARD.clamped === true && BOARD.moreShown === true &&
+    BOARD.unfolded === true && BOARD.lessLabel === 'Less', JSON.stringify(BOARD));
+  /* the recipe it used to offer names three blocks a challenge does not have */
+  check("an empty challenge program is told its budget, not the world's blocks",
+    typeof BOARD.empty === 'string' && BOARD.empty.indexOf('Walk To') < 0 &&
+    BOARD.empty.indexOf(String(BOARD.budget) + ' blocks') >= 0, JSON.stringify(BOARD.empty));
+
+  /* The level designer. Every control in it used to be an icon in a
+     square: a cube, a gear the icon pack draws as a sun, a floppy disk —
+     and the greyed-out ones gave no reason for being greyed out. */
+  const MAKE = JSON.parse(await ev(`(async()=>{
+    if(typeof mgEnterCreator!=='function'||typeof mgStatus!=='function')return JSON.stringify({missing:true});
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    if(mgState)mgExit(false); player.level=20;
+    document.querySelectorAll('.sheet.open').forEach(x=>x.classList.remove('open'));
+    mgEnterCreator(); await wait(700);
+    const out={};
+    const labels=sel=>[...document.querySelectorAll(sel)].filter(e=>e.offsetParent)
+      .map(e=>{const l=e.querySelector('.tl-lb');return l?l.textContent:'';});
+    out.tools2d=labels('#mgTools .tool');
+    /* the 3D toggle is an .ibtn too and carries its own word, not a label */
+    out.acts=labels('#mgCreatorBar .cb-act .ibtn').filter(Boolean);
+    /* an empty board says so, and says it where Save is greyed */
+    out.empty=$('mgStatus').textContent;
+    out.emptyBad=$('mgStatus').className.indexOf('bad')>=0;
+    out.saveOff=$('mgSave').classList.contains('locked');
+    /* design something: the strip moves on to what is left to do */
+    mgState.proj.cells=[[3,3]]; mgState.solved=false; mgCreatorUI();
+    out.unproven=$('mgStatus').textContent;
+    out.unprovenHmm=$('mgStatus').className.indexOf('hmm')>=0;
+    mgState.solved=true; mgCreatorUI();
+    out.proven=$('mgStatus').className.indexOf('ok')>=0;
+    out.saveOn=!$('mgSave').classList.contains('locked');
+    /* the setup steppers were three numbers with no names */
+    $('mgSetup').click(); await wait(300);
+    /* js/ui-icons.js lifts each emoji into its own span, so the words are
+       what is compared — the emoji is an <svg> by the time this runs */
+    out.stp=[...document.querySelectorAll('#mgCreatorBar .stprow .clab')]
+      .map(e=>e.textContent.trim());
+    $('mgSetup').click();
+    /* the 3D designer's tools carry names too */
+    if(typeof on3d==='function'&&$('t3Btn')){
+      const c=window.confirm; window.confirm=()=>true;
+      $('t3Btn').click(); await wait(600); window.confirm=c;
+      out.tools3d=labels('#mgTools .tool');
+      out.statusOff=$('mgStatus').style.display==='none';
+      out.t3warn=($('t3Warn').textContent||'').length>0;
+    }
+    mgExit(false);
+    return JSON.stringify(out);
+  })()`));
+  check("every tool in the designer carries its name, flat and in 3D",
+    !MAKE.missing && MAKE.tools2d.indexOf('Target') >= 0 && MAKE.tools2d.every(t => !!t) &&
+    Array.isArray(MAKE.tools3d) && MAKE.tools3d.join() === 'Brick,Ground,Pit,Start,Erase',
+    JSON.stringify(MAKE));
+  check("so do Setup and Save, which were a sun and a floppy disk",
+    MAKE.acts.join() === 'Setup,Save', JSON.stringify(MAKE.acts));
+  check("a greyed-out Save says why, and stops saying it once it is earned",
+    MAKE.emptyBad === true && MAKE.saveOff === true && MAKE.unprovenHmm === true &&
+    MAKE.proven === true && MAKE.saveOn === true, JSON.stringify(MAKE));
+  check("the setup steppers say what their numbers are",
+    JSON.stringify(MAKE.stp) === JSON.stringify(['Block budget','Width','Height']),
+    JSON.stringify(MAKE.stp));
+  /* two strips saying the same thing is one strip too many */
+  check("the 3D designer keeps its own status strip, and only its own",
+    MAKE.statusOff === true && MAKE.t3warn === true, JSON.stringify(MAKE));
+
+  /* The Layout tab. It exists because justify-content had nowhere to be
+     found: it was a token inside a rule you had to write before you could
+     tap it. It is the rule asked as questions — Where, Size, Shape, Space
+     around, Boxes inside, The piece — one card each, with the values in
+     the header while the card is folded, and a slider between − and +
+     where there was a row of five buttons. */
+  const LAYT = JSON.parse(await ev(`(()=>{
+    if(typeof mkLayoutPanel!=='function')return JSON.stringify({missing:true});
+    mgState=null; mgRobot=null; player.myWear=[]; player.level=20; player.feTut=null;
+    makerOpen('hat',null); mkParts=[]; renderMaker();
+    mkAddPart(); mkAddPart();
+    for(const k in mkSecOpen)delete mkSecOpen[k]; mkSecOpen.where=true; mkSecOpen.size=true;
+    mkTab='layout'; renderMaker();
+    const out={};
+    const cards=()=>[...document.querySelectorAll('#makerBody .mk-lgrp')];
+    const card=t=>cards().find(g=>g.querySelector('.mk-lgt').textContent===t);
+    const rows=c=>[...c.querySelectorAll('.mk-lrow')].map(r=>r.querySelector('.mk-lprop').textContent);
+    const row=(c,p)=>[...c.querySelectorAll('.mk-lrow')].find(r=>r.querySelector('.mk-lprop').textContent===p);
+    out.cards=cards().map(g=>g.querySelector('.mk-lgt').textContent);
+    /* the question a child asks first is the first card, and its first
+       row is the one that used to be at the bottom of the list */
+    out.whereOpen=card('Where').classList.contains('open');
+    out.whereRows=rows(card('Where'));
+    out.foldedSummary=[...card('Space around').querySelectorAll('.mk-lgsv')].map(e=>e.textContent);
+    /* a slider writes the real value; the + writes exactly one more */
+    const w0=mkParts[mkSel].w;
+    const wr=row(card('Size'),'width'), rng=wr.querySelector('.mk-rng');
+    rng.value=w0+10; rng.dispatchEvent(new Event('input'));
+    wr.querySelector('.mk-lb:last-child').click();
+    out.wrote=mkParts[mkSel].w===w0+11 && wr.querySelector('.mk-lval').textContent===(w0+11)+'%';
+    /* the property name is the button that says what the property does */
+    mkSecOpen.space=true; renderMaker();
+    row(card('Space around'),'padding').querySelector('.mk-lprop').click();
+    out.tip=(card('Space around').querySelector('.mk-instip')||{}).textContent;
+    row(card('Space around'),'padding').querySelector('.mk-lprop').click();
+    out.tipGone=!card('Space around').querySelector('.mk-instip');
+    /* THE point of the tab: display is a row, and choosing row is what
+       makes justify-content and align-items appear at all */
+    mkSecOpen.inside=true; renderMaker();
+    out.hidden=rows(card('Boxes inside')).indexOf('justify-content')<0;
+    [...row(card('Boxes inside'),'display').querySelectorAll('.mk-kw')].find(b=>b.textContent==='row').click();
+    out.shown=rows(card('Boxes inside')).indexOf('justify-content')>=0 && rows(card('Boxes inside')).indexOf('gap')>=0;
+    out.lay=mkParts[mkSel].lay;
+    /* a box its holder lays out loses left and top, says why, and offers
+       the holder — because the holder is where the answer now is */
+    mkParts[0].lay=1; mkParts[1].pin=mkParts[0].pid; mkSel=1; renderMaker();
+    out.noLeft=rows(card('Where')).indexOf('left')<0 && rows(card('Where')).indexOf('translate')<0;
+    out.saysWhy=[...card('Where').querySelectorAll('.mk-lnote')].some(t=>t.textContent.indexOf('left and top are not used')>=0);
+    out.offersHolder=(card('Where').querySelector('.mk-lgo')||{}).textContent;
+    /* Inside is the first row of the first card, and it never offers the
+       box its own subtree */
+    out.inside=[...row(card('Where'),'Inside').querySelectorAll('.mk-kw')].map(b=>b.textContent);
+    out.own='.'+CC_CODE.classNames(mkParts)[mkParts[1].cls];
+    out.what=[...document.querySelectorAll('#makerBody .cp-what span')].map(t=>t.textContent);
+    /* the piece has a rule of its own, and it is the last card */
+    mkRoot.lay=1; mkSecOpen.root=true; renderMaker();
+    out.pieceFlex=card('The piece').querySelectorAll('.mk-lprop').length;
+    mkRoot.lay=0;
+    player.myWear=[]; makerExit();
+    return JSON.stringify(out);
+  })()`));
+  check("the Layout tab asks the rule as questions, Where first",
+    !LAYT.missing && JSON.stringify(LAYT.cards) === JSON.stringify(
+      ['Where','Size','Shape','Space around','Boxes inside','The piece']), JSON.stringify(LAYT.cards));
+  check("Inside is the first row of the first card, open by default",
+    LAYT.whereOpen === true && LAYT.whereRows[0] === 'Inside' &&
+    JSON.stringify(LAYT.whereRows) === JSON.stringify(['Inside','left','top','translate']), JSON.stringify(LAYT));
+  check("a folded card still shows its values",
+    JSON.stringify(LAYT.foldedSummary) === JSON.stringify(['padding0px','border0px','margin0px']), JSON.stringify(LAYT.foldedSummary));
+  check("a Layout slider writes the real value, and + writes one more", LAYT.wrote === true, JSON.stringify(LAYT));
+  check("every Layout property says what it does when you tap its name",
+    LAYT.tip === CC_PAD_TIP && LAYT.tipGone === true, JSON.stringify(LAYT.tip));
+  /* the whole reason the tab exists */
+  check("display: row is what makes justify-content findable at all",
+    LAYT.hidden === true && LAYT.shown === true && LAYT.lay === 1, JSON.stringify(LAYT));
+  check("a box its holder lays out shows no left or top, says why, and offers the holder",
+    LAYT.noLeft === true && LAYT.saysWhy === true && LAYT.offersHolder === 'Open .gold-tile', JSON.stringify(LAYT));
+  /* the piece, and the box it is already in — but never itself, which is
+     what keeps the tree a tree */
+  check("Inside offers the piece and every legal holder, and never itself",
+    JSON.stringify(LAYT.inside) === JSON.stringify(['.hat', '.gold-tile']) &&
+    LAYT.inside.indexOf(LAYT.own) < 0, JSON.stringify(LAYT));
+  check("the tab says what the component is before it says any number",
+    Array.isArray(LAYT.what) && LAYT.what.length === 3 &&
+    LAYT.what[1] === 'It sits inside .gold-tile.', JSON.stringify(LAYT.what));
+  check("the piece has a rule of its own, on the last card",
+    LAYT.pieceFlex === 5, JSON.stringify(LAYT));
+
+  /* Wide: the maker's own size control. The canvas gives its height to
+     the dock and takes it back, remembered for the session — and the safe
+     area is padded once, not by the sheet and its tab bar both. */
+  const WIDE = JSON.parse(await ev(`(async()=>{
+    if(typeof makerWideToggle!=='function')return JSON.stringify({missing:true});
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    mgState=null; mgRobot=null; player.myWear=[]; player.level=20; player.feTut=null;
+    mkWide=false;
+    makerOpen('hat',null); mkParts=[]; renderMaker(); mkAddPart();
+    await wait(350);
+    const sh=document.getElementById('maker');
+    const body=()=>document.getElementById('makerBody').clientHeight;
+    const cv=()=>Math.round(document.getElementById('mkCanvas').getBoundingClientRect().height);
+    const out={padB:getComputedStyle(sh).paddingBottom, body0:body(), cv0:cv()};
+    document.getElementById('makerSize').click();
+    await wait(350);
+    out.body1=body(); out.cv1=cv(); out.over=sh.scrollHeight-sh.clientHeight;
+    out.sharedUntouched=!document.body.classList.contains('sheets-full')===!document.getElementById('editor').classList.contains('max');
+    /* remembered across a close and reopen */
+    makerExit(); makerOpen('hat',null); await wait(350);
+    out.kept=sh.classList.contains('wide');
+    document.getElementById('makerSize').click(); await wait(350);
+    out.body2=body(); out.cv2=cv();
+    makerExit(); player.myWear=[];
+    return JSON.stringify(out);
+  })()`));
+  check("the maker's size control gives the canvas's height to the dock, and back",
+    !WIDE.missing && WIDE.body1 > WIDE.body0 + 120 && WIDE.cv1 < WIDE.cv0 - 80 &&
+    WIDE.body2 === WIDE.body0 && WIDE.cv2 === WIDE.cv0, JSON.stringify(WIDE));
+  check("wide is the maker's own, remembered for the session, and never clips",
+    WIDE.kept === true && WIDE.over === 0 && WIDE.sharedUntouched === true, JSON.stringify(WIDE));
+  check("the safe area is padded once, so the tabs sit on the bottom edge",
+    WIDE.padB === '0px', JSON.stringify(WIDE));
+
+  /* A box with no colour: a <div> that only holds other boxes, which is
+     what most of a page's divs are. It paints nothing, says so in the
+     code, keeps its border if it has one, and is still findable in the
+     editor — traced, not painted. */
+  const CLEAR = JSON.parse(await ev(`(()=>{
+    const box=o=>Object.assign({cls:0,pid:0,x:10,y:10,w:60,h:40,r:10,a:0,c:-1,
+      pad:0,mg:0,bw:0,bc:15,lay:0,gap:0,jus:0,ali:0,org:0},o);
+    const ink=(parts,edit)=>{const cv=document.createElement('canvas');cv.width=cv.height=80;
+      const g=cv.getContext('2d'); const bx=CC_WEAR.box.hat, k=80/bx.w;
+      g.setTransform(k,0,0,k,-bx.x*k,-bx.y*k); CC_WEAR.parts(g,'hat',parts,null,{},edit);
+      const d=g.getImageData(0,0,80,80).data; let n=0; for(let i=3;i<d.length;i+=4)if(d[i]>40)n++; return n;};
+    const out={};
+    out.plain=ink([box({})],false);                   /* nothing */
+    out.traced=ink([box({})],true);                   /* the editor's dashed trace */
+    out.ring=ink([box({bw:6})],false);                /* a border, with a hole */
+    out.solid=ink([box({bw:6,c:3})],false);
+    out.code=CC_CODE.code({name:'n',root:{},parts:[box({})]},'hat');
+    out.cls=CC_CODE.classNames([box({})])[0];
+    out.kept=CC_WEAR.clean([{id:'my:z1',slot:'hat',name:'x',kind:'parts',parts:[{cls:0,pid:0,x:1,y:1,w:9,h:9,c:-1}]}])[0].parts[0].c;
+    out.dropped=CC_WEAR.clean([{id:'my:z2',slot:'hat',name:'x',kind:'parts',parts:[{cls:0,pid:0,x:1,y:1,w:9,h:9,c:-7}]}])[0].parts[0].c;
+    /* and the way in: the first swatch of the palette */
+    mgState=null; mgRobot=null; player.myWear=[]; player.level=20; player.feTut=null;
+    makerOpen('hat',null); mkParts=[]; renderMaker(); mkAddPart();
+    const none=document.querySelector('#makerBody .mk-pal .mk-dot');
+    out.first=none&&none.classList.contains('none');
+    none.click();
+    out.set=mkParts[0].c;
+    out.chip=!!document.querySelector('#makerBody .mk-part .pd.none');
+    player.myWear=[]; makerExit();
+    return JSON.stringify(out);
+  })()`));
+  check("a box with no colour paints nothing, and keeps its border as a ring",
+    CLEAR.plain === 0 && CLEAR.ring > 40 && CLEAR.ring < CLEAR.solid, JSON.stringify(CLEAR));
+  check("in the editor it is traced so it can still be found",
+    CLEAR.traced > 20, JSON.stringify(CLEAR));
+  check("the code says background: transparent, and the class says clear",
+    /background: transparent;/.test(CLEAR.code) && CLEAR.cls === 'clear-tile', JSON.stringify({code:CLEAR.code.slice(-200),cls:CLEAR.cls}));
+  check("a save keeps -1 and nothing below it", CLEAR.kept === -1 && CLEAR.dropped === -1, JSON.stringify(CLEAR));
+  check("the palette offers no colour first, and it lands on the box",
+    CLEAR.first === true && CLEAR.set === -1 && CLEAR.chip === true, JSON.stringify(CLEAR));
+
+  /* The tour of the front end. Every step is a predicate over the piece,
+     so nothing here can be clicked through — a step is done when the piece
+     actually has the thing. */
+  const TUT = JSON.parse(await ev(`(()=>{
+    if(typeof FE_STEPS==='undefined')return JSON.stringify({missing:true});
+    mgState=null; mgRobot=null; player.myWear=[]; player.feTut=null;
+    makerOpen('hat',null);
+    const out={steps:FE_STEPS.length, tips:0, seen:[]};
+    /* every property a child can tap says what it is */
+    for(const k in CC_CODE.field)if(CC_CODE.field[k].tip)out.tips++;
+    for(const k in CC_CODE.keyword)if(CC_CODE.keyword[k].tip)out.tips++;
+    out.props=Object.keys(CC_CODE.field).length+Object.keys(CC_CODE.keyword).length;
+    feStart();
+    out.began=player.feTut===0;
+    /* walking the whole tour by doing the work, never by pressing Next */
+    mkParts=[]; renderMaker();
+    mkAddPart();                                                out.seen.push(player.feTut);
+    Object.assign(mkParts[0],{w:70,h:16,y:60,x:15}); mkRender(); out.seen.push(player.feTut);
+    mkParts[0].r=40; mkRender();                                out.seen.push(player.feTut);
+    mkAddPart(); Object.assign(mkParts[1],{x:20,y:20,w:60,h:42,c:10}); mkRender();
+                                                                out.seen.push(player.feTut);
+    mkAddPart(); Object.assign(mkParts[2],{pin:mkParts[1].pid,w:22,h:44,r:50,c:0}); mkRender();
+                                                                out.seen.push(player.feTut);
+    mkParts[1].pad=9; mkRender();                               out.seen.push(player.feTut);
+    mkParts[1].lay=1; mkRender();                               out.seen.push(player.feTut);
+    mkParts[1].jus=1; mkRender();                               out.seen.push(player.feTut);
+    mkSel=2; mkCopyPart(2);                                     out.seen.push(player.feTut);
+    mkName='Party Cap'; mkSave();                               out.seen.push(player.feTut);
+    out.wore=(robots[selRobot].hat||'').indexOf('my:')===0;
+    player.feTut=null; player.myWear=[]; robots[selRobot].hat=null;
+    return JSON.stringify(out);
+  })()`));
+  check("the tour is ten steps and every one advances by doing the work",
+    !TUT.missing && TUT.steps === 10 && TUT.began === true &&
+    JSON.stringify(TUT.seen) === JSON.stringify([1,2,3,4,5,6,7,8,9,10]), JSON.stringify(TUT));
+  check("the last step is a hat the robot is wearing", TUT.wore === true, JSON.stringify(TUT));
+  check("every value a child can tap says what it is",
+    TUT.tips === TUT.props, JSON.stringify(TUT));
+
+  /* A piece has to be judged on a moving robot: a brim that clears the
+     antenna at rest can still swing through it on a chop, and shoes only
+     make sense mid-stride. The preview animates on the world robot's own
+     tables so the two cannot become different-looking robots. */
+  const POSE = JSON.parse(await ev(`(()=>{
+    if(typeof boardPose!=='function')return JSON.stringify({missing:true});
+    const shot=(pose,t)=>{const c=document.createElement('canvas');c.width=c.height=140;
+      const g=c.getContext('2d');
+      drawBoardRobot(g,70,74,54,'E','#ffb830',false,t,{shoes:'boots'},pose);
+      return g.getImageData(0,0,140,140).data.join(',');};
+    const idle=shot('idle',400), walk=shot('walk',400), work=shot('work',500);
+    const bare=(()=>{const c=document.createElement('canvas');c.width=c.height=140;
+      const g=c.getContext('2d');
+      drawBoardRobot(g,70,74,54,'E','#ffb830',false,400,{shoes:'boots'});
+      return g.getImageData(0,0,140,140).data.join(',');})();
+    /* the walk cycle has to move between frames, or it is a still picture */
+    const moves=shot('walk',400)!==shot('walk',760);
+    const P=boardPose('work',500);
+    return JSON.stringify({
+      three:idle!==walk&&walk!==work&&idle!==work,
+      posedDiffers:idle!==bare, moves:moves,
+      workLeans:Math.abs(P.rot)>1, workHasTool:!!P.TL,
+      /* the pose driver reads the same tables the world robot animates on */
+      sameTables:P.TL===ACT_TL.chop
+    });
+  })()`));
+  check("the preview strikes three different poses",
+    !POSE.missing && POSE.three === true, JSON.stringify(POSE));
+  check("a posed robot has the legs and arms the still one does not",
+    POSE.posedDiffers === true, JSON.stringify(POSE));
+  check("the walk actually walks between frames", POSE.moves === true, JSON.stringify(POSE));
+  check("the chop leans and carries the tool arm",
+    POSE.workLeans === true && POSE.workHasTool === true, JSON.stringify(POSE));
+  check("the preview animates on the world robot's own keyframes",
+    POSE.sameTables === true, JSON.stringify(POSE));
+  /* the Academy board is the one caller that must NOT get a pose: it draws
+     the same token it always has */
+  check("the Academy board robot is still drawn without a pose",
+    /drawBoardRobot\([^;]*rw\?\{hat:rw\.hat,outfit:rw\.outfit,shoes:rw\.shoes\}:null\);/
+      .test(fs.readFileSync(path.resolve(__dirname, "..", "js", "game", "challenges.js"), "utf8")));
+
+  check("a foreign save's pieces are re-encoded, not trusted",
+    Array.isArray(MADE.clean) && MADE.clean.length === 1 &&
+    MADE.clean[0] === 'my:a1|img src=x onerror=|144|0', JSON.stringify(MADE.clean));
+
   console.log("▶ splash login gate");
   check("splash shows an email/password login card when online is configured",
     await ev(`(()=>{renderSplashAuth();return !!document.getElementById('spEmail')&&!!document.getElementById('spLogin')&&!!document.getElementById('spSignup');})()`) === true);
@@ -2141,12 +3159,20 @@ async function ev(expr) {
     out.noTree=mgCond(mgState,'treeAhead');
     mgState=null; mgRobot=null;
     out.incomplete=(academyComplete()===false); // t_turn & t_if not solved
+    out.advIds=TUTS.slice(ACADEMY_CORE).map(t=>t.id).join(",");
+    out.coreGate=ACADEMY_CORE;
+    {  // graduating is the core six; the advanced four stay optional
+      const keep=JSON.parse(JSON.stringify(player.academy));
+      player.academy={}; TUTS.slice(0,ACADEMY_CORE).forEach(t=>player.academy[t.id]=1);
+      out.gradOnCore=academyComplete(); out.allDoneOnCore=academyAllDone();
+      player.academy=keep;
+    }
     renderProjects();
     // the whole sheet is one card language now: Academy and Puzzle Chapters use
     // the same compact .pcard as Build Projects, each keeping its dot track inside
     const ac=document.querySelector('#projList .pcard.acad-card');
     out.hasCard=!!ac;
-    out.acadMeta=ac?ac.querySelector('.pmeta').textContent.replace(/\s+/g,' ').trim():null;
+    out.acadMeta=ac?ac.querySelector('.pmeta').textContent.replace(/\\s+/g,' ').trim():null;
     out.acadTrack=ac?ac.querySelectorAll('.pmain .acad-track .acad-dot').length:0;
     out.oldMarkup=document.querySelectorAll('#projList .quest.proj').length; // must be zero
     const packCards=[...document.querySelectorAll('#projList .pcard:not(.acad-card)')]
@@ -2172,8 +3198,15 @@ async function ev(expr) {
     return JSON.stringify(out);
   })()`);
   const AC = JSON.parse(acad);
-  check("Academy defines a full ladder of stages", AC.count === 6, acad);
-  check("stages unlock a growing block set", AC.grows === "[1,3,4,4,5,6]", AC.grows);
+  check("Academy defines a full ladder of stages", AC.count === 10, acad);
+  // The six basics, then four that teach While, variables, functions and
+  // algorithms. A lesson never takes away a block an earlier one taught, so
+  // the allowed set only ever grows.
+  check("stages unlock a growing block set", AC.grows === "[1,3,4,4,5,6,7,10,12,12]", AC.grows);
+  check("the advanced half is present, and teaches the real thing",
+    AC.advIds === "t_while,t_var,t_func,t_algo", AC.advIds);
+  check("graduation still means the six basics, not all ten",
+    AC.coreGate === 6 && AC.gradOnCore === true && AC.allDoneOnCore === false, acad);
   check("reach goal: landing on the flag solves the stage", AC.moveSolved === true, acad);
   check("chop goal: felling the tree solves the stage", AC.chopSolved === true, acad);
   check("collect goal: gathering the gem solves the stage", AC.collectSolved === true, acad);
@@ -2182,7 +3215,8 @@ async function ev(expr) {
   check("Academy tracks partial progress", AC.incomplete === true, acad);
   check("Projects sheet shows the cohesive Academy section", AC.hasCard === true, acad);
   check("Academy card is a compact .pcard with progress meta + lesson track",
-    AC.acadTrack === AC.count && /4\/6 done/.test(AC.acadMeta || ""), AC.acadMeta + " dots=" + AC.acadTrack);
+    AC.acadTrack === AC.count && /4\/10 done/.test(AC.acadMeta || "")
+      && /basics 4\/6/.test(AC.acadMeta || ""), AC.acadMeta + " dots=" + AC.acadTrack);
   check("Puzzle chapters use the same card, one dot per level",
     AC.packCards === 5 && AC.packDots === true, "packs=" + AC.packCards + " dots=" + AC.packDots);
   check("no chapter is locked — every one is open from the start",
@@ -3297,6 +4331,42 @@ async function ev(expr) {
   const IM = JSON.parse(iconMiss);
   check("every emoji in the source has icon art", wanted.length > 40, "scanned " + wanted.length);
   check("no emoji renders as a raw system glyph", IM.length === 0, IM.join(" "));
+
+  // ---------------------------------------------- the app's own icon
+  /* Nothing in the game renders these, so nothing else would notice a
+     renamed file, a manifest that still points at the old one, or a
+     maskable icon with transparent corners — which some Android launchers
+     draw as a black wedge. The service worker has to precache every one of
+     them too, or an installed app loses its icon offline. */
+  {
+    const fs = require("fs"), path = require("path");
+    const ROOT2 = path.resolve(__dirname, "..");
+    const man = JSON.parse(fs.readFileSync(path.join(ROOT2, "manifest.json"), "utf8"));
+    const sw  = fs.readFileSync(path.join(ROOT2, "sw.js"), "utf8");
+    const html= fs.readFileSync(path.join(ROOT2, "index.html"), "utf8");
+    const file = s => s.split("?")[0];
+    const icons = man.icons.map(i => file(i.src));
+    const all = icons.concat(["apple-touch-icon.png"]);
+    check("every icon the manifest names is really there",
+      icons.every(f => fs.existsSync(path.join(ROOT2, f))), icons.join(" "));
+    check("and the Apple one too", fs.existsSync(path.join(ROOT2, "apple-touch-icon.png")));
+    check("the service worker precaches all of them",
+      all.every(f => sw.indexOf('"./' + f + '"') >= 0), all.join(" "));
+    check("the page links the icon and the manifest",
+      /rel="apple-touch-icon"[^>]*apple-touch-icon\.png/.test(html) &&
+      /rel="icon"[^>]*icon-192\.png/.test(html) &&
+      /rel="manifest"/.test(html));
+    /* a maskable icon is cropped to the launcher's own shape, so a
+       transparent corner is a hole in whatever it draws */
+    const mask = man.icons.filter(i => (i.purpose || "").indexOf("maskable") >= 0);
+    check("there is a maskable icon, and it is not the plain one",
+      mask.length === 1 && file(mask[0].src) !== "icon-512.png",
+      mask.map(m => m.src).join(" "));
+    const png = fs.readFileSync(path.join(ROOT2, file(mask[0].src)));
+    /* PNG colour type lives at byte 25 of the IHDR: 6 is RGBA, 2 is RGB */
+    check("the maskable icon is opaque — no transparency to leave a hole",
+      png[25] === 2, "colour type " + png[25]);
+  }
 
   check("no uncaught exceptions during entire run", exceptions.length === 0, exceptions.join(" | "));
 

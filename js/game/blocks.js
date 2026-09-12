@@ -5,7 +5,28 @@ const COND_LBL={treeAhead:"tree ahead 🌳",rockAhead:"rock ahead 🪨",ironAhea
   taken:"another robot called it 🤝",
   // challenge-board sensors (see CHALLENGE_CONDS in challenges.js)
   wallAhead:"wall ahead 🧱",pitAhead:"pit ahead 🕳️",brickHere:"block under me 🟧",onTarget:"on a target 🎯",holding:"carrying a block ✊",
-  doorAhead:"locked door ahead 🚪",keyAhead:"key ahead 🔑",gateAhead:"closed gate ahead 🚧",onPlate:"on a plate 🔘"};
+  doorAhead:"locked door ahead 🚪",keyAhead:"key ahead 🔑",gateAhead:"closed gate ahead 🚧",onPlate:"on a plate 🔘",
+  /* Cyber Lab sensors (see js/game/cyber.js). They are offered only by a
+     board that could make them true, so they never turn up in the world. */
+  jammed:"keypad jammed ⛔",sealAhead:"sealed note ahead 🔏"};
+/* ---- negation ----
+   A sensor condition is a name; the same name with a "!" in front is that
+   sensor answered the other way round. Keeping it inside the string rather
+   than wrapping the condition in an object means every save ever written
+   still loads, every stored solution still runs, and negating costs no
+   block — "while NOT blocked" is one block, exactly like "while blocked".
+
+   It is worth having because half of what a program wants to say is
+   negative. "Keep going while the way is NOT blocked" is the shape of every
+   wall-follower; without it a child has to invert the whole program instead
+   of the one word they meant. */
+const condNeg  = c => typeof c==="string" && c.charAt(0)==="!";
+const condBase = c => condNeg(c) ? c.slice(1) : c;
+const condFlip = c => (typeof c!=="string") ? c : (condNeg(c) ? c.slice(1) : "!"+c);
+/* a save from someone else can carry a name this build has never heard of:
+   show the name rather than the word "undefined" */
+const condLbl  = c => COND_LBL[condBase(c)] || String(condBase(c));
+
 const BUILDS=["sapling","bridge","chest"];
 const BUILD_LBL={sapling:"🌱 sapling (1🪵)",bridge:"🌉 bridge (2🪨)",chest:"📦 chest (5🪵)"};
 // Everywhere 🚶 Walk To / 🧭 Face Nearest can send a robot. Water is TERRAIN, not
@@ -24,6 +45,10 @@ const DEFS={
   drop:{cat:"basic",ic:"⤵️",lbl:"Drop"},
   pickUp:{cat:"basic",ic:"✊",lbl:"Lift"},   // challenge-only: lift a numbered brick to carry it
   build:{cat:"basic",ic:"🔨",lbl:"Build"},
+  /* Cyber Lab only: punch a number into the keypad in front. It is in DEFS
+     rather than in a CATS row because no world palette offers it — a level
+     hands it out through its own `allowed` list. */
+  tryCode:{cat:"basic",ic:"🔢",lbl:"Try Code"},
   rest:{cat:"basic",ic:"😴",lbl:"Rest"},
   wait:{cat:"basic",ic:"⏱️",lbl:"Wait"},
   repeat:{cat:"loops",ic:"🔁",lbl:"Repeat",container:true},
@@ -119,6 +144,7 @@ function newBlock(t){
   if(t==="changeVar"){b.name="x";b.n=1;}
   if(t==="countLoop"){b.name="i";b.to=5;b.body=[];}
   if(t==="say")b.val={k:"str",s:"Hello!"};
+  if(t==="tryCode")b.val={k:"num",n:1};
   return b;
 }
 // A comparison's right-hand side may be a bare number (old saves) or a value
