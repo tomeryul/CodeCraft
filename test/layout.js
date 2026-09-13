@@ -635,7 +635,11 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
       const out={};
       for(const [name,fn] of [["flat",()=>mgEnterCreator()],
                               ["cyber",()=>cyDesign()],
-                              ["tower",()=>{mgEnterCreator();document.getElementById('t3Btn').click();}]]){
+                              /* the 3D switch asks "are you sure?" and Playwright answers no by
+                                 default, which quietly ran the FLAT designer twice and passed */
+                              ["tower",()=>{mgEnterCreator();
+                                const c=window.confirm; window.confirm=()=>true;
+                                document.getElementById('t3Btn').click(); window.confirm=c;}]]){
         if(typeof mgState!=='undefined'&&mgState)mgExit(false);
         await wait(180); fn(); await wait(650);
         const t=document.getElementById('mgTools');
@@ -655,13 +659,71 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
           tapOk:bs.every(x=>x.getBoundingClientRect().height>=40),
           /* the design chrome is a tab away, not on top of the board */
           actOnBoard:!!document.getElementById('boardTab').querySelector('.cb-act'),
-          tip:(document.querySelector('#mgTip .cy-tip-t')||{}).textContent||''
+          tip:(document.querySelector('#mgTip .cy-tip-t')||{}).textContent||'',
+          names:bs.map(x=>(x.querySelector('.tl-lb')||{}).textContent||'').join()
         };
       }
       if(typeof mgState!=='undefined'&&mgState)mgExit(false);
       await wait(250);
       return out;
     });
+    /* The board must not move when you pick a different tool. It did: some
+       tools carry a number and some do not, so the stepper came and went,
+       and a tip that wrapped to two lines for one tool and three for the
+       next changed height too — and what is under the board is what
+       decides how much board there is. Three heights in the flat designer,
+       three in Cyber, and the thing you are looking at jumped under your
+       finger every time you switched. */
+    const steady = await pg.evaluate(async () => {
+      const wait=ms=>new Promise(r=>setTimeout(r,ms));
+      const out={};
+      for(const [name,fn] of [["flat",()=>mgEnterCreator()],
+                              ["cyber",()=>cyDesign()],
+                              /* the 3D switch asks "are you sure?" and Playwright answers no by
+                                 default, which quietly ran the FLAT designer twice and passed */
+                              ["tower",()=>{mgEnterCreator();
+                                const c=window.confirm; window.confirm=()=>true;
+                                document.getElementById('t3Btn').click(); window.confirm=c;}]]){
+        if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+        await wait(180); fn(); await wait(700);
+        const seen=[];
+        for(const t of [...document.querySelectorAll('#mgTools .tool')]){
+          t.click();
+          await wait(120);
+          /* Force the fit rather than waiting for whatever would have
+             driven the next draw: mgFitBoard is throttled to a window of
+             its own, so measuring on a timer measures the timer. */
+          if(window.mgFitReset)mgFitReset();
+          mgDraw(); await wait(120);
+          /* the tool's name and the dock's height come along, because when
+             this fails the question is always WHICH tool and by how much */
+          seen.push({h:Math.round(document.getElementById('mgCanvas').getBoundingClientRect().height),
+            t:(t.querySelector('.tl-lb')||{}).textContent,
+            dock:Math.round(document.getElementById('mgDock').getBoundingClientRect().height)});
+        }
+        const hs=[...new Set(seen.map(x=>x.h))];
+        out[name]={heights:hs,n:seen.length,
+                   /* only the outliers, so a failure reads at a glance */
+                   odd:hs.length>1?seen.filter(x=>x.h!==hs[0]).slice(0,4):[],
+                   tools:[...document.querySelectorAll('#mgTools .tl-lb')].map(e=>e.textContent).join()};
+      }
+      if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+      await wait(250);
+      return out;
+    });
+    for(const k of ["flat","cyber","tower"]){
+      ck(`${W}x${H} ${k}: the board is the same size whichever tool is picked`,
+         steady[k].n>0 && steady[k].heights.length===1, steady[k]);
+    }
+    /* and these really are three different designers — the 3D switch asks
+       a confirm() that a headless browser says no to, which ran the flat
+       one twice and passed twice */
+    ck(`${W}x${H} the three designers are three different tool sets`,
+       steady.tower.tools==='Brick,Ground,Pit,Start,Erase' &&
+       steady.cyber.tools.indexOf('Keypad')>=0 &&
+       steady.flat.tools.indexOf('Target')>=0,
+       {flat:steady.flat.tools,cyber:steady.cyber.tools,tower:steady.tower.tools});
+
     for(const k of ["flat","cyber","tower"]){
       const t=tools[k];
       ck(`${W}x${H} ${k}: every tool is on screen, none of it scrolled out of reach`,

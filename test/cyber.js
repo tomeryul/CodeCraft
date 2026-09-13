@@ -838,12 +838,30 @@ async function toWorld(pg,he){
     const B=t=>newBlock(t);
     const loop=(n,body)=>{const b=B('countLoop');b.name='i';b.to=n;b.body=body;return b;};
     const tc=v=>{const b=B('tryCode');b.val=v;return b;};
+    /* clear anything already celebrating before starting: the daily gift
+       fires on its own clock and used to win the race for #ccCele, which
+       read as "the lesson is not Hebrew" when the lesson was never on
+       screen at all */
+    for(let i=0;i<4;i++){
+      const c=document.querySelector('#ccCele .cc-cta'); if(!c)break;
+      c.click(); await wait(250);
+    }
     mgRobot.program=[loop(10,[tc({k:'var',name:'i'})]),B('move'),B('move'),B('move')];
     renderProgram(); mgRun();
     for(let i=0;i<900;i++){ if(!(mgState&&mgState.running))break; await wait(25); }
     await wait(400);
-    const d=document.querySelector('#ccCele .cc-desc'), k=document.querySelector('#ccCele .cc-kick');
-    return { desc:d?d.textContent:'', kick:k?k.textContent:'' };
+    /* and take every card that comes up, not just the first — whichever
+       one carries the lesson is the one under test */
+    const seen=[];
+    for(let i=0;i<4;i++){
+      const d=document.querySelector('#ccCele .cc-desc'), k=document.querySelector('#ccCele .cc-kick');
+      if(!d)break;
+      seen.push({desc:d.textContent||'',kick:k?k.textContent:''});
+      const c=document.querySelector('#ccCele .cc-cta'); if(!c)break;
+      c.click(); await wait(300);
+    }
+    seen.sort((a,b)=>b.desc.length-a.desc.length);
+    return seen[0]||{desc:'',kick:''};
   });
   ck('the lesson on the celebration card is Hebrew',
      HEB.test(heWhy.desc) && !/possibilities|secret/i.test(heWhy.desc), heWhy.desc.slice(0,60));

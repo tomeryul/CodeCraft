@@ -472,6 +472,10 @@ window.mgToolsUI=function(){
     b.addEventListener("click",()=>{mgState.paintMode=t.id;sfx(560,.03);mgCreatorUI();});
     el.appendChild(b);
   }
+  /* No Tower tool carries a number, so there is no stepper at all and the
+     row it would have taken goes to the tip line — the same deal the other
+     two designers make, and nothing moves between tools either way. */
+  const dk=$("mgDock"); if(dk)dk.classList.add("no-stp");
   /* the same line every designer shows. No 📘: the flat guide's starter
      boards would paint a flat board under a 3D blueprint. */
   const cur=TOOLS.find(x=>x.id===mgState.paintMode);

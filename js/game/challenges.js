@@ -530,7 +530,14 @@ function mgToolsUI(){
   const stp=$("mgBrickStp");
   if(stp){
     const on=!!(t&&(t.num||t.colour||t.dir));
-    stp.style.display=on?"":"none";
+    /* The row a missing stepper would have taken goes to the tip line, so
+       the dock's height does not depend on which tool is picked. The inline
+       display is cleared as well as the class: the Tower designer hides
+       this element outright, and without the reset the number stepper
+       stayed gone for the rest of the session once you had been in 3D. */
+    stp.style.display="";
+    stp.classList.toggle("empty",!on);
+    const dk=$("mgDock"); if(dk)dk.classList.toggle("no-stp",!on);
     if(on){
       const lab=stp.querySelector(".clab");
       if(lab)lab.textContent=t.dir?"🧭 Direction":t.colour?"🎨 Colour":"🔢 Block number";

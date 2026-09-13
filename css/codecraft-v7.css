@@ -576,6 +576,16 @@ body.sheets-full #maker.sized,
 #mgDock .stp{position:static;display:flex;align-items:center;gap:2px;align-self:stretch;
   justify-content:center;padding:3px;border-radius:999px;
   background:rgba(0,0,0,.22);backdrop-filter:none;border:none;}
+/* A tool with no number has no stepper, and the row it would have taken
+   is given to the line that says what the tool does — so the dock is the
+   same height either way (the board is sized from what is under it, and it
+   must not move when you pick a different tool) without leaving a hole
+   where the stepper used to be. --stp-h is what the dock loses when the
+   stepper goes: the stepper's own height PLUS the flex gap above it, which
+   goes with it. Set here beside the rules that make both. */
+#mgDock{--stp-h:47px;}   /* 42px stepper + 5px dock gap */
+#mgDock .stp.empty{display:none;}
+#mgDock.no-stp .cy-tip-t{height:calc(1.42em * 3 + var(--stp-h));}
 #mgDock .stp .clab{font-size:11px;font-weight:800;color:var(--ink2);margin:0 4px 0 8px;white-space:nowrap;}
 #mgDock .stp button{width:36px;height:36px;padding:0;border-radius:999px;font-size:15px;
   background:rgba(255,255,255,.07);color:var(--ink);border:none;}
@@ -709,8 +719,20 @@ body:has(.sheet.open) #toasts .toast{max-width:88vw;}
 .gnote .gline:last-child{margin-bottom:0;}
 .gnote .grule{padding:0;margin:0 0 10px;background:none;border:0;}
 #mgTip,.cy-tip{display:flex;align-items:flex-start;gap:7px;padding:5px 8px 1px;}
-.cy-tip .cy-tip-t{font-size:11px;line-height:1.42;color:var(--ink2);min-width:0;
-  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;}
+/* Three lines whether the sentence needs three or one. The height of this
+   line is part of what mgFitBoard leaves the board, so a tip that wrapped
+   to two lines for one tool and three for the next resized the BOARD every
+   time you picked a different tool — the board is the thing being looked
+   at and it must not move because the caption under it did. */
+/* Fixed height, and it SCROLLS rather than clamping: a clamp turned "what
+   this tool does" into half of what it does, and at 320px that was almost
+   every tool. The box never changes size, so the board never moves; the
+   sentence is all still there. */
+.cy-tip .cy-tip-t{font-size:11px;line-height:1.42;color:var(--ink2);min-width:0;flex:1 1 auto;
+  height:calc(1.42em * 3);overflow-y:auto;overscroll-behavior:contain;
+  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.22) transparent;}
+.cy-tip .cy-tip-t::-webkit-scrollbar{width:3px;}
+.cy-tip .cy-tip-t::-webkit-scrollbar-thumb{background:rgba(255,255,255,.22);border-radius:3px;}
 .cy-tip b{color:#8ff0a0;font-weight:800;}
 /* the way into the guide, beside the tools — the only row of this panel
    that is on screen on an untouched board */
@@ -737,8 +759,14 @@ body:has(.sheet.open) #toasts .toast{max-width:88vw;}
 @media (max-height:700px){
   #mgDock{gap:4px;margin-top:6px;}
   #mgDock .cb-row.tools{gap:4px;grid-template-columns:repeat(auto-fit,minmax(52px,1fr));}
-  #mgDock .tool{height:44px;}
+  #mgDock .tool{height:42px;}
   #mgDock .tool .tl-em{font-size:16px;}
-  #mgDock .stp button{width:32px;height:32px;}
-  #mgTip .cy-tip-t,.cy-tip .cy-tip-t{-webkit-line-clamp:2;}
+  #mgDock{--stp-h:38px;}   /* 34px stepper + 4px dock gap */
+  #mgDock .stp{padding:2px;}
+  #mgDock .stp button{width:30px;height:30px;}
+  /* two lines' worth of window instead of three, and it still scrolls, so
+     the sentence is whole — there is simply less board to give away here */
+  #mgTip .cy-tip-t,.cy-tip .cy-tip-t{height:calc(1.42em * 2);}
+  #mgDock.no-stp .cy-tip-t{height:calc(1.42em * 2 + var(--stp-h));}
+  #mgTip,.cy-tip{padding-top:3px;}
 }

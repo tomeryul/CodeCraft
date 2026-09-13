@@ -302,7 +302,12 @@ window.mgToolsUI=function(){
   tipLine();
   const stp=$("mgBrickStp"), num=NUMTOOL(mgState.paintMode);
   if(stp){
-    stp.style.display=num?"":"none";
+    /* the row a missing stepper would have taken goes to the tip line, so
+       the dock's height does not depend on which tool is picked — and the
+       inline display goes back too, because Tower's designer sets it */
+    stp.style.display="";
+    stp.classList.toggle("empty",!num);
+    const dk=$("mgDock"); if(dk)dk.classList.toggle("no-stp",!num);
     if(num){
       const lab=stp.querySelector(".clab");
       if(lab)lab.textContent="🔢 Code — tap to type";
