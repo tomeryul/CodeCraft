@@ -697,12 +697,24 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
           mgDraw(); await wait(120);
           /* the tool's name and the dock's height come along, because when
              this fails the question is always WHICH tool and by how much */
+          const T=id=>Math.round(document.getElementById(id).getBoundingClientRect().top);
           seen.push({h:Math.round(document.getElementById('mgCanvas').getBoundingClientRect().height),
             t:(t.querySelector('.tl-lb')||{}).textContent,
-            dock:Math.round(document.getElementById('mgDock').getBoundingClientRect().height)});
+            dock:Math.round(document.getElementById('mgDock').getBoundingClientRect().height),
+            /* and where the GRID is: the board holding still is only half of
+               it — the tools are what you are aiming at, and they used to
+               slide by the height of a stepper as you moved between a tool
+               that carries a value and one that does not */
+            tools:T('mgTools'), stp:T('mgBrickStp')});
         }
         const hs=[...new Set(seen.map(x=>x.h))];
         out[name]={heights:hs,n:seen.length,
+                   toolTops:[...new Set(seen.map(x=>x.tools))],
+                   stpTops:[...new Set(seen.map(x=>x.stp))],
+                   /* the value control belongs after the tools and the line
+                      that explains them, not above the lot */
+                   order:[...document.getElementById('mgDock').children]
+                     .map(c=>c.id).filter(Boolean).join('>'),
                    /* only the outliers, so a failure reads at a glance */
                    odd:hs.length>1?seen.filter(x=>x.h!==hs[0]).slice(0,4):[],
                    tools:[...document.querySelectorAll('#mgTools .tl-lb')].map(e=>e.textContent).join()};
@@ -714,7 +726,15 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     for(const k of ["flat","cyber","tower"]){
       ck(`${W}x${H} ${k}: the board is the same size whichever tool is picked`,
          steady[k].n>0 && steady[k].heights.length===1, steady[k]);
+      ck(`${W}x${H} ${k}: and the tools stay exactly where they are`,
+         steady[k].toolTops.length===1 && steady[k].stpTops.length===1, steady[k]);
     }
+    /* the value control is the LAST thing in the dock: it used to sit above
+       the tools, so picking a tool that carries a number pushed the whole
+       grid down and picking one that does not pulled it back up */
+    ck(`${W}x${H} the value control sits under the tools, not over them`,
+       ["flat","cyber"].every(k=>steady[k].order==='mgTools>mgTip>mgBrickStp'),
+       {flat:steady.flat.order,cyber:steady.cyber.order});
     /* and these really are three different designers — the 3D switch asks
        a confirm() that a headless browser says no to, which ran the flat
        one twice and passed twice */

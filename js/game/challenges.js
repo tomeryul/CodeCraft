@@ -380,7 +380,8 @@ function mgTipUI(em,label,tip,guide){
     el=document.createElement("div");el.id="mgTip";el.className="cy-tip";
     el.innerHTML='<button class="cy-help" id="mgTipGuide">📘 <span>Guide</span></button>'+
       '<span class="cy-tip-t"></span>';
-    dock.appendChild(el);
+    /* between the tools and the value control, not after both */
+    dock.insertBefore(el,$("mgBrickStp")||null);
     $("mgTipGuide").addEventListener("click",()=>{
       const bar=$("mgCreatorBar"); if(bar)bar.classList.remove("setup");
       if(typeof openGuide==="function")openGuide();
@@ -427,7 +428,14 @@ function mgStepArg(d){
   const panel=$("mgPanel"), tools=$("mgTools"), stp=$("mgBrickStp");
   if(!panel||!tools||!stp||$("mgDock"))return;
   const dock=document.createElement("div");dock.id="mgDock";
-  dock.appendChild(stp);dock.appendChild(tools);
+  /* Tools first, then the line that explains one, and the value control
+     LAST. It used to be first, above the tools — so picking a tool that
+     carries a number pushed the whole grid of tools down by the height of
+     a stepper, and picking one that does not pulled it back up. The tools
+     are the thing you are aiming at; they do not move. What comes and goes
+     comes and goes at the bottom, next to Run, where there is already
+     space for it. (mgTipUI inserts #mgTip between these two.) */
+  dock.appendChild(tools);dock.appendChild(stp);
   const read=document.createElement("div");read.id="mgRead";
   panel.appendChild(read);
   /* Designing a level and drawing one are two different jobs, and the first
@@ -530,14 +538,14 @@ function mgToolsUI(){
   const stp=$("mgBrickStp");
   if(stp){
     const on=!!(t&&(t.num||t.colour||t.dir));
-    /* The row a missing stepper would have taken goes to the tip line, so
-       the dock's height does not depend on which tool is picked. The inline
-       display is cleared as well as the class: the Tower designer hides
-       this element outright, and without the reset the number stepper
-       stayed gone for the rest of the session once you had been in 3D. */
+    /* A tool with no value keeps the row's SPACE and gives up its pixels,
+       so the dock is the same height either way and the board above it does
+       not move. The inline display is cleared as well as the class: the
+       Tower designer hides this element outright, and without the reset the
+       number stepper stayed gone for the rest of the session once you had
+       been in 3D. */
     stp.style.display="";
     stp.classList.toggle("empty",!on);
-    const dk=$("mgDock"); if(dk)dk.classList.toggle("no-stp",!on);
     if(on){
       const lab=stp.querySelector(".clab");
       if(lab)lab.textContent=t.dir?"🧭 Direction":t.colour?"🎨 Colour":"🔢 Block number";
