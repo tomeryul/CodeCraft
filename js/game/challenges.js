@@ -233,6 +233,13 @@ function mgEnterCreator(){
   mgState.editingId=null;   // when editing an already-saved My Challenges entry, its id (→ Save updates in place)
   mgState.publishId=null;   // when editing an already-published community challenge, its id (→ Publish PATCHes it)
   $("mgCreatorBar").classList.add("on");
+  $("mgPanel").classList.add("mk");   // the bar is in another tab now; the dock rides on this
+
+  /* Designing needs the room, and on a half-height sheet the box of tools
+     is below the fold with nothing saying so. Playing a challenge still
+     opens at whatever size the player chose — this does NOT touch that
+     preference, and mgExit puts their size back. */
+  $("editor").classList.add("max");
   mgCreatorUI();
 }
 // open the creator loaded with a community challenge the player published, so they
@@ -342,12 +349,51 @@ function mgSetBtn(id,on){const b=$(id);if(!b)return;b.style.opacity=on?"":".4";b
 // The creator's tool strip: the fixed board tools plus one chip per terrain type,
 // so adding a tile type in puzzle-tiles.js adds its tool here automatically.
 function mgToolList(){
-  const base=[{id:"paint",em:"🖌️",lbl:"Target",num:true},
-              {id:"bot",em:"🤖",lbl:"Start"},
-              {id:"brick",em:"🔢",lbl:"Block",num:true}];
+  /* `tip` is what the tool DOES, in one sentence, written for somebody who
+     has never placed one. Eleven glyphs in a row is eleven things to guess
+     otherwise, and the tile types carry their own in puzzle-tiles.js. */
+  const base=[{id:"paint",em:"🖌️",lbl:"Target",num:true,
+    tip:"The tiles the robot has to fill with blocks. Give one a number below and only that exact block will do."},
+              {id:"bot",em:"🤖",lbl:"Start",
+    tip:"Where the robot begins, facing right."},
+              {id:"brick",em:"🔢",lbl:"Block",num:true,
+    tip:"A block already on the board when the level starts. Number it below so a program can 📖 Read and compare them."}];
   const tiles=(window.CC_TILES?CC_TILES.TYPES:[]).map(t=>({id:t,em:CC_TILES.DEFS[t].em,lbl:CC_TILES.DEFS[t].lbl,
+    tip:CC_TILES.DEFS[t].tip||"",
     colour:CC_TILES.DEFS[t].arg==="colour",dir:CC_TILES.DEFS[t].arg==="dir"}));
-  return base.concat(tiles,[{id:"erase",em:"🧹",lbl:"Erase"}]);
+  return base.concat(tiles,[{id:"erase",em:"🧹",lbl:"Erase",
+    tip:"Clears whatever is on the tile you tap."}]);
+}
+/* ---- what the tool in your hand does ----
+   One line under the tools, in every designer: the flat board's, Tower's
+   and the Cyber Lab's all feed the same element, because they all have the
+   same problem — a row of glyphs that says nothing. The 📘 rides here too,
+   since the dock is the part of the panel that is always on screen.
+
+   Separate text nodes, never one glued string: the Hebrew dictionary
+   matches WHOLE text nodes and a name welded to its sentence matches
+   nothing. */
+function mgTipUI(em,label,tip,guide){
+  const dock=$("mgDock"); if(!dock)return;
+  let el=$("mgTip");
+  if(!el){
+    el=document.createElement("div");el.id="mgTip";el.className="cy-tip";
+    el.innerHTML='<button class="cy-help" id="mgTipGuide">📘 <span>Guide</span></button>'+
+      '<span class="cy-tip-t"></span>';
+    dock.appendChild(el);
+    $("mgTipGuide").addEventListener("click",()=>{
+      const bar=$("mgCreatorBar"); if(bar)bar.classList.remove("setup");
+      if(typeof openGuide==="function")openGuide();
+    });
+  }
+  el.style.display=(mgState&&mgState.creator)?"":"none";
+  const g=$("mgTipGuide"); if(g)g.style.display=guide?"":"none";
+  const tx=el.querySelector(".cy-tip-t"); if(!tx)return;
+  tx.textContent="";
+  const b=document.createElement("b");b.textContent=em+" "+label;
+  tx.appendChild(b);
+  tx.appendChild(document.createTextNode(" — "));
+  tx.appendChild(document.createTextNode(tip||""));
 }
 const DIR_EM=["⬆️","➡️","⬇️","⬅️"]; // matches DX/DY: 0=N 1=E 2=S 3=W
 // One shared −/+ stepper: it edits the block number for 🖌️/🔢, the colour (1-4,
@@ -384,11 +430,23 @@ function mgStepArg(d){
   dock.appendChild(stp);dock.appendChild(tools);
   const read=document.createElement("div");read.id="mgRead";
   panel.appendChild(read);
-  /* order matters: the creator bar sits above what it edits, the hint last */
-  for(const id of ["mgCreatorBar","mgVars","mgCost","mgLesson","mgBoardHint"]){
+  /* Designing a level and drawing one are two different jobs, and the first
+     was sitting on top of the second: 3D / Cyber / Setup / Save and a
+     fold-out panel of settings, wedged between the tools and the board they
+     act on. The whole bar goes to a tab of its own, after Python — moved
+     whole rather than row by row, so every rule written as
+     "#mgCreatorBar .cb-act" still finds its element. The ⚙️ fold-out goes
+     with it and stops being a fold-out: in a tab of its own it is open.
+
+     What stays on the board is the one line that belongs beside the work:
+     where the design stands. */
+  const design=$("designTab"), bar=$("mgCreatorBar"), status=$("mgStatus");
+  if(status)read.appendChild(status);
+  for(const id of ["mgVars","mgCost","mgLesson","mgBoardHint"]){
     const el=$(id); if(el)read.appendChild(el);
   }
   read.appendChild(dock);
+  if(design&&bar)design.appendChild(bar);
 })();
 
 /* The board fits the space there is. All three drawers — the flat board,
@@ -422,7 +480,23 @@ function mgFitBoard(aspect){
      announces itself — but only as much as there is to say, and never more
      than its share, so a board is not handed to an empty panel */
   const read=$("mgRead");
-  const want=Math.min(read?(read.scrollHeight||0):0,Math.round(room*.30),64);
+  /* While DESIGNING, what is under the board is not "a strip of reading" —
+     it is the box of tools, and a tool you cannot see is a tool you do not
+     use. It gets the height it actually needs and the board takes what is
+     left, which is the other way round from playing. */
+  const dock=$("mgDock"), bar=$("mgCreatorBar");
+  const making=!!(bar&&bar.classList.contains("on")&&dock&&dock.offsetParent);
+  const natural=read?(read.scrollHeight||0):0;
+  /* Same measurement either way; only the cap differs. Playing, the strip
+     under the board is a hint that a scroll exists and gets a sliver.
+     Designing, it is the box of tools and the line that says what the one
+     in your hand does — all of it, up to most of the panel, and the board
+     takes what is left. Capping it at the DOCK alone was not enough: the
+     status line and the rest of the strip are in there too, and the panel
+     came out taller than the tab it lives in. */
+  const want=making
+    ? Math.min(natural,Math.round(room*.70))
+    : Math.min(natural,Math.round(room*.30),64);
   const capH=Math.max(72,room-want);
   /* no floor under the width: a floor here would put the height back over
      the cap it was just given, which is the whole point of the cap */
@@ -448,8 +522,12 @@ function mgToolsUI(){
     b.addEventListener("click",()=>{mgState.paintMode=t.id;sfx(560,.03);mgCreatorUI();});
     el.appendChild(b);
   }
+  const t=list.find(x=>x.id===cur);
+  /* the flat designer has a guide of its own; Tower has none, and its
+     starter boards would paint a flat board under a 3D blueprint */
+  if(t)mgTipUI(t.em,t.lbl,t.tip,!(typeof on3d==="function"&&on3d()));
   // the stepper only appears for tools that carry a value, and relabels itself
-  const t=list.find(x=>x.id===cur), stp=$("mgBrickStp");
+  const stp=$("mgBrickStp");
   if(stp){
     const on=!!(t&&(t.num||t.colour||t.dir));
     stp.style.display=on?"":"none";
@@ -480,6 +558,7 @@ function mgActLabels(){
 }
 function mgCreatorUI(){
   if(!mgState||!mgState.creator)return;
+  $("designTabBtn").style.display="";
   mgActLabels();
   mgToolsUI();
   const p=mgState.proj;
@@ -1153,6 +1232,7 @@ function mgEnter(proj0){
      in and out of code. */
   $("editor").classList.add("open");
   $("boardTabBtn").style.display="";
+  $("designTabBtn").style.display="none";   // creators turn it on below
   $("editor").classList.add("mg");    // reveals RESET/STEP in the bottom action bar
   $("mgTitle").textContent=proj.em+" "+proj.name;
   /* Two nodes, not one string. Joining the goal to its question made a
@@ -1199,8 +1279,13 @@ function mgExit(reopen){
   player.projPrograms[mgState.proj.id]=packProg(mgRobot);
   mgState=null;mgRobot=null;
   $("boardTabBtn").style.display="none";
+  $("designTabBtn").style.display="none";
+  $("designTab").style.display="none";
+  /* the creator borrowed full height; hand the player's own size back */
+  $("editor").classList.toggle("max",!!sheetFull);
   $("editor").classList.remove("mg");
   $("mgCreatorBar").classList.remove("on");
+  $("mgPanel").classList.remove("mk");
   setTab("blocks");
   selBlock=null;elseSel=null;
   renderPalette();updateChips();renderProgram();renderPy();updateUndoBtns();

@@ -38,12 +38,19 @@ const DEF_ALLOWED=["move","turnL","turnR","build","climb","repeat"];
 
 /* `sh` is the word under the icon, `lbl` the sentence it holds on a
    long press — a label has to fit a 52px button */
+/* `tip` is what the tool does, in one sentence, for somebody who has never
+   placed one — the same line the flat and Cyber designers show. */
 const TOOLS=[
-  {id:"plan",   em:"🧱", sh:"Brick",  lbl:"Blueprint — tap to add a level, hold to clear"},
-  {id:"ground", em:"⛰️", sh:"Ground", lbl:"Ground — raise the terrain the robot starts on"},
-  {id:"pit",    em:"🕳️", sh:"Pit",    lbl:"Pit — a hole to jump across"},
-  {id:"bot",    em:"🤖", sh:"Start",  lbl:"Start — tap the same tile again to turn"},
-  {id:"erase",  em:"🧹", sh:"Erase",  lbl:"Erase everything on the tile"}
+  {id:"plan",   em:"🧱", sh:"Brick",  lbl:"Blueprint — tap to add a level, hold to clear",
+   tip:"How high a tower of bricks has to stand here when the player is done. Tap to add one level, hold to clear the tile."},
+  {id:"ground", em:"⛰️", sh:"Ground", lbl:"Ground — raise the terrain the robot starts on",
+   tip:"Raises the land itself. The robot starts standing on the ground, so it only has to build what is ABOVE it."},
+  {id:"pit",    em:"🕳️", sh:"Pit",    lbl:"Pit — a hole to jump across",
+   tip:"A hole in the ground. The robot has to 🦘 Jump across it, and a brick needs ground under it — not a pit."},
+  {id:"bot",    em:"🤖", sh:"Start",  lbl:"Start — tap the same tile again to turn",
+   tip:"Where the robot begins. Tap the same tile again to turn it round."},
+  {id:"erase",  em:"🧹", sh:"Erase",  lbl:"Erase everything on the tile",
+   tip:"Clears everything on the tile — brick, ground and pit."}
 ];
 
 const on3  =()=>!!(mgState&&mgState.proj&&mgState.proj.mode3d);
@@ -358,10 +365,13 @@ function chrome(){
     '<span class="t3stat">🧱 <b id="t3Bricks">0</b></span>'+
     '<span class="spacer"></span>'+
     '<span class="t3leg"><i class="t3lg t3lg-p"></i>brick<i class="t3lg t3lg-g"></i>ground<i class="t3lg t3lg-h"></i>pit</span>';
-  bar.insertBefore(row,act);
+  /* The stats and the 🧊/🗺️ view toggle stay with the BOARD: they are read
+     and used while drawing. The bar they used to sit in is a tab away now. */
+  const read=$("mgRead")||bar, dock=$("mgDock");
+  read.insertBefore(row,dock||null);
   const warn=document.createElement("div");
   warn.id="t3Warn";warn.className="t3warn";
-  bar.insertBefore(warn,act);
+  read.insertBefore(warn,dock||null);
   $("t3View").addEventListener("click",()=>{
     mgState.t3view=mgState.t3view==="3d"?"grid":"3d";
     if(window.t3Cam)t3Cam.bar(mgState.t3view==="3d");
@@ -462,6 +472,10 @@ window.mgToolsUI=function(){
     b.addEventListener("click",()=>{mgState.paintMode=t.id;sfx(560,.03);mgCreatorUI();});
     el.appendChild(b);
   }
+  /* the same line every designer shows. No 📘: the flat guide's starter
+     boards would paint a flat board under a 3D blueprint. */
+  const cur=TOOLS.find(x=>x.id===mgState.paintMode);
+  if(cur&&typeof mgTipUI==="function")mgTipUI(cur.em,cur.sh,cur.tip,false);
 };
 
 const _mgPaintTile=window.mgPaintTile;

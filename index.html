@@ -83,6 +83,10 @@
     <button data-tab="board" id="boardTabBtn" style="display:none">🗺️ Board</button>
     <button data-tab="blocks" class="on">🧩 Blocks</button>
     <button data-tab="python">🐍 Python</button>
+    <!-- everything about DESIGNING the level, in a tab of its own. It used to
+         sit above the board, between the tools and the thing being drawn,
+         where it was four buttons of chrome in the way of the work. -->
+    <button data-tab="design" id="designTabBtn" style="display:none">🛠️ Design</button>
   </div>
   <div class="tabbody" id="boardTab" style="display:none">
     <div id="mgPanel">
@@ -143,6 +147,8 @@
     <pre id="pyCode"></pre>
     <div class="pynote">🐍 This is your block program written in Python — the same language real engineers use! Your blocks and this code always match.</div>
   </div>
+  <!-- filled at load from the creator bar: see the dock IIFE in challenges.js -->
+  <div class="tabbody" id="designTab" style="display:none"></div>
   <!-- ONE action bar, bottom of the sheet, every mode. Run/Stop is the only
        primary and never moves; RESET and STEP appear for challenges only. -->
   <div id="actionBar">

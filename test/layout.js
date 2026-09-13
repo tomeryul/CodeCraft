@@ -335,19 +335,25 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     await pg.waitForTimeout(350);
 
     // ---------------------------------------------- creator tool tray
-    const cr = await pg.evaluate(()=>{
+    const cr = await pg.evaluate(async ()=>{
       if(mgState) mgExit(false);
+      await new Promise(r=>setTimeout(r,180));
       mgEnterCreator();
-      $('mgCreatorBar').classList.add('setup');
+      /* Measured after a beat, not in the same frame: the board sizes
+         itself to whatever the tray leaves (see mgFitBoard), and reading
+         the tray before that has run measures the layout it is replacing.
+         It used to pass by luck, on a tray short enough not to care. */
+      await new Promise(r=>setTimeout(r,650));
       /* the tray is the dock at the foot of the board's scroll: sticky
          never leaves its parent, so it is a direct child of the panel and
          has to be on screen with the board, at the half height too */
-      const d=document.getElementById('mgDock'), t=document.querySelector('#mgDock .cb-row.tools');
+      const d=document.getElementById('mgDock');
       const st=d?getComputedStyle(d).position:null, r=d?d.getBoundingClientRect():null;
       const bt=document.getElementById('boardTab').getBoundingClientRect();
       const named=[...document.querySelectorAll('#mgDock .tool .tl-lb')].map(e=>e.textContent.trim()).filter(Boolean).length;
       const tools=document.querySelectorAll('#mgDock .tool').length;
       if(mgState) mgExit(false);
+      await new Promise(r=>setTimeout(r,200));
       return { sticky:st, inView:r?(r.bottom<=bt.bottom+1&&r.top<innerHeight):false, named, tools };
     });
     ck(`${W}x${H} creator tool tray is sticky at the foot of the board`, cr.sticky==='sticky'&&cr.inView, cr);
@@ -619,6 +625,52 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     });
     await pg.waitForTimeout(300);
     ck(`${W}x${H} no sheet clips content it cannot scroll to`, clipped.length===0, clipped);
+
+    // ---------------------------------------------- the designers' tool box
+    /* The tools used to be one nowrap row that scrolled sideways, so half
+       the box was off the edge with nothing saying it was there. People
+       painted with whichever four they could see. */
+    const tools = await pg.evaluate(async () => {
+      const wait=ms=>new Promise(r=>setTimeout(r,ms));
+      const out={};
+      for(const [name,fn] of [["flat",()=>mgEnterCreator()],
+                              ["cyber",()=>cyDesign()],
+                              ["tower",()=>{mgEnterCreator();document.getElementById('t3Btn').click();}]]){
+        if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+        await wait(180); fn(); await wait(650);
+        const t=document.getElementById('mgTools');
+        const box=t.getBoundingClientRect();
+        const bs=[...t.querySelectorAll('.tool')];
+        const tip=document.getElementById('mgTip');
+        const tr=tip?tip.getBoundingClientRect():null;
+        out[name]={
+          n:bs.length,
+          /* no sideways scroll, and every tool inside the box that holds them */
+          scrolls:t.scrollWidth>t.clientWidth+1,
+          inside:bs.every(x=>{const r=x.getBoundingClientRect();
+            return r.left>=box.left-1&&r.right<=box.right+1;}),
+          /* and the whole box, and the line under it, actually on screen */
+          onScreen:box.top>=0&&box.bottom<=innerHeight+1&&
+                   !!tr&&tr.top>=0&&tr.bottom<=innerHeight+1,
+          tapOk:bs.every(x=>x.getBoundingClientRect().height>=40),
+          /* the design chrome is a tab away, not on top of the board */
+          actOnBoard:!!document.getElementById('boardTab').querySelector('.cb-act'),
+          tip:(document.querySelector('#mgTip .cy-tip-t')||{}).textContent||''
+        };
+      }
+      if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+      await wait(250);
+      return out;
+    });
+    for(const k of ["flat","cyber","tower"]){
+      const t=tools[k];
+      ck(`${W}x${H} ${k}: every tool is on screen, none of it scrolled out of reach`,
+         t.n>0 && !t.scrolls && t.inside && t.onScreen, t);
+      ck(`${W}x${H} ${k}: a tool is big enough to hit, and says what it does`,
+         t.tapOk && t.tip.length>30, {tapOk:t.tapOk,tip:t.tip.slice(0,40)});
+      ck(`${W}x${H} ${k}: the design buttons are not stacked on the board`,
+         t.actOnBoard===false, t);
+    }
 
     await pg.close();
   }

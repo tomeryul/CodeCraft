@@ -514,9 +514,9 @@ async function toWorld(pg,he){
     const seen=[];
     for(const t of CC_CYED.tools){
       mgState.paintMode=t.id; mgCreatorUI();
-      seen.push((document.querySelector('#cyTip .cy-tip-t')||{}).textContent||'');
+      seen.push((document.querySelector('#mgTip .cy-tip-t')||{}).textContent||'');
     }
-    const help=document.getElementById('cyHelp');
+    const help=document.getElementById("mgTipGuide");
     const dock=document.getElementById('mgDock');
     return { tools:CC_CYED.tools.length,
              everyToolExplained:CC_CYED.tools.every(t=>t.tip&&t.tip.length>30),
@@ -536,7 +536,7 @@ async function toWorld(pg,he){
 
   const guide = await pg.evaluate(async ()=>{
     const wait=ms=>new Promise(r=>setTimeout(r,ms));
-    document.getElementById('cyHelp').click(); await wait(400);
+    document.getElementById("mgTipGuide").click(); await wait(400);
     const body=document.getElementById('guideBody');
     const out={ open:document.getElementById('guide').classList.contains('open'),
       head:document.querySelector('#guide .m-head h3').textContent,
@@ -857,8 +857,8 @@ async function toWorld(pg,he){
     const wait=ms=>new Promise(r=>setTimeout(r,ms));
     if(mgState)mgExit(false); await wait(200);
     cyDesign(); await wait(400);
-    const tip=(document.querySelector('#cyTip .cy-tip-t')||{}).textContent||'';
-    document.getElementById('cyHelp').click(); await wait(500);
+    const tip=(document.querySelector('#mgTip .cy-tip-t')||{}).textContent||'';
+    document.getElementById("mgTipGuide").click(); await wait(500);
     const bits=[...document.querySelectorAll(
       '#guideBody h4.qsec, #guideBody .grule b, #guideBody .grule p, '+
       '#guideBody .gline, #guideBody .gsub, #guideBody .pcard .pname, #guideBody .pcard .pdesc')];

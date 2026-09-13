@@ -2829,9 +2829,17 @@ async function ev(expr) {
     const out={};
     const labels=sel=>[...document.querySelectorAll(sel)].filter(e=>e.offsetParent)
       .map(e=>{const l=e.querySelector('.tl-lb');return l?l.textContent:'';});
+    setTab('board'); await wait(300);
     out.tools2d=labels('#mgTools .tool');
-    /* the 3D toggle is an .ibtn too and carries its own word, not a label */
-    out.acts=labels('#mgCreatorBar .cb-act .ibtn').filter(Boolean);
+    /* and the line that says what the tool in your hand is for */
+    out.tip=(document.querySelector('#mgTip .cy-tip-t')||{}).textContent||'';
+    /* 3D / Cyber / Save live in the 🛠️ Design tab now — a control is only
+       measurable where it is shown, and offsetParent is null in a hidden
+       tab. The 3D toggle is an .ibtn too and carries its own word. */
+    setTab('design'); await wait(300);
+    out.acts=labels('#designTab .cb-act .ibtn').filter(Boolean);
+    out.designTab=$('designTabBtn').style.display!=='none';
+    setTab('board'); await wait(300);
     /* an empty board says so, and says it where Save is greyed */
     out.empty=$('mgStatus').textContent;
     out.emptyBad=$('mgStatus').className.indexOf('bad')>=0;
@@ -2843,18 +2851,21 @@ async function ev(expr) {
     mgState.solved=true; mgCreatorUI();
     out.proven=$('mgStatus').className.indexOf('ok')>=0;
     out.saveOn=!$('mgSave').classList.contains('locked');
-    /* the setup steppers were three numbers with no names */
-    $('mgSetup').click(); await wait(300);
+    /* the setup steppers were three numbers with no names. ⚙️ used to fold
+       a panel open over the board; it is the way to the Design tab now. */
+    $('mgSetup').click(); await wait(350);
+    out.onDesign=$('designTab').style.display!=='none';
     /* js/ui-icons.js lifts each emoji into its own span, so the words are
        what is compared — the emoji is an <svg> by the time this runs */
-    out.stp=[...document.querySelectorAll('#mgCreatorBar .stprow .clab')]
+    out.stp=[...document.querySelectorAll('#designTab .stprow .clab')]
       .map(e=>e.textContent.trim());
-    $('mgSetup').click();
     /* the 3D designer's tools carry names too */
     if(typeof on3d==='function'&&$('t3Btn')){
       const c=window.confirm; window.confirm=()=>true;
       $('t3Btn').click(); await wait(600); window.confirm=c;
+      setTab('board'); await wait(350);
       out.tools3d=labels('#mgTools .tool');
+      out.tip3d=(document.querySelector('#mgTip .cy-tip-t')||{}).textContent||'';
       out.statusOff=$('mgStatus').style.display==='none';
       out.t3warn=($('t3Warn').textContent||'').length>0;
     }
@@ -2865,8 +2876,16 @@ async function ev(expr) {
     !MAKE.missing && MAKE.tools2d.indexOf('Target') >= 0 && MAKE.tools2d.every(t => !!t) &&
     Array.isArray(MAKE.tools3d) && MAKE.tools3d.join() === 'Brick,Ground,Pit,Start,Erase',
     JSON.stringify(MAKE));
-  check("so do Setup and Save, which were a sun and a floppy disk",
-    MAKE.acts.join() === 'Setup,Save', JSON.stringify(MAKE.acts));
+  /* ⚙️ Setup is not in this row any more — the panel it folded open IS the
+     Design tab, so the button that folded it is hidden there. */
+  check("so does Save, which was a floppy disk",
+    MAKE.acts.join() === 'Save', JSON.stringify(MAKE.acts));
+  check("the design chrome has a tab of its own, and ⚙️ is the way to it",
+    MAKE.designTab === true && MAKE.onDesign === true, JSON.stringify(MAKE));
+  /* and every tool says what it DOES, not just what it is called */
+  check("the tool in your hand is explained under the tools",
+    (MAKE.tip||'').length > 30 && (MAKE.tip3d||'').length > 30,
+    JSON.stringify({flat:(MAKE.tip||'').slice(0,44), tower:(MAKE.tip3d||'').slice(0,44)}));
   check("a greyed-out Save says why, and stops saying it once it is earned",
     MAKE.emptyBad === true && MAKE.saveOff === true && MAKE.unprovenHmm === true &&
     MAKE.proven === true && MAKE.saveOn === true, JSON.stringify(MAKE));

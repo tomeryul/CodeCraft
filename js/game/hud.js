@@ -44,7 +44,9 @@ $("mgResetBtn").addEventListener("click",()=>{
   else mgReset();
 });
 $("mgExitBtn").addEventListener("click",()=>mgExit(true));
-$("mgSetup").addEventListener("click",()=>{$("mgCreatorBar").classList.toggle("setup");sfx(520,.03);});
+/* ⚙️ used to fold a panel open above the board. That panel IS the Design
+   tab now, so the button goes there instead of toggling anything. */
+$("mgSetup").addEventListener("click",()=>{setTab("design");sfx(520,.03);});
 /* The goal folds at three lines. It was silently clamped, so a Tower
    level's instructions simply did not exist as far as a player could tell.
    The button appears only when something is actually folded away. */
@@ -155,7 +157,9 @@ document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",
   $("blocksTab").style.display=tab==="blocks"?"flex":"none";
   $("pyTab").style.display=tab==="python"?"flex":"none";
   $("boardTab").style.display=tab==="board"?"flex":"none";
+  $("designTab").style.display=tab==="design"?"flex":"none";
   if(tab==="python")renderPy();
   if(tab==="board")mgDraw();
+  if(tab==="design"&&typeof mgCreatorUI==="function")mgCreatorUI();
 }));
 function setTab(t){const b=document.querySelector('#tabs button[data-tab="'+t+'"]');if(b)b.click();}

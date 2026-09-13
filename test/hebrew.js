@@ -340,6 +340,47 @@ async function boot(pg,he){
      align==='left'||align==='center', align);
 
   // ------------------------------------------------ opening a screen in Hebrew
+  /* Every designer explains its tools now, and a tool explained in English
+     to a child reading Hebrew is not explained. The tab that holds the
+     design chrome has to be Hebrew too. */
+  const maker = await pg.evaluate(async () => {
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    const out={};
+    if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+    await wait(200);
+    player.level=20;
+    for(const [name,fn] of [["flat",()=>mgEnterCreator()],
+                            ["cyber",()=>cyDesign()],
+                            ["tower",()=>{mgEnterCreator();$('t3Btn').click();}]]){
+      if(mgState)mgExit(false); await wait(180);
+      fn(); await wait(650);
+      setTab('board'); await wait(250);
+      const seen=[];
+      for(const b of [...document.querySelectorAll('#mgTools .tool')]){
+        b.click(); await wait(60);
+        seen.push({lb:(b.querySelector('.tl-lb')||{}).textContent||'',
+                   tip:(document.querySelector('#mgTip .cy-tip-t')||{}).textContent||''});
+      }
+      out[name]=seen;
+    }
+    setTab('design'); await wait(300);
+    out.tab=[...document.querySelectorAll('#tabs button')]
+      .filter(b=>b.style.display!=='none').map(b=>b.textContent.trim());
+    if(mgState)mgExit(false); await wait(200);
+    return out;
+  });
+  const HEB2=/[֐-׿]/;
+  for(const k of ['flat','cyber','tower']){
+    const rows=maker[k]||[];
+    ck(`the ${k} designer's tools are named in Hebrew`,
+       rows.length>0 && rows.every(r=>HEB2.test(r.lb)), rows.map(r=>r.lb));
+    ck(`and every one of them explains itself in Hebrew`,
+       rows.every(r=>r.tip.length>20 && HEB2.test(r.tip) && !/[A-Za-z]{4}/.test(r.tip)),
+       rows.filter(r=>!HEB2.test(r.tip)||/[A-Za-z]{4}/.test(r.tip)).map(r=>r.lb+': '+r.tip.slice(0,40)));
+  }
+  ck('the tab that holds the design controls is Hebrew too',
+     maker.tab.every(t=>HEB2.test(t)), maker.tab);
+
   /* An entry that translated to itself — the Language row's
      "English · עברית" — made walk() assign a text node the value it already
      held. That still queues a characterData record, which calls the

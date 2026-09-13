@@ -170,6 +170,8 @@ function chrome(){
     '<span class="spacer"></span>'+
     '<span class="t3stat">🔢 <b id="cyNLocks">0</b></span>'+
     '<span class="t3stat">📝 <b id="cyNNotes">0</b></span>';
+  /* ⛔ Strikes is a setting, so it rides with the rest of them into the
+     🛠️ Design tab — the board tab is the board and its tools, nothing else */
   bar.insertBefore(row,act);
 
   const pane=bar.querySelector(".cb-panel"), stprow=pane.querySelector(".stprow");
@@ -308,43 +310,14 @@ window.mgToolsUI=function(){
     }
   }
 };
-/* Under the tools, not above them: it explains the thing you just tapped,
-   so it belongs on the same side of the strip your finger is on.
-
-   The 📘 rides here too. The flat creator keeps its guide two taps deep
-   inside ⚙️, and on an untouched 8×6 board the whole settings row is below
-   the fold — so the one question a stuck author has ("how do I even do
-   this?") had its answer off screen. The dock is the part of this panel
-   that is always visible, so that is where the way in goes. */
+/* The line under the tools is the creator's own now — every designer shows
+   one, because they all had the same problem: a row of glyphs that says
+   nothing. This one just hands it this mode's words. */
 function tipLine(){
-  let el=$("cyTip");
-  if(!el){
-    const dock=$("mgDock"); if(!dock)return;
-    el=document.createElement("div");el.id="cyTip";el.className="cy-tip";
-    el.innerHTML='<button class="cy-help" id="cyHelp">📘 <span>Guide</span></button>'+
-      '<span class="cy-tip-t"></span>';
-    dock.appendChild(el);
-    $("cyHelp").addEventListener("click",()=>{
-      $("mgCreatorBar").classList.remove("setup");
-      if(typeof openGuide==="function")openGuide();
-    });
-  }
-  el.style.display=editCy()?"":"none";
-  const t=TOOLS.find(x=>x.id===mgState.paintMode), tx=el.querySelector(".cy-tip-t");
-  if(!t||!tx)return;
-  /* separate nodes, never one glued string: the dictionary matches whole
-     text nodes, and a name welded to its sentence matches nothing */
-  tx.textContent="";
-  const b=document.createElement("b");b.textContent=t.em+" "+t.lbl;
-  tx.appendChild(b);
-  tx.appendChild(document.createTextNode(" — "));
-  tx.appendChild(document.createTextNode(t.tip));
+  const t=TOOLS.find(x=>x.id===mgState.paintMode);
+  if(t&&typeof mgTipUI==="function")mgTipUI(t.em,t.lbl,t.tip,true);
 }
 
-/* 🚩 is a place on the board, not a tile, so it is the one tool this file
-   has to paint itself. Everything else is CC_TILES terrain and goes
-   through the creator's own painter — which is also the single place that
-   re-locks Save after a change, so nothing here may skip it. */
 const _mgPaintTile=window.mgPaintTile;
 window.mgPaintTile=function(x,y){
   if(!editCy())return _mgPaintTile(x,y);

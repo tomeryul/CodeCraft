@@ -129,6 +129,31 @@ const HE={
 /* the Cyber Lab's designer: its tools, its one setting, and what it says
    when a board is not yet a level */
 "Flag":"דגל","Wall":"קיר","Key":"מפתח",
+/* the fourth tab: everything about DESIGNING the level, out of the way of
+   the board it acts on */
+"Design":"עיצוב",
+/* the rest of the flat designer's tools, and what each of them does —
+   eleven glyphs in a row was eleven things to guess */
+"Target":"מטרה","Block":"קובייה","Door":"דלת","Portal":"שער","Plate":"לחצן",
+"Gate":"מחסום","One-way":"כיוון אחד",
+"The tiles the robot has to fill with blocks. Give one a number below and only that exact block will do.":
+  "המשבצות שהרובוט צריך למלא בקוביות. תן לאחת מספר למטה ורק הקובייה הזאת בדיוק תתאים.",
+"Where the robot begins, facing right.":"מאיפה הרובוט מתחיל, פונה ימינה.",
+"Nothing walks through it. Walls are what make a board a maze instead of an open field.":
+  "שום דבר לא עובר דרכו. קירות זה מה שהופך לוח למבוך במקום שדה פתוח.",
+"Two portals of the same colour are a pair: step on one and the robot comes out of the other.":
+  "שני שערים באותו צבע הם זוג: תדרוך על אחד והרובוט יוצא מהשני.",
+"The robot may not step OFF this tile against the arrow. Turn the arrow below.":
+  "הרובוט לא יכול לרדת מהמשבצת הזאת נגד כיוון החץ. תסובב את החץ למטה.",
+/* the Tower designer's five */
+"How high a tower of bricks has to stand here when the player is done. Tap to add one level, hold to clear the tile.":
+  "כמה גבוה מגדל הלבנים צריך לעמוד כאן כשהשחקן מסיים. לחיצה מוסיפה קומה, החזקה מנקה את המשבצת.",
+"Raises the land itself. The robot starts standing on the ground, so it only has to build what is ABOVE it.":
+  "מרים את הקרקע עצמה. הרובוט מתחיל לעמוד על הקרקע, אז הוא צריך לבנות רק את מה שמעליה.",
+"Where the robot begins. Tap the same tile again to turn it round.":
+  "מאיפה הרובוט מתחיל. לחיצה נוספת על אותה משבצת מסובבת אותו.",
+"Clears everything on the tile — brick, ground and pit.":
+  "מנקה הכול מהמשבצת — לבנה, קרקע ובור.",
 /* its guide: the sheet, its sections, and every line in it. Each one is
    its own element with nothing inside it, so each matches whole-string —
    which is why this mode is translated and the flat guide is not. */
@@ -1370,6 +1395,21 @@ const HE_RAW={
 "🧊 3D view":"🧊 תצוגה תלת-ממדית",
 "🧊 Tower design — tap a tile to raise it, hold to clear it.":
   "🧊 עיצוב מגדל — לחץ על משבצת כדי להגביה אותה, החזק כדי לנקות.",
+/* ---- the designers' tools: what each one does ---- */
+"A block already on the board when the level starts. Number it below so a program can 📖 Read and compare them.":
+  "קובייה שכבר על הלוח כשהשלב מתחיל. תן לה מספר למטה כדי שתוכנית תוכל 📖 לקרוא ולהשוות ביניהן.",
+"The robot cannot stand on it. It CAN ⤵️ Drop a block it is carrying into the gap ahead and walk across its own bridge.":
+  "הרובוט לא יכול לעמוד עליו. הוא כן יכול ⤵️ להניח קובייה שהוא נושא לתוך הפער שלפניו וללכת על הגשר שבנה לעצמו.",
+"The robot picks it up just by walking over it, and keeps it. It opens every 🚪 door of the same colour — set the colour below.":
+  "הרובוט מרים אותו פשוט בכך שהוא עובר עליו, ושומר אותו. הוא פותח כל 🚪 דלת באותו צבע — תקבע את הצבע למטה.",
+"Shut until the robot is carrying a 🔑 key of the same colour. Once it is open it stays open.":
+  "סגורה עד שהרובוט נושא 🔑 מפתח באותו צבע. ברגע שהיא נפתחת היא נשארת פתוחה.",
+"A button in the floor, held down while the robot stands on it — or while a ⤵️ block is left on it.":
+  "כפתור ברצפה, לחוץ כל עוד הרובוט עומד עליו — או כל עוד ⤵️ קובייה מונחת עליו.",
+"Open only while EVERY 🔘 plate of the same colour is held down. A robot cannot be in two places at once — that is the puzzle.":
+  "פתוח רק כל עוד כל 🔘 לחצן באותו צבע לחוץ. רובוט לא יכול להיות בשני מקומות בו-זמנית — זאת החידה.",
+"A hole in the ground. The robot has to 🦘 Jump across it, and a brick needs ground under it — not a pit.":
+  "חור בקרקע. הרובוט צריך 🦘 לקפוץ מעליו, ולבנה צריכה קרקע מתחתיה — לא בור.",
 /* ---- Cyber Lab: its designer ---- */
 "A door whose key is a NUMBER. Set its code below — tap the number to type one. It opens when the robot punches that exact code in with 🔢 Try Code, and then it stays open.":
   "דלת שהמפתח שלה הוא מספר. תקבע את הקוד שלה למטה — תלחץ על המספר כדי להקליד אותו. היא נפתחת כשהרובוט מקליד בדיוק את הקוד הזה עם 🔢 נסה קוד, ואז היא נשארת פתוחה.",
