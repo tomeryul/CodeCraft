@@ -160,7 +160,7 @@ function chrome(){
       ? "Switch to 🔐 Cyber Lab mode?\n\nThe flat board and the program you've written are cleared — you design with keypads and notes instead."
       : "Back to the flat 2D board?\n\nYour Cyber board is cleared.";
     if(!confirm(msg))return;
-    if(to&&window.on3d&&on3d()&&typeof setT3==="function")setT3(false);
+    if(to&&window.on3d&&on3d()&&window.t3SetMode)t3SetMode(false);
     setMode(to);
   });
   bar.appendChild(b);
@@ -246,7 +246,6 @@ function ui(){
   if(!mine)return;
   const p=mgState.proj;
   strikeRow(p);chipRow(p);
-  if(typeof mgDesignLayout==="function")mgDesignLayout();
   $("cyNLocks").textContent=locks(p).length;
   $("cyNNotes").textContent=notes(p).length;
   $("mgGoal").textContent=(p.desc2?"📜 “"+p.desc2+"”":"🔐 Cyber design — a keypad, something that says what its code is, and a 🚩 flag past it.");
@@ -273,7 +272,11 @@ window.mgStatus=function(has,solved,banked){
 };
 
 const _mgCreatorUI=window.mgCreatorUI;
-window.mgCreatorUI=function(){_mgCreatorUI();chrome();ui();};
+/* the layout runs after this designer has had its say too — see the note
+   beside the same line in tower-editor.js */
+window.mgCreatorUI=function(){_mgCreatorUI();chrome();ui();
+  if(typeof mgDesignLayout==="function")mgDesignLayout();};
+window.onCyP=onCyP;         // so Tower's button can switch Cyber off
 
 const _mgToolsUI=window.mgToolsUI;
 window.mgToolsUI=function(){

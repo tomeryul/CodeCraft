@@ -357,6 +357,13 @@ function chrome(){
       ? "Switch to 🧊 3D Tower mode?\n\nThe flat board and the program you've written are cleared — you design with heights instead."
       : "Back to the flat 2D board?\n\nYour 3D blueprint is cleared.";
     if(!confirm(msg))return;
+    /* A board is one kind of board. Cyber's button has always meant to turn
+       Tower off on the way in — it reached for a `setT3` that was never
+       exported, so the guard never fired and a board could end up flagged
+       BOTH, with two lists of blocks stacked in the Design tab and each one
+       overwriting the other's `allowed` on every tap. Both directions are
+       wired now, and both setters are exported. */
+    if(to&&window.onCyP&&onCyP()&&window.CC_CYED)CC_CYED.setMode(false);
     setMode(to);
   });
   bar.appendChild(b);
@@ -445,12 +452,19 @@ function ui(){
   else if(v.warns.length){warn.className="t3warn hmm";warn.textContent="⚠️ "+v.warns[0];}
   else warn.className="t3warn ok",warn.textContent="✅ Buildable — "+bricks(p)+" bricks, peak ⛰ "+peak(p)+". Write a program, press ▶ to prove it, then 💾 Save.";
   $("mgGoal").textContent=(p.desc3?"📜 “"+p.desc3+"”":"🧊 Tower design — tap a tile to raise it, hold to clear it.");
-  if(typeof mgDesignLayout==="function")mgDesignLayout();
 }
 
 /* ---------------- wrapping the creator ---------------- */
 const _mgCreatorUI=window.mgCreatorUI;
-window.mgCreatorUI=function(){_mgCreatorUI();chrome();ui();};
+/* mgDesignLayout() decides which sections have anything in them, so it has
+   to run after EVERY designer has said which of its rows are showing —
+   never from inside one of their ui()s, where an early return skips it and
+   the last word goes to whoever happened to run before the hiding. Both
+   wrappers end with it; it is idempotent, and whichever file loads last is
+   the one whose call lands last. */
+window.mgCreatorUI=function(){_mgCreatorUI();chrome();ui();
+  if(typeof mgDesignLayout==="function")mgDesignLayout();};
+window.t3SetMode=setMode;   // so Cyber's button can switch Tower off
 
 const _mgToolsUI=window.mgToolsUI;
 window.mgToolsUI=function(){

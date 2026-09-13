@@ -812,6 +812,49 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     ck(`${W}x${H} the flat board hands out no block list, the other two do`,
        design.flat.rows===0 && design.cyber.rows>=10 && design.tower.rows>=12,
        {flat:design.flat.rows,cyber:design.cyber.rows,tower:design.tower.rows});
+    /* Switching between the three kinds of board, which is the one thing
+       the top section invites you to do. Two things went wrong here: a
+       board could end up flagged BOTH Cyber and Tower (Cyber's button
+       reached for a setter that was never exported, and Tower's had no
+       such guard at all), which stacked two lists of blocks that then
+       fought over the same `allowed` array; and the layout ran from inside
+       each designer's ui(), where an early return skips it — so a flat
+       board kept the previous mode's "Blocks the player gets" heading with
+       nothing at all underneath it. */
+    const modes = await pg.evaluate(async () => {
+      const wait=ms=>new Promise(r=>setTimeout(r,ms));
+      const vis=e=>!!(e&&e.offsetParent);
+      const seen=[];
+      window.confirm=()=>true;
+      if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+      await wait(200); mgEnterCreator(); await wait(600);
+      const hop=async(id,tag)=>{
+        document.getElementById(id).click(); await wait(500);
+        /* entering a designer sends you to the board tab, so the design tab
+           has to be re-selected before anything on it can be measured */
+        setTab('design'); await wait(300);
+        const p=mgState.proj;
+        seen.push({tag, cyber:!!p.cyber, tower:!!p.mode3d,
+          section:vis(document.getElementById('dsBlocks')),
+          rows:[...document.querySelectorAll('#mgCreatorBar .blkrow')].filter(vis).length});
+      };
+      await hop('cyBtn','->cyber');
+      await hop('t3Btn','cyber->tower');
+      await hop('cyBtn','tower->cyber');
+      await hop('cyBtn','cyber->flat');
+      if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+      await wait(250);
+      return seen;
+    });
+    const at=t=>modes.find(m=>m.tag===t)||{};
+    ck(`${W}x${H} a board is one kind of board, never two at once`,
+       modes.every(m=>!(m.cyber&&m.tower)), modes);
+    ck(`${W}x${H} switching kinds swaps the block list, it does not add one`,
+       at('cyber->tower').rows===14 && at('tower->cyber').rows===12, modes);
+    ck(`${W}x${H} a flat board keeps no empty "blocks" heading behind`,
+       at('cyber->flat').section===false && at('cyber->flat').rows===0,
+       at('cyber->flat'));
+
     for(const k of ["cyber","tower"]){
       const d=design[k];
       /* the row count rides along on purpose: with no rows at all there is
