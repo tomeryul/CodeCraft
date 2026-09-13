@@ -373,7 +373,7 @@ function mgToolList(){
    So each one is a row that says what it does. The name, the sentence and
    the state are separate elements: the Hebrew dictionary matches whole
    text nodes, and a name welded into its sentence matches nothing. */
-function mgBlockRows(host,list,allowed,locked,onToggle){
+function mgBlockRows(host,list,allowed,locked,onToggle,tips){
   if(!host)return;
   host.innerHTML="";
   const set=new Set(allowed||[]);
@@ -386,7 +386,11 @@ function mgBlockRows(host,list,allowed,locked,onToggle){
     const ic=document.createElement("span");ic.className="br-ic";ic.textContent=d.ic;
     const mid=document.createElement("span");mid.className="br-mid";
     const nm=document.createElement("b");nm.textContent=d.lbl;
-    const tx=document.createElement("span");tx.className="br-tip";tx.textContent=d.tip||"";
+    /* `tips` lets a designer say what a shared block means on ITS boards —
+       🔨 Build paints the tile underfoot on a flat one and the tile ahead
+       in 3D, and one registry entry cannot say both */
+    const tx=document.createElement("span");tx.className="br-tip";
+    tx.textContent=(tips&&tips[t])||d.tip||"";
     mid.appendChild(nm);mid.appendChild(tx);
     const sw=document.createElement("i");sw.className="br-sw";
     sw.textContent=lock?"always":(on?"✓":"＋");
@@ -397,6 +401,40 @@ function mgBlockRows(host,list,allowed,locked,onToggle){
   }
 }
 window.mgBlockRows=mgBlockRows;
+
+/* ---- the blocks a FLAT board hands out ----
+   Tower and the Cyber Lab have let an author choose since they were
+   written; a flat 2D board handed out the whole toolbox and gave no say
+   in it. So the section existed on two kinds of level and not on the
+   third, which is exactly how it read from the outside — a part of the
+   screen that is sometimes not there.
+
+   None of the plumbing was missing: `allowed` is already per-project,
+   already saved with the challenge, and already what the palette reads
+   (see dragdrop.js). Only the UI was. */
+const MG_LOCKED={move:1,turnL:1,turnR:1};   // a board you cannot walk is not a level
+function mgFlatBlocks(){
+  const bar=$("mgCreatorBar"); if(!bar)return;
+  let host=$("mgBlocks");
+  if(!host){
+    host=document.createElement("div");host.id="mgBlocks";host.className="t3chips";
+    bar.appendChild(host);        // mgDesignLayout() files it into its section
+  }
+  const p=mgState&&mgState.proj;
+  /* the other two kinds have their own list and their own rules */
+  const flat=!!(p&&mgState.creator&&!p.cyber&&!p.mode3d);
+  host.style.display=flat?"":"none";
+  if(!flat)return;
+  const set=new Set(p.allowed||CHALLENGE_BLOCKS);
+  mgBlockRows(host,CHALLENGE_BLOCKS,p.allowed||CHALLENGE_BLOCKS,MG_LOCKED,(t,give)=>{
+    if(give)set.add(t); else set.delete(t);
+    p.allowed=CHALLENGE_BLOCKS.filter(k=>set.has(k)||MG_LOCKED[k]);
+    mgState.solved=false;
+    sfx(520,.03);
+    renderPalette();mgUpdateCount();mgCreatorUI();
+  });
+}
+window.mgFlatBlocks=mgFlatBlocks;
 
 /* ---- the Design tab, in sections ----
    Everything about designing a level ends up in one tab, and it arrived as
@@ -421,7 +459,7 @@ const MG_SECTIONS=[
    has:["mgSizeRow","mgDiff"]},
   {id:"dsBlocks",name:"Blocks the player gets",
    sub:"Tap one to give it to them or take it away. Dimmed means they will not have it.",
-   has:["t3Blocks","cyBlocks"]},
+   has:["mgBlocks","t3Blocks","cyBlocks"]},
   {id:"dsWords", name:"What the player reads",
    sub:"The level's name, and the line they see when it opens.",
    has:["mgName","t3Hint","cyHint","mgGuide"]},
@@ -692,6 +730,7 @@ function mgCreatorUI(){
   if(!mgState||!mgState.creator)return;
   $("designTabBtn").style.display="";
   /* the other two designers call this again after their own chrome is in */
+  mgFlatBlocks();
   mgDesignLayout();
   mgActLabels();
   mgToolsUI();

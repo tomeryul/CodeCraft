@@ -50,10 +50,15 @@ const DEFS={
   chop:{cat:"basic",ic:"🪓",lbl:"Chop"},
   mine:{cat:"basic",ic:"⛏️",lbl:"Mine"},
   scoop:{cat:"basic",ic:"🪣",lbl:"Scoop"},
-  drop:{cat:"basic",ic:"⤵️",lbl:"Drop"},
-  pickUp:{cat:"basic",ic:"✊",lbl:"Lift"},   // challenge-only: lift a numbered brick to carry it
+  drop:{cat:"basic",ic:"⤵️",lbl:"Drop",
+    tip:"Puts the carried brick down. Into a 🕳️ pit straight ahead if there is one — that is the only way to bridge a gap — otherwise on the tile underneath."},
+  pickUp:{cat:"basic",ic:"✊",lbl:"Lift",   // challenge-only: lift a numbered brick to carry it
+    tip:"Lifts the brick the robot is standing on and carries it. Give it out with ⤵️ Drop on any level that asks for things to be put in order."},
+  /* on a flat board this paints the tile the robot is STANDING on; in 3D
+     it is the tile ahead. One entry, two meanings — the Tower designer
+     passes its own sentence for this row, see T3_TIPS in tower3d.js. */
   build:{cat:"basic",ic:"🔨",lbl:"Build",
-    tip:"Drops a brick on the tile in front — but never higher than the robot's own shoulder, which is what makes a tall tower a staircase problem."},
+    tip:"Drops a brick on the tile the robot is STANDING on. To lay a row the robot builds, then moves on, then builds again — which is what a loop is for."},
   /* Cyber Lab only: punch a number into the keypad in front. It is in DEFS
      rather than in a CATS row because no world palette offers it — a level
      hands it out through its own `allowed` list. */
@@ -101,7 +106,8 @@ const DEFS={
   // block of steps to an actual abstraction.
   call:{cat:"funcs",ic:"🔧",lbl:"Call",
     tip:"Runs a job the player wrote once and named. The blocks inside are counted once however many times it is called — that is what makes it worth doing."},
-  ret:{cat:"funcs",ic:"🔙",lbl:"Give Back"},
+  ret:{cat:"funcs",ic:"🔙",lbl:"Give Back",
+    tip:"Ends a routine and hands a number back to whoever called it. This is what turns “do these steps” into “work this out for me”."},
   /* 🤝 the team blocks. One program pasted onto every robot makes them all walk to
      the SAME nearest tree; these are how a fleet divides the work instead. */
   claim:{cat:"team",ic:"🤝",lbl:"Call It"},        // reserve what I'm facing

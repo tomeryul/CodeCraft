@@ -594,7 +594,7 @@ body.sheets-full #maker.sized,
 #mgCreatorBar .blkrow:not(.on) .br-ic{filter:grayscale(1);}
 #mgCreatorBar .blkrow.lock .br-sw{color:var(--ink2);background:rgba(255,255,255,.06);}
 #mgCreatorBar .blkrow:active{border-color:rgba(255,214,107,.6);border-left-color:#ffd66b;}
-#t3Blocks,#cyBlocks{display:flex;flex-direction:column;gap:6px;}
+#mgBlocks,#t3Blocks,#cyBlocks{display:flex;flex-direction:column;gap:6px;}
 /* the difficulty row reads like the steppers beside it: name, then value */
 #mgDiff{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 #mgDiff .lb{font-size:13px;font-weight:700;color:var(--ink2);}

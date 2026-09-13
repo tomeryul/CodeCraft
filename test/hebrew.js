@@ -405,7 +405,6 @@ async function boot(pg,he){
        d.secs.length>=4 && d.secs.every(x=>HEB2.test(x.h)&&!/[A-Za-z]{4}/.test(x.h)&&
          x.p.length>15 && HEB2.test(x.p) && !/[A-Za-z]{4}/.test(x.p)),
        d.secs.filter(x=>!HEB2.test(x.h)||!HEB2.test(x.p)||/[A-Za-z]{4}/.test(x.h+x.p)));
-    if(k==='flat')continue;      // the flat board hands out no block list
     ck(`and every block it offers explains itself in Hebrew`,
        d.rows.length>=10 && d.rows.every(r=>HEB2.test(r.lb) &&
          r.tip.length>25 && HEB2.test(r.tip) && !/[A-Za-z]{4}/.test(r.tip)),

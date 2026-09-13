@@ -414,6 +414,9 @@ DEFS.jump   ={cat:"basic",ic:"🦘",lbl:"Jump Gap",
   tip:"Clears one low tile and lands level on the far side. This is the only way across a 🕳️ pit the robot cannot fill."};
 DEFS.dig    ={cat:"basic",ic:"⛏️",lbl:"Take Brick",
   tip:"Picks a brick back UP off the tile in front, so a robot that built the wrong thing can undo it."};
+/* 🔨 Build is in the shared registry and means the tile AHEAD up here, not
+   the one underfoot. The designer's block list takes this instead. */
+window.T3_TIPS={build:"Drops a brick on the tile IN FRONT — never higher than the robot's own shoulder, which is what makes a tall tower a staircase problem rather than a wall."};
 COND_LBL.canClimb ="can climb up 🪜";
 COND_LBL.stepDown ="step down ahead ⬇️";
 COND_LBL.gapAhead ="gap ahead 🕳️";

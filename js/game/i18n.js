@@ -416,8 +416,12 @@ const HE={
   "מסתובב במקום, שמאלה. הוא לא זז — סיבוב עולה בלוק ומשנה רק לאן הרובוט מסתכל.",
 "The same, to the right. Without one of these a robot can only ever walk in a straight line.":
   "אותו דבר, ימינה. בלי אחד מאלה רובוט יכול ללכת רק בקו ישר.",
-"Drops a brick on the tile in front — but never higher than the robot's own shoulder, which is what makes a tall tower a staircase problem.":
-  "מניח לבנה על המשבצת שלפניו — אבל אף פעם לא גבוה מהכתף של הרובוט עצמו, וזה מה שהופך מגדל גבוה לבעיה של מדרגות.",
+"Drops a brick on the tile the robot is STANDING on. To lay a row the robot builds, then moves on, then builds again — which is what a loop is for.":
+  "מניח לבנה על המשבצת שהרובוט עומד עליה. כדי להניח שורה הרובוט בונה, ואז זז, ואז בונה שוב — וזה בדיוק מה שלולאה נועדה לה.",
+"Lifts the brick the robot is standing on and carries it. Give it out with ⤵️ Drop on any level that asks for things to be put in order.":
+  "מרים את הלבנה שהרובוט עומד עליה ונושא אותה. תן אותו יחד עם ⤵️ הנח בכל שלב שמבקש לסדר דברים.",
+"Ends a routine and hands a number back to whoever called it. This is what turns “do these steps” into “work this out for me”.":
+  "מסיים שגרה ומחזיר מספר למי שקרא לה. זה מה שהופך “תעשה את הצעדים האלה” ל“תחשב לי את זה”.",
 "Does the blocks inside it a set number of times. This is how a short program does a long job — keep it out and your level can only be walked step by step.":
   "מבצע את הבלוקים שבתוכו מספר פעמים קבוע. ככה תוכנית קצרה עושה עבודה ארוכה — בלעדיו אפשר לעבור את השלב שלך רק צעד־צעד.",
 "Asks a question before every turn and keeps going while the answer is yes. Give it out when the player cannot know the number in advance.":
@@ -1121,6 +1125,10 @@ const SCOPED=[
    ui-icons.js turns whatever emoji they carry into icons either way. */
 const HE_RAW={
   /* the emoji sit inside these sentences, so they are used as written */
+  "Puts the carried brick down. Into a 🕳️ pit straight ahead if there is one — that is the only way to bridge a gap — otherwise on the tile underneath.":
+    "מניח את הלבנה שהוא נושא. לתוך 🕳️ בור שנמצא ישר לפניו אם יש אחד — זו הדרך היחידה לגשר על פער — אחרת על המשבצת שמתחתיו.",
+  "Drops a brick on the tile IN FRONT — never higher than the robot's own shoulder, which is what makes a tall tower a staircase problem rather than a wall.":
+    "מניח לבנה על המשבצת שלפניו — אף פעם לא גבוה מהכתף של הרובוט עצמו, וזה מה שהופך מגדל גבוה לבעיה של מדרגות ולא של קיר.",
   "Punches a number into the 🔢 keypad in front. Right number and it opens for good; wrong one and it counts against the player.":
     "מקיש מספר במקלדת 🔢 שלפניו. מספר נכון והיא נפתחת לתמיד; מספר שגוי ונרשם לשחקן ניסיון כושל.",
   "Never stops. The level ends when the goal is met, so this is for “keep doing it until it is done” — pair it with ❓ If.":

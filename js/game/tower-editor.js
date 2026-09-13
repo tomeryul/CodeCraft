@@ -412,7 +412,7 @@ function chipRow(p){
     mgState.solved=false;
     sfx(520,.03);
     renderPalette();mgUpdateCount();ui();
-  });
+  },window.T3_TIPS);
   const host=$("t3Blocks");
   for(const k of CTRL){
     const first=host.querySelector('[data-blk="'+k+'"]');

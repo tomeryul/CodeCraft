@@ -782,20 +782,32 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
         const loose=[...document.getElementById('mgCreatorBar').children]
           .filter(c=>!c.classList.contains('dsec')&&vis(c))
           .map(c=>c.id||c.className);
-        const on=rows.find(r=>r.classList.contains('on'));
-        const off=rows.find(r=>!r.classList.contains('on')&&!r.classList.contains('lock'));
+        /* every block starts switched ON for a flat board, so there is no
+           "not given" row to compare against until one is taken away */
+        if(rows.length&&!rows.some(r=>!r.classList.contains('on'))){
+          const t=rows.find(r=>!r.classList.contains('lock'));
+          if(t){t.click(); await wait(350);}
+        }
+        /* re-query: that tap re-rendered the list, and the nodes collected
+           before it are detached now — a detached element measures 0x0, so
+           anything checked against the old array silently "fails" */
+        const now=[...document.querySelectorAll('#mgCreatorBar .blkrow')].filter(vis);
+        const on=now.find(r=>r.classList.contains('on'));
+        const off=now.find(r=>!r.classList.contains('on')&&!r.classList.contains('lock'));
         const cs=e=>e?getComputedStyle(e):null;
         out[name]={
           secs:secs.map(e=>e.querySelector('h4').textContent),
           subs:secs.every(e=>((e.querySelector('h4 + p')||{}).textContent||'').length>20),
           empty, loose,
-          rows:rows.length,
-          untold:rows.filter(r=>((r.querySelector('.br-tip')||{}).textContent||'').length<25)
+          rows:now.length,
+          /* exactly one of the three lists is on screen at a time */
+          hosts:['mgBlocks','t3Blocks','cyBlocks'].filter(id=>vis(document.getElementById(id))),
+          untold:now.filter(r=>((r.querySelector('.br-tip')||{}).textContent||'').length<25)
                     .map(r=>r.querySelector('b').textContent),
           /* given and not given have to be told apart at a glance */
           split:!!on&&!!off&&cs(on).backgroundColor!==cs(off).backgroundColor&&
                 cs(on).borderLeftColor!==cs(off).borderLeftColor,
-          tapOk:rows.every(r=>r.getBoundingClientRect().height>=40)
+          tapOk:now.every(r=>r.getBoundingClientRect().height>=40)
         };
       }
       if(typeof mgState!=='undefined'&&mgState)mgExit(false);
@@ -809,9 +821,16 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
       ck(`${W}x${H} ${k}: nothing is left loose outside a section`,
          d.loose.length===0, d.loose);
     }
-    ck(`${W}x${H} the flat board hands out no block list, the other two do`,
-       design.flat.rows===0 && design.cyber.rows>=10 && design.tower.rows>=12,
+    /* All three kinds let an author choose now. The flat board did not, which
+       is why the section came and went depending on what you were building. */
+    ck(`${W}x${H} every kind of board lets you choose the player's blocks`,
+       design.flat.rows>=16 && design.cyber.rows>=10 && design.tower.rows>=12,
        {flat:design.flat.rows,cyber:design.cyber.rows,tower:design.tower.rows});
+    ck(`${W}x${H} and exactly one of the three lists is on screen at a time`,
+       design.flat.hosts.join()==='mgBlocks' &&
+       design.tower.hosts.join()==='t3Blocks' &&
+       design.cyber.hosts.join()==='cyBlocks',
+       {flat:design.flat.hosts,tower:design.tower.hosts,cyber:design.cyber.hosts});
     /* Switching between the three kinds of board, which is the one thing
        the top section invites you to do. Two things went wrong here: a
        board could end up flagged BOTH Cyber and Tower (Cyber's button
@@ -851,11 +870,11 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
        modes.every(m=>!(m.cyber&&m.tower)), modes);
     ck(`${W}x${H} switching kinds swaps the block list, it does not add one`,
        at('cyber->tower').rows===14 && at('tower->cyber').rows===12, modes);
-    ck(`${W}x${H} a flat board keeps no empty "blocks" heading behind`,
-       at('cyber->flat').section===false && at('cyber->flat').rows===0,
+    ck(`${W}x${H} coming back to a flat board leaves the FLAT list, not the old one`,
+       at('cyber->flat').section===true && at('cyber->flat').rows===18,
        at('cyber->flat'));
 
-    for(const k of ["cyber","tower"]){
+    for(const k of ["flat","cyber","tower"]){
       const d=design[k];
       /* the row count rides along on purpose: with no rows at all there is
          nothing to be untold, and this passed against a Design tab that
