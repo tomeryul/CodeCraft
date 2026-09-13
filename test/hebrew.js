@@ -351,7 +351,11 @@ async function boot(pg,he){
     player.level=20;
     for(const [name,fn] of [["flat",()=>mgEnterCreator()],
                             ["cyber",()=>cyDesign()],
-                            ["tower",()=>{mgEnterCreator();$('t3Btn').click();}]]){
+                            /* the 3D switch asks "are you sure?" and Playwright
+                               answers no, which quietly ran FLAT twice */
+                            ["tower",()=>{mgEnterCreator();
+                              const c=window.confirm; window.confirm=()=>true;
+                              $('t3Btn').click(); window.confirm=c;}]]){
       if(mgState)mgExit(false); await wait(180);
       fn(); await wait(650);
       setTab('board'); await wait(250);
@@ -362,6 +366,17 @@ async function boot(pg,he){
                    tip:(document.querySelector('#mgTip .cy-tip-t')||{}).textContent||''});
       }
       out[name]=seen;
+      /* the Design tab is where a level is actually built: its headings,
+         the line under each, and the explanation on every block on offer */
+      setTab('design'); await wait(320);
+      out[name+'Design']={
+        secs:[...document.querySelectorAll('#mgCreatorBar .dsec')].filter(e=>e.offsetParent)
+          .map(e=>({h:e.querySelector('h4').textContent,
+                    p:(e.querySelector('h4 + p')||{}).textContent||''})),
+        rows:[...document.querySelectorAll('#mgCreatorBar .blkrow')].filter(e=>e.offsetParent)
+          .map(e=>({lb:e.querySelector('b').textContent,
+                    tip:(e.querySelector('.br-tip')||{}).textContent||''}))
+      };
     }
     setTab('design'); await wait(300);
     out.tab=[...document.querySelectorAll('#tabs button')]
@@ -380,6 +395,23 @@ async function boot(pg,he){
   }
   ck('the tab that holds the design controls is Hebrew too',
      maker.tab.every(t=>HEB2.test(t)), maker.tab);
+
+  /* The Design tab is six labelled sections now, and the blocks on offer
+     are rows that say what each block DOES. All of that is new English on
+     a screen a Hebrew-reading child builds levels on. */
+  for(const k of ['flat','cyber','tower']){
+    const d=maker[k+'Design']||{secs:[],rows:[]};
+    ck(`the ${k} designer's sections are Hebrew, heading and all`,
+       d.secs.length>=4 && d.secs.every(x=>HEB2.test(x.h)&&!/[A-Za-z]{4}/.test(x.h)&&
+         x.p.length>15 && HEB2.test(x.p) && !/[A-Za-z]{4}/.test(x.p)),
+       d.secs.filter(x=>!HEB2.test(x.h)||!HEB2.test(x.p)||/[A-Za-z]{4}/.test(x.h+x.p)));
+    if(k==='flat')continue;      // the flat board hands out no block list
+    ck(`and every block it offers explains itself in Hebrew`,
+       d.rows.length>=10 && d.rows.every(r=>HEB2.test(r.lb) &&
+         r.tip.length>25 && HEB2.test(r.tip) && !/[A-Za-z]{4}/.test(r.tip)),
+       d.rows.filter(r=>!HEB2.test(r.lb)||!HEB2.test(r.tip)||
+         r.tip.length<=25||/[A-Za-z]{4}/.test(r.tip)).map(r=>r.lb+': '+r.tip.slice(0,50)));
+  }
 
   /* An entry that translated to itself — the Language row's
      "English · עברית" — made walk() assign a text node the value it already

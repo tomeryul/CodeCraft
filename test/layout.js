@@ -754,6 +754,75 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
          t.actOnBoard===false, t);
     }
 
+    // ---------------------------------------------- the Design tab
+    /* It was one undifferentiated stack: a fold-out drawer, two steppers,
+       a strip of chips carrying nothing but a name, and the publish row,
+       with nothing saying which of them belonged together or what any of
+       them was for. "Count" and "While" mean something only to somebody
+       who has already met them, and this screen is where an author decides
+       whether a child will. */
+    const design = await pg.evaluate(async () => {
+      const wait=ms=>new Promise(r=>setTimeout(r,ms));
+      const out={};
+      for(const [name,fn] of [["flat",()=>mgEnterCreator()],
+                              ["cyber",()=>cyDesign()],
+                              ["tower",()=>{mgEnterCreator();
+                                const c=window.confirm; window.confirm=()=>true;
+                                document.getElementById('t3Btn').click(); window.confirm=c;}]]){
+        if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+        await wait(180); fn(); await wait(650);
+        document.getElementById('designTabBtn').click(); await wait(350);
+        const vis=e=>!!e.offsetParent;
+        const secs=[...document.querySelectorAll('#mgCreatorBar .dsec')].filter(vis);
+        const rows=[...document.querySelectorAll('#mgCreatorBar .blkrow')].filter(vis);
+        /* a heading with nothing under it is worse than no heading */
+        const empty=secs.filter(e=>![...e.children].some(c=>c.tagName!=='H4'&&
+          c.tagName!=='P'&&getComputedStyle(c).display!=='none')).map(e=>e.id);
+        /* nothing may be left loose in the bar: every control is filed */
+        const loose=[...document.getElementById('mgCreatorBar').children]
+          .filter(c=>!c.classList.contains('dsec')&&vis(c))
+          .map(c=>c.id||c.className);
+        const on=rows.find(r=>r.classList.contains('on'));
+        const off=rows.find(r=>!r.classList.contains('on')&&!r.classList.contains('lock'));
+        const cs=e=>e?getComputedStyle(e):null;
+        out[name]={
+          secs:secs.map(e=>e.querySelector('h4').textContent),
+          subs:secs.every(e=>((e.querySelector('h4 + p')||{}).textContent||'').length>20),
+          empty, loose,
+          rows:rows.length,
+          untold:rows.filter(r=>((r.querySelector('.br-tip')||{}).textContent||'').length<25)
+                    .map(r=>r.querySelector('b').textContent),
+          /* given and not given have to be told apart at a glance */
+          split:!!on&&!!off&&cs(on).backgroundColor!==cs(off).backgroundColor&&
+                cs(on).borderLeftColor!==cs(off).borderLeftColor,
+          tapOk:rows.every(r=>r.getBoundingClientRect().height>=40)
+        };
+      }
+      if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+      await wait(250);
+      return out;
+    });
+    for(const k of ["flat","cyber","tower"]){
+      const d=design[k];
+      ck(`${W}x${H} ${k}: the Design tab is sections, each one explained`,
+         d.secs.length>=4 && d.subs && d.empty.length===0, d);
+      ck(`${W}x${H} ${k}: nothing is left loose outside a section`,
+         d.loose.length===0, d.loose);
+    }
+    ck(`${W}x${H} the flat board hands out no block list, the other two do`,
+       design.flat.rows===0 && design.cyber.rows>=10 && design.tower.rows>=12,
+       {flat:design.flat.rows,cyber:design.cyber.rows,tower:design.tower.rows});
+    for(const k of ["cyber","tower"]){
+      const d=design[k];
+      /* the row count rides along on purpose: with no rows at all there is
+         nothing to be untold, and this passed against a Design tab that
+         offered no blocks whatsoever */
+      ck(`${W}x${H} ${k}: every block on offer says what it does`,
+         d.rows>=10 && d.untold.length===0, {rows:d.rows,untold:d.untold});
+      ck(`${W}x${H} ${k}: given and not given look different, and both are tappable`,
+         d.split && d.tapOk, {split:d.split,tapOk:d.tapOk});
+    }
+
     await pg.close();
   }
 

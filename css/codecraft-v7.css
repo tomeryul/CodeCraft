@@ -551,11 +551,66 @@ body.sheets-full #maker.sized,
 #mgDock{display:none;position:sticky;bottom:0;z-index:3;flex-direction:column;gap:5px;
   margin-top:8px;padding-top:4px;background:var(--panel);}
 #mgPanel.mk #mgDock{display:flex;}
+/* ---- the Design tab's sections ----
+   The tab held every control there is, in the order the files that own
+   them happened to inject them, with nothing saying what any group was
+   for. A heading and one line each. */
+.dsec{display:flex;flex-direction:column;gap:8px;padding:12px 0 0;}
+.dsec > h4{margin:0;font-size:12px;font-weight:800;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--accent2);}
+.dsec > h4 + p{margin:-4px 0 2px;font-size:12px;line-height:1.45;color:var(--ink2);}
+.dsec + .dsec{border-top:1px solid var(--hair);}
+#dsModes{gap:6px;flex-wrap:wrap;}
+
+/* ---- which blocks the player gets ----
+   A bank of chips carrying nothing but a name told an author nothing:
+   "Count" and "While" mean something only to somebody who has already met
+   them, and this screen is where you decide whether a child will. */
+/* Every rule here is prefixed with #mgCreatorBar on purpose. The bar has a
+   blanket `#mgCreatorBar button{...}` in css/styles.css that out-ranks any
+   plain class, and a `box-shadow:none !important` in codecraft-v5.css — so
+   the stripe below is a border, not the inset shadow it wants to be. */
+#mgCreatorBar .blkrow{display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;
+  background:var(--panel3);border:1px solid transparent;border-left:3px solid transparent;
+  border-radius:12px;padding:9px 11px;color:var(--ink);font-family:inherit;
+  font-size:13px;font-weight:400;}
+#mgCreatorBar .blkrow .br-ic{flex:0 0 auto;font-size:17px;line-height:1.2;}
+#mgCreatorBar .blkrow .br-ic .ui-emoji{width:18px;height:18px;vertical-align:0;}
+#mgCreatorBar .blkrow .br-mid{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px;}
+#mgCreatorBar .blkrow .br-mid b{font-size:13px;font-weight:800;}
+#mgCreatorBar .blkrow .br-tip{font-size:11.5px;line-height:1.4;color:var(--ink2);
+  white-space:normal;}
+#mgCreatorBar .blkrow .br-sw{flex:0 0 auto;font-style:normal;font-size:11px;font-weight:800;
+  color:var(--ink2);background:rgba(255,255,255,.07);border-radius:999px;
+  padding:3px 9px;white-space:nowrap;}
+/* Given or not given has to read at a glance down a column of fourteen,
+   so it is a stripe down the edge as well as a tint — a 10% wash on a dark
+   panel is not a state anybody can see. */
+#mgCreatorBar .blkrow.on{background:rgba(84,214,106,.13);
+  border-color:rgba(143,240,160,.34);border-left-color:#54d66a;}
+#mgCreatorBar .blkrow.on .br-mid b{color:#bff5c8;}
+#mgCreatorBar .blkrow.on .br-sw{color:#0b3d1c;background:#8ff0a0;}
+#mgCreatorBar .blkrow:not(.on){opacity:.55;}
+#mgCreatorBar .blkrow:not(.on) .br-ic{filter:grayscale(1);}
+#mgCreatorBar .blkrow.lock .br-sw{color:var(--ink2);background:rgba(255,255,255,.06);}
+#mgCreatorBar .blkrow:active{border-color:rgba(255,214,107,.6);border-left-color:#ffd66b;}
+#t3Blocks,#cyBlocks{display:flex;flex-direction:column;gap:6px;}
+/* the difficulty row reads like the steppers beside it: name, then value */
+#mgDiff{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+#mgDiff .lb{font-size:13px;font-weight:700;color:var(--ink2);}
+#mgDiff b{font-size:13px;font-weight:800;}
+/* the line between what the robot DOES and what decides when it does it */
+#t3Blocks .t3sep{display:block;height:1px;margin:4px 2px;background:var(--hair);}
+
 /* ---- the Design tab ----
    The creator's chrome lives here now, so the fold-out is always open and
    the ⚙️ that folded it is a way back to this tab rather than a toggle. */
 #designTab{flex-direction:column;gap:10px;padding:10px 12px 14px;overflow-y:auto;}
+/* the fold-out is open here — unless mgDesignLayout() emptied it by filing
+   every row into a section, and then it is a bar of nothing. An inline
+   style cannot beat the !important above it, so emptiness is a class. */
 #designTab .cb-panel,#designTab #mgCreatorBar .cb-panel{display:flex!important;}
+#designTab .cb-panel.cb-empty,#designTab #mgCreatorBar .cb-panel.cb-empty{display:none!important;}
 #designTab .cb-act{display:flex;gap:6px;flex-wrap:wrap;}
 #designTab .cb-act #mgSetup{display:none;}
 #designTab .cb-act .ibtn,#designTab .cb-act #t3Btn,#designTab .cb-act #cyBtn{

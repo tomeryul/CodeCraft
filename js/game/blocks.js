@@ -35,28 +35,43 @@ const BUILD_LBL={sapling:"🌱 sapling (1🪵)",bridge:"🌉 bridge (2🪨)",che
 const TARGETS=["tree","rock","iron","crystal","water","market","home","chest"];
 const TGT_EM={tree:"🌳",rock:"🪨",iron:"⛓️",crystal:"💎",water:"💧",market:"🏪",home:"🏠",chest:"📦"};
 const DEFS={
-  move:{cat:"basic",ic:"⬆️",lbl:"Move"},
-  turnL:{cat:"basic",ic:"↩️",lbl:"Turn Left"},
-  turnR:{cat:"basic",ic:"↪️",lbl:"Turn Right"},
+  /* `tip` is what the block does, in one sentence, written for the person
+     DESIGNING a level rather than solving one — they are choosing which of
+     these the player gets, and a row of names told them nothing. Only the
+     blocks a designer can hand out carry one; see the chip rows in
+     js/game/tower-editor.js and js/game/cyber-editor.js. */
+  move:{cat:"basic",ic:"⬆️",lbl:"Move",
+    tip:"One step forward, in whatever direction the robot is already facing."},
+  turnL:{cat:"basic",ic:"↩️",lbl:"Turn Left",
+    tip:"Turns on the spot, to the left. It does not move — turning costs a block and changes only which way the robot looks."},
+  turnR:{cat:"basic",ic:"↪️",lbl:"Turn Right",
+    tip:"The same, to the right. Without one of these a robot can only ever walk in a straight line."},
   collect:{cat:"basic",ic:"✋",lbl:"Collect"},
   chop:{cat:"basic",ic:"🪓",lbl:"Chop"},
   mine:{cat:"basic",ic:"⛏️",lbl:"Mine"},
   scoop:{cat:"basic",ic:"🪣",lbl:"Scoop"},
   drop:{cat:"basic",ic:"⤵️",lbl:"Drop"},
   pickUp:{cat:"basic",ic:"✊",lbl:"Lift"},   // challenge-only: lift a numbered brick to carry it
-  build:{cat:"basic",ic:"🔨",lbl:"Build"},
+  build:{cat:"basic",ic:"🔨",lbl:"Build",
+    tip:"Drops a brick on the tile in front — but never higher than the robot's own shoulder, which is what makes a tall tower a staircase problem."},
   /* Cyber Lab only: punch a number into the keypad in front. It is in DEFS
      rather than in a CATS row because no world palette offers it — a level
      hands it out through its own `allowed` list. */
-  tryCode:{cat:"basic",ic:"🔢",lbl:"Try Code"},
+  tryCode:{cat:"basic",ic:"🔢",lbl:"Try Code",
+    tip:"Punches a number into the 🔢 keypad in front. Right number and it opens for good; wrong one and it counts against the player."},
   rest:{cat:"basic",ic:"😴",lbl:"Rest"},
-  wait:{cat:"basic",ic:"⏱️",lbl:"Wait"},
-  repeat:{cat:"loops",ic:"🔁",lbl:"Repeat",container:true},
-  forever:{cat:"loops",ic:"♾️",lbl:"Forever",container:true},
+  wait:{cat:"basic",ic:"⏱️",lbl:"Wait",
+    tip:"Does nothing, for a moment. Give it out when something on the board needs time to change — a jammed keypad cooling down."},
+  repeat:{cat:"loops",ic:"🔁",lbl:"Repeat",container:true,
+    tip:"Does the blocks inside it a set number of times. This is how a short program does a long job — keep it out and your level can only be walked step by step."},
+  forever:{cat:"loops",ic:"♾️",lbl:"Forever",container:true,
+    tip:"Never stops. The level ends when the goal is met, so this is for “keep doing it until it is done” — pair it with ❓ If."},
   // "keep going UNTIL" — the loop every algorithm needs. repeat/count run a KNOWN
   // number of times, so neither can express "while it isn't sorted yet".
-  whileLoop:{cat:"loops",ic:"🔄",lbl:"While",container:true},
-  "if":{cat:"logic",ic:"❓",lbl:"If",container:true},
+  whileLoop:{cat:"loops",ic:"🔄",lbl:"While",container:true,
+    tip:"Asks a question before every turn and keeps going while the answer is yes. Give it out when the player cannot know the number in advance."},
+  "if":{cat:"logic",ic:"❓",lbl:"If",container:true,
+    tip:"Asks a question right now and only runs the blocks inside when the answer is yes. This is what lets the robot LOOK at your board instead of following a memorised route."},
   faceNearest:{cat:"smart",ic:"🧭",lbl:"Face Nearest"},
   /* 🚶 Walk To is how you travel in the world — the FIRST block a player meets,
      not a reward. Stepping one tile at a time (⬆️ Move + ↩️/↪️) is a puzzle-board
@@ -68,18 +83,24 @@ const DEFS={
   goHome:{cat:"smart",ic:"🏠",lbl:"Go Home"},
   sellAll:{cat:"smart",ic:"💰",lbl:"Sell All"},
   bankAll:{cat:"smart",ic:"🏦",lbl:"Bank All"},
-  setVar:{cat:"vars",ic:"📦",lbl:"Set"},
-  changeVar:{cat:"vars",ic:"➕",lbl:"Change"},
-  countLoop:{cat:"vars",ic:"🔢",lbl:"Count",container:true},
+  setVar:{cat:"vars",ic:"📦",lbl:"Set",
+    tip:"Puts a number in a named box, so the program can remember something. A counter starts life here."},
+  changeVar:{cat:"vars",ic:"➕",lbl:"Change",
+    tip:"Adds to a box — plus one each time round a loop, or plus the key that unscrambles a note."},
+  countLoop:{cat:"vars",ic:"🔢",lbl:"Count",container:true,
+    tip:"A loop that counts as it goes: 1, 2, 3… and the blocks inside can use the number it is on. Trying every code from 1 to 10 is one of these."},
   // reads a value FROM the world INTO a variable. Without this the board is opaque:
   // the robot could carry a numbered block but never look at its number, so no
   // sorting/searching/counting algorithm was expressible at all.
-  read:{cat:"vars",ic:"📖",lbl:"Read"},
-  say:{cat:"vars",ic:"💬",lbl:"Say"},
+  read:{cat:"vars",ic:"📖",lbl:"Read",
+    tip:"Copies a number OFF the board into a box — the number on a brick, or the one written on a 📝 note. Without it the player has to already know the answer."},
+  say:{cat:"vars",ic:"💬",lbl:"Say",
+    tip:"The robot says a number out loud. On a level that asks a question, this is how the answer is given."},
   // 🔧 Call a function. A function takes PARAMETERS and can hand a value BACK,
   // so "do this thing" becomes "work this out for me" — the step from a named
   // block of steps to an actual abstraction.
-  call:{cat:"funcs",ic:"🔧",lbl:"Call"},
+  call:{cat:"funcs",ic:"🔧",lbl:"Call",
+    tip:"Runs a job the player wrote once and named. The blocks inside are counted once however many times it is called — that is what makes it worth doing."},
   ret:{cat:"funcs",ic:"🔙",lbl:"Give Back"},
   /* 🤝 the team blocks. One program pasted onto every robot makes them all walk to
      the SAME nearest tree; these are how a fleet divides the work instead. */

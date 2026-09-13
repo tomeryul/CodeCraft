@@ -406,10 +406,14 @@ window.__t3glue=1;
 /* ---- new blocks in the shared palette ----
    DEFS is the block registry (blocks.js) and COND_LBL the sensor labels;
    both are plain objects, so a 3D level's palette is just five more keys. */
-DEFS.climb  ={cat:"basic",ic:"🪜",lbl:"Climb Up"};
-DEFS.descend={cat:"basic",ic:"⬇️",lbl:"Step Down"};
-DEFS.jump   ={cat:"basic",ic:"🦘",lbl:"Jump Gap"};
-DEFS.dig    ={cat:"basic",ic:"⛏️",lbl:"Take Brick"};
+DEFS.climb  ={cat:"basic",ic:"🪜",lbl:"Climb Up",
+  tip:"Steps UP onto a brick exactly one level high. Any higher and the robot cannot reach — which is why a tall tower needs a stair, not a wall."};
+DEFS.descend={cat:"basic",ic:"⬇️",lbl:"Step Down",
+  tip:"Steps DOWN exactly one level. Give it out on a board the robot starts high up on."};
+DEFS.jump   ={cat:"basic",ic:"🦘",lbl:"Jump Gap",
+  tip:"Clears one low tile and lands level on the far side. This is the only way across a 🕳️ pit the robot cannot fill."};
+DEFS.dig    ={cat:"basic",ic:"⛏️",lbl:"Take Brick",
+  tip:"Picks a brick back UP off the tile in front, so a robot that built the wrong thing can undo it."};
 COND_LBL.canClimb ="can climb up 🪜";
 COND_LBL.stepDown ="step down ahead ⬇️";
 COND_LBL.gapAhead ="gap ahead 🕳️";

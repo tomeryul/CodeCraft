@@ -147,7 +147,10 @@ window.cyDesign=()=>{mgEnterCreator();setMode(true);};
 function chrome(){
   const bar=$("mgCreatorBar");
   if(!bar||$("cyBtn"))return;
-  const act=bar.querySelector(".cb-act");
+  /* Everything this file injects is APPENDED to the bar, and mgDesignLayout()
+     files it into a section. Positioning relative to .cb-act or the size
+     steppers used to work and cannot any more: the layout moves both of
+     those into sections, so neither is a child of the bar by then. */
   const b=document.createElement("button");
   b.id="cyBtn";b.className="ibtn wide";
   b.title="Switch between a flat 2D challenge and a Cyber Lab level";
@@ -160,7 +163,7 @@ function chrome(){
     if(to&&window.on3d&&on3d()&&typeof setT3==="function")setT3(false);
     setMode(to);
   });
-  act.insertBefore(b,$("mgSetup"));
+  bar.appendChild(b);
 
   /* the strikes setting and the verdict, in the row Tower's stats use */
   const row=document.createElement("div");
@@ -172,9 +175,8 @@ function chrome(){
     '<span class="t3stat">📝 <b id="cyNNotes">0</b></span>';
   /* ⛔ Strikes is a setting, so it rides with the rest of them into the
      🛠️ Design tab — the board tab is the board and its tools, nothing else */
-  bar.insertBefore(row,act);
+  bar.appendChild(row);
 
-  const pane=bar.querySelector(".cb-panel"), stprow=pane.querySelector(".stprow");
   const hint=document.createElement("button");
   hint.id="cyHint";hint.className="rowbtn";
   hint.innerHTML='📜 <span class="lb">Level hint for the player</span>';
@@ -186,8 +188,7 @@ function chrome(){
   });
   const chips=document.createElement("div");
   chips.id="cyBlocks";chips.className="t3chips";
-  pane.insertBefore(hint,stprow);
-  pane.insertBefore(chips,stprow);
+  bar.appendChild(hint);bar.appendChild(chips);
 
   /* stepping one at a time to a four-digit code is not a design tool, so
      the number itself is the way in */
@@ -216,24 +217,13 @@ function strikeRow(p){
   }
 }
 function chipRow(p){
-  const chips=$("cyBlocks"); if(!chips)return;
-  chips.innerHTML="";
   const set=new Set(p.allowed||[]);
-  for(const t of CY.blocks){
-    const d=DEFS[t]; if(!d)continue;
-    const lock=!!LOCKED[t], onx=set.has(t)||lock;
-    const c=document.createElement("button");
-    c.className="t3chip"+(onx?" on":"")+(lock?" lock":"");
-    c.innerHTML=d.ic+' <span>'+esc(d.lbl)+'</span>';
-    c.title=lock?"Always available":(onx?"Tap to take it away":"Tap to allow it");
-    if(!lock)c.addEventListener("click",()=>{
-      if(set.has(t))set.delete(t); else set.add(t);
-      p.allowed=CY.blocks.filter(k=>set.has(k)||LOCKED[k]);
-      mgState.solved=false;
-      sfx(520,.03);renderPalette();mgUpdateCount();ui();
-    });
-    chips.appendChild(c);
-  }
+  mgBlockRows($("cyBlocks"),CY.blocks,p.allowed,LOCKED,(t,give)=>{
+    if(give)set.add(t); else set.delete(t);
+    p.allowed=CY.blocks.filter(k=>set.has(k)||LOCKED[k]);
+    mgState.solved=false;
+    sfx(520,.03);renderPalette();mgUpdateCount();ui();
+  });
 }
 function ui(){
   const btn=$("cyBtn"); if(!btn)return;
@@ -256,6 +246,7 @@ function ui(){
   if(!mine)return;
   const p=mgState.proj;
   strikeRow(p);chipRow(p);
+  if(typeof mgDesignLayout==="function")mgDesignLayout();
   $("cyNLocks").textContent=locks(p).length;
   $("cyNNotes").textContent=notes(p).length;
   $("mgGoal").textContent=(p.desc2?"📜 “"+p.desc2+"”":"🔐 Cyber design — a keypad, something that says what its code is, and a 🚩 flag past it.");
@@ -649,7 +640,7 @@ function cyGuideBody(el){
   sec("🔀 The hard version: several codes, one program");
   const n4=box("gnote alt");
   line(n4,"This is the trick the three hardest built-in levels are made of, and it is two taps.");
-  row(n4,"1","⚙️ Split into inputs","Your board becomes input 1. Add another, and give that board a different code on its keypad and on its note. Up to eight.");
+  row(n4,"1","🛠️ Split into inputs","Your board becomes input 1. Add another, and give that board a different code on its keypad and on its note. Up to eight.");
   row(n4,"2","One program, every board","A program that types 58 into the keypad passes the first board and fails the rest. Only a program that reads the note gets through all of them.");
   row(n4,"3","👁 Make the last one 🙈 secret","The player never sees that board at all, so they cannot study it. That is a one-time code, built by you.");
 }

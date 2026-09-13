@@ -344,7 +344,10 @@ function setMode(on){
 function chrome(){
   const bar=$("mgCreatorBar");
   if(!bar||$("t3Btn"))return;
-  const act=bar.querySelector(".cb-act");
+  /* Everything this file injects is APPENDED to the bar, and mgDesignLayout()
+     files it into a section. Positioning relative to .cb-act or the size
+     steppers used to work and cannot any more: the layout moves both of
+     those into sections, so neither is a child of the bar by then. */
   const b=document.createElement("button");
   b.id="t3Btn";b.className="ibtn wide";
   b.title="Switch between a flat 2D challenge and a 3D Tower level";
@@ -356,7 +359,7 @@ function chrome(){
     if(!confirm(msg))return;
     setMode(to);
   });
-  act.insertBefore(b,$("mgSetup"));
+  bar.appendChild(b);
 
   const row=document.createElement("div");
   row.id="t3EdRow";row.className="cb-row t3edrow";
@@ -378,7 +381,6 @@ function chrome(){
     sfx(560,.03);ui();mgDraw();
   });
 
-  const pane=bar.querySelector(".cb-panel"), stprow=pane.querySelector(".stprow");
   const hint=document.createElement("button");
   hint.id="t3Hint";hint.className="rowbtn";
   hint.innerHTML='📜 <span class="lb">Level hint for the player</span>';
@@ -390,32 +392,26 @@ function chrome(){
   });
   const chips=document.createElement("div");
   chips.id="t3Blocks";chips.className="t3chips";
-  pane.insertBefore(hint,stprow);
-  pane.insertBefore(chips,stprow);
+  bar.appendChild(hint);bar.appendChild(chips);
 }
 function chipRow(p){
-  const chips=$("t3Blocks");
-  chips.innerHTML="";
   const set=new Set(p.allowed||[]);
-  const mk=t=>{
-    const d=DEFS[t]; if(!d)return;
-    const lock=!!LOCKED[t], onx=set.has(t)||lock;
-    const c=document.createElement("button");
-    c.className="t3chip"+(onx?" on":"")+(lock?" lock":"");
-    c.innerHTML=d.ic+' <span>'+esc(d.lbl)+'</span>';
-    c.title=lock?"Always available":(onx?"Tap to take it away":"Tap to allow it");
-    if(!lock)c.addEventListener("click",()=>{
-      if(set.has(t))set.delete(t); else set.add(t);
-      p.allowed=ALL.filter(k=>set.has(k)||LOCKED[k]);
-      mgState.solved=false;
-      sfx(520,.03);
-      renderPalette();mgUpdateCount();ui();
-    });
-    chips.appendChild(c);
-  };
-  ACTS.forEach(mk);
-  const sep=document.createElement("i");sep.className="t3sep";chips.appendChild(sep);
-  CTRL.forEach(mk);
+  /* what the robot DOES, then what decides when it does it — the same two
+     halves the palette is split into, and the separator between them is
+     what made the old chip bank readable at all */
+  mgBlockRows($("t3Blocks"),ALL,p.allowed,LOCKED,(t,give)=>{
+    if(give)set.add(t); else set.delete(t);
+    p.allowed=ALL.filter(k=>set.has(k)||LOCKED[k]);
+    mgState.solved=false;
+    sfx(520,.03);
+    renderPalette();mgUpdateCount();ui();
+  });
+  const host=$("t3Blocks");
+  for(const k of CTRL){
+    const first=host.querySelector('[data-blk="'+k+'"]');
+    if(first){const sep=document.createElement("i");sep.className="t3sep";
+      host.insertBefore(sep,first);break;}
+  }
 }
 function ui(){
   const btn=$("t3Btn");
@@ -449,6 +445,7 @@ function ui(){
   else if(v.warns.length){warn.className="t3warn hmm";warn.textContent="⚠️ "+v.warns[0];}
   else warn.className="t3warn ok",warn.textContent="✅ Buildable — "+bricks(p)+" bricks, peak ⛰ "+peak(p)+". Write a program, press ▶ to prove it, then 💾 Save.";
   $("mgGoal").textContent=(p.desc3?"📜 “"+p.desc3+"”":"🧊 Tower design — tap a tile to raise it, hold to clear it.");
+  if(typeof mgDesignLayout==="function")mgDesignLayout();
 }
 
 /* ---------------- wrapping the creator ---------------- */

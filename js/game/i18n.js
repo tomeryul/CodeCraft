@@ -384,6 +384,62 @@ const HE={
 "Split into inputs — this board becomes input 1":"פצל לקלטים — הלוח הזה הופך לקלט 1",
 "Starter routines: off":"שגרות פתיחה: כבוי",
 "⭐ Easy":"⭐ קל",
+"always":"תמיד",
+
+/* ---- the Design tab: its six sections, and what each one is for ---- */
+"Kind of level":"סוג השלב",
+"Tap a kind to switch to it. Switching clears the board you built.":
+  "תלחץ על סוג כדי לעבור אליו. מעבר מוחק את הלוח שבנית.",
+"The board":"הלוח",
+"How big it is, and how many blocks the player is allowed to use.":
+  "כמה הוא גדול, וכמה בלוקים מותר לשחקן להשתמש.",
+"Blocks the player gets":"הבלוקים שהשחקן מקבל",
+"Tap one to give it to them or take it away. Dimmed means they will not have it.":
+  "תלחץ על אחד כדי לתת אותו או לקחת אותו. מעומעם אומר שלא יהיה לו.",
+"What the player reads":"מה שהשחקן קורא",
+"The level's name, and the line they see when it opens.":
+  "השם של השלב, והשורה שהוא רואה כשהוא נפתח.",
+"Make it harder":"להקשות",
+"Optional. Each of these asks the player for something more.":
+  "לא חובה. כל אחד מאלה דורש מהשחקן עוד משהו.",
+"When it is ready":"כשהוא מוכן",
+"Save keeps it for you. Publish puts it in front of everybody.":
+  "שמירה שומרת אותו אצלך. פרסום מציג אותו לכולם.",
+
+/* ---- what each block does, written for whoever is HANDING it out ----
+   Four of the twenty carry an emoji inside the sentence and live in
+   HE_RAW instead; see the note there. "Move" is not here either — the
+   academy already teaches that sentence, so the block reuses it. */
+"Does nothing, for a moment. Give it out when something on the board needs time to change — a jammed keypad cooling down.":
+  "לא עושה כלום, לרגע. תן אותו כשמשהו על הלוח צריך זמן כדי להשתנות — מקלדת תקועה שמתקררת.",
+"Turns on the spot, to the left. It does not move — turning costs a block and changes only which way the robot looks.":
+  "מסתובב במקום, שמאלה. הוא לא זז — סיבוב עולה בלוק ומשנה רק לאן הרובוט מסתכל.",
+"The same, to the right. Without one of these a robot can only ever walk in a straight line.":
+  "אותו דבר, ימינה. בלי אחד מאלה רובוט יכול ללכת רק בקו ישר.",
+"Drops a brick on the tile in front — but never higher than the robot's own shoulder, which is what makes a tall tower a staircase problem.":
+  "מניח לבנה על המשבצת שלפניו — אבל אף פעם לא גבוה מהכתף של הרובוט עצמו, וזה מה שהופך מגדל גבוה לבעיה של מדרגות.",
+"Does the blocks inside it a set number of times. This is how a short program does a long job — keep it out and your level can only be walked step by step.":
+  "מבצע את הבלוקים שבתוכו מספר פעמים קבוע. ככה תוכנית קצרה עושה עבודה ארוכה — בלעדיו אפשר לעבור את השלב שלך רק צעד־צעד.",
+"Asks a question before every turn and keeps going while the answer is yes. Give it out when the player cannot know the number in advance.":
+  "שואל שאלה לפני כל סיבוב וממשיך כל עוד התשובה כן. תן אותו כשהשחקן לא יכול לדעת את המספר מראש.",
+"Asks a question right now and only runs the blocks inside when the answer is yes. This is what lets the robot LOOK at your board instead of following a memorised route.":
+  "שואל שאלה עכשיו ומריץ את הבלוקים שבפנים רק אם התשובה כן. זה מה שנותן לרובוט להסתכל על הלוח שלך במקום ללכת לפי מסלול שנלמד בעל פה.",
+"Puts a number in a named box, so the program can remember something. A counter starts life here.":
+  "שם מספר בקופסה עם שם, כדי שהתוכנית תוכל לזכור משהו. מונה מתחיל את חייו כאן.",
+"Adds to a box — plus one each time round a loop, or plus the key that unscrambles a note.":
+  "מוסיף לקופסה — פלוס אחד בכל סיבוב של לולאה, או פלוס המפתח שמפענח פתק.",
+"A loop that counts as it goes: 1, 2, 3… and the blocks inside can use the number it is on. Trying every code from 1 to 10 is one of these.":
+  "לולאה שסופרת תוך כדי: 1, 2, 3… והבלוקים שבפנים יכולים להשתמש במספר שהיא נמצאת בו. לנסות כל קוד מ-1 עד 10 זו אחת כזאת.",
+"The robot says a number out loud. On a level that asks a question, this is how the answer is given.":
+  "הרובוט אומר מספר בקול. בשלב ששואל שאלה, ככה נותנים את התשובה.",
+"Runs a job the player wrote once and named. The blocks inside are counted once however many times it is called — that is what makes it worth doing.":
+  "מריץ עבודה שהשחקן כתב פעם אחת ונתן לה שם. הבלוקים שבפנים נספרים פעם אחת לא משנה כמה פעמים קוראים לה — זה מה שהופך את זה למשתלם.",
+"Steps UP onto a brick exactly one level high. Any higher and the robot cannot reach — which is why a tall tower needs a stair, not a wall.":
+  "עולה על לבנה בגובה של קומה אחת בדיוק. גבוה מזה והרובוט לא מגיע — ולכן מגדל גבוה צריך מדרגות, לא קיר.",
+"Steps DOWN exactly one level. Give it out on a board the robot starts high up on.":
+  "יורד קומה אחת בדיוק. תן אותו בלוח שהרובוט מתחיל בו גבוה.",
+"Picks a brick back UP off the tile in front, so a robot that built the wrong thing can undo it.":
+  "מרים לבנה בחזרה מהמשבצת שלפניו, כדי שרובוט שבנה את הדבר הלא נכון יוכל לבטל.",
 "➕ Add level":"➕ הוסף שלב","🌍 Publish":"🌍 פרסם",
 "🚚 Move":"🚚 הזז","🗑 Delete":"🗑 מחק",
 
@@ -1065,6 +1121,14 @@ const SCOPED=[
    ui-icons.js turns whatever emoji they carry into icons either way. */
 const HE_RAW={
   /* the emoji sit inside these sentences, so they are used as written */
+  "Punches a number into the 🔢 keypad in front. Right number and it opens for good; wrong one and it counts against the player.":
+    "מקיש מספר במקלדת 🔢 שלפניו. מספר נכון והיא נפתחת לתמיד; מספר שגוי ונרשם לשחקן ניסיון כושל.",
+  "Never stops. The level ends when the goal is met, so this is for “keep doing it until it is done” — pair it with ❓ If.":
+    "אף פעם לא נעצר. השלב נגמר כשהמטרה מושגת, אז זה בשביל “תמשיך עד שזה נגמר” — תשלב אותו עם ❓ אם.",
+  "Copies a number OFF the board into a box — the number on a brick, or the one written on a 📝 note. Without it the player has to already know the answer.":
+    "מעתיק מספר מהלוח אל קופסה — המספר שעל לבנה, או זה שכתוב על 📝 פתק. בלעדיו השחקן חייב כבר לדעת את התשובה.",
+  "Clears one low tile and lands level on the far side. This is the only way across a 🕳️ pit the robot cannot fill.":
+    "מדלג מעל משבצת נמוכה אחת ונוחת באותו גובה בצד השני. זו הדרך היחידה לחצות 🕳️ בור שהרובוט לא יכול למלא.",
   "Hats, outfits and shoes unlock as you level up ⭐ (first at level 2).":
     "כובעים, תלבושות ונעליים נפתחים כשאתה עולה רמה ⭐ (הראשון ברמה 2).",
   "Collect 10 🪵 wood":"לאסוף 10 🪵 עץ",
@@ -1293,8 +1357,8 @@ const HE_RAW={
   "שלושה בלוקים ממוספרים בסדר הלא נכון, ושורה פנויה מעל לשימוש כשטח עבודה. זה השלב שיכול להפוך לשאלת אלגוריתם אמיתית — תריץ עליו את מבחן הערבוב.",
 "Use ➕ Add level. Level 1 shows the trick with two blocks. Level 2 makes them use it twice. Level 4 makes it the only way through. Four small levels beat one giant one — and your player actually finishes them.":
   "השתמש ב-➕ הוסף שלב. שלב 1 מראה את הטריק עם שני בלוקים. שלב 2 מכריח להשתמש בו פעמיים. שלב 4 הופך אותו לדרך היחידה. ארבעה שלבים קטנים עדיפים על אחד ענק — והשחקן שלך באמת מסיים אותם.",
-"You do not have to shuffle by hand. Open ⚙️ and use":
-  "אתה לא צריך לערבב ביד. פתח את ⚙️ והשתמש ב",
+"You do not have to shuffle by hand. Open the 🛠️ Design tab and use":
+  "אתה לא צריך לערבב ביד. פתח את לשונית 🛠️ העיצוב והשתמש ב",
 "something it could not know in advance: ❓ If 🧱 wall ahead, ❓ If 🎯 on a target, 📖 Read the number under me. A level with nothing to check can only be walked from memory.":
   "משהו שהוא לא יכול לדעת מראש: ❓ אם 🧱 קיר לפנים, ❓ אם 🎯 על יעד, 📖 קרא את המספר מתחתיי. שלב שאין בו מה לבדוק אפשר רק ללכת בו מהזיכרון.",
 "thing (move a block, move the start) and run the same program again. What happens next is rule number seven…":
@@ -1304,7 +1368,6 @@ const HE_RAW={
 "🍳 Start from a board":"🍳 להתחיל מלוח",
 "🎁 Starter routines":"🎁 שגרות פתיחה",
 "📏 Six rules for a level people finish":"📏 שישה כללים לשלב שאנשים מסיימים",
-"🔢 Add this board as an input":"🔢 הוסף את הלוח הזה כקלט",
 "🔢 Make the game run the shuffle test for you":"🔢 תן למשחק להריץ את מבחן הערבוב בשבילך",
 "🧠 When is it an algorithm question?":"🧠 מתי זו שאלת אלגוריתם?",
 "🧩 is the strongest tool in the creator. Solve your own level first, count the blocks you used, then set the budget to":

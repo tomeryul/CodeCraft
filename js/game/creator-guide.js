@@ -108,7 +108,7 @@ function renderGuide(){
   el.appendChild(n);
   sec("🔢 Make the game run the shuffle test for you");
   const m=document.createElement("div");m.className="gnote alt";
-  m.innerHTML='You do not have to shuffle by hand. Open ⚙️ and use <b>🔢 Add this board as an input</b>:'+
+  m.innerHTML='You do not have to shuffle by hand. Open the 🛠️ Design tab and use <b>🔢 Split into inputs</b>:'+
     '<br><br><b>1.</b> Lay out your numbered blocks and add them as input 1.'+
     '<br><b>2.</b> Move the blocks, add them again as input 2. Up to eight.'+
     '<br><b>3.</b> Write <b>one</b> program and press ▶. It runs against <b>every</b> input, and you only prove the level — and only unlock 💾 Save — if all of them pass.'+

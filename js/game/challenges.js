@@ -364,6 +364,123 @@ function mgToolList(){
   return base.concat(tiles,[{id:"erase",em:"🧹",lbl:"Erase",
     tip:"Clears whatever is on the tile you tap."}]);
 }
+/* ---- which blocks the player gets ----
+   Both the Tower and the Cyber designers ask the same question and used to
+   draw it the same wrong way: a bank of chips with nothing but a name on
+   them. "Count" and "While" mean nothing to somebody who has not met them,
+   and this screen is where you DECIDE whether a child will meet them.
+
+   So each one is a row that says what it does. The name, the sentence and
+   the state are separate elements: the Hebrew dictionary matches whole
+   text nodes, and a name welded into its sentence matches nothing. */
+function mgBlockRows(host,list,allowed,locked,onToggle){
+  if(!host)return;
+  host.innerHTML="";
+  const set=new Set(allowed||[]);
+  for(const t of list){
+    const d=(typeof DEFS!=="undefined")&&DEFS[t]; if(!d)continue;
+    const lock=!!(locked&&locked[t]), on=set.has(t)||lock;
+    const b=document.createElement("button");
+    b.className="blkrow"+(on?" on":"")+(lock?" lock":"");
+    b.dataset.blk=t;   // so a caller can find one row without reading its label
+    const ic=document.createElement("span");ic.className="br-ic";ic.textContent=d.ic;
+    const mid=document.createElement("span");mid.className="br-mid";
+    const nm=document.createElement("b");nm.textContent=d.lbl;
+    const tx=document.createElement("span");tx.className="br-tip";tx.textContent=d.tip||"";
+    mid.appendChild(nm);mid.appendChild(tx);
+    const sw=document.createElement("i");sw.className="br-sw";
+    sw.textContent=lock?"always":(on?"✓":"＋");
+    b.appendChild(ic);b.appendChild(mid);b.appendChild(sw);
+    b.title=lock?"Always available":(on?"Tap to take it away":"Tap to allow it");
+    if(!lock)b.addEventListener("click",()=>onToggle(t,!set.has(t)));
+    host.appendChild(b);
+  }
+}
+window.mgBlockRows=mgBlockRows;
+
+/* ---- the Design tab, in sections ----
+   Everything about designing a level ends up in one tab, and it arrived as
+   a pile: a strikes row, three buttons, six rowbtns, a bank of block chips
+   and three steppers, in the order the files that own them happened to
+   inject them. Nothing said what any group WAS.
+
+   So the tab is arranged here, in one place, by id — the three files that
+   inject into it (this one, tower-editor.js, cyber-editor.js) each call
+   this after their own chrome is in, and anything they add that is not
+   named below is left where it fell rather than lost.
+
+   Each section is a heading and one line saying what it is for, because
+   "Block budget" and "Starter routines" are only obvious to somebody who
+   already knows what they do. */
+const MG_SECTIONS=[
+  {id:"dsKind",  name:"Kind of level",
+   sub:"Tap a kind to switch to it. Switching clears the board you built.",
+   has:["dsModes"]},
+  {id:"dsBoard", name:"The board",
+   sub:"How big it is, and how many blocks the player is allowed to use.",
+   has:["mgSizeRow","mgDiff"]},
+  {id:"dsBlocks",name:"Blocks the player gets",
+   sub:"Tap one to give it to them or take it away. Dimmed means they will not have it.",
+   has:["t3Blocks","cyBlocks"]},
+  {id:"dsWords", name:"What the player reads",
+   sub:"The level's name, and the line they see when it opens.",
+   has:["mgName","t3Hint","cyHint","mgGuide"]},
+  {id:"dsHard",  name:"Make it harder",
+   sub:"Optional. Each of these asks the player for something more.",
+   has:["cyEdRow","mgAddCase","mgCaseNow","mgPreset","mgCaseEdit","mgLevels","mgStageInfo"]},
+  {id:"dsDone",  name:"When it is ready",
+   sub:"Save keeps it for you. Publish puts it in front of everybody.",
+   has:["mgActRow"]}
+];
+function mgDesignLayout(){
+  const bar=$("mgCreatorBar"); if(!bar)return;
+  /* the size steppers and the action row are wrapped once, so they can be
+     moved as a unit rather than three and four loose children */
+  if(!$("mgSizeRow")){
+    const sr=bar.querySelector(".stprow"); if(sr)sr.id="mgSizeRow";
+  }
+  if(!$("mgActRow")){
+    const ar=bar.querySelector(".cb-act"); if(ar)ar.id="mgActRow";
+  }
+  /* the mode buttons are injected into the action row by the two other
+     files; they belong at the top with the question they answer */
+  let modes=$("dsModes");
+  if(!modes){
+    modes=document.createElement("div");modes.id="dsModes";modes.className="cb-row cb-act";
+    /* into the document first: the section loop below finds its contents
+       by id, and an element that is not in the document is not findable */
+    bar.appendChild(modes);
+  }
+  for(const id of ["t3Btn","cyBtn"]){
+    const b=$(id); if(b&&b.parentNode!==modes)modes.appendChild(b);
+  }
+  for(const sec of MG_SECTIONS){
+    let el=$(sec.id);
+    if(!el){
+      el=document.createElement("div");el.id=sec.id;el.className="dsec";
+      const h=document.createElement("h4");h.textContent=sec.name;
+      const p=document.createElement("p");p.textContent=sec.sub;
+      el.appendChild(h);el.appendChild(p);
+    }
+    bar.appendChild(el);               // keeps the sections in order
+    for(const id of sec.has){
+      const c=$(id); if(c&&c.parentNode!==el)el.appendChild(c);
+    }
+    /* a section with nothing in it says nothing — the Cyber strikes row is
+       not there on a flat board, and 3D has no inputs */
+    const live=[...el.children].filter(c=>c.tagName!=="H4"&&c.tagName!=="P"&&
+      getComputedStyle(c).display!=="none");
+    el.style.display=live.length?"":"none";
+  }
+  /* The fold-out panel is an empty shell once its rows have been filed into
+     sections — it was the ⚙️ drawer, and there is no drawer here. Checked
+     last, when everything that was going to leave it has left. */
+  const pane=bar.querySelector(".cb-panel");
+  if(pane)pane.classList.toggle("cb-empty",
+    !pane.querySelector("button,.stprow,.cb-row,.cb-note"));
+}
+window.mgDesignLayout=mgDesignLayout;
+
 /* ---- what the tool in your hand does ----
    One line under the tools, in every designer: the flat board's, Tower's
    and the Cyber Lab's all feed the same element, because they all have the
@@ -574,6 +691,8 @@ function mgActLabels(){
 function mgCreatorUI(){
   if(!mgState||!mgState.creator)return;
   $("designTabBtn").style.display="";
+  /* the other two designers call this again after their own chrome is in */
+  mgDesignLayout();
   mgActLabels();
   mgToolsUI();
   const p=mgState.proj;
@@ -581,8 +700,16 @@ function mgCreatorUI(){
   $("mgW").textContent=p.gw;
   $("mgH").textContent=p.gh;
   // (#mgBrickN is owned by mgToolsUI — it shows a block number or a colour)
+  /* "⭐ Easy" on its own is a rating of nothing in particular. Two nodes,
+     not one glued string — the dictionary matches whole text nodes. */
   const dl=["","⭐ Easy","⭐⭐ Medium","⭐⭐⭐ Hard"];
-  if($("mgDiff"))$("mgDiff").textContent=dl[p.diff||1];
+  const df=$("mgDiff");
+  if(df){
+    df.textContent="";
+    const l=document.createElement("span");l.className="lb";l.textContent="Difficulty";
+    const v=document.createElement("b");v.textContent=dl[p.diff||1];
+    df.appendChild(l);df.appendChild(v);
+  }
   const banked=(mgState.stages&&mgState.stages.length)||0, editing=mgState.editIndex!=null;
   // Edit mode used to be invisible (this element was `hidden`), so after tapping
   // ✏️ on a banked level the ➕ button quietly REPLACED that level instead of
