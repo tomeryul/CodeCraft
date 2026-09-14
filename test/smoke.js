@@ -4007,7 +4007,11 @@ async function ev(expr) {
     mgRobot.routines={A:[{t:'move',uid:7}],B:[]};
     mgExit(false);
     mgEnterCreator();
-    out.freshStart = mgRobot.program.length===0 && mgRobot.routines.A.length===0;
+    /* "blank" is about the CONTENT, not the shape: routines are {params,body}
+       once robotRoutines() has normalised them, and reading .length off that
+       tests which shape the robot happens to be in rather than whether the
+       program is empty. */
+    out.freshStart = mgRobot.program.length===0 && routineOf(mgRobot,'A').body.length===0;
     mgExit(false);
     // (3) editing a banked level must not remove it from the bank
     mgEnterCreator();

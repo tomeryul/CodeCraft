@@ -38,6 +38,7 @@ let mkVal=null;
    editor, it is this one with a filter. Only the ids differ, so that both
    sheets can be in the DOM at once. */
 let mkFocus=null;
+let mkFromStyle=false;   // was the maker opened FROM Style, or straight from the menu?
 /* which of the dock's four tabs is showing. A tab switch repaints the
    dock and nothing else, so the canvas is never torn down under the
    player's finger. */
@@ -72,6 +73,7 @@ function wearNewId(){
 
 /* ---------------- open / close ---------------- */
 function makerOpen(slot,id){
+  const st=$("style"); mkFromStyle=!!(st&&st.classList.contains("open"));
   mkSlot=(slot==="outfit"||slot==="shoes")?slot:"hat";
   const p=id?wearFind(id):null;
   mkParts=[]; mkSel=-1; mkDrag=null; mkWasGrid=false;
@@ -123,7 +125,14 @@ function mkWideApply(){
   if(mkWide&&!sh.classList.contains("wide"))sh.classList.add("wide");
   else if(!mkWide&&sh.classList.contains("wide"))sh.classList.remove("wide");
 }
-function makerClose(){ makerExit(); styleOpen(); }
+/* The maker is usually opened FROM Style, and closing it went back there
+   unconditionally — including when it had been opened straight from the
+   menu, which dropped you on a page you were never on. */
+function makerClose(){
+  const fromStyle=mkFromStyle;
+  makerExit();
+  if(fromStyle)styleOpen(); else if(typeof hubOpen==="function")hubOpen();
+}
 
 /* ---------------- the painting surface ---------------- */
 /* The guide is the robot, not a ruler: whatever the piece is worn on is

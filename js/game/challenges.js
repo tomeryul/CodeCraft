@@ -215,6 +215,61 @@ async function loadCommunity(){
     }
   }catch(e){el.innerHTML='<div class="authnote">⚠️ Could not load: '+esc(e.message)+'</div>';}
 }
+/* ---- the author's draft ----
+   The creator had no memory. mgEnterCreator() always built a blank board,
+   and nothing anywhere wrote the half-finished one down — so ANY way out
+   (‹ Back, ✕ Exit, the tab bar, a reload) threw the work away, silently,
+   with no way back to it. And 💾 Save cannot be the safety net: it stays
+   locked until the level is proven solvable, which is exactly the state a
+   half-built board is not in.
+
+   So the creator keeps a draft. It is written on every edit and on the way
+   out, restored on the way in, and cleared only when the work has a
+   permanent home (saved or published) or the author asks for a new board. */
+function mgDraftHasWork(d){
+  if(!d||!d.proj)return false;
+  const p=d.proj;
+  return !!((p.cells&&p.cells.length)||(p.initial&&p.initial.length)||
+            (p.tiles&&p.tiles.length)||(p.plan&&p.plan.length)||
+            (p.terrain&&p.terrain.length)||(p.holes&&p.holes.length)||
+            (d.stages&&d.stages.length)||(d.program&&d.program.length)||
+            (p.cases&&p.cases.length)||p.cyber||p.mode3d||
+            (p.name&&p.name!=="My Challenge"));
+}
+function mgSaveDraft(){
+  if(!mgState||!mgState.creator)return;
+  try{
+    const d={
+      proj:JSON.parse(JSON.stringify(mgState.proj)),
+      program:mgRobot?packProg(mgRobot):[],
+      stages:JSON.parse(JSON.stringify(mgState.stages||[])),
+      solved:!!mgState.solved,
+      /* which saved thing this draft belongs to, so Save still updates in
+         place instead of making a second copy */
+      editingId:mgState.editingId||null,
+      publishId:mgState.publishId||null,
+      at:Date.now()
+    };
+    /* Opening a blank board must not destroy the draft behind it. Once
+       there is something on the new board it becomes the draft — that is
+       the author building something else, on purpose. */
+    if(!mgDraftHasWork(d)&&mgDraftHasWork(player.draft))return;
+    player.draft=d;
+    saveSoon();
+  }catch(e){}   // a draft is a convenience; never let it break the creator
+}
+function mgClearDraft(){ if(player.draft){player.draft=null;saveSoon();} }
+window.mgSaveDraft=mgSaveDraft; window.mgClearDraft=mgClearDraft;
+/* NOT window.mgDraftHasWork: `function mgDraftHasWork(){}` at the top level
+   of a classic script IS window.mgDraftHasWork, so assigning a wrapper over
+   that name replaces the declaration and the wrapper calls itself. One
+   blown stack, and every file after this one never loads. */
+window.mgHasDraft=function(){return mgDraftHasWork(player.draft);};
+
+/* start a brand-new board, throwing the draft away on purpose */
+function mgNewChallenge(){ mgClearDraft(); mgEnterCreator(); }
+window.mgNewChallenge=mgNewChallenge;
+
 function mgEnterCreator(){
   mgEnter({id:"custom",em:"✏️",name:"My Challenge",diff:1,coins:0,xp:0,maxBlocks:12,gw:8,gh:6,
     desc:"Pick a tool under the board and tap tiles to design a level.",
@@ -223,7 +278,12 @@ function mgEnterCreator(){
   // used to open with the PREVIOUS one's program — which could then be run with ▶ and
   // "prove" a level the author never solved. Start blank; the edit flows
   // (mgEditStage / mgEditMyChallenge / mgEditCommunity) load their saved solution after this.
-  if(mgRobot){mgRobot.program=[];robotRoutines(mgRobot);mgRobot.routines={A:[],B:[]};mgRobot.hist=[];mgRobot.redoS=[];}
+  /* {A:[],B:[]} is the LEGACY shape robotRoutines() exists to upgrade away
+     ({params,body}); writing it here left the robot in a shape that the
+     next thing to touch it silently rewrote. Ask for empty canonical
+     routines instead. */
+  if(mgRobot){mgRobot.program=[];mgRobot.routines={};robotRoutines(mgRobot);
+    mgRobot.hist=[];mgRobot.redoS=[];}
   edTarget="main";
   mgState.creator=true;mgState.solved=false;mgState.paintMode="paint";mgState.brickNum=1;mgState.tileArg=1;
   mgState.stages=[];        // banked levels for a multi-level pack (empty = single challenge)
@@ -242,6 +302,31 @@ function mgEnterCreator(){
   $("editor").classList.add("max");
   mgCreatorUI();
 }
+/* Resuming is its own door, NOT something mgEnterCreator() does for you.
+   Seven callers funnel through that function and every one of them means
+   "a blank board of this kind" — cyDesign() in particular does
+   mgEnterCreator() then setMode(true), so restoring a Tower draft under it
+   would flag the board BOTH kinds at once, which is the bug v164 fixed.
+   The Projects card and the menu tile say "Continue" and come here. */
+function mgResumeDraft(){
+  const d=player.draft;
+  mgEnterCreator();
+  if(!mgDraftHasWork(d))return;
+  mgState.proj=JSON.parse(JSON.stringify(d.proj));
+  mgState.stages=JSON.parse(JSON.stringify(d.stages||[]));
+  mgState.solved=!!d.solved;
+  mgState.editingId=d.editingId||null;
+  mgState.publishId=d.publishId||null;
+  if(mgRobot&&d.program&&d.program.length)applyProg(mgRobot,d.program);
+  const rb=mgState.robot;
+  rb.x=mgState.proj.start.x;rb.y=mgState.proj.start.y;rb.dir=mgState.proj.start.dir;
+  if(rb.h){rb.h={};rb.base={};rb.z=0;}
+  mgSeed(rb,mgState.proj);
+  renderPalette();renderProgram();renderPy();updateUndoBtns();mgUpdateCount();
+  mgCreatorUI();mgDraw();
+  toast("↩️ Picked up where you left off — “"+mgState.proj.name+"”.");
+}
+window.mgResumeDraft=mgResumeDraft;
 // open the creator loaded with a community challenge the player published, so they
 // can tweak it or add levels; Publish then UPDATES that row instead of inserting.
 function mgEditCommunity(row){
@@ -755,6 +840,7 @@ function mgActLabels(){
 }
 function mgCreatorUI(){
   if(!mgState||!mgState.creator)return;
+  mgSaveDraft();   // every edit routes through here, so this is the autosave
   $("designTabBtn").style.display="";
   /* the other two designers call this again after their own chrome is in */
   mgBlocksUI();
@@ -1416,7 +1502,21 @@ function mgSortGoalOrder(proj){
   for(let i=0;i<n;i++)g.push([cells[i][0],cells[i][1],nums[i]]);
   return g.length?g:null;
 }
+/* Back means "one step, to wherever you came from" (see js/game/nav.js),
+   but mgExit always reopened Projects — so a lesson entered from the
+   Academy, or a creator opened from the menu, both dropped you into a
+   list you had never been on. Whatever sheet was open when the challenge
+   started is the way back. */
+let mgCameFrom=null;
+const MG_BACKABLE=["projects","quests","mentor","hub"];
+function mgNoteOrigin(){
+  const open=MG_BACKABLE.find(id=>{const e=$(id);return e&&e.classList.contains("open");});
+  /* a sheet that closed itself on the way here leaves a hint behind */
+  mgCameFrom=open||(MG_BACKABLE.indexOf(window.mgOriginHint)>=0?window.mgOriginHint:null);
+  window.mgOriginHint=null;
+}
 function mgEnter(proj0){
+  mgNoteOrigin();
   // Own a private copy. Two callers hand us LIVE objects — the PROJECTS entry and a
   // saved player.myChallenges entry — so anything that writes to mgState.proj during
   // play (the test-case loop does) would corrupt the built-in level for the session,
@@ -1485,6 +1585,7 @@ function mgExit(reopen){
   if(!mgState)return;
   mgStop();
   player.projPrograms[mgState.proj.id]=packProg(mgRobot);
+  mgSaveDraft();          // leaving is the commonest way work was lost
   mgState=null;mgRobot=null;
   $("boardTabBtn").style.display="none";
   $("designTabBtn").style.display="none";
@@ -1504,7 +1605,15 @@ function mgExit(reopen){
   saveSoon();
   if(reopen!==false){
     $("editor").classList.remove("open");
-    renderProjects();$("projects").classList.add("open");
+    /* the page it was opened from, not always the challenge list */
+    const to=mgCameFrom||"projects";
+    if(to==="hub"&&typeof hubOpen==="function")hubOpen();
+    else{
+      /* fill the page before showing it, where it has a renderer */
+      if(to==="quests"&&typeof renderQuests==="function")renderQuests();
+      else if(typeof renderProjects==="function"&&to==="projects")renderProjects();
+      ($(to)||$("projects")).classList.add("open");
+    }
   }
 }
 function mgReset(){
@@ -2152,10 +2261,21 @@ function renderProjects(){
   }
   // player's own saved challenges (incl. sorting games) — persisted + cloud-synced
   const mh=document.createElement("h4");mh.className="qsec";mh.textContent="🛠️ My Challenges";el.appendChild(mh);
-  const nc=ccCard(el,{em:"✏️",name:"Create your own",cls:"pnew",
-    desc:"Design a blueprint, prove it solvable, then share it with other players.",
-    onTap:()=>{$("projects").classList.remove("open");mgEnterCreator();}});
-  nc.querySelector(".pbadge").textContent="＋";
+  /* The creator reopens on whatever you were last building, so this card
+     has to say which of the two it is about to do — and offer the other. */
+  const dr=mgDraftHasWork(player.draft)?player.draft:null;
+  const nc=ccCard(el,dr
+    ? {em:"✏️",name:"Continue “"+esc(dr.proj.name)+"”",cls:"pnew",
+       desc:"Your unfinished board is still here. Pick it up where you left it.",
+       onTap:()=>{$("projects").classList.remove("open");mgResumeDraft();}}
+    : {em:"✏️",name:"Create your own",cls:"pnew",
+       desc:"Design a blueprint, prove it solvable, then share it with other players.",
+       onTap:()=>{$("projects").classList.remove("open");mgEnterCreator();}});
+  nc.querySelector(".pbadge").textContent=dr?"↩️":"＋";
+  if(dr)ccSideBtn(nc,"＋","Start a new board instead (throws this draft away)",()=>{
+    if(!confirm("Start a new board?\n\n“"+dr.proj.name+"” is not saved — it will be gone."))return;
+    $("projects").classList.remove("open");mgNewChallenge();
+  });
   // "what do I even build?" is where most people stop — so the answer sits right
   // next to the button that asks the question
   if(typeof openGuide==="function")

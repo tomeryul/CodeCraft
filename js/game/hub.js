@@ -64,7 +64,12 @@ const GROUPS=[
      show:()=>!has("ageOk")||ageOk()}
   ]},
   {name:"Create",tiles:[
-    {em:"✏️",name:"New challenge",tag:"2D",go:()=>{hubClose();mgEnterCreator();}},
+    /* same rule as the Projects card: the creator resumes, so say so */
+    /* a function, not a string: GROUPS is built once at load, so a fixed
+       label here would answer "is there a draft?" before there ever is one */
+    {em:"✏️",name:()=>(window.mgHasDraft&&mgHasDraft())?"Continue my challenge":"New challenge",
+     tag:"2D",go:()=>{hubClose();
+       if(window.mgHasDraft&&mgHasDraft())mgResumeDraft(); else mgEnterCreator();}},
     {em:"🧊",name:"New tower level",tag:"3D",go:()=>hubPage("tower",".t3card.t3new")},
     {em:"🛠️",name:"My Challenges",tag:"yours",page:"mine",
      meta:()=>num(()=>((player.myChallenges||[]).length||null)+"")},
@@ -88,7 +93,14 @@ function hubOpen(){
   $("hub").classList.add("open");
   if(has("sfx"))sfx(560,.04);
 }
-function hubClose(){$("hub").classList.remove("open");}
+/* Every menu row closes the menu and THEN opens its destination, so by the
+   time a challenge starts there is no open sheet left to remember. The
+   hint says where the journey began; mgEnter reads it and Back returns to
+   the menu instead of dumping you in the challenge list. */
+function hubClose(){
+  if($("hub").classList.contains("open"))window.mgOriginHint="hub";
+  $("hub").classList.remove("open");
+}
 
 function hubRender(){
   const el=$("hubBody"); if(!el)return;
@@ -117,9 +129,10 @@ function hubRender(){
     const grid=document.createElement("div");grid.className="hub-grid";
     for(const t of tiles){
       const m=t.meta?t.meta():null;
+      const nm=(typeof t.name==="function")?t.name():t.name;
       const b=document.createElement("button");b.className="hub-tile";b.type="button";
       b.innerHTML='<span class="ht-em">'+t.em+'</span>'+
-        '<span class="ht-name">'+esc(t.name)+'</span>'+
+        '<span class="ht-name">'+esc(nm)+'</span>'+
         '<span class="ht-foot"><i class="ht-tag">'+esc(t.tag||"")+'</i>'+
         (m&&m!=="null"?'<i class="ht-n">'+esc(m)+'</i>':'')+'</span>';
       b.addEventListener("click",()=>{

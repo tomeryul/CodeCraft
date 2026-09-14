@@ -631,7 +631,10 @@ const HE={
 "CHALLENGE SOLVED!":"האתגר נפתר!","CHAPTER COMPLETE!":"הפרק הושלם!",
 "PROJECT COMPLETE!":"הפרויקט הושלם!",
 "Community challenge by":"אתגר קהילה מאת",
-"Create your own":"צור משלך","Delete Level":"מחק שלב","Delete level":"מחק שלב",
+"Create your own":"צור משלך",
+"Continue my challenge":"תמשיך את האתגר שלי",
+"Your unfinished board is still here. Pick it up where you left it.":
+  "הלוח שלא סיימת עדיין כאן. תמשיך מאיפה שהפסקת.","Delete Level":"מחק שלב","Delete level":"מחק שלב",
 "Delete this input":"מחק את הקלט הזה","Edit level":"ערוך שלב",
 "Edit this challenge":"ערוך את האתגר הזה",
 "Hide everything by this player":"הסתר הכול מהשחקן הזה",
@@ -1654,6 +1657,9 @@ const HE_RAW={
 const HE_T={
 /* ---- academy ---- */
 "{s} — Lesson {n}":"{1} — שיעור {2}",
+/* ---- the creator's draft ---- */
+"Continue “{s}”":"תמשיך את “{1}”",
+"↩️ Picked up where you left off — “{s}”.":"↩️ המשכנו מאיפה שהפסקת — “{1}”.",
 "{s}/{s} done":"{1}/{2} הושלמו",
 "· basics {s}/{s}":"· יסודות {1}/{2}",
 "· next: {s} {s}":"· הבא: {1} {2}",

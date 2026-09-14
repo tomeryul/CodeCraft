@@ -156,15 +156,20 @@ async function toWorld(pg){
          e.offsetParent && getComputedStyle(e).visibility!=='hidden');
      }), null);
 
-  /* The paint sheet is the one page reached from another page rather than
-     from the menu, so Back has to mean Style there and Exit still has to
-     mean the world. */
+  /* The paint sheet is reached from Style — every way in is a swatch on
+     that sheet — so Back has to mean Style there and Exit still has to
+     mean the world. It is opened here the way it is opened in the app,
+     from an open Style sheet: makerClose() used to reopen Style whatever
+     was behind it, which is only right because of where it is opened
+     from, and the test has to prove that rather than assume it. */
   await pg.evaluate(()=>navHome()); await pg.waitForTimeout(400);
   if (await pg.evaluate(()=>typeof makerOpen==='function')) {
     /* a level-up card left over from the run so far would sit over the
        header and swallow the click */
     await pg.evaluate(()=>{ const c=document.getElementById('ccCele'); if(c)c.remove(); });
-    await pg.evaluate(()=>{ player.myWear=[]; makerOpen('hat',null); });
+    await pg.evaluate(()=>{ player.myWear=[]; styleOpen(); });
+    await pg.waitForTimeout(400);
+    await pg.evaluate(()=>makerOpen('hat',null));
     await pg.waitForTimeout(500);
     await pg.click('#makerBack'); await pg.waitForTimeout(500);
     ck('Back out of the paint sheet lands on Style, not the menu',
@@ -196,12 +201,124 @@ async function toWorld(pg){
     ck('Exit out of a component lands on the world',
        await pg.evaluate(()=>document.querySelectorAll('.sheet.open').length===0),
        await pg.evaluate(()=>[...document.querySelectorAll('.sheet.open')].map(s=>s.id)));
+    /* and opened with nothing behind it, Back obeys the same rule as every
+       other page rather than inventing a Style sheet you were never on */
+    await pg.evaluate(()=>navHome()); await pg.waitForTimeout(350);
+    await pg.evaluate(()=>makerOpen('hat',null)); await pg.waitForTimeout(450);
+    await pg.click('#makerBack'); await pg.waitForTimeout(450);
+    ck('Back out of the paint sheet opened from nowhere lands on the menu',
+       await pg.evaluate(()=>$('hub').classList.contains('open') &&
+         !$('style').classList.contains('open')),
+       await pg.evaluate(()=>[...document.querySelectorAll('.sheet.open')].map(s=>s.id)));
   } else {
     ck('Back out of the paint sheet lands on Style, not the menu', false, 'makerOpen missing');
+    ck('Back out of the paint sheet opened from nowhere lands on the menu', false, 'makerOpen missing');
     ck('Exit out of the paint sheet lands on the world', false, 'makerOpen missing');
     ck('Back out of a component lands on the whole piece', false, 'makerOpen missing');
     ck('Exit out of a component lands on the world', false, 'makerOpen missing');
   }
+
+  // ------------------------------------------------ the author's draft
+  /* The creator had no memory: mgEnterCreator() always built a blank board
+     and nothing wrote the half-finished one down, so ‹ Back, ✕, the tab bar
+     or a reload threw the work away with no way back to it — and 💾 Save
+     cannot be the safety net, because it stays locked until the level is
+     proven solvable, which a half-built board never is. */
+  await pg.evaluate(()=>{window.confirm=()=>true;});
+  const draft = await pg.evaluate(async () => {
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+    player.draft=null; await wait(250);
+    mgEnterCreator(); await wait(600);
+    mgState.paintMode='paint'; mgPaintTile(1,1); mgPaintTile(2,1);
+    mgState.proj.name='Castle gate'; mgState.proj.maxBlocks=19;
+    mgCreatorUI(); await wait(250);
+    navBack(); await wait(600);                 // leave the way a person leaves
+    const gone=(typeof mgState==='undefined'||!mgState);
+    /* the Continue door, which is what the card and the menu tile call —
+       mgEnterCreator() still means a blank board of its own kind */
+    mgResumeDraft(); await wait(650);
+    const back={cells:mgState.proj.cells.length,name:mgState.proj.name,
+                budget:mgState.proj.maxBlocks};
+    if(typeof mgState!=='undefined'&&mgState)mgExit(false); await wait(250);
+    // the entry points must say which of the two they are about to do
+    renderProjects(); await wait(300);
+    const card=[...document.querySelectorAll('#projList .pcard .pname')]
+      .map(e=>e.textContent).find(x=>/Continue|Create your own/.test(x))||'';
+    const side=!!document.querySelector('#projList .pcard.pnew .pside');
+    hubOpen(); await wait(300);
+    const tile=[...document.querySelectorAll('.hub-tile .ht-name')]
+      .map(e=>e.textContent).find(x=>/challenge/i.test(x))||'';
+    // 🆕 throws it away on purpose
+    renderProjects(); await wait(250);
+    const sb=document.querySelector('#projList .pcard.pnew .pside');
+    if(sb)sb.click(); await wait(750);
+    const blankKeepsDraft=mgDraftHasWork(player.draft);
+    const fresh={cells:mgState?mgState.proj.cells.length:-1,
+                 name:mgState?mgState.proj.name:''};
+    if(typeof mgState!=='undefined'&&mgState)mgExit(false); await wait(250);
+    // ...and a blank board opened by any other door must not wipe a draft
+    player.draft=null; await wait(150);
+    mgEnterCreator(); await wait(500);
+    mgState.proj.name='Keep me'; mgState.paintMode='paint'; mgPaintTile(2,2);
+    mgCreatorUI(); await wait(250); mgExit(false); await wait(300);
+    mgEnterCreator(); await wait(550);            // a blank door, straight after
+    mgExit(false); await wait(300);
+    const survived=mgDraftHasWork(player.draft)&&player.draft.proj.name==='Keep me';
+    return {gone,back,card,side,tile,fresh,survived};
+  });
+  ck('leaving the creator really does tear it down', draft.gone, draft);
+  ck('...but the half-built board is still there when you come back',
+     draft.back.cells===2 && draft.back.name==='Castle gate' && draft.back.budget===19,
+     draft.back);
+  ck('the Projects card says it will continue, and offers a new board',
+     /Continue/.test(draft.card) && draft.side, {card:draft.card,side:draft.side});
+  ck('the menu tile says the same thing', /Continue/.test(draft.tile), draft.tile);
+  ck('and 🆕 starts a genuinely new board',
+     draft.fresh.cells===0 && draft.fresh.name==='My Challenge', draft.fresh);
+  ck('opening a blank board does not wipe the draft behind it',
+     draft.survived===true, draft.survived);
+
+  // ------------------------------------------------ Back goes where you came from
+  /* mgExit always reopened Projects, so a lesson entered from the Academy
+     and a creator opened from the menu both landed you in a list you had
+     never been on. */
+  const origin = await pg.evaluate(async () => {
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    const S=["mentor","quests","hub","projects","style","maker","editor"];
+    const open=()=>S.filter(id=>{const e=$(id);return e&&e.classList.contains('open');}).join()||'(world)';
+    const trip=async go=>{ navHome(); await wait(300); await go(); await wait(700);
+      navBack(); await wait(650); return open(); };
+    return {
+      fromAcademy:await trip(async()=>{ $('mentor').classList.add('open');
+        await wait(250); academyEnter(0); }),
+      fromMenu:await trip(async()=>{ hubOpen(); await wait(250);
+        hubClose(); mgEnterCreator(); }),
+      fromProjects:await trip(async()=>{ renderProjects();
+        $('projects').classList.add('open'); await wait(250);
+        $('projects').classList.remove('open'); mgEnterCreator(); })
+    };
+  });
+  ck('Back from a lesson opened in the Academy returns to the Academy',
+     origin.fromAcademy==='mentor', origin);
+  ck('Back from a challenge opened in the menu returns to the menu',
+     origin.fromMenu==='hub', origin);
+  ck('Back from a challenge opened in Projects returns to Projects',
+     origin.fromProjects==='projects', origin);
+
+  // ------------------------------------------------ every header is built the same
+  const heads = await pg.evaluate(()=>{
+    const S=["mentor","quests","projects","guide","funcLib","orders","style","maker","report","settings"];
+    return S.map(id=>{
+      const h=$(id)&&$(id).querySelector('.m-head');
+      return {id, face:!!(h&&h.querySelector('.face')),
+        back:!!(h&&h.querySelector('.iconbtn.back')),
+        x:!!(h&&h.querySelector('.iconbtn.x'))};
+    });
+  });
+  ck('every destination header carries Back, an emoji and Exit',
+     heads.every(h=>h.face&&h.back&&h.x),
+     heads.filter(h=>!(h.face&&h.back&&h.x)));
 
   console.log('  pageerrors:', errs.length?errs.slice(0,3):'none');
   ck('no uncaught exceptions', errs.length===0, errs.slice(0,3));
