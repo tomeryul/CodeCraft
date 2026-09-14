@@ -44,7 +44,8 @@ function renderOrders(){
   const filled=player.orders|0, best=player.orderBest|0;
   let h="";
   if(!o){
-    h+='<div class="ord-none">📭 The board is empty right now.<small>A new order goes up every few seconds — keep gathering in the meantime.</small></div>';
+    h+='<div class="ord-none">📭 The board is empty right now.<small>A new order goes up every few seconds — keep gathering in the meantime.</small>'+
+       '<button type="button" class="ord-go ord-code" id="ordToCode">🧩 Open the code editor</button></div>';
   }else{
     const late=(o.until-now)<45000;
     h+='<div class="ord-card">'+
@@ -68,6 +69,9 @@ function renderOrders(){
      (best?'<span>🏁 Best <b>'+Math.floor(best/60)+":"+("0"+(best%60)).slice(-2)+'</b></span>':'')+
      '</div>';
   el.innerHTML=h;
+  /* an empty board points at the one thing that fills it */
+  const go0=$("ordToCode");
+  if(go0)go0.addEventListener("click",()=>{ ordersClose(); $("editor").classList.add("open"); if(typeof setTab==="function")setTab("blocks"); });
   const go=$("ordCode");
   if(go)go.addEventListener("click",()=>{
     ordersClose();
@@ -81,8 +85,13 @@ function renderOrders(){
 $("ordClose").addEventListener("click",ordersClose);
 /* the ticker is the only place an order is visible from the world, so its
    order chip is the way in — a screen nothing opens is a screen nobody finds */
+/* .tk-ord is the clock chip in the top bar, .tk-order the order row inside
+   the price panel — two ways into the same sheet. The chip is its own button
+   now rather than a region of the market handle, so this no longer has to
+   win a race with that handle's listener; the capture phase stays because
+   the panel row still sits inside the market's own click target. */
 $("ticker").addEventListener("click",e=>{
-  if(e.target.closest(".tk-order")||e.target.closest(".tk-shape")||e.target.closest(".tk-clk")){
+  if(e.target.closest(".tk-ord")||e.target.closest(".tk-order")){
     e.stopPropagation();ordersOpen();
   }
 },true);

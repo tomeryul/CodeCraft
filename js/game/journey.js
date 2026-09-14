@@ -36,7 +36,8 @@ function jGoto(open,find){
   },260);
 }
 function jProjects(find){
-  jGoto(()=>{renderProjects();$("projects").classList.add("open");},find);
+  jGoto(()=>{if(typeof hubPage==="function")hubPage("builds");
+    else{renderProjects();$("projects").classList.add("open");}},find);
 }
 function jEditor(tip){
   jGoto(()=>{$("editor").classList.add("open");if(typeof setTab==="function")setTab("blocks");

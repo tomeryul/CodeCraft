@@ -49,6 +49,8 @@ function evalCond(r,c){
     if(c.op==="!=")return v!==w;
     return v===w;   // no op / "=" — the shape every save before ≠ existed used
   }
+  /* "!blocked" is "blocked", answered the other way round */
+  if(condNeg(c))return !evalCond(r,condBase(c));
   const a=ahead(r), o=inB(a.x,a.y)?objects.get(key(a.x,a.y)):null;
   switch(c){
     case "taken":return inB(a.x,a.y)&&claimedByOther(r,key(a.x,a.y));

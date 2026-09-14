@@ -1,0 +1,413 @@
+/* =====================================================================
+   CodeCraft — v5: one language
+   Linked AFTER css/styles.css and css/codecraft-v4.css. Companion to
+   js/game/v5-ui.js, which moves the DOM nodes this file styles.
+
+   Four rules, and every value below already exists in styles.css:
+
+     1. ONE header per screen: ‹ Back left · title centred · ✕ Exit right.
+        Nothing else lives in a header — not the board's controls, not
+        the speed button, not a second close.
+     2. Flat glass everywhere. The toy bevel belongs to the ONE primary
+        on the screen: green = Run, amber = commit (Get / Claim /
+        Publish / Save).
+     3. Tabs are the last row of the screen, always. The run controls
+        (RESET · STEP · 1× · Run) sit in one row directly above them.
+     4. One card for every list row: 42px icon tile · name · meta ·
+        description · one action at the end.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. THE HEADER
+   ------------------------------------------------------------------ */
+.m-head,#editor .v5-head{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;flex:0 0 auto;
+  border-bottom:1px solid var(--hair);
+}
+/* the emoji tile made every header a different width and a different
+   height; the title is the identity now */
+.m-head .face{display:none;}
+.m-head>div:not(.face):not(.iconbtn),#editor .v5-head .v5-title{
+  flex:1;min-width:0;text-align:center;
+}
+.m-head h3,#editor .v5-head b{
+  margin:0;font-size:16.5px;font-weight:700;line-height:1.2;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;
+}
+.m-head p,#editor .v5-head small{
+  margin:2px 0 0;font-size:11.5px;font-weight:600;line-height:1.35;color:var(--ink2);
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;
+}
+/* One line left ~240px between two 40px buttons, and four of the eleven
+   subtitles did not fit — the Shop's broke mid-word at "automa…". Two
+   lines, still clamped, so a long one wraps instead of being cut and the
+   header keeps its three slots. */
+/* Back and Exit: same square, same size, same corner, on every screen */
+.m-head .iconbtn.back,.m-head .iconbtn.size,.m-head .iconbtn.x,
+#editor .v5-head .iconbtn{
+  width:40px;height:40px;flex:0 0 auto;padding:0;margin:0;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:12px;background:var(--glass-hi);border:1px solid var(--hair);
+  border-bottom:1px solid var(--hair);box-shadow:none;color:var(--ink2);font-size:15px;
+  transition:transform .09s,background .12s;
+}
+.m-head .iconbtn.back:active,.m-head .iconbtn.size:active,.m-head .iconbtn.x:active,
+#editor .v5-head .iconbtn:active{transform:scale(.93);background:var(--glass-on);}
+.m-head .iconbtn.back svg,.m-head .iconbtn.size svg,
+#editor .v5-head .iconbtn svg{width:20px;height:20px;}
+/* the top of the tree has nothing behind it — keep the slot, drop the button */
+#hub .m-head .v5-gap{width:40px;height:40px;flex:0 0 auto;}
+
+/* the editor grows its own header; the old tray and the mg title bar go */
+#editor .ed-head{display:none;}
+#editor .mg-top{display:none;}
+/* robot chips are content, not chrome: v5-ui.js moves them into the Blocks tab */
+#blocksTab #robotChips{margin:0 0 7px;}
+
+/* ---------------------------------------------------------------------
+   2. BUTTONS — flat glass, one bevel
+   ------------------------------------------------------------------ */
+.shopitem button,#settingsList button,.authbtn,.rep-opt,.ord-go,
+#mgCreatorBar button,#mgCreatorBar .rowbtn,.qsec .secbtn,
+#selActions button,.ed-btns button,#chips button,.t3btn,.t3vbtn{
+  border-bottom-width:1px !important;
+  box-shadow:none !important;
+}
+.shopitem button,#settingsList button{
+  height:40px;padding:0 15px;border-radius:12px;
+  font-family:inherit;font-size:13px;font-weight:700;color:var(--ink);
+  background:var(--glass-hi);border:1px solid var(--hair);
+  transition:transform .08s,background .12s;
+}
+.shopitem button:active,#settingsList button:active{transform:scale(.96);background:var(--glass-on);}
+.shopitem button:disabled{opacity:.4;}
+/* amber = commit. The only bevel in a list. */
+.shopitem button.v5-buy{
+  color:var(--accent-text);background:linear-gradient(180deg,var(--accent2),var(--accent));
+  border:none;border-bottom:3px solid var(--accent-deep) !important;
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.45) !important;
+}
+.shopitem button.danger,#settingsList button.danger{
+  background:rgba(226,59,87,.14);border:1px solid rgba(226,59,87,.5);color:#ff8fa3;
+}
+.quest button{
+  border-bottom:4px solid var(--accent-deep) !important;
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.45) !important;
+  min-height:44px;border-radius:12px;
+}
+/* green is Run and nothing else: Publish and Add level are commits */
+#mgCreatorBar .cb-act #mgPublish{
+  background:linear-gradient(180deg,var(--accent2),var(--accent));
+  color:var(--accent-text);border:none;
+  border-bottom:3px solid var(--accent-deep) !important;
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.45) !important;
+}
+#mgCreatorBar .cb-act #mgSave,#mgCreatorBar .cb-act #mgAddStage{
+  background:var(--glass-hi);color:var(--ink);border:1px solid var(--hair);
+}
+
+/* ---------------------------------------------------------------------
+   3. TABS AT THE BOTTOM, RUN ROW ABOVE THEM
+   v5-ui.js moves #tabs to the end of #editor, after #actionBar.
+   ------------------------------------------------------------------ */
+#editor #tabs{
+  order:99;flex:0 0 auto;margin:0;gap:6px;
+  padding:8px 12px calc(14px + var(--sab));
+  border-radius:0;border:none;border-top:1px solid var(--hair);
+  background:rgba(26,19,50,.86);backdrop-filter:blur(16px);
+}
+#editor #tabs button{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:8px 0 7px;border-radius:14px;background:none;
+  font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--ink-dim);
+}
+#editor #tabs button .ui-emoji{width:19px;height:19px;vertical-align:0;}
+#editor #tabs button.on{background:var(--glass-on);color:var(--ink);}
+#editor #tabs #boardTabBtn{background:none;color:var(--ink-dim);}
+#editor #tabs #boardTabBtn.on{background:rgba(255,184,48,.2);color:var(--accent2);}
+/* the action row keeps its glass squares and gains the speed button */
+#actionBar{border-top:none;background:none;backdrop-filter:none;padding:11px 12px;}
+#actionBar #mgSpeedBtn{
+  flex:0 0 auto;width:52px;height:52px;padding:0;border:none;border-radius:15px;
+  background:var(--glass-hi);color:var(--ink2);box-shadow:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  font-family:inherit;font-size:14px;font-weight:800;
+}
+#editor:not(.mg) #actionBar #mgSpeedBtn{display:none;}
+#actionBar #mgSpeedBtn:active{transform:scale(.94);background:var(--glass-on);}
+
+/* ---------------------------------------------------------------------
+   4. THE SHOP IS A SHEET LIKE EVERY OTHER DESTINATION
+   ------------------------------------------------------------------ */
+#shopWrap{
+  position:fixed;inset:0;height:auto;z-index:45;padding:0;display:block;
+  background:rgba(8,4,24,.52);backdrop-filter:none;
+  opacity:0;pointer-events:none;transition:opacity .28s ease;
+}
+#shopWrap.open{display:block;opacity:1;pointer-events:auto;}
+#shop{
+  position:absolute;left:0;right:0;bottom:0;width:auto;max-width:none;
+  padding:0;overflow:hidden;
+  display:flex;flex-direction:column;
+  background:var(--panel);border:none;border-top:1px solid var(--hair);
+  border-radius:24px 24px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.5);
+  transform:translateY(105%);transition:transform .28s cubic-bezier(.32,.9,.35,1);
+}
+#shopWrap.open #shop{transform:translateY(0);animation:none;}
+/* the header the sheet grows, and the old title/footer it replaces */
+#shop h2,#shop .sub,#shop .closerow{display:none;}
+#shopItems{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:12px 14px calc(16px + var(--sab));}
+@media (min-width:920px){
+  #shop{left:auto;right:0;top:0;bottom:0;width:430px;height:auto;max-height:none;
+    border-radius:22px 0 0 22px;transform:translateX(105%);}
+  #shopWrap.open #shop{transform:translateX(0);}
+}
+
+/* ---------------------------------------------------------------------
+   5. ONE CARD
+   ------------------------------------------------------------------ */
+.shopitem{
+  display:flex;align-items:flex-start;gap:11px;padding:11px 12px;margin-bottom:8px;
+  background:var(--glass-hi);border:1px solid var(--hair);border-radius:16px;box-shadow:none;
+}
+.shopitem .em{
+  flex:0 0 auto;width:42px;height:42px;border-radius:12px;background:rgba(0,0,0,.26);
+  display:flex;align-items:center;justify-content:center;font-size:21px;
+}
+.shopitem .em .ui-emoji{width:25px;height:25px;vertical-align:0;}
+.shopitem .tx b{font-size:14.5px;font-weight:700;line-height:1.25;}
+.shopitem .tx small{font-size:12px;line-height:1.42;margin-top:5px;}
+.shopitem>button,.shopitem>div:last-child:not(.tx):not(.em){align-self:center;}
+
+/* the row v5-ui.js builds at the top of the Blocks tab: which robot,
+   and the three controls that act on the program */
+#blocksTab .v5-edrow{display:flex;align-items:center;gap:8px;margin:0 0 8px;}
+#blocksTab .v5-edrow #robotChips{flex:1;min-width:0;margin:0;}
+#blocksTab .v5-edrow .ed-btns{
+  display:flex;flex:0 0 auto;gap:3px;padding:3px;
+  border-radius:14px;background:rgba(0,0,0,.24);border:1px solid var(--hair);
+}
+
+/* ---------------------------------------------------------------------
+   6. THE WORLD'S ACTION BADGE (js/game/render.js — see PATCHES.md)
+   The canvas has no CSS; the badge is drawn from the same SVG art the
+   UI uses (CC_SPRITES), so a chop looks like a chop on every device.
+   ------------------------------------------------------------------ */
+
+/* ---------------------------------------------------------------------
+   K. The scrim, and the glow around Run
+   The sheet colour is NOT set here. The design file's surface is #241b45
+   — the --panel token .sheet already uses — and its program wells are
+   rgba(0,0,0,.26). An earlier version of this block lifted the sheet to
+   #2c2257 and turned the well into a light inset; both were wrong, and
+   both are gone. The sheet looked dark because of the scrim bug below,
+   not because of its colour.
+   ------------------------------------------------------------------ */
+
+/* The scrim was a ::before on .sheet with z-index:-1. A negative-z child
+   paints above its own stacking context's BACKGROUND, and .sheet is
+   position:fixed with z-index:40, so it formed that context: every sheet
+   dimmed itself by 52% black while the world behind stayed lit.
+   #241b45 under rgba(8,4,24,.52) is #150e2e, which is the pixel a
+   screenshot of the sheet actually contained. One element, outside them
+   all, below them all. */
+#scrim{position:fixed;inset:0;z-index:38;pointer-events:none;
+  background:rgba(8,4,24,.52);opacity:0;transition:opacity .28s ease;}
+body:has(.sheet.open) #scrim{opacity:1;}
+
+/* ---------------------------------------------------------------------
+   L. One size for every sheet
+   Shrinking the code sheet and then opening the menu used to hand you a
+   different height, so the two never agreed on how much of the world you
+   could see. #editor.max stays the single source of truth — render.js
+   offsets the camera by it and challenges.js restores it — and body
+   mirrors it, so every other sheet follows the size you last chose.
+   ------------------------------------------------------------------ */
+/* Each of these carries its own id-level height in styles.css — #mentor
+   and #quests 70vh, #projects 78vh, #guide 88vh — so a class selector
+   loses to every one of them. They are named here for that reason, not
+   for emphasis. */
+body:not(.sheets-full) #mentor.sized,
+body:not(.sheets-full) #quests.sized,
+body:not(.sheets-full) #hub.sized,
+body:not(.sheets-full) #projects.sized,
+body:not(.sheets-full) #guide.sized,
+body:not(.sheets-full) #funcLib.sized,
+body:not(.sheets-full) #orders.sized,
+body:not(.sheets-full) #style.sized,
+body:not(.sheets-full) #maker.sized,
+body:not(.sheets-full) #report.sized,
+body:not(.sheets-full) #settings.sized,
+body:not(.sheets-full) #shop{height:56vh;max-height:56vh;}
+body.sheets-full #mentor.sized,
+body.sheets-full #quests.sized,
+body.sheets-full #hub.sized,
+body.sheets-full #projects.sized,
+body.sheets-full #guide.sized,
+body.sheets-full #funcLib.sized,
+body.sheets-full #orders.sized,
+body.sheets-full #style.sized,
+body.sheets-full #maker.sized,
+body.sheets-full #report.sized,
+body.sheets-full #settings.sized,
+body.sheets-full #shop{height:var(--sheet-full);max-height:var(--sheet-full);}
+/* these three bodies never scrolled, which was survivable while the sheet
+   grew to fit them and is not once its height is fixed */
+#settingsList,#ordList,#funcList{flex:1 1 auto;min-height:0;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;}
+
+/* the size control mirrors #edMax's icon swap off the shared state */
+.m-head .iconbtn.size .ic-min{display:none;}
+body.sheets-full .m-head .iconbtn.size .ic-max{display:none;}
+body.sheets-full .m-head .iconbtn.size .ic-min{display:block;}
+
+/* Nothing sits behind the world editor, so Back is not merely invisible
+   there — its slot goes too, and shrink becomes the leftmost control
+   instead of floating a gap away from the edge. */
+#editor:not(.mg) .v5-head .iconbtn.back{display:none;}
+
+/* Every sheet is #241b45. The program well was the one surface inside the
+   editor still laying 20% black over it, so the middle of the screen sat
+   off the tone. A hairline keeps the scroll region defined without a fill
+   that changes the colour. The tab bar stays darker on purpose — it is the
+   anchor strip, and it reads correctly as one. */
+#editor #programWrap{background:none;border:1px solid var(--hair);}
+
+/* the glow around Run was a 24px bloom at 40% and spilled well past the
+   pill. Keep the bevel, lose the halo. */
+#actionBar #runBtn{
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 4px 12px rgba(55,200,92,.26);}
+#actionBar #stopBtn{
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.3), 0 4px 12px rgba(255,93,115,.26);}
+
+/* ---------------------------------------------------------------------
+   M. Hebrew — the words, not the layout
+   Hebrew used to set dir="rtl" on <html>, which flips every flex and grid
+   row for free. Free is the wrong price here: picking a language moved
+   every control to the other side of the screen, so Run, Back and the tabs
+   all swapped places, and each rule written with left/right needed a
+   mirrored twin to keep up. A player asking for Hebrew is asking for
+   Hebrew words.
+
+   So the layout stays exactly as it is and only the text changes. The one
+   thing RTL was genuinely doing for the text — putting a Hebrew sentence's
+   full stop on the correct side — is done by unicode-bidi:plaintext
+   instead: each paragraph takes its direction from its own first strong
+   character, which reorders the characters inside a line without moving
+   the line, the box, or anything around it.
+   ------------------------------------------------------------------ */
+html.he *{unicode-bidi:plaintext;}
+/* plaintext gives each paragraph its own direction, which is what puts a
+   Hebrew sentence's full stop on the correct side — but it also makes the
+   initial text-align:start resolve to the right, so headings that sit on
+   the left in English would slide across. text-align is inherited, so
+   naming it once at the root pins everything that does not set its own,
+   and anything explicitly centred stays centred. */
+html.he{text-align:left;}
+/* The canvas is not text and the Python listing is code that reads left to
+   right in any language; both are pinned rather than left to guess. */
+html.he #game,html.he #mgCanvas,html.he #pyTab,html.he #pyCode,html.he .mono{
+  direction:ltr;unicode-bidi:normal;}
+
+/* Hebrew has no capitals, so the uppercase labels lose nothing by
+   dropping the letter-spacing that was tuned for Latin caps */
+html.he .hub-sec,html.he .hub-nlab,html.he #editor #tabs button,
+html.he #actionBar .ibtn{letter-spacing:0;}
+
+/* Run and Stop are CSS ::after content, which no DOM observer can reach,
+   so their Hebrew lives here beside the English. */
+html.he #actionBar #runBtn::after{content:"הרצה";}
+html.he #actionBar #stopBtn::after{content:"עצור";}
+html.he #fabRun::after{content:"הרצה";}
+html.he #fabRun.running::after{content:"עצור";}
+
+/* ---------------------------------------------------------------------
+   N. Focus — the blocks, and nothing else
+   Making the sheet taller only ever bought a little room. The rows above
+   the program — header, robot chips, undo/redo, routine tabs, variable
+   watch — and the run bar below it keep their height whatever the sheet
+   does, so on a phone the part being edited stayed small even full-screen.
+   Focus drops the rows that are not the program: the program and the
+   palette get what is left, and every header control stays exactly where it
+   was, so the way back is where you last pressed.
+   ------------------------------------------------------------------ */
+#edFocus .ic-foff{display:none;}
+#editor.focused #edFocus .ic-fon{display:none;}
+#editor.focused #edFocus .ic-foff{display:block;}
+
+/* Not 100vh. The sheet is anchored to the bottom, so a full-viewport height
+   starts it at y=0 — behind the status bar, where iOS dims and the button
+   that turns focus OFF becomes hard to see and hard to hit. It is capped at
+   the same --sheet-full every other full-size sheet uses. */
+/* the same token maximise uses, so the two are the same height to the pixel.
+   Phone only: above 920px the editor is a full-height side panel, and a
+   height here would land after that rule and squash it. */
+@media (max-width:919px){
+  #editor.focused{height:var(--sheet-full);max-height:var(--sheet-full);}
+}
+/* The header is left exactly as it is. Hiding all of it but the one button
+   pushed that button from the left of the row to the right — it changed
+   sides the moment the mode turned on, which is the one thing a control you
+   are about to press again must never do — and it took Back, shrink and
+   exit away with it, on the screen where the sheet is at its largest and
+   those are most wanted. Sixty-one pixels of header is a cheap price for
+   every control staying where the hand already went.
+
+   What focus drops is the rows that are not the program: the robot chips
+   with undo/redo, the routine tabs, the variable watch, the tab bar and the
+   run row. */
+#editor.focused #blocksTab .v5-edrow,
+#editor.focused #routineTabs,
+#editor.focused #varWatch,
+#editor.focused #tabs,
+#editor.focused #actionBar{display:none;}
+/* the program takes what the palette does not need, rather than the even
+   split the two share when the rest of the screen is competing for room */
+#editor.focused #programWrap{flex:1 1 60%;}
+#editor.focused #palette{flex:1 1 40%;}
+
+/* ---------------------------------------------------------------------
+   O. iOS 26 — no glass on anything pinned to a screen edge
+   Safari 26 samples position:fixed elements near the top and bottom of the
+   viewport and folds their backdrop-filter into the system's own Liquid
+   Glass, then paints that across the FULL WIDTH of the edge. The result is
+   a blurred, darkened band over the world where the HUD floats — it is not
+   the status bar, it is the union of the fixed HUD boxes, stretched.
+
+   Measured against a report: the band ended 140px down, and #ticker's last
+   chip ends at safe-area-top + 58 + 22 = 142px. That is the tell.
+
+   Nothing here is a design change. Every one of these already paints an
+   80-97% opaque background, so the blur behind them was doing almost no
+   work; dropping it removes what iOS samples and leaves the HUD looking
+   as it did. Sheets keep theirs — they cover the screen, so they are not
+   an edge the system reads through.
+   ------------------------------------------------------------------ */
+#topbar,#topbar *,#ticker,#ticker *,
+#bottombar,#bottombar *,#buildBar,#buildBar *,
+#toasts,#toasts *,#coach,#coach *,#journey,#journey *,
+#objMenu,#objMenu *,#fabRun{
+  -webkit-backdrop-filter:none !important;backdrop-filter:none !important;}
+
+/* The blur was also doing a little legibility work behind the HUD, where a
+   bright green world shows through 20% of a pill. Redefining the token for
+   this layer only pays that back without touching the sheets. */
+#topbar,#ticker,#bottombar,#buildBar,#toasts,#coach,#journey,#objMenu{
+  --glass:rgba(26,19,50,.92);}
+#ticker .tk{background:rgba(23,17,48,.92);}
+
+/* ---------------------------------------------------------------------
+   P. is / is not
+   Half of what a program wants to say is negative — "keep going while the
+   way is NOT blocked" is the shape of every wall-follower — and the sensors
+   had no way to say it. The switch sits in front of the sensor it negates.
+   "is" is the quiet default; "not" is the state worth seeing from across a
+   program, so it is the one that carries colour.
+   ------------------------------------------------------------------ */
+.blk .pbtn.neg{min-width:52px;text-align:center;}
+.blk .pbtn.neg.on{
+  background:rgba(255,93,115,.3);
+  box-shadow:inset 0 0 0 1.5px rgba(255,93,115,.6);}

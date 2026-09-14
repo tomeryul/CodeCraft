@@ -22,24 +22,29 @@
   const COL=["#ffd66b","#5ab8ff","#ff5d73","#54d66a"];
   const DEFS={
     wall:{em:"🧱",lbl:"Wall",arg:null,
+      tip:"Nothing walks through it. Walls are what make a board a maze instead of an open field.",
       solid:()=>true},
     // A pit blocks the robot until something fills it. Dropping a carried brick
     // into the gap ahead is the fix — the robot builds its own bridge.
     pit:{em:"🕳️",lbl:"Pit",arg:null,
+      tip:"The robot cannot stand on it. It CAN ⤵️ Drop a block it is carrying into the gap ahead and walk across its own bridge.",
       solid:(rs,k)=>!rs.bricks.has(k)},
     // Walk over a key to add its colour to the robot's keyring. Keys are never
     // spent — one key opens every door of its colour, which keeps the rule simple
     // ("do I have the blue key?") and means a door, once open, stays open.
     key:{em:"🔑",lbl:"Key",arg:"colour",
+      tip:"The robot picks it up just by walking over it, and keeps it. It opens every 🚪 door of the same colour — set the colour below.",
       solid:()=>false,
       enter:(st,rs,k,t)=>{rs.keys.add(t.a);rs.tiles.delete(k);sfx(880,.05);sfx(1180,.05,.06);}},
     door:{em:"🚪",lbl:"Door",arg:"colour",
+      tip:"Shut until the robot is carrying a 🔑 key of the same colour. Once it is open it stays open.",
       solid:(rs,k,t)=>!rs.keys.has(t.a),
       enter:(st,rs,k)=>{rs.open.add(k);}},
     // Two portals sharing a colour are a pair — stepping on one puts the robot
     // on the other. The move that lands here is not re-run at the far end, so a
     // pair can never bounce the robot back and forth.
     portal:{em:"🌀",lbl:"Portal",arg:"colour",
+      tip:"Two portals of the same colour are a pair: step on one and the robot comes out of the other.",
       solid:()=>false,
       enter:(st,rs,k,t)=>{
         for(const [k2,t2] of rs.tiles)
@@ -49,13 +54,16 @@
     // Both matter: standing on it teaches "I can't be in two places at once",
     // which is exactly what pushes the player to discover the block solution.
     plate:{em:"🔘",lbl:"Plate",arg:"colour",
+      tip:"A button in the floor, held down while the robot stands on it — or while a ⤵️ block is left on it.",
       solid:()=>false},
     // Open only while every plate of its colour is pressed.
     gate:{em:"🚧",lbl:"Gate",arg:"colour",
+      tip:"Open only while EVERY 🔘 plate of the same colour is held down. A robot cannot be in two places at once — that is the puzzle.",
       solid:(rs,k,t)=>!platesPressed(rs,t.a)},
     // One-way: you may not step OFF this tile against the arrow. It never moves
     // the robot itself — "the robot does exactly what your code says" still holds.
     arrow:{em:"➡️",lbl:"One-way",arg:"dir",
+      tip:"The robot may not step OFF this tile against the arrow. Turn the arrow below.",
       solid:()=>false},
   };
   // creator tool order (also the order tiles are drawn in)
@@ -358,6 +366,9 @@
       else if(t.t==="plate")drawPlate(g,px,py,cell,n,rs.bricks.has(k)||(rs.x+"_"+rs.y)===k);
       else if(t.t==="gate")drawGate(g,px,py,cell,n,platesPressed(rs,t.a));
       else if(t.t==="arrow")drawArrow(g,px,py,cell,t.a|0);
+      /* a type registered from another file brings its own art with it —
+         see js/game/cyber.js, which adds the keypad and the note */
+      else if(DEFS[t.t]&&DEFS[t.t].draw)DEFS[t.t].draw(g,px,py,cell,t,rs,k);
     }
   }
 

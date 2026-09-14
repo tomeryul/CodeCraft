@@ -104,6 +104,31 @@ function renderSplashAuth(){
 ageGateInit(()=>{ renderSplashAuth(); sbRestore().then(renderSplashAuth).catch(()=>{}); });
 $("playBtn").addEventListener("click",()=>enterGame(true));
 
+/* Registering and walking away was not enough to get an update onto a phone.
+   Two things kept an old build alive there: the browser serves sw.js itself
+   from its own HTTP cache (for up to a day) unless told not to, and a page
+   that is already open never re-runs its scripts — an app resumed from the
+   home screen can sit on a build from days ago while the server has moved on.
+
+   So: never cache the worker script, check for a new one on load and every
+   time the app comes back to the foreground, and reload once when a new
+   worker actually takes over. The reload is guarded, because a page that
+   reloads on every controllerchange can loop. */
 if("serviceWorker" in navigator&&location.protocol.indexOf("http")===0){
-  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+  navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"}).then(reg=>{
+    const check=()=>{ try{ reg.update(); }catch(e){} };
+    check();
+    document.addEventListener("visibilitychange",()=>{ if(!document.hidden)check(); });
+    window.addEventListener("focus",check);
+  }).catch(()=>{});
+  /* Read before the event, not inside it: by the time controllerchange fires
+     there is always a controller, so the first install would look like an
+     update and reload a page that is already running the newest code. */
+  const hadController=!!navigator.serviceWorker.controller;
+  let reloading=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    if(reloading||!hadController)return;
+    reloading=true;
+    location.reload();
+  });
 }

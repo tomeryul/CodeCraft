@@ -406,10 +406,17 @@ window.__t3glue=1;
 /* ---- new blocks in the shared palette ----
    DEFS is the block registry (blocks.js) and COND_LBL the sensor labels;
    both are plain objects, so a 3D level's palette is just five more keys. */
-DEFS.climb  ={cat:"basic",ic:"🪜",lbl:"Climb Up"};
-DEFS.descend={cat:"basic",ic:"⬇️",lbl:"Step Down"};
-DEFS.jump   ={cat:"basic",ic:"🦘",lbl:"Jump Gap"};
-DEFS.dig    ={cat:"basic",ic:"⛏️",lbl:"Take Brick"};
+DEFS.climb  ={cat:"basic",ic:"🪜",lbl:"Climb Up",
+  tip:"Steps UP onto a brick exactly one level high. Any higher and the robot cannot reach — which is why a tall tower needs a stair, not a wall."};
+DEFS.descend={cat:"basic",ic:"⬇️",lbl:"Step Down",
+  tip:"Steps DOWN exactly one level. Give it out on a board the robot starts high up on."};
+DEFS.jump   ={cat:"basic",ic:"🦘",lbl:"Jump Gap",
+  tip:"Clears one low tile and lands level on the far side. This is the only way across a 🕳️ pit the robot cannot fill."};
+DEFS.dig    ={cat:"basic",ic:"⛏️",lbl:"Take Brick",
+  tip:"Picks a brick back UP off the tile in front, so a robot that built the wrong thing can undo it."};
+/* 🔨 Build is in the shared registry and means the tile AHEAD up here, not
+   the one underfoot. The designer's block list takes this instead. */
+window.T3_TIPS={build:"Drops a brick on the tile IN FRONT — never higher than the robot's own shoulder, which is what makes a tall tower a staircase problem rather than a wall."};
 COND_LBL.canClimb ="can climb up 🪜";
 COND_LBL.stepDown ="step down ahead ⬇️";
 COND_LBL.gapAhead ="gap ahead 🕳️";
@@ -505,6 +512,7 @@ window.mgDraw=function(){
   if($("boardTab").style.display==="none")return;
   const cv=$("mgCanvas"), sc=t3Scene();
   if(!sc)return;
+  if(window.mgFitBoard)mgFitBoard(0.72);
   const W=cv.clientWidth||320, H=Math.round(W*0.72);
   const dpr=(typeof DPR!=="undefined"?DPR:Math.min(3,window.devicePixelRatio||1));
   cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);cv.style.height=H+"px";

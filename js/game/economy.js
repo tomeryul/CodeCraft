@@ -266,11 +266,24 @@ function renderMarket(){
   const open=el.classList.contains("open");
   const cpm=coinsPerMin();
   /* the handle: rate, the order clock, and a dot when the world is doing something */
-  let html='<button class="tk-btn'+(ev?" live":"")+'" type="button" aria-expanded="'+open+'">'+
+  /* The order's shape is already spelled out in the panel's own order row, so
+     the handle drops it. q0 hides the rate while it reads zero — a number
+     that has never moved is not worth a chip's width — and .tk-rate stays in
+     the DOM either way, because it is what the smoke test reads. */
+  /* TWO buttons, not one with two halves. The clock used to sit inside the
+     📈 handle, and tapping it opened the Orders sheet while tapping two
+     millimetres to the left opened the price panel — one pill, one shape,
+     two different screens, and nothing on it saying so. They are separate
+     chips now, with a gap and their own colours: amber for the market, the
+     Orders sheet's own violet for the order. */
+  let html='<button class="tk-btn'+(ev?" live":"")+(cpm?"":" q0")+'" type="button"'+
+    ' aria-expanded="'+open+'" title="Market prices" aria-label="Market prices">'+
     '<span class="tk-ic">📈</span>'+
     '<span class="tk-rate">🪙/min '+cpm+'</span>'+
-    (m.order?'<span class="tk-shape">'+(m.order.shape==="bulk"?"⛓":"⇉")+'</span><span class="tk-clk">⏱ '+mktClock(m.order.until)+'</span>':'')+
-    '<span class="tk-car">'+(open?"▴":"▾")+'</span></button>';
+    '<span class="tk-car">'+(open?"▴":"▾")+'</span></button>'+
+    (m.order?'<button class="tk-ord" type="button" title="The order on the clock"'+
+      ' aria-label="The order on the clock">'+
+      '<span class="tk-clk">⏱ '+mktClock(m.order.until)+'</span></button>':'');
   if(open){
     html+='<div class="tk-panel">';
     if(ev){

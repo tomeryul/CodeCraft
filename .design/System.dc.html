@@ -1,0 +1,129 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: "Fredoka", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    a { color: #ffd66b; } a:hover { color: #ffb830; }
+    h3 { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+         color: #ffb830; margin: 0 0 10px; }
+    .card { padding: 15px 16px; border-radius: 15px; background: #2f2456; border: 1px solid rgba(255,255,255,.1); }
+    .row { display: flex; align-items: center; gap: 11px; font-size: 12.5px; line-height: 1.5; color: #e2dbf5; }
+    .sw { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 10px; }
+    b { color: #fff; }
+  </style>
+</helmet>
+
+<div style="width: 560px; min-height: 844px; background: #241b45; color: #f6f3ff; padding: 22px; box-sizing: border-box">
+
+  <div style="font-size: 22px; font-weight: 700; margin-bottom: 4px">HUD rules</div>
+  <div style="font-size: 13px; color: #b9aee0; margin-bottom: 20px; line-height: 1.5">
+    Three docks, and nothing floats outside them. Every value below is already in
+    <b style="color:#ffd66b">css/styles.css</b> &mdash; this reorganises, it does not repaint.
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 14px">
+
+    <div class="card">
+      <h3>1 &middot; Three docks, never more</h3>
+      <div style="display: flex; gap: 14px; align-items: flex-start">
+        <div style="flex: 0 0 auto; width: 132px; height: 286px; border-radius: 12px; background: #2c7fb8;
+                    position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,.14)">
+          <div style="position: absolute; left: 0; right: 0; top: 96px; bottom: 0; background: #56a83f"></div>
+          <div style="position: absolute; top: 5px; left: 5px; right: 5px; height: 20px; border-radius: 999px;
+                      background: rgba(26,19,50,.9); border: 1px solid #ffb830"></div>
+          <div style="position: absolute; top: 32px; right: 5px; width: 20px; height: 96px; border-radius: 7px;
+                      background: rgba(26,19,50,.9); border: 1px solid #ffb830"></div>
+          <div style="position: absolute; bottom: 5px; left: 5px; right: 5px; height: 52px; border-radius: 10px;
+                      background: rgba(26,19,50,.9); border: 1px solid #ffb830"></div>
+          <div style="position: absolute; left: 5px; right: 30px; top: 32px; bottom: 62px;
+                      border: 1.5px dashed rgba(255,255,255,.5); border-radius: 8px; display: flex;
+                      align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff">
+            play</div>
+        </div>
+        <div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 9px">
+          <div class="row"><span class="sw" style="background: #ffb830; opacity: .25"></span>
+            <span><b>Top &mdash; status.</b> One row that never wraps. Read-only, plus one menu.</span></div>
+          <div class="row"><span class="sw" style="background: #ffb830; opacity: .25"></span>
+            <span><b>Right &mdash; tools.</b> Things you open: quests, shop, mentor, recentre.
+            Starts below the status bar so the two never collide.</span></div>
+          <div class="row"><span class="sw" style="background: #ffb830; opacity: .25"></span>
+            <span><b>Bottom &mdash; actions.</b> Things you do, plus the one next step.</span></div>
+          <div class="row" style="color: #b9aee0; padding-top: 3px">
+            <span class="sw" style="border: 1.5px dashed rgba(255,255,255,.5); background: none"></span>
+            <span>Everything between the docks is the game. Nothing new may be placed there
+            &mdash; a toast, a coach, a banner all dock to the bottom.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2 &middot; What a colour means</h3>
+      <div style="display: flex; flex-direction: column; gap: 9px">
+        <div class="row">
+          <span class="sw" style="background: linear-gradient(180deg,#7fe28f,#37c85c); border-bottom: 3px solid #1e8a3c"></span>
+          <span><b>Green &mdash; run it.</b> One per screen, the only round button. Never used for anything else.</span></div>
+        <div class="row">
+          <span class="sw" style="background: linear-gradient(180deg,#9b6bff,#7a4dff); border-bottom: 3px solid #4c2bb0"></span>
+          <span><b>Violet &mdash; write code.</b> The path into the editor.</span></div>
+        <div class="row">
+          <span class="sw" style="background: linear-gradient(180deg,#d8912f,#b06f1a); border-bottom: 3px solid #7c4c0e"></span>
+          <span><b>Amber &mdash; build and progress.</b> Build mode, XP, the next step. Already the game's
+          accent (<b>#ffb830</b>) &mdash; now it means one thing.</span></div>
+        <div class="row">
+          <span class="sw" style="background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14)"></span>
+          <span><b>Glass &mdash; everything else.</b> Tools and secondary controls recede.</span></div>
+        <div class="row">
+          <span class="sw" style="background: #ff5d73"></span>
+          <span><b>Red &mdash; attention only.</b> Badges and stop. Never a resting button.</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>3 &middot; The same shape means the same thing</h3>
+      <div style="display: flex; flex-direction: column; gap: 9px">
+        <div class="row"><span style="flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+          background: linear-gradient(180deg,#7fe28f,#37c85c); border-bottom: 3px solid #1e8a3c"></span>
+          <span><b>Circle, 64px</b> &mdash; run. Exactly one on screen.</span></div>
+        <div class="row"><span style="flex: 0 0 auto; width: 34px; height: 34px; border-radius: 999px;
+          background: linear-gradient(180deg,#9b6bff,#7a4dff)"></span>
+          <span><b>Pill, 54px tall</b> &mdash; a primary action with a word on it.</span></div>
+        <div class="row"><span style="flex: 0 0 auto; width: 34px; height: 34px; border-radius: 11px;
+          background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14)"></span>
+          <span><b>Rounded square, 44px</b> &mdash; a tool. Icon only, always 44 so it stays tappable.</span></div>
+        <div class="row"><span style="flex: 0 0 auto; width: 34px; height: 20px; border-radius: 999px;
+          background: rgba(26,19,50,.8); border: 1px solid rgba(255,255,255,.1)"></span>
+          <span><b>Small pill</b> &mdash; a number you read, never tap.</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>4 &middot; Icons, not emoji</h3>
+      <div style="font-size: 12.5px; line-height: 1.55; color: #e2dbf5">
+        The chrome already swaps emoji for drawn SVG (<b>js/ui-icons.js</b>). Keep that for
+        every control: emoji render differently on each device and are the fastest way for a
+        store screenshot to look unfinished. Emoji stay where they are content &mdash; the world,
+        block labels, lesson text.
+      </div>
+    </div>
+
+    <div class="card" style="border-color: rgba(255,214,107,.4); background: rgba(255,184,48,.08)">
+      <h3>5 &middot; What a new player sees first</h3>
+      <div style="font-size: 12.5px; line-height: 1.6; color: #e2dbf5">
+        Top left: what I have. Top right: one menu. Bottom: one sentence telling me what to do next,
+        and three buttons &mdash; write code, build, run. That is the whole game, learnable in one
+        glance, and it reads the same in a store screenshot as it does in the hand.
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

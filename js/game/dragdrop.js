@@ -219,7 +219,11 @@ function updateChips(){
   robots.forEach((r,i)=>{
     const c=document.createElement("button");
     c.className="rchip"+(i===selRobot?" sel":"");
-    c.innerHTML='<span class="dot" style="background:'+r.color+'"></span>'+r.name+(r.running?' <span class="live">●RUN</span>':'');
+    /* r.name and r.color come out of the save file, and an imported save is
+       someone else's data: unescaped, a crafted name landed an <img onerror>
+       here and a crafted colour broke out of the style attribute. */
+    c.innerHTML='<span class="dot" style="background:'+safeColor(r.color)+'"></span>'+
+      esc(r.name)+(r.running?' <span class="live">●RUN</span>':'');
     c.addEventListener("click",()=>{selRobot=i;selBlock=null;elseSel=null;renderProgram();renderPy();updateChips();updateHud();updateFab();updateUndoBtns();follow=true;});
     wrap.appendChild(c);
   });
