@@ -801,7 +801,10 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
           empty, loose,
           rows:now.length,
           /* exactly one of the three lists is on screen at a time */
-          hosts:['mgBlocks','t3Blocks','cyBlocks'].filter(id=>vis(document.getElementById(id))),
+          /* which set the one list is showing — there used to be three
+             separate hosts and that was the bug */
+          set:(document.getElementById('mgBlocks')||{}).dataset?
+              document.getElementById('mgBlocks').dataset.set||'':'(no host)',
           untold:now.filter(r=>((r.querySelector('.br-tip')||{}).textContent||'').length<25)
                     .map(r=>r.querySelector('b').textContent),
           /* given and not given have to be told apart at a glance */
@@ -826,11 +829,12 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     ck(`${W}x${H} every kind of board lets you choose the player's blocks`,
        design.flat.rows>=16 && design.cyber.rows>=10 && design.tower.rows>=12,
        {flat:design.flat.rows,cyber:design.cyber.rows,tower:design.tower.rows});
-    ck(`${W}x${H} and exactly one of the three lists is on screen at a time`,
-       design.flat.hosts.join()==='mgBlocks' &&
-       design.tower.hosts.join()==='t3Blocks' &&
-       design.cyber.hosts.join()==='cyBlocks',
-       {flat:design.flat.hosts,tower:design.tower.hosts,cyber:design.cyber.hosts});
+    /* one list, showing the set that matches the board — never two stacked,
+       never a stale one, never none */
+    ck(`${W}x${H} the one block list shows the set that matches the board`,
+       design.flat.set==='flat' && design.tower.set==='tower' &&
+       design.cyber.set==='cyber',
+       {flat:design.flat.set,tower:design.tower.set,cyber:design.cyber.set});
     /* Switching between the three kinds of board, which is the one thing
        the top section invites you to do. Two things went wrong here: a
        board could end up flagged BOTH Cyber and Tower (Cyber's button

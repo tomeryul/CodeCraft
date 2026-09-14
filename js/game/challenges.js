@@ -412,29 +412,56 @@ window.mgBlockRows=mgBlockRows;
    None of the plumbing was missing: `allowed` is already per-project,
    already saved with the challenge, and already what the palette reads
    (see dragdrop.js). Only the UI was. */
-const MG_LOCKED={move:1,turnL:1,turnR:1};   // a board you cannot walk is not a level
-function mgFlatBlocks(){
+/* There used to be three of these lists — a flat one here, Tower's and the
+   Cyber Lab's, each built in its own file, each showing and hiding itself
+   at its own moment. The Design tab then worked out whether the section
+   had anything in it by looking at whichever of the three happened to be
+   visible when it looked, so the answer depended on which file had run
+   last. That is the whole reason the section came and went.
+
+   One host, one renderer, one question asked at the moment of drawing:
+   what kind of board is this? A designer REGISTERS its block set and never
+   touches the DOM, so there is no ordering left to get wrong. */
+const MG_SETS=[];
+function mgRegisterBlocks(set){MG_SETS.push(set);}
+window.mgRegisterBlocks=mgRegisterBlocks;
+
+/* the flat board's own set. `allowed` is per-project, saved with the
+   challenge, and already what the palette reads (see dragdrop.js). */
+mgRegisterBlocks({
+  id:"flat",
+  when:p=>!p.cyber&&!p.mode3d,
+  list:()=>CHALLENGE_BLOCKS,
+  locked:{move:1,turnL:1,turnR:1}   // a board you cannot walk is not a level
+});
+
+function mgBlocksUI(){
   const bar=$("mgCreatorBar"); if(!bar)return;
   let host=$("mgBlocks");
   if(!host){
     host=document.createElement("div");host.id="mgBlocks";host.className="t3chips";
     bar.appendChild(host);        // mgDesignLayout() files it into its section
   }
-  const p=mgState&&mgState.proj;
-  /* the other two kinds have their own list and their own rules */
-  const flat=!!(p&&mgState.creator&&!p.cyber&&!p.mode3d);
-  host.style.display=flat?"":"none";
-  if(!flat)return;
-  const set=new Set(p.allowed||CHALLENGE_BLOCKS);
-  mgBlockRows(host,CHALLENGE_BLOCKS,p.allowed||CHALLENGE_BLOCKS,MG_LOCKED,(t,give)=>{
-    if(give)set.add(t); else set.delete(t);
-    p.allowed=CHALLENGE_BLOCKS.filter(k=>set.has(k)||MG_LOCKED[k]);
+  const p=mgState&&mgState.creator&&mgState.proj;
+  /* first match wins, and the three `when`s are mutually exclusive — a
+     board is one kind of board (see the mode buttons in tower-editor.js) */
+  const set=p?MG_SETS.find(x=>x.when(p)):null;
+  host.style.display=set?"":"none";
+  host.dataset.set=set?set.id:"";     // the tests read this, and so can you
+  if(!set){host.innerHTML="";return;}
+  const list=set.list();
+  const lock=set.locked||{};
+  const have=new Set(p.allowed||list);
+  mgBlockRows(host,list,p.allowed||list,lock,(t,give)=>{
+    if(give)have.add(t); else have.delete(t);
+    p.allowed=list.filter(k=>have.has(k)||lock[k]);
     mgState.solved=false;
     sfx(520,.03);
-    renderPalette();mgUpdateCount();mgCreatorUI();
-  });
+    renderPalette();mgUpdateCount();mgCreatorUI();mgDraw();
+  },set.tips&&set.tips());
+  if(set.after)set.after(host);
 }
-window.mgFlatBlocks=mgFlatBlocks;
+window.mgBlocksUI=mgBlocksUI;
 
 /* ---- the Design tab, in sections ----
    Everything about designing a level ends up in one tab, and it arrived as
@@ -459,7 +486,7 @@ const MG_SECTIONS=[
    has:["mgSizeRow","mgDiff"]},
   {id:"dsBlocks",name:"Blocks the player gets",
    sub:"Tap one to give it to them or take it away. Dimmed means they will not have it.",
-   has:["mgBlocks","t3Blocks","cyBlocks"]},
+   has:["mgBlocks"]},
   {id:"dsWords", name:"What the player reads",
    sub:"The level's name, and the line they see when it opens.",
    has:["mgName","t3Hint","cyHint","mgGuide"]},
@@ -730,7 +757,7 @@ function mgCreatorUI(){
   if(!mgState||!mgState.creator)return;
   $("designTabBtn").style.display="";
   /* the other two designers call this again after their own chrome is in */
-  mgFlatBlocks();
+  mgBlocksUI();
   mgDesignLayout();
   mgActLabels();
   mgToolsUI();
@@ -1462,6 +1489,10 @@ function mgExit(reopen){
   $("boardTabBtn").style.display="none";
   $("designTabBtn").style.display="none";
   $("designTab").style.display="none";
+  /* and empty the block list on the way out. Nothing draws it once the
+     creator is gone, so a list left standing is the next session's stale
+     list — which is the bug this whole arrangement exists to prevent. */
+  mgBlocksUI();
   /* the creator borrowed full height; hand the player's own size back */
   $("editor").classList.toggle("max",!!sheetFull);
   $("editor").classList.remove("mg");

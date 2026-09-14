@@ -594,13 +594,13 @@ body.sheets-full #maker.sized,
 #mgCreatorBar .blkrow:not(.on) .br-ic{filter:grayscale(1);}
 #mgCreatorBar .blkrow.lock .br-sw{color:var(--ink2);background:rgba(255,255,255,.06);}
 #mgCreatorBar .blkrow:active{border-color:rgba(255,214,107,.6);border-left-color:#ffd66b;}
-#mgBlocks,#t3Blocks,#cyBlocks{display:flex;flex-direction:column;gap:6px;}
+#mgBlocks{display:flex;flex-direction:column;gap:6px;}
 /* the difficulty row reads like the steppers beside it: name, then value */
 #mgDiff{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 #mgDiff .lb{font-size:13px;font-weight:700;color:var(--ink2);}
 #mgDiff b{font-size:13px;font-weight:800;}
 /* the line between what the robot DOES and what decides when it does it */
-#t3Blocks .t3sep{display:block;height:1px;margin:4px 2px;background:var(--hair);}
+#mgBlocks .t3sep{display:block;height:1px;margin:4px 2px;background:var(--hair);}
 
 /* ---- the Design tab ----
    The creator's chrome lives here now, so the fold-out is always open and

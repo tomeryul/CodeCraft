@@ -397,37 +397,36 @@ function chrome(){
     if(t===null)return;
     p.desc3=t.slice(0,240);sfx(560,.04);ui();
   });
-  const chips=document.createElement("div");
-  chips.id="t3Blocks";chips.className="t3chips";
-  bar.appendChild(hint);bar.appendChild(chips);
+  bar.appendChild(hint);
 }
-function chipRow(p){
-  const set=new Set(p.allowed||[]);
+/* Tower's block set. It is REGISTERED, not drawn: challenges.js owns the
+   one list in the Design tab and picks whichever set matches the board.
+   See the note beside MG_SETS there. */
+mgRegisterBlocks({
+  id:"tower",
+  when:p=>!!p.mode3d,
+  list:()=>ALL,
+  locked:LOCKED,
+  /* 🔨 Build means the tile AHEAD up here, not the one underfoot */
+  tips:()=>window.T3_TIPS,
   /* what the robot DOES, then what decides when it does it — the same two
-     halves the palette is split into, and the separator between them is
-     what made the old chip bank readable at all */
-  mgBlockRows($("t3Blocks"),ALL,p.allowed,LOCKED,(t,give)=>{
-    if(give)set.add(t); else set.delete(t);
-    p.allowed=ALL.filter(k=>set.has(k)||LOCKED[k]);
-    mgState.solved=false;
-    sfx(520,.03);
-    renderPalette();mgUpdateCount();ui();
-  },window.T3_TIPS);
-  const host=$("t3Blocks");
-  for(const k of CTRL){
-    const first=host.querySelector('[data-blk="'+k+'"]');
-    if(first){const sep=document.createElement("i");sep.className="t3sep";
-      host.insertBefore(sep,first);break;}
+     halves the palette is split into */
+  after:host=>{
+    for(const k of CTRL){
+      const first=host.querySelector('[data-blk="'+k+'"]');
+      if(first){const sep=document.createElement("i");sep.className="t3sep";
+        host.insertBefore(sep,first);break;}
+    }
   }
-}
+});
 function ui(){
   const btn=$("t3Btn");
   if(!btn)return;
   const cr=!!(mgState&&mgState.creator);
   btn.style.display=cr?"":"none";
-  const row=$("t3EdRow"), warn=$("t3Warn"), chips=$("t3Blocks"), hint=$("t3Hint");
+  const row=$("t3EdRow"), warn=$("t3Warn"), hint=$("t3Hint");
   const three=cr&&on3();
-  for(const el of [row,warn,chips,hint])if(el)el.style.display=three?"":"none";
+  for(const el of [row,warn,hint])if(el)el.style.display=three?"":"none";
   if(!cr)return;
   btn.textContent=three?"🗺️ 2D":"🧊 3D";
   btn.classList.toggle("on",three);
@@ -446,7 +445,6 @@ function ui(){
   $("t3View").classList.toggle("on",solid);
   $("t3Peak").textContent=peak(p);
   $("t3Bricks").textContent=bricks(p);
-  chipRow(p);
   const v=check(p);
   if(v.errs.length){warn.className="t3warn bad";warn.textContent="⚠️ "+v.errs[0];}
   else if(v.warns.length){warn.className="t3warn hmm";warn.textContent="⚠️ "+v.warns[0];}

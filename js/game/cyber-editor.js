@@ -186,9 +186,7 @@ function chrome(){
     if(t===null)return;
     p.desc2=t.slice(0,240);sfx(560,.04);ui();
   });
-  const chips=document.createElement("div");
-  chips.id="cyBlocks";chips.className="t3chips";
-  bar.appendChild(hint);bar.appendChild(chips);
+  bar.appendChild(hint);
 
   /* stepping one at a time to a four-digit code is not a design tool, so
      the number itself is the way in */
@@ -216,22 +214,21 @@ function strikeRow(p){
     el.appendChild(c);
   }
 }
-function chipRow(p){
-  const set=new Set(p.allowed||[]);
-  mgBlockRows($("cyBlocks"),CY.blocks,p.allowed,LOCKED,(t,give)=>{
-    if(give)set.add(t); else set.delete(t);
-    p.allowed=CY.blocks.filter(k=>set.has(k)||LOCKED[k]);
-    mgState.solved=false;
-    sfx(520,.03);renderPalette();mgUpdateCount();ui();
-  });
-}
+/* the Cyber Lab's block set — registered, not drawn; see MG_SETS in
+   js/game/challenges.js */
+mgRegisterBlocks({
+  id:"cyber",
+  when:p=>!!p.cyber,
+  list:()=>CY.blocks,
+  locked:LOCKED
+});
 function ui(){
   const btn=$("cyBtn"); if(!btn)return;
   const cr=!!(mgState&&mgState.creator);
   btn.style.display=cr?"":"none";
-  const row=$("cyEdRow"), chips=$("cyBlocks"), hint=$("cyHint");
+  const row=$("cyEdRow"), hint=$("cyHint");
   const mine=cr&&onCyP();
-  for(const el of [row,chips,hint])if(el)el.style.display=mine?"":"none";
+  for(const el of [row,hint])if(el)el.style.display=mine?"":"none";
   if(!cr)return;
   /* Tower's button renames itself to "2D" while it is on, which is fine
      when it is the only mode button. With two of them a row reading
@@ -245,7 +242,7 @@ function ui(){
   const add=$("mgAddStage"); if(add)add.style.display=mine?"none":"";
   if(!mine)return;
   const p=mgState.proj;
-  strikeRow(p);chipRow(p);
+  strikeRow(p);
   $("cyNLocks").textContent=locks(p).length;
   $("cyNNotes").textContent=notes(p).length;
   $("mgGoal").textContent=(p.desc2?"📜 “"+p.desc2+"”":"🔐 Cyber design — a keypad, something that says what its code is, and a 🚩 flag past it.");
