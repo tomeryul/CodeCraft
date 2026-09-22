@@ -39,6 +39,12 @@
 :root{
   --ease-settle:cubic-bezier(.32,.9,.35,1);   /* what the sheets already use */
   --ease-carry:cubic-bezier(.22,1.2,.36,1);   /* slight overshoot */
+  /* A THIRD curve, and CLAUDE.md asks for a reason you can say out loud,
+     so: this is the celebration card and nothing else. It is the one rare,
+     high-emotion moment in the game — a solved level — and the only place
+     the delight budget is spent on a big, visible pop. Anything seen more
+     than a few times a session uses --ease-carry instead. */
+  --ease-celebrate:cubic-bezier(.34,1.6,.64,1);
   --dur-quick:.12s;   /* press feedback — must feel instant */
   --dur-move:.28s;    /* a surface arriving or leaving */
   --dur-settle:.4s;   /* something finding its place */

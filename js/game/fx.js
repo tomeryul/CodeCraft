@@ -7,13 +7,40 @@
    a journey step that clears several at once did the same. A repeat now bumps
    a counter on the line already showing. */
 const TOAST_MAX=3;
+/* The stack used to jump. Toasts sit in a column, and every one that
+   arrived or left moved the others by a whole row in a single frame —
+   several times a minute, since this game narrates nearly everything.
+
+   FLIP: note where each toast is, make the change, then start each one
+   back where it WAS and let it glide to where it now is. Transform only,
+   so nothing is laid out per frame; and under reduced motion the global
+   rule in css/apple.css zeroes the duration, so it simply lands. A toast
+   that is still in its own entrance keeps it — an animation outranks an
+   inline style, and 250ms later it is settled anyway. */
+function tFlip(box,change){
+  if(!box){change();return;}
+  const was=new Map([...box.children].map(k=>[k,k.getBoundingClientRect().top]));
+  change();
+  for(const k of box.children){
+    const t0=was.get(k); if(t0==null)continue;      // a newcomer has its own entrance
+    const dy=t0-k.getBoundingClientRect().top;
+    if(Math.abs(dy)<1)continue;
+    k.style.transition="none";
+    k.style.transform="translateY("+dy+"px)";
+    k.getBoundingClientRect();                       // commit the old position first
+    /* opacity stays in the list so a toast already fading out keeps fading */
+    k.style.transition="transform var(--dur-move) var(--ease-settle),opacity .4s";
+    k.style.transform="";
+  }
+}
+function tKill(d){clearTimeout(d._f);clearTimeout(d._g);d.remove();}
 function tArm(d,fade,gone){
   clearTimeout(d._f);clearTimeout(d._g);
   d.style.opacity="";d.style.transition="";
   d._f=setTimeout(()=>{d.style.opacity="0";d.style.transition="opacity .4s";},fade);
-  d._g=setTimeout(()=>d.remove(),gone);
+  d._g=setTimeout(()=>tFlip(d.parentNode,()=>d.remove()),gone);
 }
-function tDrop(d){clearTimeout(d._f);clearTimeout(d._g);d.remove();}
+function tDrop(d){tFlip(d.parentNode,()=>tKill(d));}
 function toast(t){
   const box=$("toasts");
   const small=[...box.querySelectorAll(".toast:not(.big)")];
@@ -26,8 +53,12 @@ function toast(t){
   }
   const d=document.createElement("div");
   d.className="toast";d.textContent=t;d.dataset.msg=t;d.dataset.n="1";
-  box.appendChild(d);
-  for(let i=0;i<=small.length-TOAST_MAX;i++)tDrop(small[i]);
+  /* the arrival and any overflow it pushes out happen as ONE change, so
+     the stack makes one move rather than two */
+  tFlip(box,()=>{
+    box.appendChild(d);
+    for(let i=0;i<=small.length-TOAST_MAX;i++)tKill(small[i]);
+  });
   tArm(d,2600,3100);
 }
 function bigToast(t){
@@ -35,9 +66,11 @@ function bigToast(t){
   const box=$("toasts");
   // one banner at a time: a big toast is an announcement, and two
   // announcements on screen at once is neither
-  box.querySelectorAll(".toast.big").forEach(tDrop);
   const d=document.createElement("div");d.className="toast big";d.textContent=t;
-  box.appendChild(d);
+  tFlip(box,()=>{
+    box.querySelectorAll(".toast.big").forEach(tKill);
+    box.appendChild(d);
+  });
   tArm(d,4200,4800);
 }
 let actx=null;

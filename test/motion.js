@@ -1,0 +1,162 @@
+/* Motion that has to earn its place — the findings of an audit against the
+   improve-animations catalog, asserted by SAMPLING the animations rather
+   than by reading the stylesheet, because the stylesheet looked fine and
+   the block pop was still wobbling twice.
+   Run: NODE_PATH=/opt/node22/lib/node_modules /opt/node22/bin/node test/motion.js */
+const { chromium } = require('playwright');
+const fs = require('fs');
+const path = require('path');
+const ROOT = path.join(__dirname, '..');
+const CHROME = process.env.CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const LAUNCH = fs.existsSync(CHROME) ? { executablePath: CHROME } : {};
+const APP = 'file://' + path.join(ROOT, 'index.html');
+
+let pass = 0, fail = 0;
+const ck = (n, ok, d) => { ok ? pass++ : fail++;
+  console.log((ok ? '  ✅ ' : '  ❌ ') + n + (ok ? '' : ' — ' + JSON.stringify(d))); };
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+(async () => {
+  const b = await chromium.launch(LAUNCH);
+  const pg = await b.newPage({ viewport: { width: 390, height: 844 } });
+  const errs = [];
+  pg.on('pageerror', e => errs.push(String(e)));
+  await pg.goto(APP); await wait(1200);
+  await pg.selectOption('#ageMonth', '6');
+  await pg.selectOption('#ageYear', String(new Date().getFullYear() - 30));
+  await pg.click('#ageGo'); await wait(400);
+  await pg.evaluate(() => $('playBtn').click()); await wait(1600);
+  await pg.evaluate(() => { const c = document.querySelector('#ccCele .cc-cta'); if (c) c.click(); });
+  await wait(400);
+
+  /* Step an element's animation through its own timeline, paused, and read
+     the scale it actually has at each point. */
+  const sampleScale = sel => pg.evaluate(s => {
+    const d = document.createElement('div'); d.className = s; d.textContent = 'x';
+    d.style.cssText = 'position:fixed;top:100px;left:40px';
+    document.body.appendChild(d);
+    const a = d.getAnimations()[0];
+    if (!a) { d.remove(); return null; }
+    a.pause();
+    const dur = a.effect.getComputedTiming().duration, out = [];
+    for (let i = 0; i <= 40; i++) {
+      a.currentTime = dur * i / 40;
+      const m = getComputedStyle(d).transform;
+      out.push(m === 'none' ? 1 : +m.slice(7).split(',')[0]);
+    }
+    const curve = getComputedStyle(d).animationTimingFunction;
+    d.remove();
+    return { dur, curve, peak: Math.max(...out), dip: Math.min(...out.slice(20)), first: out[0] };
+  }, sel);
+
+  console.log('▶ the block a child taps in');
+  const blk = await sampleScale('blk c-basic new');
+  /* It was .82 → 1.086 → .993 → 1: overshoot on the way up, then again on
+     the way down. A block lands two hundred times a session. */
+  ck('it grows and settles — it does not overshoot and then dip back under',
+     !!blk && blk.dip >= 0.999, blk);
+  ck('any overshoot is a hair, not a bounce', !!blk && blk.peak < 1.01, blk);
+  ck('it starts close to its size, not from a shrunken block',
+     !!blk && blk.first >= 0.9 && blk.first < 1, blk);
+  ck('it is quick, because it is the most frequent motion in the game',
+     !!blk && blk.dur <= 200, blk && blk.dur);
+  ck('and it uses the house curve for things the hand put somewhere',
+     !!blk && blk.curve === 'cubic-bezier(0.22, 1.2, 0.36, 1)', blk && blk.curve);
+
+  console.log('▶ the one place a big pop is allowed');
+  const cele = await sampleScale('cc-card');
+  ck('the celebration card still pops — it is the rare moment the delight is for',
+     !!cele && cele.peak > 1.05, cele);
+
+  console.log('▶ one vocabulary');
+  /* Every curve is a token in css/apple.css. Checked on the live cascade:
+     the sheets used to carry the house curve typed out by hand. */
+  const tok = await pg.evaluate(() => {
+    const cs = e => getComputedStyle(e);
+    /* matched, not split: a cubic-bezier has commas of its own */
+    return { sheet: (cs($('hub')).transitionTimingFunction.match(/cubic-bezier\([^)]*\)/)||[''])[0],
+             dur: cs($('hub')).transitionDuration.split(',')[0].trim(),
+             settle: cs(document.documentElement).getPropertyValue('--ease-settle').trim() };
+  });
+  ck('the sheets move on --ease-settle, by name',
+     tok.sheet === 'cubic-bezier(0.32, 0.9, 0.35, 1)' && tok.dur === '0.28s', tok);
+  const literals = ['css/styles.css', 'css/codecraft-v4.css', 'css/codecraft-v5.css',
+                    'css/codecraft-v6.css', 'css/codecraft-v7.css']
+    .filter(f => fs.existsSync(path.join(ROOT, f)))
+    .map(f => [f, (fs.readFileSync(path.join(ROOT, f), 'utf8').match(/cubic-bezier\(/g) || []).length])
+    .filter(([, n]) => n > 0);
+  ck('no stylesheet but apple.css spells out a curve of its own', literals.length === 0, literals);
+
+  console.log('▶ the toast stack');
+  /* Toasts sit in a column, and every arrival and departure used to move
+     the rest a whole row in one frame. Which ones move depends on where
+     the column is anchored, so both are checked:
+       no sheet open  — anchored at the TOP: a toast LEAVING pulls the rest up
+       a sheet open   — anchored at the BOTTOM: a toast ARRIVING pushes the rest up */
+  const glide = (open, act) => pg.evaluate(async ([open, act]) => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    navHome(); await wait(300);
+    if (open) { hubOpen(); await wait(450); }
+    const box = $('toasts'); box.innerHTML = '';
+    toast('one'); await wait(40); toast('two');
+    await wait(420);                                   // both have arrived
+    const watch = act === 'leave' ? box.children[1] : box.children[0];
+    const rest = watch.getBoundingClientRect().top;
+    if (act === 'leave') tDrop(box.children[0]); else toast('three');
+    const moved = watch.getBoundingClientRect().top;   // the same frame
+    /* FLIP clears the inline transform in the same tick on purpose — the
+       CSS transition is what carries the toast from the inverted spot to
+       its new row, so THAT is what is looked for. */
+    const gliding = watch.getAnimations().some(x => x.transitionProperty === 'transform');
+    await wait(500);
+    const settled = watch.getBoundingClientRect().top;
+    const after = watch.style.transform;
+    navHome(); await wait(200);
+    return { rest, moved, gliding, settled, after,
+             anchored: getComputedStyle(box).bottom !== 'auto' && open ? 'bottom' : 'top' };
+  }, [open, act]);
+
+  const L = await glide(false, 'leave');
+  /* The glide: in the frame the change happens the toast is still where it
+     was, carrying an inverse transform, and THEN travels to its new row. */
+  ck('top-anchored: when a toast leaves, the one below does not jump',
+     Math.abs(L.moved - L.rest) < 1 && L.gliding === true, L);
+  ck('and ends up in the gap', L.settled < L.rest - 10, L);
+  ck('and hands its position back to the layout when it gets there', L.after === '', L);
+
+  const A = await glide(true, 'arrive');
+  ck('bottom-anchored, over a sheet: a new toast does not shove the rest up in one frame',
+     Math.abs(A.moved - A.rest) < 1 && A.gliding === true, A);
+  ck('and ends up a row higher, with the layout owning it again', A.settled < A.rest - 10 && A.after === '', A);
+
+  const R = await pg.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const box = $('toasts'); box.innerHTML = '';
+    for (const t of ['a', 'b', 'c']) { toast(t); await wait(30); }
+    await wait(400);
+    const first = box.children[0];
+    toast('d');                                        // pushes the oldest out
+    return { count: box.children.length, gone: !first.isConnected };
+  });
+  ck('a fourth toast still pushes the oldest out — three at most', R.count === 3 && R.gone, R);
+
+  console.log('▶ reduced motion');
+  await pg.emulateMedia({ reducedMotion: 'reduce' });
+  const RM = await pg.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const box = $('toasts'); box.innerHTML = '';
+    toast('one'); toast('two'); await wait(60);
+    const second = box.children[1];
+    tDrop(box.children[0]);
+    await wait(40);
+    return second.getBoundingClientRect().top === box.getBoundingClientRect().top;
+  });
+  /* No travel: the gap simply closes. */
+  ck('with reduced motion the gap closes without travelling', RM === true, RM);
+  await pg.emulateMedia({ reducedMotion: null });
+
+  ck('no uncaught exceptions', errs.length === 0, errs.slice(0, 3));
+  console.log('\n' + pass + ' passed, ' + fail + ' failed');
+  await b.close();
+  process.exit(fail ? 1 : 0);
+})();

@@ -42,7 +42,11 @@ glued to the point that grabbed it — never re-centred under the finger.
 simply moves or appears; `--ease-carry`, which overshoots slightly, only
 when the hand pushed the thing. Overshoot on a panel that merely
 appeared feels wrong. Don't invent a third curve without a reason you
-can say out loud.
+can say out loud — the one that exists, `--ease-celebrate`, is the
+solved-level card and nothing else. Every curve lives in `css/apple.css`
+and nowhere else; `test/motion.js` fails if a stylesheet types one out.
+Frequency sets the budget: a block lands two hundred times a session, so
+it gets 180ms and a hair of give, not a bounce.
 
 **Dragged means sprung.** A CSS curve is enough for a surface that
 only ever opens by a tap. The moment something can be dragged and

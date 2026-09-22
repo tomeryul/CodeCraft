@@ -121,12 +121,12 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 
 /* ---------- sheets ---------- */
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--panel);border-radius:24px 24px 0 0;
-  box-shadow:0 -10px 40px rgba(0,0,0,.5);transform:translateY(105%);transition:transform .28s cubic-bezier(.32,.9,.35,1);
+  box-shadow:0 -10px 40px rgba(0,0,0,.5);transform:translateY(105%);transition:transform var(--dur-move) var(--ease-settle);
   display:flex;flex-direction:column;max-height:78vh;padding-bottom:var(--sab);}
 .sheet.open{transform:translateY(0);}
 
 /* ---------- editor ---------- */
-#editor{height:48vh;transition:transform .28s cubic-bezier(.32,.9,.35,1),height .26s cubic-bezier(.32,.9,.35,1);}
+#editor{height:48vh;transition:transform var(--dur-move) var(--ease-settle),height .26s var(--ease-settle);}
 #editor.max{height:var(--sheet-full);max-height:var(--sheet-full);}
 #edMax svg{width:17px;height:17px;display:block;}
 #edMax .ic-min{display:none;}
@@ -168,8 +168,14 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .blk{display:flex;align-items:center;gap:8px;background:var(--panel2);border:2px solid transparent;border-radius:13px;
   padding:8px 11px;margin:5px 0;font-size:13.5px;font-weight:600;min-height:40px;color:#fff;
   border-bottom:4px solid rgba(0,0,0,.32);box-shadow:var(--bevel-hi);flex-wrap:wrap;}
-.blk.new{animation:blockIn .22s cubic-bezier(.34,1.6,.64,1);}
-@keyframes blockIn{0%{transform:scale(.82);opacity:.2}55%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+/* The most frequent animation in the game — every block a child taps in.
+   It was .82 -> 1.086 -> .993 -> 1: a keyframe that overshot on its own,
+   eased by a curve that overshot again, so each block wobbled twice. Two
+   hundred times a session that is noise, not delight. One segment now,
+   from a smaller distance, on --ease-carry: the hand put it there, so it
+   may settle with a little give, and that is all. */
+.blk.new{animation:blockIn 180ms var(--ease-carry);}
+@keyframes blockIn{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}
 .blk .ic{font-size:16px;}
 .blk.sel{border-color:var(--accent) !important;box-shadow:0 0 0 3px rgba(255,184,48,.25), var(--bevel-hi);}
 .blk.exec{border-color:var(--green) !important;animation:execPulse 1s ease-in-out infinite;}
@@ -252,7 +258,6 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 /* ---------- shop ---------- */
 #shopWrap{position:absolute;top:0;left:0;right:0;height:var(--vh,100lvh);z-index:45;background:rgba(10,6,25,.55);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:18px;}
 #shopWrap.open{display:flex;}
-#shopWrap.open #shop{animation:popIn .3s cubic-bezier(.34,1.6,.64,1);}
 @keyframes popIn{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
 #shop{width:min(420px,100%);max-height:80vh;overflow-y:auto;background:var(--panel);border-radius:22px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.6);}
 #shop h2{margin:0 0 4px;font-size:20px;} #shop .sub{color:var(--ink2);font-size:12.5px;margin-bottom:12px;}
@@ -543,7 +548,7 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #ccCele{position:absolute;top:0;left:0;right:0;height:var(--vh,100lvh);z-index:95;background:radial-gradient(90% 70% at 50% 42%,rgba(20,13,45,.55),rgba(12,7,30,.88));
   display:flex;align-items:center;justify-content:center;padding:28px;transition:opacity .3s;}
 #ccCele.out{opacity:0;}
-.cc-card{text-align:center;animation:popIn .45s cubic-bezier(.34,1.6,.64,1);max-width:360px;position:relative;z-index:1;}
+.cc-card{text-align:center;animation:popIn .45s var(--ease-celebrate);max-width:360px;position:relative;z-index:1;}
 .cc-halo{position:relative;width:118px;height:118px;margin:0 auto 18px;}
 .cc-halo::before{content:"";position:absolute;inset:-14px;border-radius:50%;border:3px dashed rgba(255,214,107,.6);animation:haloSpin 9s linear infinite;}
 @keyframes haloSpin{to{transform:rotate(360deg)}}
