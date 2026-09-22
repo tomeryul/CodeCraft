@@ -25,9 +25,12 @@
    clicked, so a fling does exactly what the control in the corner does,
    on every sheet, for ever — including the ones added after this file.
 
-   The editor is the exception, and deliberately: it is full of a child's
-   work, so the first pull down only shrinks it from full height. You
-   have to pull a second time, from the small size, to leave.
+   Down and up are the same ladder. Pulling UP makes the window bigger,
+   on every sheet, by pressing the size control the header has always
+   carried. Pulling DOWN makes it smaller and then, one rung lower, sends
+   it away — except that the editor is full of a child's work, so its
+   first pull down is spent on the size and you have to pull a second
+   time, from the small size, to leave.
    ===================================================================== */
 
 /* ---------------------------------------------------------------------
@@ -93,6 +96,10 @@ window.ccProject=projectThrow;
 if(window.__sheetDrag)return; window.__sheetDrag=1;
 
 const DISMISS_FRACTION=0.4;   // past this much of its own height, it goes
+/* Smaller than the dismiss threshold on purpose: growing is undoable with
+   the same gesture the other way, while leaving is not, so the cheap
+   direction is allowed to be the easy one. */
+const EXPAND_FRACTION=0.22;   // and this much upwards makes it bigger
 const START_SLOP=6;           // px before a press becomes a drag
 const reduced=()=>window.matchMedia&&
   matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -140,13 +147,42 @@ function clearY(el){
 }
 function openSheets(){ return document.querySelectorAll(".sheet.open").length; }
 
-/* The editor holds work, so its first pull down is a shrink rather than
-   an exit. Returns true when the pull was spent on the size. */
+/* ---------------- the size ladder ----------------
+   Sizing is ONE preference shared by every sheet: nav.js puts a size
+   button in each header and that button clicks #edMax, so #editor.max is
+   the state even when the editor is shut. The maker is the exception — a
+   pinned canvas does not fit in 56vh — and owns its own.
+
+   Both are CLICKED rather than reimplemented, for exactly the reason the
+   ✕ is: the gesture does what the control does, so the two can never
+   drift apart. */
+function sizeCtl(el){
+  if(el.id==="maker")return el.querySelector(".m-head .iconbtn.size");
+  return $("edMax");
+}
+function isFull(el){
+  if(el.id==="maker")return el.classList.contains("wide");
+  const ed=$("editor");
+  return !!ed&&ed.classList.contains("max");
+}
+/* Down one rung. Only the editor: it is full of a child's work, so the
+   first pull spends itself on the size. Every other sheet holds nothing
+   you would be sorry to lose, and making them take two flings to close
+   would be a tax on the common case. */
 function shrankInstead(el){
   if(el.id!=="editor")return false;
-  if(!el.classList.contains("max"))return false;
-  const m=$("edMax"); if(!m)return false;
-  m.click();
+  if(!isFull(el))return false;
+  const c=sizeCtl(el); if(!c)return false;
+  c.click();
+  return true;
+}
+/* Up one rung, and on EVERY sheet. Growing one costs nothing and risks
+   nothing, so there is no reason for the gesture to be lopsided: the same
+   hand movement that makes the window smaller makes it bigger again. */
+function grewInstead(el){
+  if(isFull(el))return false;
+  const c=sizeCtl(el); if(!c)return false;
+  c.click();
   return true;
 }
 /* What dismissal means is the sheet's own ✕ — never a rule invented here,
@@ -164,7 +200,7 @@ function begin(e,sheet){
   if(s.anim){s.anim.stop();s.anim=null;}
   const startY=s.y;
   const grabY=e.clientY;
-  let dragging=false;
+  let dragging=false, rawDy=0;
   /* A short history rather than a running average of the last two points.
      Two points is not enough: a burst of moves can share a timestamp —
      performance.now() is deliberately coarse — and every one of them then
@@ -196,6 +232,7 @@ function begin(e,sheet){
     }
     ev.preventDefault();
     push(ev.clientY,performance.now());
+    rawDy=dy;
     let y=startY+dy;
     /* Up is a boundary, not a wall: it gives, less and less, which reads
        as "there is nothing more up here" rather than "frozen". */
@@ -216,8 +253,21 @@ function begin(e,sheet){
     const vel=velocity();
     /* Not "where did the finger stop" but "where was it going". A short
        fast flick from near the top still throws the sheet away, which is
-       what the hand meant and what the eye expects. */
-    const landing=y+projectThrow(vel);
+       what the hand meant and what the eye expects.
+
+       Read off the UNDAMPED travel, not off the sheet: going down the two
+       are the same number, but going up the sheet is rubber-banded and
+       moves about half as far as the hand — a threshold taken from the
+       sheet would quietly ask for a pull twice as long upwards. */
+    const landing=startY+rawDy+projectThrow(vel);
+
+    /* Up the ladder: bigger. Nothing lives above full height, so from
+       there the sheet simply comes home. */
+    if(landing<-h*EXPAND_FRACTION){
+      if(grewInstead(sheet)){ ccHaptic(12); if(typeof sfx==="function")sfx(600,.04); }
+      settle(sheet,0,vel,()=>clearY(sheet));
+      return;
+    }
     const go=landing>h*DISMISS_FRACTION;
 
     if(go&&shrankInstead(sheet)){ settle(sheet,0,vel); return; }

@@ -52,11 +52,15 @@ Sheets crossed that line — `js/game/sheet-drag.js` holds the spring
 (`ccSpring`) and the momentum projection (`ccProject`), and both are
 exported for the next thing that needs them. Do not add a second spring.
 
-Two traps that file already paid for: read the release velocity over a
-WINDOW of the last ~80ms, never from the last two points (a burst of
-moves can share a timestamp, and a real flick then arrives at zero);
-and let the gesture do what the on-screen control does — a fling
-clicks the sheet's own ✕ rather than inventing a second way out.
+Three traps that file already paid for. Read the release velocity over
+a WINDOW of the last ~80ms, never from the last two points (a burst of
+moves can share a timestamp, and a real flick then arrives at zero).
+Let the gesture do what the on-screen control does — a fling clicks the
+sheet's own ✕, a pull up presses its own size button, rather than
+inventing a second way out or a second idea of "big". And judge the
+throw on the UNDAMPED finger travel: upward is rubber-banded, so a
+threshold read off the sheet silently asks for twice the pull going up
+as coming down.
 
 **Out the way it came in.** A surface that arrives from the bottom
 leaves to the bottom, and a menu grows from the control that opened it.

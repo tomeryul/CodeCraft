@@ -192,12 +192,89 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await pg.evaluate(() => $('hub').style.transform) === '',
     await pg.evaluate(() => $('hub').style.transform));
 
+  console.log('▶ the other way up the same ladder');
+  /* Down makes the window smaller and then sends it away. Up has to make
+     it bigger, by the same hand movement, or the gesture is lopsided. */
+  const size = () => pg.evaluate(() => ({
+    max: $('editor').classList.contains('max'),
+    full: document.body.classList.contains('sheets-full'),
+    hub: $('hub').classList.contains('open') ? Math.round($('hub').offsetHeight) : null
+  }));
+  const shrink = async () => {
+    await pg.evaluate(() => { if ($('editor').classList.contains('max')) $('edMax').click(); });
+    await wait(600);
+  };
+
+  await shrink();
+  r = await openHub();
+  const small = await size();
+  await drag('hub', 8, -15, 16);                 // 120px UP at about 940px/s
+  await wait(1100);
+  const grown = await size();
+  ck('pulling a sheet up makes the window bigger',
+    small.max === false && grown.max === true && grown.hub > small.hub + 100,
+    { before: small, after: grown });
+  ck('and the sheet it grew is still open', await isOpen('hub') === true);
+
+  /* Nothing lives above full height. The danger here is the up-gesture
+     falling through into the DOWN branch and throwing the sheet away. */
+  await drag('hub', 8, -15, 16);
+  await wait(1100);
+  const ceiling = await size();
+  ck('pulling up at full height changes nothing and keeps the sheet',
+    ceiling.max === true && await isOpen('hub') === true, ceiling);
+
+  await shrink();
+  r = await openHub();
+  await drag('hub', 5, -6, 70);                  // 30px at about 85px/s
+  await wait(900);
+  const nudged = await size();
+  ck('a small slow pull up is not enough to resize',
+    nudged.max === false && await isOpen('hub') === true, nudged);
+  ck('and it comes back to rest', await ty('hub') === 0, await ty('hub'));
+
+  /* The maker sizes itself — a pinned canvas does not fit in 56vh — so
+     the gesture has to reach ITS control, not the shared one. */
+  const mk = await pg.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    if (typeof makerOpen !== 'function') return { skipped: true };
+    navHome(); await wait(300);
+    makerOpen('hat'); await wait(700);
+    return { skipped: false, open: $('maker').classList.contains('open'),
+             wide: $('maker').classList.contains('wide'),
+             hasOwn: !!$('maker').querySelector('.m-head .iconbtn.size') };
+  });
+  if (!mk.skipped) {
+    ck('the maker is open with a size control of its own',
+      mk.open === true && mk.hasOwn === true, mk);
+    await drag('maker', 8, mk.wide ? 15 : -15, 16);
+    await wait(1000);
+    const mkAfter = await pg.evaluate(() => ({
+      wide: $('maker').classList.contains('wide'),
+      open: $('maker').classList.contains('open'),
+      edMax: $('editor').classList.contains('max') }));
+    ck('dragging the maker moves its own size, not the shared one',
+      mkAfter.wide !== mk.wide && mkAfter.open === true, { before: mk.wide, after: mkAfter });
+    await pg.evaluate(() => { navHome(); }); await wait(400);
+  }
+
   console.log('▶ the editor is full of a child’s work');
   await pg.evaluate(() => { navHome(); }); await wait(400);
   await pg.evaluate(() => { $('editor').classList.add('open');
     if (!$('editor').classList.contains('max')) $('edMax').click(); });
   await wait(600);
   ck('the editor starts full height', await pg.evaluate(() => $('editor').classList.contains('max')));
+
+  /* The whole ladder in one place: small -> big -> small -> gone. */
+  await pg.evaluate(() => { if ($('editor').classList.contains('max')) $('edMax').click(); });
+  await wait(600);
+  await drag('editor', 8, -15, 16);
+  await wait(1000);
+  ck('pulling the editor up puts it back to full height',
+    await pg.evaluate(() => $('editor').classList.contains('max') &&
+                            $('editor').classList.contains('open')),
+    await pg.evaluate(() => $('editor').className));
+
   await drag('editor', 8, 15, 16);
   await wait(1000);
   ck('the first pull down shrinks it instead of closing it',
