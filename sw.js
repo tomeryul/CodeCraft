@@ -1,4 +1,4 @@
-const CACHE = "codecraft-v169";
+const CACHE = "codecraft-v170";
 const ASSETS = [
   "./",
   "./index.html",
@@ -47,6 +47,7 @@ const ASSETS = [
   "./js/game/hub.js",
   "./js/game/settings.js",
   "./js/game/nav.js",
+  "./js/game/sheet-drag.js",
   "./js/game/i18n.js",
   "./js/game/fx.js",
   "./js/game/hud.js",

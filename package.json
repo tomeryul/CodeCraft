@@ -12,7 +12,7 @@
     "open:ios": "cap open ios",
     "open:android": "cap open android",
     "test": "node test/smoke.js",
-    "test:all": "node test/smoke.js && node test/layout.js && node test/hebrew.js && node test/cyber.js && node test/hub.js && node test/nav.js && node test/academy.js && node test/settings.js && node test/security.js && node test/age-gate.js && node test/delete-account.js && node test/privacy.js && node test/music.js && node test/native.js",
+    "test:all": "node test/smoke.js && node test/layout.js && node test/hebrew.js && node test/cyber.js && node test/hub.js && node test/nav.js && node test/academy.js && node test/settings.js && node test/security.js && node test/age-gate.js && node test/delete-account.js && node test/privacy.js && node test/music.js && node test/native.js && node test/sheet-drag.js",
     "sync:android": "npm run www && cap sync android",
     "sync:ios": "npm run www && cap sync ios"
   },

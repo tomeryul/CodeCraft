@@ -141,3 +141,50 @@
 #stats .chip,#mgCount,#mgBudget,#mgW,#mgH,.num,.ht-n,.pmeta{
   font-variant-numeric:tabular-nums;
 }
+
+/* ---------------------------------------------------------------------
+   6. Sheets that can be dragged
+   ---------------------------------------------------------------------
+   The condition in CLAUDE.md finally arrived: a surface you can throw
+   needs a spring, not a curve. js/game/sheet-drag.js is that spring.
+   What belongs here is only what a stylesheet can hold — the grip, and
+   getting the CSS transition out of the way while JS owns the transform.
+   --------------------------------------------------------------------- */
+
+/* The grip. Small, quiet, and in the one place every phone user already
+   looks for it. It is drawn in space the header already had rather than
+   given its own strip, so nothing below it moves. */
+.sheet.grabbable > .m-head,
+.sheet.grabbable > .v5-head,
+.sheet.grabbable > .ed-head{ position:relative; touch-action:none; }
+.sheet.grabbable > .m-head{ padding-top:13px; }
+.sheet.grabbable > .m-head::before,
+.sheet.grabbable > .v5-head::before,
+.sheet.grabbable > .ed-head::before{
+  content:"";position:absolute;top:5px;left:50%;
+  width:36px;height:4px;margin-left:-18px;border-radius:2px;
+  background:var(--ink2,#b9b0d8);opacity:.3;pointer-events:none;
+}
+/* Pressed, the grip answers on the press — not on the release, and not
+   only once the sheet has started to move. */
+.sheet.grabbable.sheet-drag > .m-head::before,
+.sheet.grabbable.sheet-drag > .v5-head::before,
+.sheet.grabbable.sheet-drag > .ed-head::before{ opacity:.62; }
+
+/* While a finger or the spring owns the transform, the CSS curve must
+   not also be trying to own it — two animations on one property is a
+   fight the finger loses. The editor keeps its height curve, which is a
+   different property and still the editor's own business. */
+.sheet.sheet-drag,.sheet.sheet-anim{ transition:none; will-change:transform; }
+#editor.sheet-drag,#editor.sheet-anim{
+  transition:height .26s var(--ease-settle);
+}
+
+/* Nothing is thrown when the setting says nothing should be: the drag
+   still tracks, but the release lands instantly (handled in JS) and the
+   grip stops inviting a gesture that no longer has motion to show. */
+@media (prefers-reduced-motion:reduce){
+  .sheet.grabbable > .m-head::before,
+  .sheet.grabbable > .v5-head::before,
+  .sheet.grabbable > .ed-head::before{ opacity:.22; }
+}

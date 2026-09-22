@@ -44,12 +44,19 @@ when the hand pushed the thing. Overshoot on a panel that merely
 appeared feels wrong. Don't invent a third curve without a reason you
 can say out loud.
 
-**If it ever becomes draggable, it needs a spring.** These CSS curves
-are enough because every surface here opens by a tap. The moment
-something can be dragged and released — a sheet you can fling shut — a
-fixed curve stops working: the animation has to start from the live
-on-screen value, inherit the release velocity, and be grabbable again
-mid-flight. That is a spring, and the skill file explains the handoff.
+**Dragged means sprung.** A CSS curve is enough for a surface that
+only ever opens by a tap. The moment something can be dragged and
+released, it is not: the animation has to start from the live on-screen
+value, inherit the release velocity, and be grabbable again mid-flight.
+Sheets crossed that line — `js/game/sheet-drag.js` holds the spring
+(`ccSpring`) and the momentum projection (`ccProject`), and both are
+exported for the next thing that needs them. Do not add a second spring.
+
+Two traps that file already paid for: read the release velocity over a
+WINDOW of the last ~80ms, never from the last two points (a burst of
+moves can share a timestamp, and a real flick then arrives at zero);
+and let the gesture do what the on-screen control does — a fling
+clicks the sheet's own ✕ rather than inventing a second way out.
 
 **Out the way it came in.** A surface that arrives from the bottom
 leaves to the bottom, and a menu grows from the control that opened it.
