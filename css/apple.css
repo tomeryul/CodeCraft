@@ -1,0 +1,143 @@
+/* =====================================================================
+   The house rules for motion and material
+   ---------------------------------------------------------------------
+   Apple's fluid-interface principles (WWDC "Designing Fluid Interfaces",
+   "The Details of UI Typography", "Principles of Great Design"), applied
+   to this game. The skill they come from lives in
+   .claude/skills/apple-design/SKILL.md; the rules a human has to KEEP
+   following are written down in CLAUDE.md. This file is the part a
+   stylesheet can enforce on its own.
+
+   It loads LAST so it can answer for rules written anywhere before it.
+   Nothing here restyles the game: it adds the three accessibility
+   settings the game never answered, names the curves the game already
+   uses so the next person picks one instead of inventing a sixth, and
+   fixes tracking on the two sizes where a fixed value is wrong.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. Motion tokens — the vocabulary, not a restyle
+   ---------------------------------------------------------------------
+   Apple replaced mass/stiffness/damping with two ideas a designer can
+   hold: RESPONSE (how fast it reaches the target) and DAMPING (whether
+   it overshoots). There is no spring engine here and the game does not
+   need one — nothing in it is thrown or flicked, every surface is opened
+   by a tap. These curves are the CSS approximation of the two cases:
+
+     --ease-settle   damping 1.0 — reaches the target and stops. The
+                     default for anything that simply moves or appears.
+     --ease-carry    damping ~0.8 — a touch of overshoot. ONLY for
+                     something the hand pushed (a block landing home).
+
+   Overshoot on a menu that merely appeared feels wrong; overshoot on
+   something you threw feels right. That is the whole rule.
+
+   If a gesture ever becomes continuous here — a sheet you can drag down
+   and fling — these curves stop being enough and the thing needs a real
+   spring that starts from the live on-screen value. CLAUDE.md says so.
+   --------------------------------------------------------------------- */
+:root{
+  --ease-settle:cubic-bezier(.32,.9,.35,1);   /* what the sheets already use */
+  --ease-carry:cubic-bezier(.22,1.2,.36,1);   /* slight overshoot */
+  --dur-quick:.12s;   /* press feedback — must feel instant */
+  --dur-move:.28s;    /* a surface arriving or leaving */
+  --dur-settle:.4s;   /* something finding its place */
+}
+
+/* ---------------------------------------------------------------------
+   2. Reduced motion
+   ---------------------------------------------------------------------
+   The game had 47 transitions and 18 keyframe animations and answered
+   this setting nowhere. Several of those animations are slow ambient
+   loops — the drifting sky, the bobbing robot, a spinning halo — which
+   are exactly what the setting exists to stop.
+
+   Reduced motion does not mean no feedback. Colour and opacity still
+   carry meaning and stay; what goes is travel across the screen, scale,
+   and anything that loops. The sheets keep a short cross-fade so they
+   still read as arriving rather than blinking into place.
+   --------------------------------------------------------------------- */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    animation-delay:0s !important;
+    transition-duration:.01ms !important;
+    transition-delay:0s !important;
+    scroll-behavior:auto !important;
+  }
+  /* A sheet still has to hide itself, and it hides by sitting off the
+     bottom of the screen — so the transform stays and only its travel
+     is removed. Opacity carries the arrival instead. */
+  .sheet{opacity:0;transition:opacity 160ms linear !important;}
+  .sheet.open{opacity:1;}
+  /* The press is the one piece of motion worth keeping: it is the
+     answer to a touch, it is 120ms, and it goes nowhere. */
+  .blk:active,button:active,.pcard:active,.hub-tile:active{
+    transition-duration:var(--dur-quick) !important;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   3. Reduced transparency
+   ---------------------------------------------------------------------
+   29 surfaces blur what is behind them. Dropping the blur alone would
+   make things WORSE — a semi-transparent panel with the blur removed is
+   less legible, not more — so every one of them also becomes solid.
+
+   The two bars and the toasts sit over a moving, painted world, which is
+   the worst case for reading text through glass.
+   --------------------------------------------------------------------- */
+@media (prefers-reduced-transparency:reduce){
+  *{backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}
+  #topbar #stats,#topbar #tbBtns,#stats .chip,#tbBtns .iconbtn,
+  #bottombar #codeBtn,#bottombar #buildBtn,#buildBar,#actionBar,
+  #objMenu,#shopWrap,#splashAuth,#splashAuth .sp-card,
+  #ticker .tk,#ticker .tk-btn,#ticker .tk-order,#ticker .tk-panel,
+  #mgBrickStp,#coach,.toast,.chip,.iconbtn{
+    background-color:var(--panel,#241c46) !important;
+  }
+  #fabRun{background-image:none !important;background-color:#3ca85a !important;}
+}
+
+/* ---------------------------------------------------------------------
+   4. More contrast
+   ---------------------------------------------------------------------
+   Apple's rule for this setting is near-solid backgrounds with a defined
+   border. The game separates surfaces almost entirely by fill, so under
+   this setting they get an edge to be separated BY.
+   --------------------------------------------------------------------- */
+@media (prefers-contrast:more){
+  .sheet,.pcard,.hub-tile,.toast,#actionBar,#objMenu,#shopWrap,
+  #mgCreatorBar .blkrow,.dsec{
+    border:1px solid var(--ink2,#b9b0d8) !important;
+  }
+  .blk{outline:1px solid rgba(0,0,0,.45);outline-offset:-1px;}
+}
+
+/* ---------------------------------------------------------------------
+   5. Tracking is size-specific
+   ---------------------------------------------------------------------
+   A single letter-spacing value is wrong somewhere: large text reads too
+   loose as it grows and wants negative tracking; small uppercase labels
+   want a little more.
+
+   The small-label half is already right throughout (.04–.09em on the
+   uppercase eyebrows). The large half was never done — the big display
+   numbers and headings run at default tracking.
+
+   Scoped deliberately: this game is bilingual, and negative tracking
+   that flatters large Latin display type damages Hebrew, where the
+   letters are not meant to be pulled together. So the rule applies to
+   the numerals and Latin headings, and Hebrew is left alone.
+   --------------------------------------------------------------------- */
+:root:not([lang="he"]) h1,
+:root:not([lang="he"]) .v5-title b,
+:root:not([lang="he"]) .m-head h3{
+  letter-spacing:-.015em;
+}
+/* Numbers are numbers in both languages. Anywhere digits line up in a
+   column they also line up with each other. */
+#stats .chip,#mgCount,#mgBudget,#mgW,#mgH,.num,.ht-n,.pmeta{
+  font-variant-numeric:tabular-nums;
+}

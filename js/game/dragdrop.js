@@ -29,7 +29,19 @@ function attachDrag(row,b){
 }
 function isDescUid(uid){return !!byUid(dragCtx.b.body||[],uid)||!!byUid(dragCtx.b.els||[],uid);}
 function beginDrag(b,row,x,y,pid){
-  dragCtx={b,uid:b.uid,w:row.offsetWidth,h:row.offsetHeight,row,pid};
+  /* Where the finger landed ON the block, kept so the block stays under
+     that same point for the whole drag. It used to be centred under the
+     finger on the first move — grab a block by its right edge and it
+     jumped left before it moved anywhere, which is the one thing that
+     breaks the feeling of holding the thing you touched.
+
+     Not clamped: the clone is the same width as the row it came from, so
+     holding the grab point puts it exactly where the original was. A
+     clamp here would re-introduce the jump it exists to remove. */
+  const r=row.getBoundingClientRect();
+  const gx=Math.max(0,Math.min(r.width, x-r.left));
+  const gy=Math.max(0,Math.min(r.height,y-r.top));
+  dragCtx={b,uid:b.uid,w:row.offsetWidth,h:row.offsetHeight,row,pid,gx,gy};
   // NOTE: do NOT setPointerCapture here — on iOS capturing a pointer inside a
   // scroll container fires an immediate pointercancel, which kills the drag on
   // the first move. Document-level listeners already receive every move.
@@ -46,8 +58,9 @@ function beginDrag(b,row,x,y,pid){
 }
 function dragMove(x,y){
   const c=dragCtx.clone;
-  c.style.left=(x-dragCtx.w*0.5)+"px";
-  c.style.top=(y-dragCtx.h*0.6)+"px";
+  /* 1:1 with the finger, from the point it grabbed */
+  c.style.left=(x-dragCtx.gx)+"px";
+  c.style.top=(y-dragCtx.gy)+"px";
   // auto-scroll the program list when dragging near its top/bottom edge so long
   // programs stay fully reachable (otherwise you can't reach far-away targets)
   const wrap=$("programWrap"), wr=wrap.getBoundingClientRect(), EDGE=44;
