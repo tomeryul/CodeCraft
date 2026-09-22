@@ -329,6 +329,10 @@ function bridge(seed){
   ck('on an iPad it is portrait, and says it needs the full screen',
      !!pad && pad.every(o=>/Portrait/.test(o)) &&
      /<key>UIRequiresFullScreen<\/key>\s*<true\/>/.test(plist), {pad});
+  /* HTTPS only, which is exempt — declaring it here is what stops App Store
+     Connect asking the export-compliance question on every single upload. */
+  ck('the app declares it uses only exempt encryption',
+     /<key>ITSAppUsesNonExemptEncryption<\/key>\s*<false\/>/.test(plist));
   ck('on Android the activity is locked to portrait',
      /android:screenOrientation="portrait"/.test(rd('android/app/src/main/AndroidManifest.xml')));
 
