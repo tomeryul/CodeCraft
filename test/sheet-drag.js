@@ -306,6 +306,83 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await wait(600);
   ck('pressing the ✕ and sliding off does not drag the sheet', btnDrag === false);
 
+  console.log('▶ swipe in from the left edge to go back');
+  /* Dispatched from x=5, into whatever element is under that point, the way
+     a finger would land. Returns the transform the sheet had at each step. */
+  const edge = (id, steps, px, gap, opt) => pg.evaluate(async ([id, steps, px, gap, opt]) => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const o = opt || {};
+    const sh = $(id), r = sh.getBoundingClientRect(), Y = Math.round(r.top + r.height / 2);
+    const X = o.x || 5;
+    const tgt = document.elementFromPoint(X, Y);
+    const ev = (t, x, y) => tgt.dispatchEvent(new PointerEvent(t, { pointerId: 7, isPrimary: true,
+      button: t === 'pointermove' ? -1 : 0, buttons: t === 'pointerup' ? 0 : 1,
+      clientX: x, clientY: y, bubbles: true, cancelable: true }));
+    ev('pointerdown', X, Y); const xs = [];
+    for (let k = 1; k <= steps; k++) {
+      ev('pointermove', X + k * px, Y + k * (o.dy || 0)); await wait(gap);
+      xs.push(sh.style.transform);
+    }
+    ev(o.cancel ? 'pointercancel' : 'pointerup', X + steps * px, Y + steps * (o.dy || 0));
+    return xs;
+  }, [id, steps, px, gap, opt]);
+  const onProjects = async () => {
+    /* An earlier phase can leave the celebration card up, and it covers the
+       screen — a real finger would land on it too, so it is closed first. */
+    await pg.evaluate(() => { const c = document.querySelector('#ccCele .cc-cta'); if (c) c.click();
+      navHome(); $('projects').classList.add('open'); }); await wait(500);
+  };
+  const px = t => { const m = /translateX\(([-\d.]+)px\)/.exec(t || ''); return m ? Math.round(+m[1]) : 0; };
+  const where = () => pg.evaluate(() => ({
+    projects: $('projects').classList.contains('open'), hub: $('hub').classList.contains('open'),
+    tr: $('projects').style.transform, drag: $('projects').classList.contains('sheet-drag') }));
+
+  await onProjects();
+  const tr = await edge('projects', 6, 10, 60);
+  ck('the sheet follows the finger sideways, 1:1', tr.map(px).join() === '10,20,30,40,50,60', tr);
+  await wait(700);
+  const back1 = await where();
+  ck('a slow short swipe springs the sheet home', back1.projects && back1.tr === '' && !back1.drag, back1);
+
+  await edge('projects', 8, 18, 16);                     // about 1100px/s
+  await wait(900);
+  const went = await where();
+  /* The same step the ‹ in the header takes: from a page, to the menu. */
+  ck('a flick takes the same step back as the ‹ button', !went.projects && went.hub, went);
+  ck('and leaves nothing behind on the sheet', went.tr === '' && !went.drag, went);
+
+  await onProjects();
+  await edge('projects', 8, 18, 16, { x: 60 });
+  await wait(700);
+  const mid = await where();
+  ck('a swipe that starts away from the edge is not a back swipe',
+     mid.projects && mid.tr === '', mid);
+
+  await onProjects();
+  await edge('projects', 6, 2, 30, { dy: 14 });
+  await wait(500);
+  const vert = await where();
+  /* A finger that sets off downwards was scrolling. */
+  ck('a finger that sets off vertically is left alone', vert.projects && vert.tr === '', vert);
+
+  await onProjects();
+  await edge('projects', 8, 18, 16, { cancel: true });
+  await wait(800);
+  const canc = await where();
+  ck('when the system cancels the touch, the sheet goes home rather than back',
+     canc.projects && canc.tr === '', canc);
+
+  /* In a Safari tab that edge is the browser's own history-back; two
+     gestures on one swipe is worse than one. */
+  await onProjects();
+  await pg.evaluate(() => Object.defineProperty(navigator, 'standalone', { value: false, configurable: true }));
+  const tab = await edge('projects', 8, 18, 16);
+  await wait(600);
+  const tabState = await where();
+  await pg.evaluate(() => { delete navigator.standalone; });
+  ck('in a Safari tab the edge is left to the browser',
+     tab.every(t => t === '') && tabState.projects, { tab, tabState });
+
   console.log('▶ reduced motion');
   await pg.emulateMedia({ reducedMotion: 'reduce' });
   await openHub();

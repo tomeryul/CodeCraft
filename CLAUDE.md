@@ -60,8 +60,10 @@ Three traps that file already paid for. Read the release velocity over
 a WINDOW of the last ~80ms, never from the last two points (a burst of
 moves can share a timestamp, and a real flick then arrives at zero).
 Let the gesture do what the on-screen control does — a fling clicks the
-sheet's own ✕, a pull up presses its own size button, rather than
-inventing a second way out or a second idea of "big". And judge the
+sheet's own ✕, a pull up presses its own size button, and a swipe in
+from the left edge calls `nativeBack()`, the same step as the ‹ and as
+Android's hardware back — rather than inventing a second way out or a
+second idea of "big". And judge the
 throw on the UNDAMPED finger travel: upward is rubber-banded, so a
 threshold read off the sheet silently asks for twice the pull going up
 as coming down.

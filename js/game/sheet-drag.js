@@ -325,6 +325,114 @@ function wire(){
 }
 window.ccSheetDrag=wire;
 
+/* ---------------------------------------------------------------------
+   Swipe in from the left edge to go back
+   ---------------------------------------------------------------------
+   On an iPhone the left edge IS back, in every app, and here it did
+   nothing. It now does exactly what the ‹ in the header does — the same
+   one step, via nativeBack() in native.js, which is also what Android's
+   hardware button calls — so there are three ways back and one meaning.
+
+   It is interactive, not a trigger: the sheet follows the finger 1:1
+   sideways, and at release the throw is projected, as with the vertical
+   drag above. Far enough or fast enough and it slides off and the step is
+   taken; otherwise it springs home, and it can be caught on the way.
+
+   Left edge in Hebrew too. iOS mirrors the gesture only for apps that
+   mirror their layout, and this one does not: the ‹ sits on the left in
+   both languages, so the edge that means back is the one next to it.
+
+   Off in a Safari tab. There the browser owns that edge — it is its own
+   history-back — and two gestures on one swipe is worse than one. That is
+   the one place navigator.standalone is exactly false; in the app and in
+   an installed PWA it is true or absent. */
+const EDGE=16;                 // px from the edge where a back-swipe can start
+function edgeOn(){
+  if(navigator.standalone===false)return false;
+  const g=$("agegate"); if(g&&g.classList.contains("open"))return false;
+  return !!document.querySelector(".sheet.open");
+}
+/* The sheet a step back would act on: the highest in the stack, then the
+   latest in the page. */
+function topSheet(){
+  const open=[...document.querySelectorAll(".sheet.open")];
+  let best=null,bz=-Infinity;
+  open.forEach(el=>{ const z=+getComputedStyle(el).zIndex||0; if(z>=bz){bz=z;best=el;} });
+  return best;
+}
+function setX(el,x){ el.style.transform=x?("translateX("+x+"px)"):""; }
+
+document.addEventListener("pointerdown",e=>{
+  if(e.button||e.clientX>EDGE||!edgeOn())return;
+  const sheet=topSheet();
+  if(!sheet||!sheet.contains(e.target))return;
+  const s=stateOf(sheet);
+  if(s.anim){s.anim.stop();s.anim=null;}
+  const x0=e.clientX, y0=e.clientY, id=e.pointerId;
+  let live=false,dead=false,dx=0;
+  const hist=[{x:x0,t:performance.now()}];
+
+  function move(ev){
+    if(ev.pointerId!==id||dead)return;
+    const mx=ev.clientX-x0, my=ev.clientY-y0;
+    if(!live){
+      /* Commit to the gesture only once it is clearly sideways; a finger
+         that set off vertically was scrolling, and is left alone. */
+      if(Math.abs(mx)<8&&Math.abs(my)<8)return;
+      if(Math.abs(my)>Math.abs(mx)||mx<=0){dead=true;return end();}
+      live=true;
+      sheet.classList.add("sheet-drag");
+      try{sheet.setPointerCapture(id);}catch(_){}
+      ccHaptic("snap");
+    }
+    ev.preventDefault();
+    const t=performance.now();
+    hist.push({x:ev.clientX,t});
+    while(hist.length>2&&t-hist[0].t>80)hist.shift();
+    dx=Math.max(0,mx);                       // it only ever goes the way it came
+    setX(sheet,dx);
+  }
+  function up(ev){
+    if(ev.pointerId!==id)return;
+    end();
+    if(!live)return;
+    const a=hist[0],b=hist[hist.length-1],dt=b.t-a.t;
+    const vel=dt>0?(b.x-a.x)/dt*1000:0;
+    const w=sheet.offsetWidth||window.innerWidth;
+    /* A cancel is the system taking the touch away, not a throw: it
+       always goes home. */
+    const go=ev.type!=="pointercancel"&&dx+projectThrow(vel)>w*0.4;
+    const finish=to=>{
+      if(reduced()){ setX(sheet,to); return done(to); }
+      sheet.classList.add("sheet-anim");
+      s.anim=spring(dx,to,vel,x=>setX(sheet,x),()=>{s.anim=null;done(to);},
+        {damping:1,response:0.3});
+    };
+    const done=to=>{
+      sheet.classList.remove("sheet-anim");
+      if(to>0){
+        /* Off the right edge now. Take the step, then hand the transform
+           back to the stylesheet with the transition still switched off,
+           so the sheet does not travel from "off to the right" to "off
+           the bottom" on screen. It is invisible either way. */
+        ccHaptic("commit");
+        if(typeof nativeBack==="function")nativeBack(); else sheet.classList.remove("open");
+        setX(sheet,0);
+        requestAnimationFrame(()=>requestAnimationFrame(()=>sheet.classList.remove("sheet-drag")));
+      }else{ setX(sheet,0); sheet.classList.remove("sheet-drag"); }
+    };
+    finish(go?w:0);
+  }
+  function end(){
+    document.removeEventListener("pointermove",move,true);
+    document.removeEventListener("pointerup",up,true);
+    document.removeEventListener("pointercancel",up,true);
+  }
+  document.addEventListener("pointermove",move,true);
+  document.addEventListener("pointerup",up,true);
+  document.addEventListener("pointercancel",up,true);
+},true);
+
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",wire);
 else wire();
 /* Second pass after every other script has had its turn at the DOM. The
