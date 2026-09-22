@@ -29,7 +29,7 @@ function tFlip(box,change){
     k.style.transform="translateY("+dy+"px)";
     k.getBoundingClientRect();                       // commit the old position first
     /* opacity stays in the list so a toast already fading out keeps fading */
-    k.style.transition="transform var(--dur-move) var(--ease-settle),opacity .4s";
+    k.style.transition="transform var(--dur-move) var(--ease-settle),opacity .2s";
     k.style.transform="";
   }
 }
@@ -37,7 +37,7 @@ function tKill(d){clearTimeout(d._f);clearTimeout(d._g);d.remove();}
 function tArm(d,fade,gone){
   clearTimeout(d._f);clearTimeout(d._g);
   d.style.opacity="";d.style.transition="";
-  d._f=setTimeout(()=>{d.style.opacity="0";d.style.transition="opacity .4s";},fade);
+  d._f=setTimeout(()=>{d.style.opacity="0";d.style.transition="opacity .2s";},fade);
   d._g=setTimeout(()=>tFlip(d.parentNode,()=>d.remove()),gone);
 }
 function tDrop(d){tFlip(d.parentNode,()=>tKill(d));}
@@ -59,7 +59,7 @@ function toast(t){
     box.appendChild(d);
     for(let i=0;i<=small.length-TOAST_MAX;i++)tKill(small[i]);
   });
-  tArm(d,2600,3100);
+  tArm(d,2600,2850);
 }
 function bigToast(t){
   if(window.CC_EXTRAS&&CC_EXTRAS.maybeCelebrate(t))return;
@@ -71,7 +71,7 @@ function bigToast(t){
     box.querySelectorAll(".toast.big").forEach(tKill);
     box.appendChild(d);
   });
-  tArm(d,4200,4800);
+  tArm(d,4200,4450);
 }
 let actx=null;
 function sfx(freq,dur,delay){

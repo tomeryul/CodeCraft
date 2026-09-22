@@ -121,6 +121,7 @@ function hubRender(){
       el.appendChild(w);
     }
   }
+  let tileN=0;                 // each tile's place in the entrance stagger
   for(const g of GROUPS){
     const tiles=g.tiles.filter(t=>!t.show||t.show());
     if(!tiles.length)continue;
@@ -131,6 +132,7 @@ function hubRender(){
       const m=t.meta?t.meta():null;
       const nm=(typeof t.name==="function")?t.name():t.name;
       const b=document.createElement("button");b.className="hub-tile";b.type="button";
+      b.style.setProperty("--i",String(tileN++));  // its place in the stagger, see apple.css
       b.innerHTML='<span class="ht-em">'+t.em+'</span>'+
         '<span class="ht-name">'+esc(nm)+'</span>'+
         '<span class="ht-foot"><i class="ht-tag">'+esc(t.tag||"")+'</i>'+

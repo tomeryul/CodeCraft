@@ -58,7 +58,7 @@
   transition:transform .08s,background .12s;}
 #actionBar .ibtn i{font-style:normal;}
 #actionBar .ibtn .ui-emoji{width:20px;height:20px;}
-#actionBar .ibtn:active{transform:scale(.94);background:var(--glass-on);border-bottom-width:0;}
+#actionBar .ibtn:active{transform:scale(.94);background:var(--glass-on);}
 /* reset + step are challenge controls: hidden in the plain world editor */
 #actionBar #mgResetBtn,#actionBar #mgStepBtn{display:none;}
 #editor.mg #actionBar #mgResetBtn,#editor.mg #actionBar #mgStepBtn{display:flex;}
@@ -66,7 +66,7 @@
 #actionBar #runBtn,#actionBar #stopBtn{flex:1 1 auto;width:auto;height:58px;padding:0 20px;
   display:flex;align-items:center;justify-content:center;gap:10px;
   border:none;border-radius:999px;font-family:inherit;font-size:18px;font-weight:700;
-  transition:transform .1s,border-bottom-width .1s;}
+  transition:transform .1s;}
 #actionBar #runBtn{background:linear-gradient(180deg,#7fe28f,#37c85c);color:var(--green-text);
   border-bottom:5px solid var(--green-deep);
   box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 8px 24px rgba(55,200,92,.4);}
@@ -76,7 +76,7 @@
 #actionBar #runBtn::after{content:"Run";}
 #actionBar #stopBtn::after{content:"Stop";}
 #actionBar #runBtn .ui-emoji,#actionBar #stopBtn .ui-emoji{width:22px;height:22px;}
-#actionBar #runBtn:active,#actionBar #stopBtn:active{transform:translateY(2px);border-bottom-width:2px;}
+#actionBar #runBtn:active,#actionBar #stopBtn:active{transform:translateY(2px);}
 /* one primary at a time: Run flips to Stop in place (hud.js toggles .running) */
 #actionBar #stopBtn{display:none;}
 #editor.running #actionBar #runBtn{display:none;}
@@ -115,7 +115,7 @@
 .mg-top #mgCount{background:none;padding:0;font-size:11.5px;font-weight:600;color:var(--ink2);}
 .mg-top .ibtn{width:40px;height:40px;border-radius:13px;background:var(--glass-hi);
   border:none;box-shadow:none;color:var(--ink2);}
-.mg-top .ibtn:active{transform:scale(.94);background:var(--glass-on);border-bottom-width:0;}
+.mg-top .ibtn:active{transform:scale(.94);background:var(--glass-on);}
 .mg-top .ibtn.wide{width:auto;min-width:44px;padding:0 12px;font-size:13.5px;font-weight:800;}
 /* the goal leads the board — it is the first thing a player has to read */
 #mgGoal{margin:2px 0 10px;font-size:13px;line-height:1.5;color:#e2dbf5;}

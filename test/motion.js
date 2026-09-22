@@ -140,6 +140,69 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   });
   ck('a fourth toast still pushes the oldest out — three at most', R.count === 3 && R.gone, R);
 
+  console.log('▶ the review\'s findings');
+  const V = await pg.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const out = {};
+    /* XP: scaled on the GPU, and the shine plays on a gain — not for ever */
+    const fill = $('xpFill'), bar = $('xpBar');
+    out.fillTransition = getComputedStyle(fill).transitionProperty;
+    out.fillWidthStyle = fill.style.width;
+    player.xp = 0; updateHud(); await wait(30);
+    bar.classList.remove('gain');
+    player.xp = Math.round(xpNeed(player.level) * 0.5); updateHud(); await wait(30);
+    out.scaled = /scaleX\(0\.5\)/.test(fill.style.transform);
+    out.shineOnGain = bar.classList.contains('gain');
+    const sh = getComputedStyle(bar, '::after');
+    out.shineCount = sh.animationIterationCount;
+    /* the other shines and pulses are finite */
+    const probe = cls => { const d = document.createElement('div'); d.className = cls;
+      document.body.appendChild(d); const c = getComputedStyle(d);
+      const r = c.animationIterationCount; d.remove(); return r; };
+    out.badge = (() => { const b = document.createElement('button'); b.className = 'iconbtn badge';
+      document.body.appendChild(b); const r = getComputedStyle(b, '::after').animationIterationCount;
+      b.remove(); return r; })();
+    out.quest = (() => { const q = document.createElement('div'); q.className = 'quest';
+      const b = document.createElement('button'); q.appendChild(b); document.body.appendChild(q);
+      const r = getComputedStyle(b, '::after').animationIterationCount; q.remove(); return r; })();
+    /* the object menu: close by, popover-quick, and out faster than in */
+    const m = $('objMenu');
+    out.menuShutScale = getComputedStyle(m).transform;
+    const dur = el => getComputedStyle(el).transitionDuration.split(',').map(x => parseFloat(x) * 1000);
+    out.menuOut = Math.max(...dur(m));
+    m.classList.add('open'); out.menuIn = dur(m); m.classList.remove('open');
+    /* the menu's tiles arrive in order */
+    hubOpen(); await wait(60);
+    out.tileDelays = [...document.querySelectorAll('#hub .hub-tile')].slice(0, 4)
+      .map(t => parseFloat(getComputedStyle(t).animationDelay) * 1000);
+    navHome(); await wait(200);
+    return out;
+  });
+  ck('the XP fill is scaled, not resized', V.fillTransition === 'transform' && V.fillWidthStyle === '', V);
+  ck('and it lands where the XP says', V.scaled === true, V);
+  ck('a gain plays the shine, once', V.shineOnGain === true && V.shineCount === '1', V);
+  ck('the quest button shines twice and then rests', V.quest === '2', V.quest);
+  ck('the notification dot pulses three times and then rests', V.badge === '3', V.badge);
+  const menuScale = (+V.menuShutScale.slice(7).split(',')[0]);
+  ck('the object menu arrives from .95, not from far away', Math.abs(menuScale - 0.95) < 0.005, V.menuShutScale);
+  ck('it opens within the popover budget', Math.max(...V.menuIn) <= 200, V.menuIn);
+  ck('and leaves faster than it arrived', V.menuOut < Math.max(...V.menuIn), { in: V.menuIn, out: V.menuOut });
+  ck('the menu tiles arrive one after another',
+     V.tileDelays.length === 4 && V.tileDelays.every((d, i) => Math.abs(d - i * 35) < 1), V.tileDelays);
+
+  /* No press anywhere re-lays out the page: the bevel does not shrink. */
+  const pressLayout = ['css/styles.css', 'css/codecraft-v4.css', 'css/codecraft-v5.css',
+                       'css/codecraft-v6.css', 'css/codecraft-v7.css']
+    .filter(f => fs.existsSync(path.join(ROOT, f)))
+    .flatMap(f => (fs.readFileSync(path.join(ROOT, f), 'utf8')
+      .match(/:active\{[^}]*border-bottom-width[^}]*\}|transition:[^;}]*border-bottom-width/g) || [])
+      .map(x => f + ': ' + x.slice(0, 60)));
+  ck('no press changes a border — only the transform moves', pressLayout.length === 0, pressLayout);
+
+  const toastOut = fs.readFileSync(path.join(ROOT, 'js/game/fx.js'), 'utf8').match(/opacity \.(\d)s/g) || [];
+  ck('a toast leaves in 200ms, quicker than its 250ms entrance',
+     toastOut.length === 2 && toastOut.every(x => x === 'opacity .2s'), toastOut);
+
   console.log('▶ reduced motion');
   await pg.emulateMedia({ reducedMotion: 'reduce' });
   const RM = await pg.evaluate(async () => {

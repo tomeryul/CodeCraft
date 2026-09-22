@@ -5,10 +5,23 @@
    replaced the text node 60x a second, so the observer rebuilt every chip
    icon each frame. Write only when the string actually changed. */
 function setTxt(el,s){s=String(s);if(el.textContent!==s)el.textContent=s;}
+/* The XP fill is scaled, not resized (see #xpBar in styles.css), and this
+   runs every frame, so it writes only when the value moved. A rise within
+   the same level earns the one sweep of shine; a level-up resets the bar
+   and does not. */
+let hudXpWas=-1, hudLvlWas=-1;
+function hudXp(f){
+  const q=Math.round(f*1000)/1000;
+  if(q===hudXpWas&&player.level===hudLvlWas)return;
+  const rose=hudXpWas>=0&&player.level===hudLvlWas&&q>hudXpWas;
+  hudXpWas=q; hudLvlWas=player.level;
+  $("xpFill").style.transform="scaleX("+q+")";
+  if(rose){ const b=$("xpBar"); b.classList.remove("gain"); void b.offsetWidth; b.classList.add("gain"); }
+}
 function updateHud(){
   setTxt($("coinsEl"),coins);
   setTxt($("lvlEl"),player.level);
-  $("xpFill").style.width=Math.min(100,Math.round(player.xp/xpNeed(player.level)*100))+"%";
+  hudXp(Math.min(1,player.xp/xpNeed(player.level)));
   const r=R();
   // was: the top-2 inventory emoji appended here, so the chip's width changed
   // on every collect and the row it sits in could not hold a fixed shape. The

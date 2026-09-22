@@ -569,15 +569,14 @@ body.sheets-full #maker.sized,
    blanket `#mgCreatorBar button{background:var(--panel3);…}` that out-ranks
    any plain class, and the head is a button. Without the prefix it kept
    that fill and the card looked like two colours stacked. The push-down
-   on :active is dropped for the same reason — a whole card sinking two
+   on :active is cancelled for the same reason — a whole card sinking two
    pixels is not the feedback a heading wants. */
 #mgCreatorBar .dsec .ds-head{display:flex;align-items:flex-start;gap:10px;width:100%;
   padding:11px 12px;background:transparent;border:0;border-bottom:0;border-radius:0;
   font-family:inherit;font-size:12px;font-weight:700;text-align:left;
   color:var(--ink);cursor:pointer;
   transition:background var(--dur-quick) var(--ease-settle);}
-#mgCreatorBar .dsec .ds-head:active{background:rgba(255,255,255,.07);
-  transform:none;border-bottom-width:0;}
+#mgCreatorBar .dsec .ds-head:active{background:rgba(255,255,255,.07);transform:none;}
 .dsec .ds-em{flex:0 0 auto;font-size:16px;line-height:1.35;}
 .dsec .ds-em .ui-emoji{width:17px;height:17px;vertical-align:0;}
 .dsec .ds-t{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px;}

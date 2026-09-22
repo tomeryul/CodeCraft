@@ -205,7 +205,7 @@
    set in js/game/input.js from the tap — and shrinks back into it, which
    is the same path in reverse.
 
-   The scale is small and the curve is --ease-settle, not --ease-carry:
+   The scale is small (.95) and the curve is --ease-settle, not --ease-carry:
    this appeared because a finger asked for it, it was not thrown, and
    overshoot on something that merely appeared feels wrong.
    --------------------------------------------------------------------- */
@@ -215,16 +215,19 @@
      menu can be MEASURED before it is shown — which is what turns a tap
      coordinate into a transform-origin. */
   display:block;visibility:hidden;pointer-events:none;
-  transform:translateX(-50%) scale(.84);
-  transition:opacity var(--dur-move) var(--ease-settle),
-             transform var(--dur-move) var(--ease-settle),
-             visibility 0s linear var(--dur-move);
+  /* From .95, not .84: a small popover arrives from close by. And it
+     leaves faster than it came (140ms against 180ms) — the player asked
+     for it to open, the closing is only the system answering. */
+  transform:translateX(-50%) scale(.95);
+  transition:opacity 140ms var(--ease-settle),
+             transform 140ms var(--ease-settle),
+             visibility 0s linear 140ms;
 }
 #objMenu.open{
   visibility:visible;pointer-events:auto;
   transform:translateX(-50%) scale(1);
   transition:opacity var(--dur-quick) var(--ease-settle),
-             transform var(--dur-move) var(--ease-settle),
+             transform 180ms var(--ease-settle),
              visibility 0s;
 }
 
@@ -288,3 +291,19 @@ textarea, select{
   -webkit-user-select:text; user-select:text;
   -webkit-touch-callout:default;
 }
+
+/* ---------------------------------------------------------------------
+   9. The menu's tiles arrive in order, not all at once
+   ---------------------------------------------------------------------
+   The menu opens a few times a session, which is the budget for a
+   stagger: 35ms a tile, capped at the ninth so the last one is never
+   waiting on the first. It only plays as the sheet OPENS (the selector
+   starts matching), so it neither replays while you use the menu nor
+   holds up a tap — tiles take presses from the first frame. Opacity and
+   6px of travel, both compositor-only.
+   --------------------------------------------------------------------- */
+#hub.open .hub-tile{
+  animation:hubTileIn 220ms var(--ease-settle) both;
+  animation-delay:calc(min(var(--i,0),8) * 35ms);
+}
+@keyframes hubTileIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
