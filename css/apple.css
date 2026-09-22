@@ -242,3 +242,43 @@
   #objMenu.open{ transform:translateX(-50%); }
   #ticker .tk-panel.tk-grow{ animation:none; }
 }
+
+/* ---------------------------------------------------------------------
+   8. The platform layer
+   ---------------------------------------------------------------------
+   The things a phone does to a web page that a native app never suffers.
+   Most were already answered elsewhere — no hover rules to stick, the
+   tap highlight is off, overscroll is off, safe areas are padded, the
+   full-height sheets use dvh. These are the ones that were not.
+   --------------------------------------------------------------------- */
+
+/* Rotate an iPhone in Safari and it inflates body text it thinks is too
+   small to read in landscape. A game lays its own text out; it does not
+   want the browser second-guessing the sizes. */
+html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+
+/* iOS zooms the whole page into any field whose text is under 16px, and
+   does not zoom back out — a child typing an email is left looking at a
+   cropped, drifted screen. The viewport tag's maximum-scale happens to
+   block that today, but it is the wrong thing to lean on: Android's
+   "force enable zoom" accessibility setting overrides it, and then every
+   one of these fields zooms. So the cause is fixed instead. Every field
+   in the game was 14-15px, which is also simply small for the audience.
+
+   !important because the rules it answers are id-scoped (#askrow input,
+   #splashAuth input) and this file's job is to win regardless. Range and
+   file inputs are excluded: they have no text to be too small. */
+input:not([type="range"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+textarea, select{
+  font-size:16px !important;
+}
+
+/* The one piece of the game that is CONTENT rather than a control: the
+   Python the blocks turn into. body is user-select:none so a long press
+   on a button never selects its label — correct for controls, but it
+   also meant a child could not copy the code the game had just taught
+   them to write. */
+#pyTab, #pyTab *{
+  -webkit-user-select:text; user-select:text;
+  -webkit-touch-callout:default;
+}

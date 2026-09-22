@@ -87,6 +87,26 @@ async function cloudSave(data){
     headers:Object.assign(sbHeaders(true),{Prefer:"resolution=merge-duplicates,return=minimal"}),
     body:JSON.stringify({user_id:sbUser.uid,data,updated_at:new Date().toISOString()})});
 }
+/* The keyboard's return key on a phone was dead on both sign-in forms:
+   there is no <form> and nothing listened for Enter, so a child who typed
+   an email and pressed "next" on the keyboard got nothing, and pressing
+   "go" after the password got nothing either. The key now does what it
+   says — next field, then the primary button — and enterkeyhint in the
+   markup makes the key SAY that, so the label and the action agree.
+   Shared by the splash (boot.js) and the Projects sheet, which build the
+   same two fields. */
+function authKeys(email,pass,go){
+  if(!email||!pass||!go)return;
+  email.addEventListener("keydown",e=>{
+    if(e.key!=="Enter")return;
+    e.preventDefault(); pass.focus();
+  });
+  pass.addEventListener("keydown",e=>{
+    if(e.key!=="Enter")return;
+    e.preventDefault(); go.click();
+  });
+}
+
 function renderAuthBox(){
   const box=$("authBox");
   box.className="";
@@ -111,14 +131,15 @@ function renderAuthBox(){
   tog.innerHTML='🌍 <b>Sign in</b><span>publish challenges &amp; sync progress</span>';
   tog.addEventListener("click",()=>box.classList.toggle("open"));
   box.innerHTML='<div class="authform">'+
-    '<input id="authEmail" type="email" placeholder="Email" autocomplete="email">'+
-    '<input id="authPass" type="password" placeholder="Password (6+)" autocomplete="current-password">'+
+    '<input id="authEmail" type="email" placeholder="Email" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next">'+
+    '<input id="authPass" type="password" placeholder="Password (6+)" autocomplete="current-password" enterkeyhint="go">'+
     '<div class="authbtns"><button class="authbtn go" id="authLogin">Log in</button>'+
     '<button class="authbtn" id="authSignup">Sign up</button></div>'+
     '<div id="authMsg"></div></div>';
   box.insertBefore(tog,box.firstChild);
   const msg=t=>{$("authMsg").textContent=t;};
   const creds=()=>[($("authEmail").value||"").trim(),$("authPass").value||""];
+  authKeys($("authEmail"),$("authPass"),$("authLogin"));
   $("authLogin").addEventListener("click",async()=>{
     const[e,p]=creds();if(!e||p.length<6)return msg("Enter email and a 6+ char password");
     msg("⏳ Logging in…");

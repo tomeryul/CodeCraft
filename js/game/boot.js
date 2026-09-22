@@ -76,13 +76,14 @@ function renderSplashAuth(){
   }
   box.innerHTML=
     '<div class="sp-card"><div class="sp-h">☁️ Sign in to save your world to your account</div>'+
-    '<input id="spEmail" type="email" placeholder="Email" autocomplete="email">'+
-    '<input id="spPass" type="password" placeholder="Password (6+)" autocomplete="current-password">'+
+    '<input id="spEmail" type="email" placeholder="Email" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next">'+
+    '<input id="spPass" type="password" placeholder="Password (6+)" autocomplete="current-password" enterkeyhint="go">'+
     '<div class="sp-row"><button class="authbtn go" id="spLogin">Log in</button><button class="authbtn" id="spSignup">Sign up</button></div>'+
     '<div id="spMsg" class="sp-msg"></div></div>'+PRIV_LINK;
   $("playBtn").textContent="▶ Play offline";
   const m=t=>{$("spMsg").textContent=t;};
   const creds=()=>[($("spEmail").value||"").trim(),$("spPass").value||""];
+  if(typeof authKeys==="function")authKeys($("spEmail"),$("spPass"),$("spLogin"));
   $("spLogin").addEventListener("click",async()=>{
     const[e,p]=creds(); if(!e||p.length<6)return m("Enter your email and a 6+ character password");
     m("⏳ Logging in…");
