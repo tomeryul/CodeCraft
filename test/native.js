@@ -333,6 +333,21 @@ function bridge(seed){
      Connect asking the export-compliance question on every single upload. */
   ck('the app declares it uses only exempt encryption',
      /<key>ITSAppUsesNonExemptEncryption<\/key>\s*<false\/>/.test(plist));
+  /* Required since May 2024 for any app using a "required reason" API.
+     @capacitor/preferences writes UserDefaults and ships no manifest, so
+     without this the upload comes back with ITMS-91053. It must also be IN
+     the build, not just in the folder — hence the Resources phase check. */
+  const privPath = 'ios/App/App/PrivacyInfo.xcprivacy';
+  const priv = fs.existsSync(path.join(ROOT, privPath)) ? rd(privPath) : '';
+  ck('the app ships a privacy manifest',
+     /NSPrivacyAccessedAPICategoryUserDefaults/.test(priv) && /<string>CA92\.1<\/string>/.test(priv),
+     priv ? 'present, reason missing' : 'missing');
+  ck('which says the app does not track',
+     /<key>NSPrivacyTracking<\/key>\s*<false\/>/.test(priv));
+  const pbx = rd('ios/App/App.xcodeproj/project.pbxproj');
+  const resPhase = (pbx.match(/isa = PBXResourcesBuildPhase;[\s\S]*?\);/) || [''])[0];
+  ck('and it is in the build, not just in the folder',
+     /PrivacyInfo\.xcprivacy in Resources/.test(resPhase));
   ck('on Android the activity is locked to portrait',
      /android:screenOrientation="portrait"/.test(rd('android/app/src/main/AndroidManifest.xml')));
 
