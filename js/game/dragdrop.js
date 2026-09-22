@@ -52,7 +52,7 @@ function beginDrag(b,row,x,y,pid){
   document.body.appendChild(clone);
   dragCtx.clone=clone;
   $("programWrap").classList.add("dragging");
-  if(navigator.vibrate)navigator.vibrate(15);
+  if(typeof ccFeel==="function")ccFeel("snap");   // it came loose in your fingers
   sfx(600,.04);
   dragMove(x,y);
 }
@@ -105,7 +105,8 @@ function dragEnd(x,y){
   $("programEl").querySelectorAll(".blk.dz-into").forEach(el=>el.classList.remove("dz-into"));
   $("programWrap").classList.remove("dragging");
   dragCtx=null;
-  if(t){moveBlock(ctx.uid,t.mode,t.uid);sfx(780,.05);}
+  if(t){moveBlock(ctx.uid,t.mode,t.uid);sfx(780,.05);
+    if(typeof ccFeel==="function")ccFeel("snap");}  // and it landed
   else renderProgram();
 }
 // aborted drag (OS cancel): tear down without moving anything

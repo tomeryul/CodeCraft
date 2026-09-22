@@ -79,7 +79,10 @@ together. The rule in `css/apple.css` is scoped for that reason.
 
 **Feedback has to earn its place.** Haptics and sound are for commits,
 snaps, successes and errors. Put them everywhere and players learn to
-ignore all of them.
+ignore all of them. Those four are also the only arguments `ccFeel()`
+takes (`js/game/native.js`) — it reaches the Taptic Engine in the app and
+`navigator.vibrate` on the web, which iOS Safari never had. Never call
+`vibrate()` directly; there were two and neither worked on an iPhone.
 
 ### The skills pack
 
@@ -107,8 +110,21 @@ same repo — the fifteen lines are worth reading once.
 
 ## Native app
 
-`dev/app` carries the Capacitor wrapper (iOS + Android, `js/game/native.js`,
-`scripts/build-www.js`, `test/native.js`). It branches from `main` and is
-behind this branch — merge forward before building, don't restart it.
+The Capacitor wrapper lives on this branch now (merged forward from
+`dev/app` at v169): `ios/`, `android/`, `capacitor.config.json`,
+`js/game/native.js`, `scripts/build-www.js`, `test/native.js`.
 `scripts/build-www.js` reads its file list from `sw.js`'s `ASSETS`, so a
 file registered properly is a file the app ships.
+
+Adding a Capacitor plugin is `npm install --save`, then `npm run sync` —
+the sync is what registers it in `android/capacitor.settings.gradle` and
+`ios/App/CapApp-SPM/Package.swift`, and those two files are committed. A
+plugin in `package.json` but not in them is in `node_modules` and nowhere
+else.
+
+Two things that look optional and are not. The launch screen does not
+hide itself (`launchAutoHide:false`); `boot.js` lifts it once the first
+screen has painted and `native.js` has a timer in case boot never gets
+there — keep both. And the iPad is portrait-only, which Apple rejects at
+upload (ITMS-90474) unless `UIRequiresFullScreen` is set — it is; do not
+remove it without restoring all four iPad orientations.

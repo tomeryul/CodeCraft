@@ -2185,9 +2185,14 @@ function mgFinish(){
     toast(st.failMsg);
   }else toast(st.failMsg);
   sfx(220,.12);
+  if(typeof ccFeel==="function")ccFeel("error");
 }
 function mgSuccess(){
   const proj=mgState.proj;
+  /* Every solved challenge comes through this door — Academy, packs, the
+     creator proving a level, community boards — so the hand hears it once,
+     on the same frame as the sound and the confetti. */
+  if(typeof ccFeel==="function")ccFeel("success");
   if(proj.tut){academySolved(proj);return;} // Academy stage: record + advance to the next lesson
   if(mgState.packCtx){packStageSolved();return;} // multi-level pack: advance to the next level
   if(mgState.creator){

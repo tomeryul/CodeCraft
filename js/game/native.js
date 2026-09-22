@@ -23,6 +23,15 @@
         already local) and network-first against capacitor://localhost is
         a way to fail, so registration is skipped.
 
+     5. The launch screen used to vanish the moment the webview loaded —
+        before the game had drawn anything — which reads as a flash of an
+        empty purple rectangle. It now waits for the first real screen and
+        then fades, with a timer so a failure can never trap the app on it.
+
+     6. iPhones have no navigator.vibrate at all, so the game had no touch
+        feedback on the device most children hold. ccFeel() below speaks to
+        the Taptic Engine when it is there and to vibrate() when it is not.
+
    Capacitor exposes its plugins on window.Capacitor.Plugins at runtime,
    so none of this needs a bundler and the app stays zero-build. Every
    path here is guarded: in a plain browser this file does nothing.
@@ -134,6 +143,51 @@ function nativeLinks(){
     e.preventDefault();
     openExternal(new URL(href,location.href).href);
   },true);
+}
+
+/* ---------------- 5. the launch screen hands over ---------------- */
+/* launchAutoHide is false in capacitor.config.json, so nothing hides the
+   launch screen unless this does. boot.js calls it once the first real
+   screen — the age gate or the splash — is in the page and has painted.
+
+   The timer is the reason that is safe. It is set here, at load, before
+   any of the game's own code has had a chance to throw: if boot never
+   gets as far as calling this, the launch screen still lifts after four
+   seconds rather than sitting over a broken app for ever. */
+let nativeSplashDone=false;
+function nativeSplashHide(){
+  if(nativeSplashDone)return;
+  nativeSplashDone=true;
+  const S=nativePlugin("SplashScreen");
+  if(S&&S.hide)S.hide({fadeOutDuration:180}).catch(()=>{});
+}
+if(isNative())setTimeout(nativeSplashHide,4000);
+
+/* ---------------- 6. one voice for the hand ---------------- */
+/* Four kinds, and only four, because CLAUDE.md is explicit that feedback
+   has to earn its place: a SNAP (a block landing, a sheet coming loose), a
+   COMMIT (a sheet thrown away, a window resized), a SUCCESS (a challenge
+   solved) and an ERROR (a run that failed). Anything that is not one of
+   those should not be buzzing.
+
+   Native: Capacitor's Haptics, which is UIFeedbackGenerator on iOS and so
+   obeys the phone's own System Haptics switch — the platform owns that
+   choice, not the game. Web: navigator.vibrate, which on Android is an
+   audible motor, so it answers the game's Sound toggle. iPhone Safari has
+   no vibrate at all, and gets nothing, correctly. */
+const FEEL_WEB={snap:8,commit:14,success:[12,50,20],error:[28,40,28]};
+function ccFeel(kind){
+  const H=nativePlugin("Haptics");
+  if(H){
+    try{
+      if(kind==="success")H.notification({type:"SUCCESS"}).catch(()=>{});
+      else if(kind==="error")H.notification({type:"ERROR"}).catch(()=>{});
+      else H.impact({style:kind==="commit"?"MEDIUM":"LIGHT"}).catch(()=>{});
+    }catch(_){}
+    return;
+  }
+  if(typeof muted!=="undefined"&&muted)return;
+  try{ if(navigator.vibrate)navigator.vibrate(FEEL_WEB[kind]||8); }catch(_){}
 }
 
 /* ---------------- boot ---------------- */

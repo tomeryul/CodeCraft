@@ -108,6 +108,13 @@ function renderSplashAuth(){
   // The age answer decides whether a sign-in box is offered at all, so it has
   // to be settled before the splash renders one.
   ageGateInit(()=>{ renderSplashAuth(); sbRestore().then(renderSplashAuth).catch(()=>{}); });
+  /* The first real screen — the age gate, or the splash behind it — is in
+     the page now. Two frames so it has actually been painted, then the
+     native launch screen lifts off it. Not inside ageGateInit's callback:
+     that waits for the child to answer the gate, and they cannot answer
+     a gate they cannot see. */
+  if(typeof nativeSplashHide==="function")
+    requestAnimationFrame(()=>requestAnimationFrame(nativeSplashHide));
 });
 $("playBtn").addEventListener("click",()=>enterGame(true));
 

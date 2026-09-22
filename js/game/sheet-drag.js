@@ -105,9 +105,12 @@ const reduced=()=>window.matchMedia&&
   matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /* Two moments earn a tap on the hand, and only two: the sheet coming
-   loose in your fingers, and it leaving. Putting one on every frame of a
-   drag is how a game teaches players to ignore all of its feedback. */
-function ccHaptic(ms){ try{ if(navigator.vibrate)navigator.vibrate(ms); }catch(_){} }
+   loose in your fingers, and it landing somewhere new. Putting one on
+   every frame of a drag is how a game teaches players to ignore all of
+   its feedback. The voice itself is ccFeel() in native.js, so it reaches
+   the Taptic Engine on an iPhone rather than a vibrate() that iOS never
+   had. */
+function ccHaptic(kind){ if(typeof ccFeel==="function")ccFeel(kind); }
 
 /* A sheet is grabbable by its header. Not by its body: every sheet's body
    is either a scroller or the thing the player is tapping, and stealing
@@ -228,7 +231,7 @@ function begin(e,sheet){
       if(Math.abs(dy)<START_SLOP)return;
       dragging=true;
       sheet.classList.add("sheet-drag");
-      ccHaptic(6);
+      ccHaptic("snap");
     }
     ev.preventDefault();
     push(ev.clientY,performance.now());
@@ -264,7 +267,7 @@ function begin(e,sheet){
     /* Up the ladder: bigger. Nothing lives above full height, so from
        there the sheet simply comes home. */
     if(landing<-h*EXPAND_FRACTION){
-      if(grewInstead(sheet)){ ccHaptic(12); if(typeof sfx==="function")sfx(600,.04); }
+      if(grewInstead(sheet)){ ccHaptic("commit"); if(typeof sfx==="function")sfx(600,.04); }
       settle(sheet,0,vel,()=>clearY(sheet));
       return;
     }
@@ -274,7 +277,7 @@ function begin(e,sheet){
     if(go){
       /* Out the way it came in, at the speed it was thrown, and only
          then does the sheet's own ✕ run. */
-      ccHaptic(12);
+      ccHaptic("commit");
       settle(sheet,h,vel,()=>{ dismiss(sheet); clearY(sheet); });
     }else{
       if(typeof sfx==="function"&&y>20)sfx(430,.03);

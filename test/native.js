@@ -39,7 +39,13 @@ function bridge(seed){
           exitApp: () => { rec('app.exitApp'); window.__exited = true; }
         },
         Browser: { open: async ({url}) => { rec('browser.open',{url}); window.__opened = url; } },
-        StatusBar: { setStyle: async (o) => { rec('statusbar.setStyle',o); } }
+        StatusBar: { setStyle: async (o) => { rec('statusbar.setStyle',o); } },
+        SplashScreen: { hide: async (o) => { rec('splash.hide',o);
+          window.__splashAt = window.__splashAt || performance.now(); } },
+        Haptics: {
+          impact: async (o) => { rec('haptics.impact',o); },
+          notification: async (o) => { rec('haptics.notification',o); }
+        }
       },
       __store: store
     };
@@ -178,6 +184,91 @@ function bridge(seed){
      back.age==='y' && back.gate===false, back);
   await ctx.close();
 
+  // ============================================================ the launch screen
+  console.log('▶ the launch screen');
+  {
+    const ctx2 = await b.newContext({ viewport:{width:420,height:940} });
+    await ctx2.addInitScript(bridge());
+    const p2 = await ctx2.newPage(); p2.on('pageerror',e=>errs.push(String(e)));
+    await p2.goto(APP); await p2.waitForTimeout(700);
+    const sp = await p2.evaluate(()=>({
+      hides: window.__calls.filter(c=>c.startsWith('splash.hide')).length,
+      gate: document.getElementById('agegate').classList.contains('open') }));
+    /* It lifts while the age gate is still UP. The gate waits for the child
+       to answer, and a child cannot answer a gate behind a launch screen. */
+    ck('the launch screen lifts once the first screen has painted, gate and all',
+       sp.hides===1 && sp.gate===true, sp);
+    await p2.waitForTimeout(4200);
+    ck('and only once: the safety timer does not hide it a second time',
+       await p2.evaluate(()=>window.__calls.filter(c=>c.startsWith('splash.hide')).length)===1);
+    await ctx2.close();
+  }
+  {
+    /* The safety net itself. rAF is frozen so boot's handover can never
+       run — standing in for a boot that threw — and the launch screen must
+       still lift on the timer rather than sit over a dead app for ever. */
+    const ctx3 = await b.newContext({ viewport:{width:420,height:940} });
+    await ctx3.addInitScript(bridge());
+    await ctx3.addInitScript(`window.requestAnimationFrame=function(){return 0;};`);
+    const p3 = await ctx3.newPage();
+    await p3.goto(APP); await p3.waitForTimeout(1500);
+    const early = await p3.evaluate(()=>window.__calls.filter(c=>c.startsWith('splash.hide')).length);
+    await p3.waitForTimeout(3200);
+    const late = await p3.evaluate(()=>window.__calls.filter(c=>c.startsWith('splash.hide')).length);
+    ck('if boot never hands over, the launch screen still lifts on its own timer',
+       early===0 && late===1, {early, late});
+    await ctx3.close();
+  }
+
+  // ============================================================ haptics
+  console.log('▶ one voice for the hand');
+  const hctx = await b.newContext({ viewport:{width:420,height:940} });
+  await hctx.addInitScript(bridge());
+  const hp = await hctx.newPage(); hp.on('pageerror',e=>errs.push(String(e)));
+  await hp.goto(APP); await hp.waitForTimeout(900);
+  await hp.selectOption('#ageMonth','6');
+  await hp.selectOption('#ageYear', String(new Date().getFullYear()-30));
+  await hp.click('#ageGo'); await hp.waitForTimeout(300);
+  await hp.click('#playBtn').catch(()=>{}); await hp.waitForTimeout(1400);
+  await hp.evaluate(()=>{const c=document.querySelector('#ccCele .cc-cta');if(c)c.click();});
+  await hp.waitForTimeout(300);
+  const feel = await hp.evaluate(()=>{
+    window.__calls.length = 0;
+    ccFeel('snap'); ccFeel('commit'); ccFeel('success'); ccFeel('error');
+    return window.__calls.slice();
+  });
+  ck('a snap is a light tap on the Taptic Engine', feel[0]==='haptics.impact:{"style":"LIGHT"}', feel);
+  ck('a commit is a firmer one', feel[1]==='haptics.impact:{"style":"MEDIUM"}', feel);
+  ck('a solve is the success notification', feel[2]==='haptics.notification:{"type":"SUCCESS"}', feel);
+  ck('a failed run is the error notification', feel[3]==='haptics.notification:{"type":"ERROR"}', feel);
+
+  /* The real moments, not the router in isolation: a creator proving
+     their level solvable goes through mgSuccess() like every other solve. */
+  const solved = await hp.evaluate(async ()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    navHome(); await wait(200);
+    mgEnterCreator(); await wait(400);
+    window.__calls.length = 0;
+    mgSuccess(); await wait(50);
+    const out = window.__calls.filter(c=>c.startsWith('haptics.')).slice();
+    mgExit(false);
+    return out;
+  });
+  ck('solving a challenge is felt, once', solved.length===1 &&
+     solved[0]==='haptics.notification:{"type":"SUCCESS"}', solved);
+
+  /* The haptic belongs to the operating system's own switch, not to the
+     game's Sound toggle — muting the blips must not silence the Taptic
+     Engine, which makes no sound. */
+  const mutedNative = await hp.evaluate(()=>{
+    const was = muted; muted = true;
+    window.__calls.length = 0; ccFeel('snap');
+    muted = was;
+    return window.__calls.filter(c=>c.startsWith('haptics.')).length;
+  });
+  ck('the game\'s mute does not silence native haptics', mutedNative===1, mutedNative);
+  await hctx.close();
+
   // ======================================================== plain browser
   ctx = await b.newContext({ viewport:{width:420,height:940} });   // no bridge
   pg = await ctx.newPage(); pg.on('pageerror',e=>errs.push(String(e)));
@@ -187,8 +278,59 @@ function bridge(seed){
      await pg.evaluate(()=>isNative()===false && !document.documentElement.classList.contains('native')));
   ck('in a plain browser mirroring is a silent no-op',
      await pg.evaluate(()=>{ try{ nativeMirror('x','y'); return true; }catch(e){ return 'threw '+e.message; } })===true);
+  const web = await pg.evaluate(()=>{
+    const got=[]; const had=navigator.vibrate;
+    navigator.vibrate = p => { got.push(p); return true; };
+    ccFeel('snap'); ccFeel('success');
+    const was = muted; muted = true; ccFeel('error'); muted = was;
+    navigator.vibrate = had;
+    return got;
+  });
+  /* Android Chrome's vibrate is an audible motor, so on the web it answers
+     the game's Sound toggle: two buzzes, and the muted error is silent. */
+  ck('in a plain browser feedback falls back to vibrate()',
+     web.length===2 && web[0]===8 && Array.isArray(web[1]), web);
+  ck('and a muted game does not buzz', web.length===2, web);
+  ck('in a plain browser there is no launch screen to lift',
+     await pg.evaluate(()=>{ try{ nativeSplashHide(); return true; }catch(e){ return 'threw '+e.message; } })===true);
   ck('the age gate still works with no bridge present',
      await pg.evaluate(()=>document.getElementById('agegate').classList.contains('open')));
+
+  // ============================================================ the committed projects
+  console.log('▶ what the native projects say');
+  const rd = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
+  const cfg = JSON.parse(rd('capacitor.config.json'));
+  ck('the launch screen is told to wait for the game',
+     cfg.plugins && cfg.plugins.SplashScreen && cfg.plugins.SplashScreen.launchAutoHide===false,
+     cfg.plugins && cfg.plugins.SplashScreen);
+  const pkg = JSON.parse(rd('package.json'));
+  ck('haptics and the splash screen are real dependencies',
+     !!pkg.dependencies['@capacitor/haptics'] && !!pkg.dependencies['@capacitor/splash-screen']);
+  /* Registered in both native projects — that is what `cap sync` writes,
+     and without it the plugin is in node_modules and nowhere else. */
+  ck('both plugins are registered in the Android build',
+     /capacitor-haptics/.test(rd('android/capacitor.settings.gradle')) &&
+     /capacitor-splash-screen/.test(rd('android/capacitor.settings.gradle')));
+  ck('and in the iOS package',
+     /CapacitorHaptics/.test(rd('ios/App/CapApp-SPM/Package.swift')) &&
+     /CapacitorSplashScreen/.test(rd('ios/App/CapApp-SPM/Package.swift')));
+  const plist = rd('ios/App/App/Info.plist');
+  const orient = key => {
+    const m = new RegExp('<key>'+key.replace(/[~]/g,'\\~')+'</key>\\s*<array>([\\s\\S]*?)</array>').exec(plist);
+    return m ? (m[1].match(/UIInterfaceOrientation\w+/g)||[]) : null;
+  };
+  const phone = orient('UISupportedInterfaceOrientations');
+  const pad = orient('UISupportedInterfaceOrientations~ipad');
+  ck('on an iPhone the game is portrait and nothing else',
+     !!phone && phone.length===1 && phone[0]==='UIInterfaceOrientationPortrait', phone);
+  /* An iPad app that does not support all four orientations is rejected
+     at upload (ITMS-90474) unless it opts out of multitasking. Portrait on
+     the iPad without this key is a build that cannot be submitted. */
+  ck('on an iPad it is portrait, and says it needs the full screen',
+     !!pad && pad.every(o=>/Portrait/.test(o)) &&
+     /<key>UIRequiresFullScreen<\/key>\s*<true\/>/.test(plist), {pad});
+  ck('on Android the activity is locked to portrait',
+     /android:screenOrientation="portrait"/.test(rd('android/app/src/main/AndroidManifest.xml')));
 
   console.log('  pageerrors:', errs.length?errs.slice(0,3).join(' | '):'none');
   ck('no uncaught exceptions', errs.length===0);
