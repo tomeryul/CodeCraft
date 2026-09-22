@@ -310,7 +310,20 @@ function renderMarket(){
 /* one delegated listener — renderMarket rewrites innerHTML on every tick */
 $("ticker").addEventListener("click",e=>{
   if(!e.target.closest(".tk-btn"))return;
-  $("ticker").classList.toggle("open");
+  const el=$("ticker");
+  const opening=!el.classList.contains("open");
+  el.classList.toggle("open");
   if(typeof sfx==="function")sfx(520,.03);
   renderMarket();
+  /* The grow goes on the panel THIS tap created, not on .tk-panel in the
+     stylesheet: the ticker rewrites its own markup once a second, so a
+     plain CSS animation would replay every second for as long as the
+     panel stayed open.
+
+     There is no matching shrink, and that is a decision rather than an
+     omission. The panel does not survive the close — innerHTML takes it —
+     so animating the exit would mean holding the ticker's state 150ms
+     behind the tap, or lifting the panel out to somewhere its own styles
+     no longer reach. Neither is worth a shrink on a 300px popover. */
+  if(opening){ const p=el.querySelector(".tk-panel"); if(p)p.classList.add("tk-grow"); }
 });
