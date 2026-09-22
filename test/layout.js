@@ -772,12 +772,29 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
         if(typeof mgState!=='undefined'&&mgState)mgExit(false);
         await wait(180); fn(); await wait(650);
         document.getElementById('designTabBtn').click(); await wait(350);
-        const vis=e=>!!e.offsetParent;
+        const vis=e=>!!e.offsetParent&&getComputedStyle(e).visibility!=='hidden';
         const secs=[...document.querySelectorAll('#mgCreatorBar .dsec')].filter(vis);
+        /* The block list is the one section that starts shut — it is four
+           times the size of every other — so the rows have to be let out
+           before they can be measured. Opening it is also the check that
+           the head is a real control. */
+        const blocksSec=document.getElementById('dsBlocks');
+        const wasShut=!!blocksSec&&blocksSec.classList.contains('shut');
+        let toggles=false;
+        if(blocksSec){
+          const head=blocksSec.querySelector('.ds-head');
+          head.click(); await wait(420);
+          const flipped=blocksSec.classList.contains('shut')!==wasShut;
+          if(blocksSec.classList.contains('shut')){head.click(); await wait(420);}
+          toggles=flipped&&!blocksSec.classList.contains('shut');
+        }
         const rows=[...document.querySelectorAll('#mgCreatorBar .blkrow')].filter(vis);
-        /* a heading with nothing under it is worse than no heading */
-        const empty=secs.filter(e=>![...e.children].some(c=>c.tagName!=='H4'&&
-          c.tagName!=='P'&&getComputedStyle(c).display!=='none')).map(e=>e.id);
+        /* a heading with nothing under it is worse than no heading, and
+           the answer now lives inside .ds-in — the head is always there */
+        const empty=secs.filter(e=>{
+          const inn=e.querySelector('.ds-in');
+          return !inn||![...inn.children].some(c=>getComputedStyle(c).display!=='none');
+        }).map(e=>e.id);
         /* nothing may be left loose in the bar: every control is filed */
         const loose=[...document.getElementById('mgCreatorBar').children]
           .filter(c=>!c.classList.contains('dsec')&&vis(c))
@@ -796,6 +813,15 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
         const off=now.find(r=>!r.classList.contains('on')&&!r.classList.contains('lock'));
         const cs=e=>e?getComputedStyle(e):null;
         out[name]={
+          blocksStartsShut:wasShut,
+          blocksToggles:toggles,
+          /* a shut section still has to say what it is holding */
+          sums:secs.map(e=>({id:e.id,s:(e.querySelector('.ds-sum')||{}).textContent||''}))
+                   .filter(x=>['dsKind','dsBoard','dsBlocks'].indexOf(x.id)>=0),
+          heads:secs.every(e=>{
+            const h=e.querySelector('.ds-head');
+            return !!h&&h.tagName==='BUTTON'&&h.hasAttribute('aria-expanded');
+          }),
           secs:secs.map(e=>e.querySelector('h4').textContent),
           subs:secs.every(e=>((e.querySelector('h4 + p')||{}).textContent||'').length>20),
           empty, loose,
@@ -817,12 +843,31 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
       await wait(250);
       return out;
     });
+    /* Shut by default only the FIRST time: the block list is four times
+       the size of every other section, so it starts folded — and once an
+       author opens it, switching the kind of board does not fold it again.
+       That is the same session remembering, which is the whole point of
+       keeping the state rather than recomputing it. */
+    ck(`${W}x${H} the oversized block list starts folded`,
+       design.flat.blocksStartsShut===true, design.flat.blocksStartsShut);
+    ck(`${W}x${H} and once opened it stays open through a change of board`,
+       design.cyber.blocksStartsShut===false && design.tower.blocksStartsShut===false,
+       {cyber:design.cyber.blocksStartsShut, tower:design.tower.blocksStartsShut});
     for(const k of ["flat","cyber","tower"]){
       const d=design[k];
       ck(`${W}x${H} ${k}: the Design tab is sections, each one explained`,
          d.secs.length>=4 && d.subs && d.empty.length===0, d);
       ck(`${W}x${H} ${k}: nothing is left loose outside a section`,
          d.loose.length===0, d.loose);
+      /* Six topics on one screen instead of 2400px of scroll: each head is
+         a control, the big one starts shut, and a shut head still carries
+         the answer underneath it. */
+      ck(`${W}x${H} ${k}: every section head is a control that says open or shut`,
+         d.heads===true, d.heads);
+      ck(`${W}x${H} ${k}: pressing a section head opens and shuts it`,
+         d.blocksToggles===true, d.blocksToggles);
+      ck(`${W}x${H} ${k}: a shut section still says what it is holding`,
+         d.sums.length===3 && d.sums.every(x=>x.s.length>0), d.sums);
     }
     /* All three kinds let an author choose now. The flat board did not, which
        is why the section came and went depending on what you were building. */

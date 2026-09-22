@@ -555,11 +555,61 @@ body.sheets-full #maker.sized,
    The tab held every control there is, in the order the files that own
    them happened to inject them, with nothing saying what any group was
    for. A heading and one line each. */
-.dsec{display:flex;flex-direction:column;gap:8px;padding:12px 0 0;}
-.dsec > h4{margin:0;font-size:12px;font-weight:800;letter-spacing:.05em;
+/* Cards, not hairlines. Six topics separated by a 1px rule read as one
+   long form; six panels with an edge read as six things, and a head you
+   can press turns each of them into a door. */
+/* A quiet WELL rather than a raised panel: the rows filed into these
+   sections (the steppers, the block rows, the action pills) are already
+   lighter than the sheet, so a lighter card would have left them reading
+   as holes. Darker fill, hairline edge, and the rows sit on top of it. */
+.dsec{display:flex;flex-direction:column;
+  background:rgba(0,0,0,.16);
+  border:1px solid var(--hair);border-radius:16px;overflow:hidden;}
+/* Prefixed with #mgCreatorBar, and not by accident: styles.css carries a
+   blanket `#mgCreatorBar button{background:var(--panel3);…}` that out-ranks
+   any plain class, and the head is a button. Without the prefix it kept
+   that fill and the card looked like two colours stacked. The push-down
+   on :active is dropped for the same reason — a whole card sinking two
+   pixels is not the feedback a heading wants. */
+#mgCreatorBar .dsec .ds-head{display:flex;align-items:flex-start;gap:10px;width:100%;
+  padding:11px 12px;background:transparent;border:0;border-bottom:0;border-radius:0;
+  font-family:inherit;font-size:12px;font-weight:700;text-align:left;
+  color:var(--ink);cursor:pointer;
+  transition:background var(--dur-quick) var(--ease-settle);}
+#mgCreatorBar .dsec .ds-head:active{background:rgba(255,255,255,.07);
+  transform:none;border-bottom-width:0;}
+.dsec .ds-em{flex:0 0 auto;font-size:16px;line-height:1.35;}
+.dsec .ds-em .ui-emoji{width:17px;height:17px;vertical-align:0;}
+.dsec .ds-t{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px;}
+.dsec .ds-t h4{margin:0;font-size:12px;font-weight:800;letter-spacing:.05em;
   text-transform:uppercase;color:var(--accent2);}
-.dsec > h4 + p{margin:-4px 0 2px;font-size:12px;line-height:1.45;color:var(--ink2);}
-.dsec + .dsec{border-top:1px solid var(--hair);}
+.dsec .ds-t p{margin:0;font-size:12px;line-height:1.45;color:var(--ink2);}
+/* The answer the section is holding, so a shut one still says something.
+   Tabular figures because these sit in a column down the page. */
+.dsec .ds-sum{flex:0 0 auto;font-style:normal;font-size:11.5px;font-weight:800;
+  color:var(--ink2);background:rgba(255,255,255,.07);border-radius:999px;
+  padding:3px 9px;margin-top:1px;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.dsec .ds-sum:empty{display:none;}
+.dsec .ds-chev{flex:0 0 auto;width:16px;height:16px;margin-top:2px;color:var(--ink2);
+  transform:rotate(90deg);transition:transform var(--dur-move) var(--ease-settle);}
+.dsec .ds-chev svg{width:100%;height:100%;display:block;}
+.dsec.shut .ds-chev{transform:rotate(0deg);}
+/* 0fr → 1fr collapses to the content's own height with nothing measured in
+   JS, so a section that grows a row while open does not need telling. */
+.dsec .ds-body{display:grid;grid-template-rows:1fr;
+  transition:grid-template-rows var(--dur-move) var(--ease-settle);}
+.dsec.shut .ds-body{grid-template-rows:0fr;}
+/* Clipped is not gone. Without the visibility a shut section's buttons
+   stayed in the tab order and in the accessibility tree — invisible
+   controls a keyboard could still land on. It waits out the collapse so
+   the content is still there to watch while it closes. */
+.dsec .ds-in{overflow:hidden;min-height:0;display:flex;flex-direction:column;gap:8px;
+  padding:0 12px;visibility:visible;transition:visibility 0s;}
+.dsec.shut .ds-in{visibility:hidden;transition:visibility 0s linear var(--dur-move);}
+.dsec:not(.shut) .ds-in{padding-bottom:12px;}
+@media (prefers-reduced-motion:reduce){
+  .dsec .ds-body,.dsec .ds-chev,.dsec .ds-in{transition:none;}
+}
 #dsModes{gap:6px;flex-wrap:wrap;}
 
 /* ---- which blocks the player gets ----

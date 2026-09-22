@@ -562,26 +562,68 @@ window.mgBlocksUI=mgBlocksUI;
    Each section is a heading and one line saying what it is for, because
    "Block budget" and "Starter routines" are only obvious to somebody who
    already knows what they do. */
+/* Six topics, each one a card you can shut.
+   ---------------------------------------------------------------------
+   The tab was right in substance and wrong to look at: six headings
+   separated by hairlines, 2400px of scroll, and ONE of them — the block
+   list — was 1667px of it. An author looking for "When it is ready" had
+   to scroll past fourteen paragraphs about blocks to find it.
+
+   So each section is a card with a head you can press, and each head
+   carries the answer it is holding: the board says 8×6, the block list
+   says 11/14. That is what makes shutting one safe — a shut section
+   still tells you its value. The block list starts shut for the same
+   reason it needed this: it is four times the size of everything else.
+
+   `sum` returns DIGITS and short words that need no translation ("2D",
+   "3D", "Cyber", "8×6", "11/14"). It is deliberately not a sentence:
+   the Hebrew dictionary matches whole text nodes, and a summary glued
+   into a heading would match nothing. */
 const MG_SECTIONS=[
-  {id:"dsKind",  name:"Kind of level",
+  {id:"dsKind",  em:"🧭", name:"Kind of level",
    sub:"Tap a kind to switch to it. Switching clears the board you built.",
-   has:["dsModes"]},
-  {id:"dsBoard", name:"The board",
+   has:["dsModes"],
+   sum:p=>p.cyber?"Cyber":p.mode3d?"3D":"2D"},
+  {id:"dsBoard", em:"📐", name:"The board",
    sub:"How big it is, and how many blocks the player is allowed to use.",
-   has:["mgSizeRow","mgDiff"]},
-  {id:"dsBlocks",name:"Blocks the player gets",
+   has:["mgSizeRow","mgDiff"],
+   sum:p=>(p.gw&&p.gh)?(p.gw+"×"+p.gh):""},
+  {id:"dsBlocks",em:"🧩", name:"Blocks the player gets",
    sub:"Tap one to give it to them or take it away. Dimmed means they will not have it.",
-   has:["mgBlocks"]},
-  {id:"dsWords", name:"What the player reads",
+   has:["mgBlocks"], shut:true,
+   sum:()=>{
+     const rows=document.querySelectorAll("#mgBlocks .blkrow");
+     if(!rows.length)return "";
+     let on=0; for(const r of rows) if(r.classList.contains("on"))on++;
+     return on+"/"+rows.length;
+   }},
+  {id:"dsWords", em:"💬", name:"What the player reads",
    sub:"The level's name, and the line they see when it opens.",
    has:["mgName","t3Hint","cyHint","mgGuide"]},
-  {id:"dsHard",  name:"Make it harder",
+  {id:"dsHard",  em:"🎯", name:"Make it harder",
    sub:"Optional. Each of these asks the player for something more.",
    has:["cyEdRow","mgAddCase","mgCaseNow","mgPreset","mgCaseEdit","mgLevels","mgStageInfo"]},
-  {id:"dsDone",  name:"When it is ready",
+  {id:"dsDone",  em:"🏁", name:"When it is ready",
    sub:"Save keeps it for you. Publish puts it in front of everybody.",
    has:["mgActRow"]}
 ];
+/* Which sections the author has shut, for this session. Not in the save:
+   it is a view preference, and a save format is a thing you have to keep
+   reading forever. */
+const MG_SHUT={};
+const CHEV='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" '+
+  'stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
+
+function mgSecToggle(id){
+  const el=$(id); if(!el)return;
+  MG_SHUT[id]=!MG_SHUT[id];
+  el.classList.toggle("shut",!!MG_SHUT[id]);
+  const h=el.querySelector(".ds-head");
+  if(h)h.setAttribute("aria-expanded",MG_SHUT[id]?"false":"true");
+  if(typeof sfx==="function")sfx(MG_SHUT[id]?430:520,.03);
+}
+window.mgSecToggle=mgSecToggle;
+
 function mgDesignLayout(){
   const bar=$("mgCreatorBar"); if(!bar)return;
   /* the size steppers and the action row are wrapped once, so they can be
@@ -604,22 +646,45 @@ function mgDesignLayout(){
   for(const id of ["t3Btn","cyBtn"]){
     const b=$(id); if(b&&b.parentNode!==modes)modes.appendChild(b);
   }
+  const proj=(mgState&&mgState.proj)||{};
   for(const sec of MG_SECTIONS){
     let el=$(sec.id);
     if(!el){
       el=document.createElement("div");el.id=sec.id;el.className="dsec";
+      /* A button, not a div with a handler: it is a real control, so it
+         gets a real control's keyboard and screen-reader behaviour. */
+      const head=document.createElement("button");
+      head.type="button";head.className="ds-head";
+      const em=document.createElement("span");em.className="ds-em";em.textContent=sec.em;
+      /* h4 and p stay separate text nodes inside their own box — the
+         dictionary matches whole nodes, and the summary beside them is a
+         third node so it never welds itself into the heading. */
+      const t=document.createElement("span");t.className="ds-t";
       const h=document.createElement("h4");h.textContent=sec.name;
-      const p=document.createElement("p");p.textContent=sec.sub;
-      el.appendChild(h);el.appendChild(p);
+      const pp=document.createElement("p");pp.textContent=sec.sub;
+      t.appendChild(h);t.appendChild(pp);
+      const sum=document.createElement("i");sum.className="ds-sum";
+      const ch=document.createElement("span");ch.className="ds-chev";ch.innerHTML=CHEV;
+      head.appendChild(em);head.appendChild(t);head.appendChild(sum);head.appendChild(ch);
+      head.addEventListener("click",()=>mgSecToggle(sec.id));
+      const body=document.createElement("div");body.className="ds-body";
+      const inner=document.createElement("div");inner.className="ds-in";
+      body.appendChild(inner);
+      el.appendChild(head);el.appendChild(body);
+      if(sec.shut)MG_SHUT[sec.id]=MG_SHUT[sec.id]===undefined?true:MG_SHUT[sec.id];
+      el.classList.toggle("shut",!!MG_SHUT[sec.id]);
+      head.setAttribute("aria-expanded",MG_SHUT[sec.id]?"false":"true");
     }
     bar.appendChild(el);               // keeps the sections in order
+    const inner=el.querySelector(".ds-in");
     for(const id of sec.has){
-      const c=$(id); if(c&&c.parentNode!==el)el.appendChild(c);
+      const c=$(id); if(c&&c.parentNode!==inner)inner.appendChild(c);
     }
+    const sv=el.querySelector(".ds-sum");
+    if(sv)sv.textContent=sec.sum?(sec.sum(proj)||""):"";
     /* a section with nothing in it says nothing — the Cyber strikes row is
        not there on a flat board, and 3D has no inputs */
-    const live=[...el.children].filter(c=>c.tagName!=="H4"&&c.tagName!=="P"&&
-      getComputedStyle(c).display!=="none");
+    const live=[...inner.children].filter(c=>getComputedStyle(c).display!=="none");
     el.style.display=live.length?"":"none";
   }
   /* The fold-out panel is an empty shell once its rows have been filed into
