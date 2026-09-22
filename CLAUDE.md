@@ -19,6 +19,10 @@ is the only backend and the only external domain.
   splits it into fragments that match nothing. Build labelled rows out
   of separate elements. See the tables at the top of `js/game/i18n.js`.
 - **Every emoji in `js/*.js` needs icon art** or `test/smoke.js` fails.
+- **A control that shows only a symbol needs an `aria-label`** (➤, ✕, −,
+  ＋), or VoiceOver reads it as just "button". The Hebrew layer translates
+  `aria-label` too, so each label also needs its entry in `HE`.
+  `test/a11y.js` walks the real accessibility tree in both languages.
 - Run the suites before shipping:
   `NODE_PATH=/opt/node22/lib/node_modules node test/<name>.js`
 

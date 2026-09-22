@@ -119,9 +119,9 @@
           <div class="cb-row" id="mgCaseEdit" style="display:none"></div>
           <button id="mgDiff" class="rowbtn" title="Difficulty">⭐ Easy</button>
           <div class="stprow">
-            <span class="stp"><span class="clab">🧩 Block budget</span><button id="mgBudDec">−</button><span id="mgBudget" class="num"></span><button id="mgBudInc">＋</button></span>
-            <span class="stp"><span class="clab">↔️ Width</span><button id="mgWDec">−</button><span id="mgW" class="num"></span><button id="mgWInc">＋</button></span>
-            <span class="stp"><span class="clab">↕️ Height</span><button id="mgHDec">−</button><span id="mgH" class="num"></span><button id="mgHInc">＋</button></span>
+            <span class="stp"><span class="clab">🧩 Block budget</span><button id="mgBudDec" aria-label="Fewer blocks">−</button><span id="mgBudget" class="num"></span><button id="mgBudInc" aria-label="More blocks">＋</button></span>
+            <span class="stp"><span class="clab">↔️ Width</span><button id="mgWDec" aria-label="Narrower">−</button><span id="mgW" class="num"></span><button id="mgWInc" aria-label="Wider">＋</button></span>
+            <span class="stp"><span class="clab">↕️ Height</span><button id="mgHDec" aria-label="Shorter">−</button><span id="mgH" class="num"></span><button id="mgHInc" aria-label="Taller">＋</button></span>
           </div>
         </div>
         <div class="cb-row" id="mgLevels" style="display:none"></div>
@@ -173,7 +173,7 @@
   <div id="chips"></div>
   <div id="askrow">
     <input id="askInput" placeholder="Ask Byte something…" autocomplete="off" enterkeyhint="send">
-    <button id="askSend">➤</button>
+    <button id="askSend" aria-label="Send">➤</button>
   </div>
 </div>
 
@@ -308,7 +308,7 @@
   <div class="m-head">
     <div class="face">🗑</div>
     <div><h3>Delete your account</h3><p id="delWho"></p></div>
-    <button class="iconbtn x" id="delClose">✕</button>
+    <button class="iconbtn x" id="delClose" aria-label="Close">✕</button>
   </div>
   <div class="del-note">This cannot be undone. Nobody can get any of it back for you — not even us.</div>
   <div id="delList"></div>

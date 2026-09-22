@@ -65,7 +65,7 @@ function ageGateShow(done){
   for(let y=yNow;y>=yNow-99;y--)ys+='<option value="'+y+'">'+y+'</option>';
   let ms='<option value="">Month</option>';
   for(let i=0;i<12;i++)ms+='<option value="'+(i+1)+'">'+AGE_MONTHS[i]+'</option>';
-  $("ageSelects").innerHTML='<select id="ageMonth">'+ms+'</select><select id="ageYear">'+ys+'</select>';
+  $("ageSelects").innerHTML='<select id="ageMonth" aria-label="Birth month">'+ms+'</select><select id="ageYear" aria-label="Birth year">'+ys+'</select>';
   const go=$("ageGo");
   go.disabled=true;
   const check=()=>{go.disabled=!($("ageMonth").value&&$("ageYear").value);};

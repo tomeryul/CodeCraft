@@ -614,7 +614,7 @@ const HE={
 "Still fine to change your mind.":"עדיין אפשר להתחרט.",
 "Deleting your account…":"מוחק את החשבון שלך…",
 "Your account is gone. Starting fresh…":"החשבון שלך נמחק. מתחילים מחדש…",
-"Password (6+)":"סיסמה (6+)",
+"Password (6+)":"סיסמה (6+)","Email":"אימייל","Market prices":"מחירי השוק",
 "Enter your email and a 6+ character password":"הזן אימייל וסיסמה של 6 תווים ומעלה",
 "Creating your account…":"יוצר את החשבון שלך…","Logging in…":"מתחבר…",
 "Loading your world…":"טוען את העולם שלך…",
@@ -668,6 +668,10 @@ const HE={
 /* ---- attributes ---- */
 "Back":"אחורה","Back to the list":"חזרה לרשימה","Back to the menu":"חזרה לתפריט",
 "Exit to the world":"יציאה לעולם","Close":"סגור",
+/* names VoiceOver reads for controls that show only a symbol */
+"Send":"שלח","Birth month":"חודש לידה","Birth year":"שנת לידה",
+"Fewer blocks":"פחות בלוקים","More blocks":"יותר בלוקים",
+"Narrower":"צר יותר","Wider":"רחב יותר","Shorter":"נמוך יותר","Taller":"גבוה יותר",
 "Shrink or expand":"הקטן או הגדל","Expand / shrink editor":"הגדל / הקטן עורך",
 "Expand editor":"הגדל עורך","Menu":"תפריט",
 "Menu — everything in the game":"תפריט — כל מה שיש במשחק",
