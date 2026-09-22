@@ -81,6 +81,30 @@ together. The rule in `css/apple.css` is scoped for that reason.
 snaps, successes and errors. Put them everywhere and players learn to
 ignore all of them.
 
+### The skills pack
+
+`.claude/skills/` holds Emil Kowalski's set (github.com/emilkowalski/skills,
+at 85e8e23), byte for byte. Seven of them fit this codebase:
+
+| skill | when |
+|---|---|
+| `apple-design` | the house rules above — load it before UI or motion work |
+| `animate` | building a new animation, web, from scratch |
+| `review-animations` | judging motion that already exists (`/review-animations`) |
+| `improve-animations` | a whole-codebase motion audit, read-only |
+| `find-animation-opportunities` | what here should move and does not |
+| `mobile-native` | the CSS and meta fixes that stop a web app feeling like a browser |
+| `animation-vocabulary` | naming an effect you can only describe |
+
+Three are for stacks this project does not have and should be left
+alone here: `animate-expo` (React Native), `ask-sonner` (a React toast
+library), `write-swift`. Two more only run when you type them:
+`/pick-ui-library` and `/prototype`, both of which assume React.
+`emil-design-eng` is the philosophy the rest are built on.
+
+`.claude/skills/performance-cheatsheet.md` is a one-page table from the
+same repo — the fifteen lines are worth reading once.
+
 ## Native app
 
 `dev/app` carries the Capacitor wrapper (iOS + Android, `js/game/native.js`,
