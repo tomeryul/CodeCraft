@@ -31,7 +31,11 @@ let saveOff=false;
 function saveNow(){
   if(saveOff)return;
   const data=buildSave();
-  try{localStorage.setItem(SAVE_KEY,JSON.stringify(data));}catch(_){}
+  const json=JSON.stringify(data);
+  try{localStorage.setItem(SAVE_KEY,json);}catch(_){}
+  // iOS can evict a webview's localStorage; in the native shell the save is
+  // also mirrored into real device storage. No-op in a browser.
+  if(typeof nativeMirror==="function")nativeMirror(SAVE_KEY,json);
   scheduleCloud(data); // logged-in players also sync to their account
 }
 function scheduleCloud(data){

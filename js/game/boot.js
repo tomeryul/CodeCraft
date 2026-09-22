@@ -99,9 +99,15 @@ function renderSplashAuth(){
     }catch(err){ m("⚠️ "+err.message); }
   });
 }
-// The age answer decides whether a sign-in box is offered at all, so it has
-// to be settled before the splash renders one.
-ageGateInit(()=>{ renderSplashAuth(); sbRestore().then(renderSplashAuth).catch(()=>{}); });
+// In the native shell the save may need recovering from device storage
+// before anything reads it; nativeInit resolves true only when it reloaded.
+// In a browser it resolves false immediately and changes nothing.
+(typeof nativeInit==="function"?nativeInit():Promise.resolve(false)).then(reloading=>{
+  if(reloading)return;
+  // The age answer decides whether a sign-in box is offered at all, so it has
+  // to be settled before the splash renders one.
+  ageGateInit(()=>{ renderSplashAuth(); sbRestore().then(renderSplashAuth).catch(()=>{}); });
+});
 $("playBtn").addEventListener("click",()=>enterGame(true));
 
 /* Registering and walking away was not enough to get an update onto a phone.
@@ -114,7 +120,11 @@ $("playBtn").addEventListener("click",()=>enterGame(true));
    time the app comes back to the foreground, and reload once when a new
    worker actually takes over. The reload is guarded, because a page that
    reloads on every controllerchange can loop. */
-if("serviceWorker" in navigator&&location.protocol.indexOf("http")===0){
+/* And in the packaged app there is no worker at all: the files are already
+   local, www/ deliberately ships no sw.js, and a network-first worker aimed
+   at capacitor://localhost would only add a way to fail. */
+if("serviceWorker" in navigator&&location.protocol.indexOf("http")===0
+   &&!(typeof isNative==="function"&&isNative())){
   navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"}).then(reg=>{
     const check=()=>{ try{ reg.update(); }catch(e){} };
     check();
