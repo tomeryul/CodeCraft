@@ -790,7 +790,14 @@ function drawBoardRobot(g,cx,cy,s2,dir,color,running,t,wear,pose){
   g.restore();
 }
 function drawBoardBrick(g,px,py,cell,onPlan,no){
-  const m=Math.max(3,cell*0.08), x=px+m, y=py+m, s=cell-2*m, rad=Math.max(4,cell*.15);
+  const m=Math.max(3,cell*0.08), x=px+m, y=py+m, s=cell-2*m;
+  /* The inset is at least 3px a side, so under ~8px there is no brick left
+     — s goes NEGATIVE, and ellipse() throws on a negative radius. That was
+     an uncaught exception in the middle of mgDraw, every frame, whenever a
+     big board met a small screen: the carried brick (drawn at half a cell)
+     hit it first. Too small to see is too small to draw. */
+  if(s<2)return;
+  const rad=Math.min(Math.max(4,cell*.15),s/2);
   const grd=g.createLinearGradient(0,y,0,y+s);
   grd.addColorStop(0,onPlan?"#e6bd7d":"#ff8fa0");grd.addColorStop(1,onPlan?"#b9793c":"#e23b57");
   g.fillStyle="rgba(0,0,0,.18)";g.beginPath();g.ellipse(px+cell/2,y+s-2,s*.42,s*.12,0,0,7);g.fill();

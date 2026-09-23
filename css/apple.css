@@ -157,19 +157,30 @@
    getting the CSS transition out of the way while JS owns the transform.
    --------------------------------------------------------------------- */
 
-/* The grip. Small, quiet, and in the one place every phone user already
-   looks for it. It is drawn in space the header already had rather than
-   given its own strip, so nothing below it moves. */
+/* The grip, the way iOS draws a sheet's grabber: 36×5, fully rounded,
+   6px below the sheet's top edge, and with a strip of its own — the
+   header's content starts well clear of it. The first version tucked it
+   into padding the header already had, and in the editor that left ONE
+   pixel between the grip and the buttons: it read as a scratch on the
+   toolbar, not as a handle. --grip-zone is the whole strip.
+
+   The editor needs its own line because `#editor .v5-head` (codecraft-v5)
+   outranks any class selector — which is exactly why the earlier
+   padding never reached it. */
+:root{ --grip-zone:20px; }
 .sheet.grabbable > .m-head,
 .sheet.grabbable > .v5-head,
 .sheet.grabbable > .ed-head{ position:relative; touch-action:none; }
-.sheet.grabbable > .m-head{ padding-top:13px; }
+.sheet.grabbable > .m-head,
+#editor.sheet.grabbable > .v5-head,
+#editor.sheet.grabbable > .ed-head{ padding-top:var(--grip-zone); }
 .sheet.grabbable > .m-head::before,
 .sheet.grabbable > .v5-head::before,
 .sheet.grabbable > .ed-head::before{
-  content:"";position:absolute;top:5px;left:50%;
-  width:36px;height:4px;margin-left:-18px;border-radius:2px;
-  background:var(--ink2,#b9b0d8);opacity:.3;pointer-events:none;
+  content:"";position:absolute;top:6px;left:50%;
+  width:36px;height:5px;margin-left:-18px;border-radius:2.5px;
+  background:var(--ink2,#b9b0d8);opacity:.34;pointer-events:none;
+  transition:opacity var(--dur-quick) var(--ease-settle);
 }
 /* Pressed, the grip answers on the press — not on the release, and not
    only once the sheet has started to move. */

@@ -124,6 +124,18 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
         again.hints[0] === 'next' && again.hints[1] === 'go', again);
     }
 
+    /* A big board on a small screen makes tiny cells, and the brick the
+       robot carries is drawn at half a cell. Under ~8px the brick's inset
+       left it a NEGATIVE size, ellipse() threw, and the exception took
+       down the whole board drawing every frame. */
+    const bricks = await pg.evaluate(() => {
+      const c = document.createElement('canvas').getContext('2d'), bad = [];
+      for (const cell of [1, 2, 4, 5, 6, 8, 12, 40]) {
+        try { drawBoardBrick(c, 0, 0, cell, true, 3); } catch (e) { bad.push(cell + ': ' + e.name); }
+      }
+      return bad;
+    });
+    ck(`${W}: a board brick too small to see is skipped, not a crash`, bricks.length === 0, bricks);
     ck(`${W}: no uncaught exceptions`, errs.length === 0, errs.slice(0, 3));
     await pg.close();
   }
