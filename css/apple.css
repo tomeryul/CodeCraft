@@ -196,6 +196,11 @@
 #editor.sheet-drag,#editor.sheet-anim{
   transition:height .26s var(--ease-settle);
 }
+/* The one frame a drag hands the size over: the height changes with no
+   curve at all and the transform absorbs the difference, so the top edge
+   stays under the finger (resize() in sheet-drag.js). Last, so it beats
+   the editor's own height curve just above. */
+.sheet.sheet-resize,#editor.sheet-resize{ transition:none; }
 
 /* Nothing is thrown when the setting says nothing should be: the drag
    still tracks, but the release lands instantly (handled in JS) and the

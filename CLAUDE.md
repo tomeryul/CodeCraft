@@ -72,6 +72,12 @@ throw on the UNDAMPED finger travel: upward is rubber-banded, so a
 threshold read off the sheet silently asks for twice the pull going up
 as coming down.
 
+A pull down from full has two rungs below it, half and gone, and the
+projected landing picks the nearer — a slow pull to the middle stops at
+half, a long pull or a hard flick leaves. When the size changes under
+the finger, the height flips with no curve and the transform absorbs the
+difference (`resize()`), so the top edge never jumps at release.
+
 **Out the way it came in.** A surface that arrives from the bottom
 leaves to the bottom, and a menu grows from the control that opened it.
 
@@ -117,6 +123,15 @@ library), `write-swift`. Two more only run when you type them:
 
 `.claude/skills/performance-cheatsheet.md` is a one-page table from the
 same repo — the fifteen lines are worth reading once.
+
+## The 3D board
+
+`js/game/tower3d.js` is a painter, not a z-buffer, so order is
+everything. A brick draws only the faces whose screen winding says they
+face the camera. Everything with height — rock, bricks, blueprints, the
+robot — goes in ONE pass sorted by distance from the camera's eye.
+Depth along the view axis is not enough: it ties for every brick in a
+row across the screen. `test/tower3d.js` checks all of this in pixels.
 
 ## Native app
 

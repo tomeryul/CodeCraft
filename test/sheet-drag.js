@@ -142,7 +142,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 
   console.log('▶ the spring can be caught mid-flight');
   r = await openHub();
-  await drag('hub', 20, 6, 60);              // 120px, slow enough to spring back
+  await drag('hub', 12, 6, 60);              // 72px, slow: short of the half rung, so it springs back
   await wait(50);
   const before = await ty('hub');
   await down('hub');                          // catch it in the air
@@ -258,34 +258,64 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await pg.evaluate(() => { navHome(); }); await wait(400);
   }
 
-  console.log('▶ the editor is full of a child’s work');
-  await pg.evaluate(() => { navHome(); }); await wait(400);
-  await pg.evaluate(() => { $('editor').classList.add('open');
-    if (!$('editor').classList.contains('max')) $('edMax').click(); });
-  await wait(600);
-  ck('the editor starts full height', await pg.evaluate(() => $('editor').classList.contains('max')));
+  console.log('▶ three rungs down: full, half, gone');
+  /* Pulled down from full, a sheet lands on whichever rung the throw
+     reaches: a gentle pull to the middle stops at half, a long pull or a
+     hard flick leaves. The same on every sheet — the editor included,
+     since leaving it saves the program and the draft (mgExit). */
+  const full = async () => {
+    await pg.evaluate(() => { if (!$('editor').classList.contains('max')) $('edMax').click(); });
+    await wait(600);
+  };
+  /* A slow pull, released, with the top edge measured on both sides of
+     the release in ONE evaluate: the height changes at that instant and
+     the edge must not jump when it does. */
+  const pullAndLook = (id, to) => pg.evaluate(async ([i, dist]) => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const el = $(i);
+    const h = el.querySelector(':scope > .m-head, :scope > .v5-head, :scope > .ed-head');
+    const r = h.getBoundingClientRect();
+    const x = Math.round(r.left + r.width / 2), y0 = Math.round(r.top + r.height / 2);
+    const ev = (type, y, extra) => h.dispatchEvent(new PointerEvent(type, Object.assign({
+      pointerId: 1, isPrimary: true, clientX: x, clientY: y, bubbles: true, cancelable: true }, extra)));
+    ev('pointerdown', y0, { button: 0, buttons: 1 });
+    const steps = Math.round(dist / 8);
+    for (let k = 1; k <= steps; k++) { ev('pointermove', y0 + k * 8, { button: -1, buttons: 1 }); await wait(70); }
+    const hBefore = el.offsetHeight, topBefore = el.getBoundingClientRect().top;
+    ev('pointerup', y0 + steps * 8, { button: 0, buttons: 0 });
+    const hAfter = el.offsetHeight, topAfter = el.getBoundingClientRect().top;
+    return { hBefore, hAfter, jump: Math.round(topAfter - topBefore) };
+  }, [id, to]);
 
-  /* The whole ladder in one place: small -> big -> small -> gone. */
-  await pg.evaluate(() => { if ($('editor').classList.contains('max')) $('edMax').click(); });
-  await wait(600);
-  await drag('editor', 8, -15, 16);
-  await wait(1000);
-  ck('pulling the editor up puts it back to full height',
-    await pg.evaluate(() => $('editor').classList.contains('max') &&
-                            $('editor').classList.contains('open')),
-    await pg.evaluate(() => $('editor').className));
+  for (const id of ['editor', 'hub']) {
+    await pg.evaluate(() => { navHome(); }); await wait(400);
+    await full();
+    if (id === 'editor') { await pg.evaluate(() => $('editor').classList.add('open')); await wait(600); }
+    else await openHub();
+    const H = await pg.evaluate(i => $(i).offsetHeight, id);
+    const look = await pullAndLook(id, Math.round(H * 0.42));
+    await wait(1000);
+    const st = await pg.evaluate(i => ({ max: $('editor').classList.contains('max'),
+      open: $(i).classList.contains('open'), y: $(i).style.transform }), id);
+    ck(`${id}: a slow pull to the middle stops at half size`,
+      st.max === false && st.open === true && look.hAfter < look.hBefore - 100, { look, st });
+    ck(`${id}: and the top edge stays under the finger as the size changes`,
+      Math.abs(look.jump) <= 2, look);
+    ck(`${id}: then settles at rest`, st.y === '', st.y);
 
-  await drag('editor', 8, 15, 16);
-  await wait(1000);
-  ck('the first pull down shrinks it instead of closing it',
-    await pg.evaluate(() => !$('editor').classList.contains('max') && $('editor').classList.contains('open')),
-    await pg.evaluate(() => $('editor').className));
+    await drag(id, 8, 15, 16);                   // from half: a flick
+    await wait(1200);
+    ck(`${id}: from half, a flick sends it away`, await isOpen(id) === false);
 
-  await drag('editor', 8, 15, 16);
-  await wait(1200);
-  ck('a second pull, from the small size, does close it',
-    await pg.evaluate(() => !$('editor').classList.contains('open')),
-    await pg.evaluate(() => $('editor').className));
+    await pg.evaluate(() => { navHome(); }); await wait(400);
+    await full();
+    if (id === 'editor') { await pg.evaluate(() => $('editor').classList.add('open')); await wait(600); }
+    else await openHub();
+    await drag(id, 12, 20, 16);                  // from full: 240px at ~1250px/s
+    await wait(1200);
+    ck(`${id}: from full, a hard flick goes all the way in one throw`,
+      await isOpen(id) === false, await pg.evaluate(i => $(i).className, id));
+  }
 
   console.log('▶ buttons in the header keep their own press');
   r = await openHub();

@@ -25,12 +25,12 @@
    clicked, so a fling does exactly what the control in the corner does,
    on every sheet, for ever — including the ones added after this file.
 
-   Down and up are the same ladder. Pulling UP makes the window bigger,
-   on every sheet, by pressing the size control the header has always
-   carried. Pulling DOWN makes it smaller and then, one rung lower, sends
-   it away — except that the editor is full of a child's work, so its
-   first pull down is spent on the size and you have to pull a second
-   time, from the small size, to leave.
+   Down and up are the same ladder, and it has three rungs: full, half,
+   gone. Pulling UP climbs one, by pressing the size control the header
+   has always carried. Pulling DOWN from full lands on whichever rung the
+   throw would reach — a slow pull to the middle stops at half, a long
+   pull or a hard flick goes all the way — on every sheet, the way an
+   iOS sheet chooses between its detents.
    ===================================================================== */
 
 /* ---------------------------------------------------------------------
@@ -168,24 +168,46 @@ function isFull(el){
   const ed=$("editor");
   return !!ed&&ed.classList.contains("max");
 }
-/* Down one rung. Only the editor: it is full of a child's work, so the
-   first pull spends itself on the size. Every other sheet holds nothing
-   you would be sorry to lose, and making them take two flings to close
-   would be a tax on the common case. */
-function shrankInstead(el){
-  if(el.id!=="editor")return false;
-  if(!isFull(el))return false;
-  const c=sizeCtl(el); if(!c)return false;
-  c.click();
-  return true;
+/* body.sheets-full is how every other sheet reads the size, and nav.js
+   mirrors it from #editor.max with a MutationObserver — which runs only
+   after this handler returns, too late for a measurement taken inside
+   it. So it is mirrored here as well, synchronously. Same rule, same
+   result; the observer then finds nothing to change. */
+function mirrorSize(){
+  const ed=$("editor");
+  if(ed)document.body.classList.toggle("sheets-full",ed.classList.contains("max"));
 }
-/* Up one rung, and on EVERY sheet. Growing one costs nothing and risks
-   nothing, so there is no reason for the gesture to be lopsided: the same
-   hand movement that makes the window smaller makes it bigger again. */
-function grewInstead(el){
-  if(isFull(el))return false;
+/* The height of the half rung, read off the stylesheet rather than
+   restated here: flip the size, measure, flip it back, all inside one
+   task, so nothing is ever painted in between. 0 when there is no half
+   rung — the sheet is already small, or it is the maker, whose size
+   control moves its canvas rather than its top edge. */
+function halfHeight(el){
+  if(el.id==="maker"||!isFull(el)||!sizeCtl(el))return 0;
+  const ed=$("editor"), h=el.offsetHeight;
+  el.classList.add("sheet-resize"); ed.classList.add("sheet-resize");
+  ed.classList.remove("max"); mirrorSize();
+  const small=el.offsetHeight;
+  ed.classList.add("max"); mirrorSize();
+  void el.offsetHeight;          // settle back at full before the curve returns
+  el.classList.remove("sheet-resize"); ed.classList.remove("sheet-resize");
+  return small<h-1?small:0;
+}
+/* Press the size control, and keep the sheet's top edge exactly where
+   the finger left it: the height changes in one frame with no curve, the
+   transform takes up the difference, and the spring carries it home from
+   there at the release velocity. Without that the edge jumps the moment
+   the finger lets go — the one thing a sheet under a finger must not do. */
+function resize(el,vel){
   const c=sizeCtl(el); if(!c)return false;
-  c.click();
+  const ed=$("editor"), h0=el.offsetHeight, y=stateOf(el).y;
+  el.classList.add("sheet-resize"); ed.classList.add("sheet-resize");
+  c.click(); mirrorSize();
+  const h1=el.offsetHeight;
+  setY(el,y+(h1-h0));
+  void el.offsetHeight;
+  el.classList.remove("sheet-resize"); ed.classList.remove("sheet-resize");
+  settle(el,0,vel,()=>clearY(el));
   return true;
 }
 /* What dismissal means is the sheet's own ✕ — never a rule invented here,
@@ -267,18 +289,25 @@ function begin(e,sheet){
     /* Up the ladder: bigger. Nothing lives above full height, so from
        there the sheet simply comes home. */
     if(landing<-h*EXPAND_FRACTION){
-      if(grewInstead(sheet)){ ccHaptic("commit"); if(typeof sfx==="function")sfx(600,.04); }
+      /* no sound of its own: the size control it presses has one */
+      if(!isFull(sheet)&&resize(sheet,vel)){ ccHaptic("commit"); return; }
       settle(sheet,0,vel,()=>clearY(sheet));
       return;
     }
-    const go=landing>h*DISMISS_FRACTION;
-
-    if(go&&shrankInstead(sheet)){ settle(sheet,0,vel); return; }
-    if(go){
+    /* Down the ladder. From full there are two rungs below: half, sitting
+       `half` px lower, and gone. The throw lands on the nearer rung, with
+       leaving asking for the same 40% of the remaining height it asks for
+       from the half size — so a gentle pull to the middle stops there, and
+       the ✕ is only ever one long pull or one hard flick away. */
+    const half=landing>0?h-halfHeight(sheet):h;     // measured only when heading down
+    const goAt=half>=h?h*DISMISS_FRACTION:half+(h-half)*DISMISS_FRACTION;
+    if(landing>goAt){
       /* Out the way it came in, at the speed it was thrown, and only
          then does the sheet's own ✕ run. */
       ccHaptic("commit");
       settle(sheet,h,vel,()=>{ dismiss(sheet); clearY(sheet); });
+    }else if(half<h&&landing>half/2&&resize(sheet,vel)){
+      ccHaptic("commit");
     }else{
       if(typeof sfx==="function"&&y>20)sfx(430,.03);
       settle(sheet,0,vel,()=>clearY(sheet));
