@@ -59,7 +59,10 @@ function makeProj(sc,W,H,yaw){
     const rx=(x-cx)*c-(y-cy)*s, ry=(x-cx)*s+(y-cy)*c;
     const yc=ry*cp-z*sp, zc=ry*sp+z*cp;
     const d=yc+CAMD, f=1/Math.max(.6,d);
-    return {x:rx*f, y:-zc*f, d:d};
+    /* r: squared distance from the camera itself. d alone is depth along
+       the view axis, which is the SAME for two bricks side by side — and
+       sorting on a tie is sorting at random. */
+    return {x:rx*f, y:-zc*f, d:d, r:rx*rx+d*d+zc*zc};
   };
   let mnx=1e9,mxx=-1e9,mny=1e9,mxy=-1e9;
   for(let q=0;q<4;q++){const yw=q*Math.PI/2;
@@ -70,8 +73,12 @@ function makeProj(sc,W,H,yaw){
   const S=Math.min(W*.90/(mxx-mnx), H*.88/(mxy-mny));
   const mid=raw(cx,cy,maxZ*.45,yaw);
   const ox=W/2-mid.x*S, oy=H/2-mid.y*S;
-  const f=(x,y,z)=>{const p=raw(x,y,z,yaw);return {x:ox+p.x*S,y:oy+p.y*S,d:p.d};};
+  const f=(x,y,z)=>{const p=raw(x,y,z,yaw);return {x:ox+p.x*S,y:oy+p.y*S,d:p.d,r:p.r};};
   f.zcos=Math.cos(pitch);
+  /* Which way round a face that looks at the camera winds on screen. The
+     ground is seen from above at every yaw, so its winding is the
+     reference; any face wound the other way is facing away. */
+  f.front=Math.sign(area([f(cx-.5,cy-.5,0),f(cx+.5,cy-.5,0),f(cx+.5,cy+.5,0),f(cx-.5,cy+.5,0)]))||1;
   return f;
 }
 T3.makeProj=makeProj;
@@ -88,6 +95,13 @@ function unit(P,x,y,z){
   return Math.hypot(b.x-a.x,b.y-a.y)/(P.zcos||1);
 }
 
+// twice the signed screen area of a polygon: its sign is its winding
+function area(q){
+  let a=0;
+  for(let i=0;i<q.length;i++){const p=q[i],n=q[(i+1)%q.length];a+=p.x*n.y-n.x*p.y;}
+  return a;
+}
+
 function poly(g,pts,fill,stroke,lw){
   g.beginPath();g.moveTo(pts[0].x,pts[0].y);
   for(let i=1;i<pts.length;i++)g.lineTo(pts[i].x,pts[i].y);
@@ -96,23 +110,29 @@ function poly(g,pts,fill,stroke,lw){
   if(stroke){g.strokeStyle=stroke;g.lineWidth=lw||1;g.lineJoin="round";g.stroke();}
 }
 
-/* one brick. Sides are drawn back-to-front then the top lid, so the
-   cube is always correct without per-face culling maths. */
+/* one brick. Only the faces that look at the camera are drawn — found
+   by their winding on screen, since every face below is listed
+   counter-clockwise from outside. A convex box's visible faces never
+   overlap each other, so no order among them is needed.
+   It used to sort the sides by depth instead, and the east and west
+   faces always tie on that key: whichever came second in the list won,
+   so on half the board a brick painted its hidden back over its own
+   visible side. */
 function cube(g,P,x,y,z,col,opt){
   opt=opt||{};
   const p=(dx,dy,dz)=>P(x+dx,y+dy,z+dz);
   const t=[p(0,0,1),p(1,0,1),p(1,1,1),p(0,1,1)];
   const b=[p(0,0,0),p(1,0,0),p(1,1,0),p(0,1,0)];
-  const sides=[
+  const faces=[
     {q:[b[0],b[1],t[1],t[0]],k:"N"},
     {q:[b[1],b[2],t[2],t[1]],k:"E"},
     {q:[b[2],b[3],t[3],t[2]],k:"S"},
-    {q:[b[3],b[0],t[0],t[3]],k:"W"}
+    {q:[b[3],b[0],t[0],t[3]],k:"W"},
+    {q:t,k:"top"}
   ];
-  sides.sort((a,c)=>((c.q[0].d+c.q[1].d)-(a.q[0].d+a.q[1].d)));
   const line="rgba(90,58,20,.34)";
-  for(const s of sides)poly(g,s.q,shade(col,FACE[s.k]),opt.line||line,1);
-  poly(g,t,shade(col,FACE.top),opt.line||line,1);
+  for(const s of faces)
+    if(area(s.q)*P.front>0)poly(g,s.q,shade(col,FACE[s.k]),opt.line||line,1);
   // stud — the one detail that says "toy brick" from any angle
   if(opt.stud!==false){
     const c0=P(x+.5,y+.5,z+1), r=Math.max(1.5,unit(P,x+.5,y+.5,z+1)*.17);
@@ -249,14 +269,14 @@ T3.render=function(g,W,H,sc,cam){
     tiles.push({x:x,y:y,z:bz,d:P(x+.5,y+.5,bz).d});
   }
   tiles.sort((a,b)=>b.d-a.d);
+  /* Raised terrain is NOT drawn here: a rock plinth has height, so it
+     belongs in the depth-sorted pass below with everything else that
+     does. Painted here, first, a brick or a blueprint standing behind a
+     cliff was drawn over the cliff. */
   for(const tl of tiles){
-    if(tl.z<0)continue;                      // a hole: nothing to stand on
-    if(tl.z>0){                              // raised terrain reads as a rock plinth
-      for(let z=0;z<tl.z;z++)cube(g,P,tl.x,tl.y,z,"#a89b86",{stud:false,line:"rgba(60,50,40,.35)"});
-    }else{
-      const q=[P(tl.x,tl.y,0),P(tl.x+1,tl.y,0),P(tl.x+1,tl.y+1,0),P(tl.x,tl.y+1,0)];
-      poly(g,q,GRASS[(tl.x*31+tl.y*17)%3],"rgba(40,90,30,.16)",1);
-    }
+    if(tl.z!==0)continue;                    // a hole, or rock drawn below
+    const q=[P(tl.x,tl.y,0),P(tl.x+1,tl.y,0),P(tl.x+1,tl.y+1,0),P(tl.x,tl.y+1,0)];
+    poly(g,q,GRASS[(tl.x*31+tl.y*17)%3],"rgba(40,90,30,.16)",1);
   }
   // holes — a real sunken pit: floor, then the far walls painted over the near
   // ones (a concave shape is the reverse sort of a convex one)
@@ -277,22 +297,31 @@ T3.render=function(g,W,H,sc,cam){
     poly(g,r4,null,"rgba(30,22,14,.55)",1.6);
   }
 
-  /* --- everything with height, in one depth-sorted pass so bricks,
-     ghosts and the robot interleave correctly. */
+  /* --- everything with height — rock, bricks, blueprints, the robot —
+     in one pass, farthest from the camera first. Farthest by true
+     distance from the camera's eye, not by depth along the view axis:
+     that ties for every brick in a row across the screen, and a tie
+     drew them in list order, so on one side of the board each brick
+     painted over the neighbour that stood in front of it. For unit
+     boxes on a grid, eye distance puts the nearer of any two touching
+     boxes second, at every yaw. */
   const items=[];
+  const eye=(x,y,z)=>P(x+.5,y+.5,z+.5).r;
   for(let y=0;y<sc.gh;y++)for(let x=0;x<sc.gw;x++){
     const b=at(sc.base,x,y), h=at(sc.h,x,y), want=(sc.plan&&sc.plan[K(x,y)]);
+    for(let z=0;z<b;z++)items.push({t:"rock",x:x,y:y,z:z,r:eye(x,y,z)});
     for(let z=Math.max(0,b);z<h;z++){
       const over=want!=null?(z>=want):(sc.plan?true:false);
-      items.push({t:"b",x:x,y:y,z:z,bad:!!(sc.plan&&over),d:P(x+.5,y+.5,z+.5).d});
+      items.push({t:"b",x:x,y:y,z:z,bad:!!(sc.plan&&over),r:eye(x,y,z)});
     }
     if(want!=null)for(let z=Math.max(0,h);z<want;z++)
-      items.push({t:"g",x:x,y:y,z:z,d:P(x+.5,y+.5,z+.5).d});
+      items.push({t:"g",x:x,y:y,z:z,r:eye(x,y,z)});
   }
-  if(sc.robot)items.push({t:"r",d:P(sc.robot.x+.5,sc.robot.y+.5,sc.robot.z+.5).d});
-  items.sort((a,b)=>b.d-a.d);
+  if(sc.robot)items.push({t:"r",r:eye(sc.robot.x,sc.robot.y,sc.robot.z)});
+  items.sort((a,b)=>b.r-a.r);
   for(const it of items){
-    if(it.t==="b")cube(g,P,it.x,it.y,it.z,it.bad?BRICK_BAD:(sc.plan?BRICK_OK:BRICK));
+    if(it.t==="rock")cube(g,P,it.x,it.y,it.z,"#a89b86",{stud:false,line:"rgba(60,50,40,.35)"});
+    else if(it.t==="b")cube(g,P,it.x,it.y,it.z,it.bad?BRICK_BAD:(sc.plan?BRICK_OK:BRICK));
     else if(it.t==="g")ghost(g,P,it.x,it.y,it.z,t);
     else robot(g,P,sc.robot,t);
   }
