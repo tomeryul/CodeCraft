@@ -583,8 +583,8 @@ function t3Bar(on){
   if(bar)return;
   bar=document.createElement("div");bar.id="t3Bar";bar.className="t3bar";
   bar.innerHTML='<span class="t3tag">🧊 3D</span>'+
-    '<button class="t3btn" id="t3RotL" title="Rotate left">↺</button>'+
-    '<button class="t3btn" id="t3RotR" title="Rotate right">↻</button>'+
+    '<button class="t3btn" id="t3RotL" title="Rotate left" aria-label="Rotate left">↺</button>'+
+    '<button class="t3btn" id="t3RotR" title="Rotate right" aria-label="Rotate right">↻</button>'+
     '<span class="t3h">⛰ <b id="t3Height">0</b></span>'+
     '<span class="t3key"><i class="t3sw t3sw-b"></i>built<i class="t3sw t3sw-p"></i>planned<i class="t3sw t3sw-x"></i>stray</span>';
   const cv=$("mgCanvas");

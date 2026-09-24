@@ -996,18 +996,32 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 /* ---- Tower level editor (3D design mode in the creator) ------------- */
 #mgCreatorBar #t3Btn.on{background:linear-gradient(180deg,#8ad4ff,#4aa6dd);color:#082436;
   border-bottom-color:#2a7ba8;box-shadow:inset 0 1px 0 rgba(255,255,255,.4);}
-.t3edrow{background:rgba(0,0,0,.2);border-radius:14px;padding:6px 8px;}
-.t3vbtn{padding:5px 10px;border-radius:9px;font-size:11.5px;font-weight:800;
-  background:var(--glass-hi);border:1px solid var(--hair);color:var(--ink);cursor:pointer;}
+/* The designer's one strip under the board: the view switch and the
+   camera on the left, the counts on the right, and the legend for what is
+   on screen as a line of its own underneath — never squeezed in beside. */
+.t3edrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 8px;
+  margin:8px 0 0;padding:8px 10px;border-radius:14px;
+  background:var(--glass-hi);border:1px solid var(--hair);}
+.t3edrow .spacer{flex:1;}
+/* 3D | Plan: one control with two halves, so which one is on is read at a
+   glance instead of from a label that flips */
+.t3seg{display:inline-flex;padding:2px;gap:2px;border-radius:10px;background:rgba(0,0,0,.25);}
+.t3vbtn{padding:6px 11px;border-radius:8px;font-size:12px;font-weight:800;line-height:1.1;
+  background:transparent;border:0;color:var(--ink2);cursor:pointer;white-space:nowrap;}
 .t3vbtn:active{transform:scale(.95);}
-.t3vbtn.on{background:linear-gradient(180deg,#8ad4ff,#4aa6dd);color:#082436;border-color:transparent;}
-.t3stat{font-size:11.5px;font-weight:700;color:var(--ink2);}
+.t3vbtn.on{background:linear-gradient(180deg,#8ad4ff,#4aa6dd);color:#082436;}
+.t3stat{font-size:12px;font-weight:700;color:var(--ink2);white-space:nowrap;}
 .t3stat b{color:var(--ink);}
-.t3leg{display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--ink2);white-space:nowrap;}
-.t3lg{width:9px;height:9px;border-radius:2px;display:inline-block;margin-left:6px;}
+.t3edrow .t3leg{flex:1 0 100%;justify-content:center;padding-top:6px;
+  border-top:1px solid var(--hair);}
+.t3leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink2);white-space:nowrap;}
+.t3lg{width:10px;height:10px;border-radius:3px;display:inline-block;margin-left:8px;}
+.t3lg:first-child{margin-left:0;}
 .t3lg-p{background:#ffb347;}
 .t3lg-g{background:#a89b86;}
-.t3lg-h{background:#2f261e;}
+.t3lg-h{background:#2f261e;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);}
+.t3lg-ghost{border:1.5px dashed #e98c20;background:rgba(255,214,140,.3);}
+#t3Warn{margin-top:8px;}
 
 /* the verdict line: green while the plan is buildable, amber when not */
 .t3warn{font-size:11.5px;font-weight:600;line-height:1.4;padding:7px 10px;border-radius:11px;

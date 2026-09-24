@@ -370,11 +370,27 @@ function chrome(){
 
   const row=document.createElement("div");
   row.id="t3EdRow";row.className="cb-row t3edrow";
-  row.innerHTML='<button class="t3vbtn" id="t3View"></button>'+
+  /* ONE strip under the board while designing. The play bar (t3Bar in
+     tower3d.js) used to stand above this one with its own 3D tag, its own
+     ⛰ and its own legend, so the screen carried two of everything and
+     this row, laid out as bare inline text, ran its toggle into its
+     numbers. The play bar stays off in the designer; its rotate buttons
+     live here, shown only when there is a 3D view to turn.
+     Every word is its own element, so the Hebrew layer can match it. */
+  row.innerHTML=
+    '<span class="t3seg">'+
+      '<button class="t3vbtn" id="t3View" data-v="3d">🧊 3D</button>'+
+      '<button class="t3vbtn" id="t3Plan" data-v="grid">🗺️ <span>Plan</span></button>'+
+    '</span>'+
+    '<button class="t3btn" id="t3EdRotL" title="Rotate left" aria-label="Rotate left">↺</button>'+
+    '<button class="t3btn" id="t3EdRotR" title="Rotate right" aria-label="Rotate right">↻</button>'+
+    '<span class="spacer"></span>'+
     '<span class="t3stat">⛰ <b id="t3Peak">0</b></span>'+
     '<span class="t3stat">🧱 <b id="t3Bricks">0</b></span>'+
-    '<span class="spacer"></span>'+
-    '<span class="t3leg"><i class="t3lg t3lg-p"></i>brick<i class="t3lg t3lg-g"></i>ground<i class="t3lg t3lg-h"></i>pit</span>';
+    '<span class="t3leg" id="t3LegPlan"><i class="t3lg t3lg-p"></i><span>brick</span>'+
+      '<i class="t3lg t3lg-g"></i><span>ground</span><i class="t3lg t3lg-h"></i><span>pit</span></span>'+
+    '<span class="t3leg" id="t3Leg3d"><i class="t3lg t3lg-ghost"></i><span>planned</span>'+
+      '<i class="t3lg t3lg-g"></i><span>ground</span><i class="t3lg t3lg-h"></i><span>pit</span></span>';
   /* The stats and the 🧊/🗺️ view toggle stay with the BOARD: they are read
      and used while drawing. The bar they used to sit in is a tab away now. */
   const read=$("mgRead")||bar, dock=$("mgDock");
@@ -382,11 +398,14 @@ function chrome(){
   const warn=document.createElement("div");
   warn.id="t3Warn";warn.className="t3warn";
   read.insertBefore(warn,dock||null);
-  $("t3View").addEventListener("click",()=>{
-    mgState.t3view=mgState.t3view==="3d"?"grid":"3d";
-    if(window.t3Cam)t3Cam.bar(mgState.t3view==="3d");
+  for(const id of ["t3View","t3Plan"])$(id).addEventListener("click",e=>{
+    const v=e.currentTarget.dataset.v;
+    if(mgState.t3view===v)return;
+    mgState.t3view=v;
     sfx(560,.03);ui();mgDraw();
   });
+  $("t3EdRotL").addEventListener("click",()=>{if(window.t3Cam)t3Cam.rot(-1);});
+  $("t3EdRotR").addEventListener("click",()=>{if(window.t3Cam)t3Cam.rot(1);});
 
   const hint=document.createElement("button");
   hint.id="t3Hint";hint.className="rowbtn";
@@ -441,8 +460,13 @@ function ui(){
     const e=$(id); if(e)e.style.display="none";
   }
   const solid=mgState.t3view==="3d";
-  $("t3View").textContent=solid?"🧊 3D view":"🗺️ Plan view";
   $("t3View").classList.toggle("on",solid);
+  $("t3Plan").classList.toggle("on",!solid);
+  $("t3View").setAttribute("aria-pressed",String(solid));
+  $("t3Plan").setAttribute("aria-pressed",String(!solid));
+  for(const id of ["t3EdRotL","t3EdRotR","t3Leg3d"])$(id).style.display=solid?"":"none";
+  $("t3LegPlan").style.display=solid?"none":"";
+  if(window.t3Cam)t3Cam.bar(false);          // the designer's strip is the only one
   $("t3Peak").textContent=peak(p);
   $("t3Bricks").textContent=bricks(p);
   const v=check(p);
@@ -514,7 +538,6 @@ window.mgDraw=function(){
   if(!edit3())return _mgDraw();
   if(mgState.running&&mgState.t3view!=="3d"){
     mgState.t3view="3d";
-    if(window.t3Cam)t3Cam.bar(true);
     setTimeout(ui,0);
   }
   if(mgState.t3view==="3d"){

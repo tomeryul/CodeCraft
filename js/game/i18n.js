@@ -1468,6 +1468,8 @@ const HE_RAW={
   "🕳️ לבנה צריכה קרקע מתחתיה — קודם תמלא את הבור.",
 "🕳️ Not into a pit — pick solid ground.":"🕳️ לא לתוך בור — תבחר קרקע מוצקה.",
 "🗺️ Plan view":"🗺️ תצוגת תוכנית",
+"Plan":"תוכנית","Rotate left":"סובב שמאלה","Rotate right":"סובב ימינה",
+"brick":"לבנה","ground":"קרקע","pit":"בור","planned":"מתוכנן","built":"נבנה","stray":"מיותר",
 "🤖 That's the robot's start — put it somewhere else first.":
   "🤖 זו נקודת ההתחלה של הרובוט — קודם תעביר אותה למקום אחר.",
 "🧊 3D view":"🧊 תצוגה תלת-ממדית",

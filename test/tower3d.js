@@ -139,6 +139,61 @@ const ck = (n, ok, d) => { ok ? pass++ : fail++;
   });
   ck('each column’s front face is its own, not a neighbour painted over it', row.length === 0, row);
 
+  console.log('▶ the designer has one strip under the board, and nothing in it overlaps');
+  /* Designing a tower level used to stack two strips under the board —
+     the play bar and the designer's own row, each with its own 3D tag, ⛰
+     and legend — and the row, laid out as bare inline text, ran its
+     toggle into its numbers. */
+  for (const W of [320, 390]) {
+    const ap = await b.newPage({ viewport: { width: W, height: 844 }, hasTouch: true, isMobile: true });
+    ap.on('pageerror', e => errs.push(String(e)));
+    await ap.goto('file://' + path.join(ROOT, 'index.html'));
+    await ap.waitForTimeout(1000);
+    await ap.selectOption('#ageMonth', '6');
+    await ap.selectOption('#ageYear', String(new Date().getFullYear() - 30));
+    await ap.click('#ageGo'); await ap.waitForTimeout(400);
+    await ap.evaluate(() => $('playBtn').click()); await ap.waitForTimeout(1400);
+    await ap.evaluate(() => { const c = document.querySelector('#ccCele .cc-cta'); if (c) c.click(); });
+    await ap.waitForTimeout(300);
+    const R = await ap.evaluate(async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      if (mgState) mgExit(false);
+      document.querySelectorAll('.sheet.open').forEach(x => x.classList.remove('open'));
+      window.confirm = () => true;
+      mgEnterCreator(); await wait(700);
+      $('t3Btn').click(); await wait(400);
+      setTab('board'); $('t3View').click(); await wait(600);
+      const shown = e => !!e && !!e.offsetParent;
+      const row = $('t3EdRow');
+      /* every visible leaf of the strip, as boxes */
+      const parts = [...row.querySelectorAll('.t3vbtn,.t3btn,.t3stat,.t3leg')].filter(shown)
+        .map(e => { const r = e.getBoundingClientRect(); return { id: e.id || e.className, l: r.left, r: r.right, t: r.top, b: r.bottom }; });
+      const hits = [];
+      for (let i = 0; i < parts.length; i++) for (let j = i + 1; j < parts.length; j++) {
+        const a = parts[i], c = parts[j];
+        if (a.l < c.r - 1 && c.l < a.r - 1 && a.t < c.b - 1 && c.t < a.b - 1) hits.push(a.id + ' × ' + c.id);
+      }
+      const rr = row.getBoundingClientRect();
+      const out = { strips: ['t3Bar', 't3EdRow'].filter(id => shown($(id))),
+        hits, fits: row.scrollWidth <= row.clientWidth + 1 && rr.right <= innerWidth,
+        rot3d: shown($('t3EdRotL')) && shown($('t3EdRotR')), pressed: $('t3View').getAttribute('aria-pressed') };
+      if (!$('t3Plan')) { mgExit(false); return Object.assign(out, { rotPlan: null, legPlan: false }); }
+      $('t3Plan').click(); await wait(300);
+      out.rotPlan = shown($('t3EdRotL'));
+      out.legPlan = shown($('t3LegPlan')) && !shown($('t3Leg3d'));
+      mgExit(false);
+      return out;
+    });
+    ck(`${W}: one strip under the board, not two`,
+      R.strips.length === 1 && R.strips[0] === 't3EdRow', R.strips);
+    ck(`${W}: nothing in the strip sits on top of anything else`, R.hits.length === 0, R.hits);
+    ck(`${W}: and the strip fits the screen`, R.fits === true, R);
+    ck(`${W}: the camera turns only where there is a 3D view to turn`,
+      R.rot3d === true && R.rotPlan === false && R.pressed === 'true', R);
+    ck(`${W}: the legend is the one for what is on screen`, R.legPlan === true, R);
+    await ap.close();
+  }
+
   ck('no uncaught exceptions', errs.length === 0, errs.slice(0, 3));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await b.close();
