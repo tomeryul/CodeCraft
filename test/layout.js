@@ -919,8 +919,10 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
        modes.every(m=>!(m.cyber&&m.tower)), modes);
     ck(`${W}x${H} switching kinds swaps the block list, it does not add one`,
        at('cyber->tower').rows===14 && at('tower->cyber').rows===12, modes);
+    /* 19: the challenge toolbox, plus 🚶 Walk To — listed for the author to
+       hand out, never handed out by default (see FLAT_BLOCKS) */
     ck(`${W}x${H} coming back to a flat board leaves the FLAT list, not the old one`,
-       at('cyber->flat').section===true && at('cyber->flat').rows===18,
+       at('cyber->flat').section===true && at('cyber->flat').rows===19,
        at('cyber->flat'));
 
     for(const k of ["flat","cyber","tower"]){
