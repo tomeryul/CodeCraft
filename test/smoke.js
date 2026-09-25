@@ -3274,7 +3274,7 @@ async function ev(expr) {
     AC.acadTrack === AC.count && /4\/10 done/.test(AC.acadMeta || "")
       && /basics 4\/6/.test(AC.acadMeta || ""), AC.acadMeta + " dots=" + AC.acadTrack);
   check("Puzzle chapters use the same card, one dot per level",
-    AC.packCards === 5 && AC.packDots === true, "packs=" + AC.packCards + " dots=" + AC.packDots);
+    AC.packCards === 6 && AC.packDots === true, "packs=" + AC.packCards + " dots=" + AC.packDots);
   check("no chapter is locked — every one is open from the start",
     AC.packLocked === 0 && AC.oldMarkup === 0, "locked=" + AC.packLocked + " old=" + AC.oldMarkup);
   check("tapping a level dot jumps straight into that level",
