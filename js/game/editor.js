@@ -263,8 +263,12 @@ function renderList(list,parent){
     if(b.t==="faceNearest"||b.t==="goNear"){
       // a fixed place, or wherever a variable says — "walk to what the order wants"
       if(b.src)inner+='<button class="pbtn" data-p="tsrc">📦 '+esc(b.src)+'</button>';
-      else inner+='<button class="pbtn" data-p="tgt">'+TGT_EM[b.opt]+' '+b.opt+'</button>';
-      if(mgState||unlocks.vars)inner+='<button class="pbtn" data-p="tmode">'+(b.src?"🗺️":"📦")+'</button>';
+      /* the word in its own element: the Hebrew layer matches whole text
+         nodes, and "🔑 key" as one node came back as a word with no icon */
+      else inner+='<button class="pbtn" data-p="tgt">'+(TGT_EM[b.opt]||"❓")+' <span>'+b.opt+'</span></button>';
+      /* "wherever a variable says" is the world's: a board's destinations are
+         the few its author allowed, and a name typed into a box is none of them */
+      if(!mgState&&unlocks.vars)inner+='<button class="pbtn" data-p="tmode">'+(b.src?"🗺️":"📦")+'</button>';
     }
     if(b.t==="call"){
       const f=routineOf(R(),b.fn||"A");
@@ -352,7 +356,11 @@ function renderList(list,parent){
           b.src=SRCS[(i<0?0:i+1)%SRCS.length];
         }
         if(p==="build")b.opt=BUILDS[(BUILDS.indexOf(b.opt)+1)%BUILDS.length];
-        if(p==="tgt")b.opt=TARGETS[(TARGETS.indexOf(b.opt)+1)%TARGETS.length];
+        if(p==="tgt"){
+          // on a board, only the destinations this level's author allowed
+          const L=(mgState&&typeof mgGoList==="function")?mgGoList(mgState.proj):TARGETS;
+          b.opt=L[(L.indexOf(b.opt)+1)%L.length];
+        }
         if(p==="tmode")b.src=b.src?null:"what";
         if(p==="tsrc")b.src=promptName(b.src);
         if(p==="ch")b.opt=RADIO_CH[(RADIO_CH.indexOf(b.opt)+1)%RADIO_CH.length];

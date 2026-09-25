@@ -796,6 +796,10 @@ const HE={
 "Leave It Behind":"להשאיר מאחור",
 "Locked Machine":"מכונה נעולה",
 "Locked Vault":"כספת נעולה",
+"Errands":"שליחויות","Fetch the Key":"להביא את המפתח","Nearest First":"הקרוב קודם",
+"Delivery":"משלוח","Hold the Gate":"להחזיק את השער",
+"Stop counting steps. Name WHERE to go and the robot finds its own way — then think about what to fetch, and in which order.":
+  "די לספור צעדים. תגיד לאן ללכת והרובוט ימצא לבד את הדרך — ואז תחשוב מה להביא, ובאיזה סדר.",
 "Mind the Gap":"להיזהר מהפער",
 "One Job, Many Times":"עבודה אחת, הרבה פעמים",
 "One Key, One Door":"מפתח אחד, דלת אחת",
@@ -1131,6 +1135,15 @@ const SCOPED=[
    the ⛓️ from "Collect 5 ⛓️ iron". These are used verbatim instead, and
    ui-icons.js turns whatever emoji they carry into icons either way. */
 const HE_RAW={
+  /* the Errands chapter: flags, keys and blocks named mid-sentence */
+  "🚶 Walk To takes a place, not a number of steps — the robot finds its own way round the walls. The 🚩 is locked away: walk to the 🔑 first, then to the flag.":
+  "🚶 לך אל מקבל מקום, לא מספר צעדים — הרובוט מוצא לבד את הדרך מסביב לקירות. ה-🚩 נעול: תלך קודם אל ה-🔑, ורק אז אל הדגל.",
+  "Walk To always goes to the NEAREST one it can reach. The second 🔑 is behind the first door — so one block, used twice, fetches them in the right order.":
+  "לך אל תמיד הולך אל הקרוב ביותר שאפשר להגיע אליו. ה-🔑 השני נמצא מאחורי הדלת הראשונה — אז בלוק אחד, פעמיים, מביא אותם בסדר הנכון.",
+  "Three 🟧 blocks on one side, three 🎯 targets on the other. Walk to a block, ✊ Lift it, walk to a target, ⤵️ Drop it — and let a 🔁 loop do it three times.":
+  "שלושה 🟧 בלוקים בצד אחד, שלושה 🎯 יעדים בצד השני. תלך אל בלוק, ✊ תרים אותו, תלך אל יעד, ⤵️ תניח אותו — ותן ל-🔁 לולאה לעשות את זה שלוש פעמים.",
+  "The 🚧 gate is open only while its 🔘 plate is pressed. Stand on it and it opens — until you walk away. Fetch the 🟧 block and leave IT on the plate.":
+  "ה-🚧 שער פתוח רק כל עוד ה-🔘 לחצן שלו לחוץ. תעמוד עליו והוא נפתח — עד שתלך משם. תביא את ה-🟧 בלוק ותשאיר אותו על הלחצן.",
   /* the emoji sit inside these sentences, so they are used as written */
   "Puts the carried brick down. Into a 🕳️ pit straight ahead if there is one — that is the only way to bridge a gap — otherwise on the tile underneath.":
     "מניח את הלבנה שהוא נושא. לתוך 🕳️ בור שנמצא ישר לפניו אם יש אחד — זו הדרך היחידה לגשר על פער — אחרת על המשבצת שמתחתיו.",
@@ -1468,7 +1481,12 @@ const HE_RAW={
   "🕳️ לבנה צריכה קרקע מתחתיה — קודם תמלא את הבור.",
 "🕳️ Not into a pit — pick solid ground.":"🕳️ לא לתוך בור — תבחר קרקע מוצקה.",
 "🗺️ Plan view":"🗺️ תצוגת תוכנית",
-"Plan":"תוכנית","Rotate left":"סובב שמאלה","Rotate right":"סובב ימינה",
+"Plan":"תוכנית",
+"target":"יעד","block":"בלוק","flag":"דגל","key":"מפתח","door":"דלת","plate":"לחצן",
+"It can walk to":"הוא יכול ללכת אל",
+"🚶 Walk To needs somewhere to go — leave at least one.":"🚶 לך אל צריך לאן ללכת — תשאיר לפחות אחד.",
+"Walks to the nearest thing you name — a target, a block, a key — and finds its own way round walls on the way. That makes a level about WHAT to fetch and in which order, not about the route, so hand it out only where that is the point.":
+  "הולך אל הדבר הקרוב ביותר שבחרת — יעד, בלוק, מפתח — ומוצא לבד את הדרך מסביב לקירות. זה הופך שלב לשאלה של מה להביא ובאיזה סדר, ולא של המסלול, אז תן אותו רק כשזו המטרה.","Rotate left":"סובב שמאלה","Rotate right":"סובב ימינה",
 "brick":"לבנה","ground":"קרקע","pit":"בור","planned":"מתוכנן","built":"נבנה","stray":"מיותר",
 "🤖 That's the robot's start — put it somewhere else first.":
   "🤖 זו נקודת ההתחלה של הרובוט — קודם תעביר אותה למקום אחר.",

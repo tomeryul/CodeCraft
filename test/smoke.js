@@ -3860,7 +3860,7 @@ async function ev(expr) {
   check("every stored solution fits the level's block budget", CAMP.budget.length === 0, camp);
   check("multi-input levels are judged on every one of their inputs", CAMP.partial.length === 0, camp);
   check("a level can hand the player a starter routine", CAMP.presetGiven === true, camp);
-  check("the campaign has 5 chapters of levels, with a suggested order", CAMP.packs === 5 && CAMP.levels === 23 && CAMP.gated === 4, camp);
+  check("the campaign has 6 chapters of levels, with a suggested order", CAMP.packs === 6 && CAMP.levels === 27 && CAMP.gated === 5, camp);
   check("the Algorithms levels are multi-input, each with a hidden case", CAMP.multi === 7 && CAMP.hidden === 7, camp);
 
   console.log("▶ 📘 design guide: every starter board is solvable within its budget");

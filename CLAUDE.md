@@ -124,6 +124,17 @@ library), `write-swift`. Two more only run when you type them:
 `.claude/skills/performance-cheatsheet.md` is a one-page table from the
 same repo — the fifteen lines are worth reading once.
 
+## 🚶 Walk To on a board
+
+A challenge board can hand out the world's 🚶 Walk To (`goNear`): it
+walks to the nearest target, block, flag, key, door or plate by the
+same rules ⬆️ Move obeys (`mgMoveAhead`), one tile a tick. On a level
+about the route it solves the level, so it is in NO default block list —
+only in `FLAT_BLOCKS` for the author to hand out, and in the Errands
+chapter. The author also picks its destinations (`proj.goTargets`). A
+single level's row has no column for either, so a level that hands it
+out publishes as a one-level pack. `test/walk-to.js`.
+
 ## The 3D board
 
 `js/game/tower3d.js` is a painter, not a z-buffer, so order is

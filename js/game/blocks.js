@@ -33,7 +33,13 @@ const BUILD_LBL={sapling:"🌱 sapling (1🪵)",bridge:"🌉 bridge (2🪨)",che
 // an object, and market/home/chest are places you go to finish a job — all four
 // were missing, so half the world was unreachable by name.
 const TARGETS=["tree","rock","iron","crystal","water","market","home","chest"];
-const TGT_EM={tree:"🌳",rock:"🪨",iron:"⛓️",crystal:"💎",water:"💧",market:"🏪",home:"🏠",chest:"📦"};
+const TGT_EM={tree:"🌳",rock:"🪨",iron:"⛓️",crystal:"💎",water:"💧",market:"🏪",home:"🏠",chest:"📦",
+  target:"🎯",block:"🟧",flag:"🚩",key:"🔑",door:"🚪",plate:"🔘"};
+/* …and everywhere it can send a robot on a challenge BOARD, where there are
+   no trees or markets but there are targets, blocks, a flag, keys, doors and
+   plates. A level's author chooses which of these its player may name; see
+   mgGoList() in challenges.js. */
+const BOARD_TARGETS=["target","block","flag","key","door","plate"];
 const DEFS={
   /* `tip` is what the block does, in one sentence, written for the person
      DESIGNING a level rather than solving one — they are choosing which of
@@ -166,6 +172,9 @@ function newBlock(t){
   if(t==="rest")b.n=2;
   if(t==="build")b.opt="sapling";
   if(t==="faceNearest"||t==="goNear")b.opt="tree";
+  // on a board it starts on the first destination the level allows
+  if(t==="goNear"&&typeof mgState!=="undefined"&&mgState&&typeof mgGoList==="function")
+    b.opt=mgGoList(mgState.proj)[0];
   if(t==="broadcast"||t==="goTo")b.opt="tree"; // which channel on the noticeboard
   if(t==="setVar"){b.name="x";b.val={k:"num",n:5};}
   if(t==="changeVar"){b.name="x";b.n=1;}

@@ -400,6 +400,7 @@ function mgEditMyChallenge(entry){
   }else{
     p.gw=entry.gw||8; p.gh=entry.gh||6; p.maxBlocks=entry.maxBlocks||12;
     p.allowed=entry.allowed||CREATOR_BLOCKS;
+    p.goTargets=entry.goTargets||null;
     p.cells=JSON.parse(JSON.stringify(entry.cells||[]));
     p.tiles=JSON.parse(JSON.stringify(entry.tiles||[]));
     p.initial=JSON.parse(JSON.stringify(entry.initial||[]));
@@ -533,13 +534,67 @@ function mgRegisterBlocks(set){MG_SETS.push(set);}
 window.mgRegisterBlocks=mgRegisterBlocks;
 
 /* the flat board's own set. `allowed` is per-project, saved with the
-   challenge, and already what the palette reads (see dragdrop.js). */
+   challenge, and already what the palette reads (see dragdrop.js).
+   🚶 Walk To is on the LIST but never in anybody's default: every level
+   that already exists keeps exactly the blocks it had, and an author has
+   to choose to hand it out. */
+const FLAT_BLOCKS=CHALLENGE_BLOCKS.slice(0,3).concat(["goNear"],CHALLENGE_BLOCKS.slice(3));
 mgRegisterBlocks({
   id:"flat",
   when:p=>!p.cyber&&!p.mode3d,
-  list:()=>CHALLENGE_BLOCKS,
-  locked:{move:1,turnL:1,turnR:1}   // a board you cannot walk is not a level
+  list:()=>FLAT_BLOCKS,
+  locked:{move:1,turnL:1,turnR:1},  // a board you cannot walk is not a level
+  tips:()=>({goNear:"Walks to the nearest thing you name — a target, a block, a key — and finds its own way round walls on the way. That makes a level about WHAT to fetch and in which order, not about the route, so hand it out only where that is the point."}),
+  after:host=>mgGoPick(host)
 });
+/* Where a 🚶 Walk To may go on THIS level, chosen by its author. Shown only
+   while the block is handed out, right under its row, because it is a
+   setting of that block and nothing else. At least one stays on: a Walk To
+   with nowhere to go is a block that can only bump. */
+const MG_GO_WORD={target:"target",block:"block",flag:"flag",key:"key",door:"door",plate:"plate"};
+// on first hand-out: whatever this board actually has, so it starts useful
+function mgGoDefault(p){
+  const have=[];
+  const T=t=>(p.tiles||[]).some(c=>c&&c[2]===t);
+  if((p.cells||[]).length)have.push("target");
+  if((p.initial||[]).length)have.push("block");
+  if(p.goal)have.push("flag");
+  for(const t of ["key","door","plate"])if(T(t))have.push(t);
+  return have.length?have:["target"];
+}
+function mgGoPick(host){
+  const p=mgState&&mgState.proj; if(!p)return;
+  const row=host.querySelector('[data-blk="goNear"]');
+  if(!row||(p.allowed||[]).indexOf("goNear")<0)return;
+  const on=new Set(mgGoList(p));
+  const box=document.createElement("div");
+  box.id="mgGoPick";box.className="mg-gopick";
+  const lbl=document.createElement("span");lbl.className="gp-l";lbl.textContent="It can walk to";
+  const chips=document.createElement("div");chips.className="t3chips";
+  // the flag is only a destination on a level that has one
+  const kinds=MG_GO.filter(k=>k!=="flag"||p.goal);
+  for(const k of kinds){
+    const c=document.createElement("button");
+    c.className="t3chip"+(on.has(k)?" on":"");c.dataset.go=k;
+    c.setAttribute("aria-pressed",String(on.has(k)));
+    const em=document.createElement("span");em.textContent=TGT_EM[k];
+    const w=document.createElement("span");w.textContent=MG_GO_WORD[k];
+    c.appendChild(em);c.appendChild(w);
+    c.addEventListener("click",()=>{
+      if(on.has(k)){
+        if(on.size<2){toast("🚶 Walk To needs somewhere to go — leave at least one.");sfx(200,.05);return;}
+        on.delete(k);
+      }else on.add(k);
+      p.goTargets=MG_GO.filter(x=>on.has(x));
+      mgState.solved=false;
+      sfx(520,.03);
+      renderProgram();mgCreatorUI();
+    });
+    chips.appendChild(c);
+  }
+  box.appendChild(lbl);box.appendChild(chips);
+  row.insertAdjacentElement("afterend",box);
+}
 
 function mgBlocksUI(){
   const bar=$("mgCreatorBar"); if(!bar)return;
@@ -560,6 +615,7 @@ function mgBlocksUI(){
   const have=new Set(p.allowed||list);
   mgBlockRows(host,list,p.allowed||list,lock,(t,give)=>{
     if(give)have.add(t); else have.delete(t);
+    if(give&&t==="goNear"&&!(p.goTargets&&p.goTargets.length))p.goTargets=mgGoDefault(p);
     p.allowed=list.filter(k=>have.has(k)||lock[k]);
     mgState.solved=false;
     sfx(520,.03);
@@ -1023,6 +1079,10 @@ function mgEditStage(i){
   p.initial=JSON.parse(JSON.stringify(s.initial||[]));
   p.start=JSON.parse(JSON.stringify(s.start||{x:0,y:0,dir:1}));
   p.gw=s.gw;p.gh=s.gh;p.maxBlocks=s.maxBlocks;if(s.diff)p.diff=s.diff;
+  // the blocks it hands out are part of the level too (they used to be left
+  // behind, so a banked level reopened with whatever the last one had)
+  if(s.allowed)p.allowed=s.allowed.slice();
+  p.goTargets=s.goTargets?s.goTargets.slice():null;
   p.cases=JSON.parse(JSON.stringify(s.cases||[]));
   p.preset=s.preset?JSON.parse(JSON.stringify(s.preset)):null;
   const sol=s.sol||[];       // this level's saved solution
@@ -1248,7 +1308,7 @@ function snapshotStage(p){
   const sort=mgHasNumbers(p), b=baseBoard(p);
   return JSON.parse(JSON.stringify({
     em:sort?"🔢":"🧩", name:p.name, diff:p.diff||1, maxBlocks:p.maxBlocks, gw:p.gw, gh:p.gh,
-    allowed:p.allowed, start:b.start, cells:b.cells, initial:b.initial, tiles:b.tiles,
+    allowed:p.allowed, goTargets:p.goTargets||null, start:b.start, cells:b.cells, initial:b.initial, tiles:b.tiles,
     cases:p.cases||[],        // the inputs one program has to handle
     preset:p.preset||null,    // starter routines handed to the player
     sol:(mgRobot?packProg(mgRobot):[]), // author's proving solution — loaded only in edit mode
@@ -1431,6 +1491,13 @@ async function publishChallenge(){
   // multi-level only when there are banked levels; a lone current design stays single
   let stages=[];
   if(banked.length)stages=(curHas&&mgState.solved)?banked.concat([snapshotStage(p)]):banked.slice();
+  /* A single level's row has columns for its board but none for the blocks
+     it hands out — a published level has always been played with the full
+     toolbox. That was harmless while nothing was withheld by default; 🚶
+     Walk To is, and its destinations are the author's choice. So a level
+     that hands it out goes up as a one-level pack, whose level carries
+     `allowed` and `goTargets` whole — the way a Tower level already does. */
+  else if(curHas&&(p.allowed||[]).indexOf("goNear")>=0)stages=[snapshotStage(p)];
   const multi=stages.length>0;
   const base=multi?stages[0]:Object.assign(baseBoard(p),{maxBlocks:p.maxBlocks,gw:p.gw,gh:p.gh});
   // Author's solution: level 1's for the top-level column (multi levels keep their
@@ -1502,7 +1569,7 @@ function saveMyChallenge(){
   const copy=JSON.parse(JSON.stringify({
     id:"my_"+Date.now(), mine:true, em:sort?"🔢":"🧩", name:p.name, diff,
     coins:0, xp:0, maxBlocks:p.maxBlocks, gw:p.gw, gh:p.gh,
-    allowed:p.allowed, start:b.start, cells:b.cells, initial:b.initial, tiles:b.tiles,
+    allowed:p.allowed, goTargets:p.goTargets||null, start:b.start, cells:b.cells, initial:b.initial, tiles:b.tiles,
     cases:p.cases||[], preset:p.preset||null,
     sol:(mgRobot?packProg(mgRobot):[]), // author's solution (loaded only when editing)
     desc:(sort?"Sort the numbered blocks into order ":"Fill the blueprint ")+"— your custom challenge!"}));
@@ -1563,6 +1630,138 @@ function mgSeed(rs,proj){
 function mgWalkable(st,x,y){
   if(x<0||y<0||x>=st.proj.gw||y>=st.proj.gh)return false;
   return !(window.CC_TILES&&CC_TILES.solid(st.robot,x+"_"+y));
+}
+/* One step forward, by every rule a board has: a one-way tile you may not
+   leave this way, a cell you cannot stand on, and whatever the cell does
+   when you arrive (a key picked up, a portal crossed). ⬆️ Move is this and
+   nothing else, and so is every step of a 🚶 Walk To — the two can never
+   disagree about where a robot is allowed to go. */
+function mgMoveAhead(st,rb){
+  const nx=rb.x+DX[rb.dir],ny=rb.y+DY[rb.dir];
+  if(window.CC_TILES&&!CC_TILES.canLeave(rb,rb.x,rb.y,rb.dir)){sfx(180,.05);return false;}
+  if(!mgWalkable(st,nx,ny)){sfx(180,.05);return false;}   // a wall, a shut door, the edge
+  rb.x=nx;rb.y=ny;
+  // the tile may relocate the robot (portals) or hand it something (keys)
+  if(window.CC_TILES){
+    const to=CC_TILES.enter(st,rb,nx+"_"+ny);
+    if(to){const q=to.split("_");rb.x=+q[0];rb.y=+q[1];}
+  }
+  return true;
+}
+
+/* ---------------- 🚶 Walk To, on a board ----------------
+   The world has always travelled by naming a destination; a board only by
+   counting steps and turns. Some levels are better for the first — an
+   errand across a room is about WHAT to fetch and in which order, not
+   about spelling out every corner on the way — so a level can hand this
+   out, and its author picks which destinations the player may name
+   (`proj.goTargets`, see the Design tab). It is never on by default: on a
+   level that is about the route, it would solve the level.
+
+   It walks, one tile a tick, by exactly the rules ⬆️ Move obeys — it can
+   be stopped by a wall, a shut door, a closed gate or an open pit like
+   anyone else. It locks onto the NEAREST one when it sets off and plans
+   again every step, so a gate that closes behind a plate it just left
+   stops it honestly instead of walking it through. A place it cannot
+   stand on (a locked door) is reached by stopping next to it, facing it.
+   Nothing of that kind, or no way there: a bump, and the program goes on. */
+const MG_GO=BOARD_TARGETS;
+function mgGoList(p){
+  const g=((p&&p.goTargets)||[]).filter(k=>MG_GO.indexOf(k)>=0);
+  return g.length?g:["target"];
+}
+// every tile that counts as `kind` right now
+function mgGoDests(st,kind){
+  const rb=st.robot,p=st.proj,out=new Set(),T=window.CC_TILES;
+  const cells=p.cells||[];
+  if(kind==="target"){
+    // a target still waiting: no block on it, or (numbered) the wrong one
+    for(const c of cells){const k=c[0]+"_"+c[1];
+      if(!rb.bricks.has(k)||(c.length>2&&c[2]!=null&&rb.brickNo[k]!==c[2]))out.add(k);}
+  }else if(kind==="block"){
+    // a loose one: not already placed on a target, not spent as a bridge
+    const placed=new Set(cells.map(c=>c[0]+"_"+c[1]));
+    for(const k of rb.bricks){
+      if(placed.has(k)||(T&&T.isFilledPit(rb,k)))continue;
+      out.add(k);
+    }
+  }else if(kind==="flag"){
+    if(p.goal)out.add(p.goal[0]+"_"+p.goal[1]);
+  }else if(rb.tiles){
+    for(const [k,t] of rb.tiles)if(t.t===kind)out.add(k);
+  }
+  return out;
+}
+/* Shortest route to the nearest `kind` (or to the one already chosen).
+   Returns {goal, steps:[dir…], face} or null. `face` is set when the goal
+   is somewhere to stand NEXT to. Breadth-first over the board as it is
+   this tick: walls, doors without their key, gates, open pits and one-way
+   tiles all hold, and a portal is a door to its twin. */
+function mgGoPlan(st,kind,lock){
+  const rb=st.robot,T=window.CC_TILES;
+  let dests=mgGoDests(st,kind);
+  if(lock){ if(!dests.has(lock))return null; dests=new Set([lock]); }
+  if(!dests.size)return null;
+  const K=(x,y)=>x+"_"+y;
+  const goalAt=(x,y)=>{
+    const k=K(x,y);
+    if(dests.has(k)&&mgWalkable(st,x,y))return {goal:k,face:null};
+    for(let d=0;d<4;d++){
+      const nx=x+DX[d],ny=y+DY[d],nk=K(nx,ny);
+      if(dests.has(nk)&&!mgWalkable(st,nx,ny))return {goal:nk,face:d};
+    }
+    return null;
+  };
+  const twin=k=>{
+    const t=rb.tiles&&rb.tiles.get(k);
+    if(!t||t.t!=="portal")return k;
+    for(const [k2,t2] of rb.tiles)if(k2!==k&&t2.t==="portal"&&t2.a===t.a)return k2;
+    return k;
+  };
+  const start=K(rb.x,rb.y), prev=new Map([[start,null]]), q=[start];
+  while(q.length){
+    const k=q.shift(), xy=k.split("_"), x=+xy[0], y=+xy[1];
+    const g=goalAt(x,y);
+    if(g){
+      const steps=[];
+      for(let c=k;prev.get(c);c=prev.get(c).from)steps.unshift(prev.get(c).dir);
+      return {goal:g.goal,steps,face:g.face};
+    }
+    for(let d=0;d<4;d++){
+      if(T&&!T.canLeave(rb,x,y,d))continue;
+      const nx=x+DX[d],ny=y+DY[d];
+      if(!mgWalkable(st,nx,ny))continue;
+      const nk=twin(K(nx,ny));
+      if(prev.has(nk))continue;
+      prev.set(nk,{from:k,dir:d});
+      q.push(nk);
+    }
+  }
+  return null;
+}
+/* One tick of a 🚶 Walk To. True while it is still on its way — the same
+   block runs again next tick — and false once it has arrived or given up,
+   so the program moves on. The step that arrives is the tick that ends it:
+   a walk of four tiles costs four ticks, not five. */
+function mgWalkTick(st,b,fr){
+  const rb=st.robot;
+  let w=st.walk;
+  if(!w||w.fr!==fr||w.i!==fr.i)w=st.walk={fr,i:fr.i,goal:null};
+  /* only where this level lets it go — a program from somewhere else can
+     carry a destination this level's author did not hand out */
+  let plan=mgGoList(st.proj).indexOf(b.opt)>=0?mgGoPlan(st,b.opt,w.goal):null;
+  if(!plan){st.walk=null;sfx(180,.05);return false;}
+  w.goal=plan.goal;
+  if(plan.steps.length){
+    rb.dir=plan.steps[0];
+    if(!mgMoveAhead(st,rb)){st.walk=null;return false;}
+    plan=mgGoPlan(st,b.opt,w.goal);
+    if(!plan){st.walk=null;return false;}   // arrived ON it and it went (a key, picked up)
+    if(plan.steps.length)return true;
+  }
+  if(plan.face!=null)rb.dir=plan.face;
+  st.walk=null;
+  return false;
 }
 // does this project use numbered bricks / numbered target cells (→ numbers matter)?
 function mgHasNumbers(proj){
@@ -1764,7 +1963,7 @@ function mgCaseLabel(c,i){
 function mgStartCase(fast){
   const st=mgState;
   st.frames=[{blocks:mgRobot.program,i:0,reps:1}];
-  st.steps=0;st.wait=0;
+  st.steps=0;st.wait=0;st.walk=null;
   mgRobot.vars={};mgRobot.say=null;mgRobot.curUid=null;
   st.running=true;mgRobot.running=true;
   clearInterval(st.timer);st.timer=null;
@@ -1979,19 +2178,10 @@ function mgTick(){
     if(window.T3Act&&T3Act(st,b)){}
     // the Cyber Lab's keypad, same idea: answers false anywhere else
     else if(window.CCAct&&CCAct(st,b)){}
-    else if(b.t==="move"){
-      const nx=rb.x+DX[rb.dir],ny=rb.y+DY[rb.dir];
-      const oneWay=window.CC_TILES&&!CC_TILES.canLeave(rb,rb.x,rb.y,rb.dir);
-      if(oneWay)sfx(180,.05); // standing on a ➡️ one-way tile, facing the wrong way
-      else if(mgWalkable(st,nx,ny)){
-        rb.x=nx;rb.y=ny;
-        // the tile may relocate the robot (portals) or hand it something (keys)
-        if(window.CC_TILES){
-          const to=CC_TILES.enter(st,rb,nx+"_"+ny);
-          if(to){const q=to.split("_");rb.x=+q[0];rb.y=+q[1];}
-        }
-      }else sfx(180,.05); // bumped into a wall / the edge
-    }
+    else if(b.t==="move")mgMoveAhead(st,rb);
+    // 🚶 Walk To takes one tile a tick, so the same block stays current
+    // until it arrives
+    else if(b.t==="goNear"&&mgWalkTick(st,b,fr)){mgDraw();mgVarsUI();return;}
     else if(b.t==="turnL")rb.dir=(rb.dir+3)%4;
     else if(b.t==="turnR")rb.dir=(rb.dir+1)%4;
     else if(b.t==="build"){const kk=rb.x+"_"+rb.y;if(!rb.bricks.has(kk)){rb.bricks.add(kk);rb.brickNo[kk]=rb.nextNo++;}sfx(430,.03);}

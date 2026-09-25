@@ -1034,6 +1034,18 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .t3warn.hmm{background:rgba(233,140,32,.14);color:#ffcf8a;border:1px solid rgba(233,140,32,.34);}
 .t3warn.bad{background:rgba(226,59,87,.15);color:#ffb0bd;border:1px solid rgba(226,59,87,.36);}
 
+/* where a 🚶 Walk To may go: a setting of that one block, so it hangs
+   directly under its row, indented to its text */
+.mg-gopick{display:flex;flex-direction:column;gap:6px;margin:-2px 0 6px;margin-inline-start:44px;
+  padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.18);}
+.mg-gopick .gp-l{font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--ink2);}
+/* prefixed: the creator bar's own button rule is an id selector and would
+   otherwise paint every chip the same, on or off */
+#mgCreatorBar .mg-gopick .t3chip{display:inline-flex;align-items:center;gap:5px;
+  padding:6px 11px;border-radius:999px;font-size:12px;font-weight:700;
+  background:rgba(255,255,255,.06);color:var(--ink2);border:1px solid var(--hair);box-shadow:none;}
+#mgCreatorBar .mg-gopick .t3chip.on{background:linear-gradient(180deg,#d8912f,#b06f1a);
+  color:#fff;border-color:transparent;}
 /* which blocks the level hands the player */
 .t3chips{display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
 .t3chip{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:999px;
