@@ -100,6 +100,16 @@ takes (`js/game/native.js`) — it reaches the Taptic Engine in the app and
 `navigator.vibrate` on the web, which iOS Safari never had. Never call
 `vibrate()` directly; there were two and neither worked on an iPhone.
 
+### The game's own design skill
+
+`.claude/skills/game-app-design` is written for this project, not copied:
+which surfaces a game has (scene, screen, sheet, dialog, toast) and when
+each is right, a notification policy that never interrupts focus, flow
+without jumps, one design system, and a performance budget. Load it
+before any change to navigation, notifications or the structure of a
+screen. `docs/ux-roadmap.md` is the work it found, in topics — take the
+next one, fix it, re-run `scripts/ux-audit.js`, record the numbers there.
+
 ### The skills pack
 
 `.claude/skills/` holds Emil Kowalski's set (github.com/emilkowalski/skills,
