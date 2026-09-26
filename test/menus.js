@@ -112,12 +112,17 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     const p = el.querySelector('.tk-panel');
     const out = { grew: !!p && p.classList.contains('tk-grow'),
                   origin: p ? getComputedStyle(p).transformOrigin : null };
-    /* The ticker rewrites its own markup once a second. The animation
-       must not come back with it, or the panel pulses while it is open. */
+    /* The ticker may rewrite its own markup on a tick (when what it shows
+       changed). The animation must not come back with it, or the panel
+       pulses while it is open: a NEW panel must not carry the grow. The
+       same panel keeping its class does not restart the animation. */
     await wait(1400);
     const p2 = el.querySelector('.tk-panel');
     out.stillThere = !!p2;
-    out.replayed = !!p2 && p2.classList.contains('tk-grow');
+    out.replayed = !!p2 && p2 !== p && p2.classList.contains('tk-grow');
+    el._shape = null; renderMarket();   // force a rewrite
+    const p3 = el.querySelector('.tk-panel');
+    out.replayed = out.replayed || (!!p3 && p3.classList.contains('tk-grow'));
     btn().click(); await wait(60);
     out.closed = !el.querySelector('.tk-panel');
     return out;
