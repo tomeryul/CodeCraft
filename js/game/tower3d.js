@@ -621,17 +621,16 @@ window.renderProjects=function(){
     '<div class="t3prog">'+done+'/'+TOWER_LEVELS.length+'</div></div>'+
     '<div class="t3grid"></div>';
   const grid=sec.querySelector(".t3grid");
+  /* one row per level, the same row every other list of levels uses
+     (ccCard) — they were tiles in a grid, a second way of saying the same
+     thing (game-app-design §5; the owner chose rows) */
   for(const lv of TOWER_LEVELS){
     const solved=!!player.projects[lv.id];
-    const c=document.createElement("button");
-    c.className="t3card"+(solved?" done":"");
     const peak=Math.max.apply(null,(lv.plan||[[0,0,1]]).map(x=>x[2]));
-    c.innerHTML='<span class="t3badge">'+lv.em+'</span>'+
-      '<span class="t3name">'+esc(lv.name)+'</span>'+
-      '<span class="t3meta">'+"⭐".repeat(lv.diff)+' · 🧩 '+lv.maxBlocks+' · ⛰ '+peak+'</span>'+
-      (solved?'<span class="t3done">✓</span>':'');
-    c.onclick=()=>{$("projects").classList.remove("open");t3Enter(lv);};
-    grid.appendChild(c);
+    ccCard(grid,{em:lv.em,name:'<span class="t3name">'+esc(lv.name)+'</span>',cls:"t3card",done:solved,
+      meta:"⭐".repeat(lv.diff)+' · 🧩 '+lv.maxBlocks+' · ⛰ '+peak,
+      desc:lv.desc?esc(lv.desc):"", badge:solved?"✓":"▶",
+      onTap:()=>{$("projects").classList.remove("open");t3Enter(lv);}});
   }
   el.insertBefore(sec,el.firstChild);
 };

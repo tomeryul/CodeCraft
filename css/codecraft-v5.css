@@ -48,7 +48,7 @@
 #editor .v5-head .iconbtn{
   width:40px;height:40px;flex:0 0 auto;padding:0;margin:0;
   display:flex;align-items:center;justify-content:center;
-  border-radius:12px;background:var(--glass-hi);border:1px solid var(--hair);
+  border-radius:var(--r-ctl);background:var(--glass-hi);border:1px solid var(--hair);
   border-bottom:1px solid var(--hair);box-shadow:none;color:var(--ink2);font-size:15px;
   transition:transform .09s,background .12s;
 }
@@ -75,7 +75,7 @@
   box-shadow:none !important;
 }
 .shopitem button,#settingsList button{
-  height:40px;padding:0 15px;border-radius:12px;
+  height:40px;padding:0 15px;border-radius:var(--r-ctl);
   font-family:inherit;font-size:13px;font-weight:700;color:var(--ink);
   background:var(--glass-hi);border:1px solid var(--hair);
   transition:transform .08s,background .12s;
@@ -94,7 +94,7 @@
 .quest button{
   border-bottom:4px solid var(--accent-deep) !important;
   box-shadow:inset 0 1.5px 0 rgba(255,255,255,.45) !important;
-  min-height:44px;border-radius:12px;
+  min-height:44px;border-radius:var(--r-ctl);
 }
 /* green is Run and nothing else: Publish and Add level are commits */
 #mgCreatorBar .cb-act #mgPublish{
@@ -119,7 +119,7 @@
 }
 #editor #tabs button{
   flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
-  padding:8px 0 7px;border-radius:14px;background:none;
+  padding:8px 0 7px;border-radius:var(--r-card);background:none;
   font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
   color:var(--ink-dim);
 }
@@ -130,7 +130,7 @@
 /* the action row keeps its glass squares and gains the speed button */
 #actionBar{border-top:none;background:none;backdrop-filter:none;padding:11px 12px;}
 #actionBar #mgSpeedBtn{
-  flex:0 0 auto;width:52px;height:52px;padding:0;border:none;border-radius:15px;
+  flex:0 0 auto;width:52px;height:52px;padding:0;border:none;border-radius:var(--r-card);
   background:var(--glass-hi);color:var(--ink2);box-shadow:none;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
   font-family:inherit;font-size:14px;font-weight:800;
@@ -171,10 +171,10 @@
    ------------------------------------------------------------------ */
 .shopitem{
   display:flex;align-items:flex-start;gap:11px;padding:11px 12px;margin-bottom:8px;
-  background:var(--glass-hi);border:1px solid var(--hair);border-radius:16px;box-shadow:none;
+  background:var(--glass-hi);border:1px solid var(--hair);border-radius:var(--r-card);box-shadow:none;
 }
 .shopitem .em{
-  flex:0 0 auto;width:42px;height:42px;border-radius:12px;background:rgba(0,0,0,.26);
+  flex:0 0 auto;width:42px;height:42px;border-radius:var(--r-ctl);background:rgba(0,0,0,.26);
   display:flex;align-items:center;justify-content:center;font-size:21px;
 }
 .shopitem .em .ui-emoji{width:25px;height:25px;vertical-align:0;}
@@ -188,7 +188,7 @@
 #blocksTab .v5-edrow #robotChips{flex:1;min-width:0;margin:0;}
 #blocksTab .v5-edrow .ed-btns{
   display:flex;flex:0 0 auto;gap:3px;padding:3px;
-  border-radius:14px;background:rgba(0,0,0,.24);border:1px solid var(--hair);
+  border-radius:var(--r-card);background:rgba(0,0,0,.24);border:1px solid var(--hair);
 }
 
 /* ---------------------------------------------------------------------

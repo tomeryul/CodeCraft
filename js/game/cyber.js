@@ -496,21 +496,18 @@ window.renderProjects=function(){
 };
 function card(lv){
   const solved=!!player.projects[lv.id], open=unlocked(lv);
-  const c=document.createElement("button");
-  c.className="t3card cy-card"+(solved?" done":"")+(open?"":" locked");
-  /* the inputs are part of what a level costs, so the card says so before
-     you open it — "one program, four boards" is the promise */
+  /* the inputs are part of what a level costs, so the row says so before
+     you open it — "one program, four boards" is the promise. The same row
+     as every other list of levels (ccCard); a locked one still answers a
+     tap by saying what opens it, rather than doing nothing. */
   const inputs=(lv.cases||[]).length;
-  c.innerHTML='<span class="t3badge">'+lv.em+'</span>'+
-    '<span class="t3name">'+esc(lv.name)+'</span>'+
-    '<span class="t3meta">'+"⭐".repeat(lv.diff)+' · 🧩 '+lv.maxBlocks+
-      (inputs?' · 🔀 '+inputs:'')+'</span>'+
-    (solved?'<span class="t3done">✓</span>':"");
-  if(open)c.onclick=()=>{$("projects").classList.remove("open");enter(lv);};
-  else{
-    /* a locked card says what opens it, rather than doing nothing */
-    c.onclick=()=>toast("🔒 Finish “"+levelName(lv.needs)+"” first.");
-  }
+  const holder=document.createElement("div");
+  const c=ccCard(holder,{em:lv.em,name:'<span class="t3name">'+esc(lv.name)+'</span>',
+    cls:"t3card cy-card"+(open?"":" locked"),done:solved,
+    meta:"⭐".repeat(lv.diff)+' · 🧩 '+lv.maxBlocks+(inputs?' · 🔀 '+inputs:''),
+    desc:lv.desc?esc(lv.desc):"", badge:solved?"✓":open?"▶":"🔒",
+    onTap:open?()=>{$("projects").classList.remove("open");enter(lv);}
+              :()=>toast("🔒 Finish “"+levelName(lv.needs)+"” first.")});
   return c;
 }
 function levelName(id){const l=LEVELS.find(x=>x.id===id);return l?l.name:id;}

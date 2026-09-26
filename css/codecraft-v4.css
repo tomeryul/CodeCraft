@@ -51,7 +51,7 @@
 #actionBar{flex:0 0 auto;display:flex;align-items:center;gap:9px;
   padding:11px 12px calc(12px + var(--sab));
   border-top:1px solid var(--hair);background:rgba(26,19,50,.86);backdrop-filter:blur(16px);}
-#actionBar .ibtn{flex:0 0 auto;width:52px;height:52px;padding:0;border:none;border-radius:15px;
+#actionBar .ibtn{flex:0 0 auto;width:52px;height:52px;padding:0;border:none;border-radius:var(--r-card);
   background:var(--glass-hi);color:var(--ink2);box-shadow:none;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
   font-family:inherit;font-size:9px;font-weight:800;letter-spacing:.03em;
@@ -113,7 +113,7 @@
 .mg-top{gap:10px;padding:0 0 2px;}
 .mg-top b{font-size:16.5px;font-weight:700;}
 .mg-top #mgCount{background:none;padding:0;font-size:11.5px;font-weight:600;color:var(--ink2);}
-.mg-top .ibtn{width:40px;height:40px;border-radius:13px;background:var(--glass-hi);
+.mg-top .ibtn{width:40px;height:40px;border-radius:var(--r-ctl);background:var(--glass-hi);
   border:none;box-shadow:none;color:var(--ink2);}
 .mg-top .ibtn:active{transform:scale(.94);background:var(--glass-on);}
 .mg-top .ibtn.wide{width:auto;min-width:44px;padding:0 12px;font-size:13.5px;font-weight:800;}
@@ -122,7 +122,7 @@
 #mgGoal b{color:var(--accent2);}
 /* the level question, now its own node so it can be translated on its own */
 #mgGoal .mg-q{margin-inline-start:8px;color:var(--accent2);}
-#mgCanvas{border-radius:16px;border:1px solid var(--hair);}
+#mgCanvas{border-radius:var(--r-card);border:1px solid var(--hair);}
 #mgBoardHint{margin-top:9px;font-size:12px;color:var(--ink2);}
 #mgCases{gap:6px;margin:0 0 9px;}
 #mgVars{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 0;}
@@ -135,10 +135,10 @@
    ------------------------------------------------------------------ */
 #mgCreatorBar{gap:9px;margin-top:9px;}
 #mgCreatorBar .cb-row.tools{position:sticky;bottom:0;z-index:3;gap:6px;padding:5px;
-  border-radius:16px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;
+  border-radius:var(--r-card);flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;
   background:rgba(26,19,50,.86);backdrop-filter:blur(16px);border:1px solid var(--hair);}
 #mgCreatorBar .cb-row.tools::-webkit-scrollbar{display:none;}
-#mgCreatorBar .tool{width:40px;height:40px;border-radius:12px;}
+#mgCreatorBar .tool{width:40px;height:40px;border-radius:var(--r-ctl);}
 #mgCreatorBar .tool.on{background:rgba(255,184,48,.2);border-bottom:none;
   box-shadow:inset 0 0 0 1.5px rgba(255,214,107,.7);}
 #mgBrickStp{position:sticky;bottom:0;z-index:3;align-self:flex-end;
@@ -218,7 +218,7 @@ button:focus-visible,input:focus-visible,.blk:focus-visible{outline:2px solid va
    the left of them — a destination opener, not part of the segmented pair. */
 #bottombar #hubBtn{pointer-events:auto;flex:0 0 auto;width:48px;height:48px;
   display:flex;align-items:center;justify-content:center;
-  border-radius:16px;color:var(--ink);background:var(--glass);backdrop-filter:blur(16px);
+  border-radius:var(--r-card);color:var(--ink);background:var(--glass);backdrop-filter:blur(16px);
   border:1px solid var(--hair);box-shadow:var(--lift);transition:background .14s;}
 #bottombar #hubBtn:active{background:var(--glass-on);}
 #bottombar #hubBtn svg{width:22px;height:22px;}
@@ -272,7 +272,7 @@ button:focus-visible,input:focus-visible,.blk:focus-visible{outline:2px solid va
 .hub-nlab{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
   color:var(--ink-dim);margin:0 0 7px 2px;}
 .hub-next .j-btn{display:flex;align-items:center;gap:10px;width:100%;
-  padding:11px 13px;border-radius:16px;text-align:left;cursor:pointer;color:inherit;font:inherit;
+  padding:11px 13px;border-radius:var(--r-card);text-align:left;cursor:pointer;color:inherit;font:inherit;
   background:linear-gradient(180deg,rgba(58,44,104,.96),rgba(43,32,80,.96));
   border:1px solid rgba(255,214,107,.42);
   box-shadow:0 6px 20px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.10);}
@@ -296,7 +296,7 @@ h4.hub-sec:first-child{margin-top:2px;}
 /* J4. A tile names the place, then the two things you want to know before
    you tap: which kind it is (2D / 3D / lessons) and how far in you are. */
 .hub-tile{display:flex;flex-direction:column;align-items:flex-start;gap:0;
-  min-height:92px;padding:12px 13px;border-radius:16px;text-align:left;cursor:pointer;
+  min-height:92px;padding:12px 13px;border-radius:var(--r-card);text-align:left;cursor:pointer;
   color:inherit;font:inherit;background:var(--glass-hi);border:1px solid var(--hair);
   transition:background .14s,transform .09s;}
 .hub-tile:active{transform:scale(.975);background:var(--glass-on);}
@@ -376,4 +376,4 @@ h4.hub-sec:first-child{margin-top:2px;}
    J. Editor: the empty program should look like a place, not a gap
    ------------------------------------------------------------------ */
 #programWrap .empty{margin:6px 0;padding:30px 18px;
-  border:1.5px dashed rgba(255,255,255,.13);border-radius:16px;font-size:13.5px;}
+  border:1.5px dashed rgba(255,255,255,.13);border-radius:var(--r-card);font-size:13.5px;}

@@ -88,7 +88,13 @@ do NOT make them full-screen. Everything else in this topic stands.*
 - A page for one card: *Academy* holds a single card you tap again.
 - Back does not restore scroll position.
 
-## 5. One design system
+## 5. One design system  ✅ v189
+*Done:* every list of levels is the same row (ccCard) — Tower and Cyber
+were tiles in a grid (owner chose rows), their big header cards are now
+section titles with a count like every other band; radius is three
+tokens in `css/apple.css` (`--r-ctl` 12, `--r-card` 16, `--r-sheet` 24)
+and the 10–19px zoo (≈160 rules) maps onto the first two. Emoji already
+render as one icon family through `ui-icons.js`, so they stay.
 *Skill §5*
 
 - Two languages for "a list of levels": rows with ▶ (Academy, Chapters,
@@ -115,4 +121,6 @@ card, one button set; each kind of content always uses the same one.
 
 - First run: lesson 1 opens, then the daily gift, then a market order —
   three things to dismiss before the first block.
+- First load: the splash's feature chips wrap to a second line when the
+  web font arrives (layout shift ~0.08 on a cold cache).
 - HUD slots are not reserved (see 2).

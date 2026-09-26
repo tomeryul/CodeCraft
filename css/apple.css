@@ -37,6 +37,12 @@
    spring that starts from the live on-screen value. CLAUDE.md says so.
    --------------------------------------------------------------------- */
 :root{
+  /* Radius, three values and a reason for each (game-app-design §5): a
+     control, a card, a sheet. There were twenty-odd — 10, 11, 13, 14, 15,
+     17, 18… — each picked by whichever feature came along. Things smaller
+     than a thumb (dots, bars, swatches) keep their own tiny radius, and a
+     round button is a circle, not a token. */
+  --r-ctl:12px; --r-card:16px; --r-sheet:24px;
   --ease-settle:cubic-bezier(.32,.9,.35,1);   /* what the sheets already use */
   --ease-carry:cubic-bezier(.22,1.2,.36,1);   /* slight overshoot */
   /* A THIRD curve, and CLAUDE.md asks for a reason you can say out loud,

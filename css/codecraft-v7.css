@@ -25,7 +25,7 @@
 
 /* ---- the live preview ---- */
 #styleBody .st-prev{display:flex;align-items:center;justify-content:center;
-  margin:14px 0 2px;border-radius:18px;background:rgba(255,255,255,.04);
+  margin:14px 0 2px;border-radius:var(--r-card);background:rgba(255,255,255,.04);
   border:1px solid var(--hair);overflow:hidden;}
 #styleBody .st-prev canvas{display:block;width:100%;max-width:330px;height:150px;}
 #styleBody .st-modes{display:flex;gap:6px;justify-content:center;margin:8px 0 0;}
@@ -55,7 +55,7 @@
 #styleBody .st-row::-webkit-scrollbar{width:0;height:0;}
 #styleBody .st-sw{position:relative;flex:0 0 auto;width:52px;height:52px;padding:0;
   display:flex;align-items:center;justify-content:center;overflow:hidden;
-  border-radius:15px;background:rgba(255,255,255,.06);border:1px solid var(--hair);}
+  border-radius:var(--r-card);background:rgba(255,255,255,.06);border:1px solid var(--hair);}
 #styleBody .st-sw.on{background:rgba(255,184,48,.18);border:2px solid var(--accent);}
 #styleBody .st-sw.locked{opacity:.5;}
 #styleBody .st-sw .lk{position:absolute;left:0;right:0;bottom:0;padding:2px 0 3px;
@@ -74,18 +74,18 @@
    ===================================================================== */
 /* the robot's box, on the Outfit tab: it fills whatever the dock has, so
    the robot is read at a size a child can actually judge */
-#maker .mk-prev{position:relative;width:100%;border-radius:18px;
+#maker .mk-prev{position:relative;width:100%;border-radius:var(--r-card);
   background:rgba(255,255,255,.04);border:1px solid var(--hair);overflow:hidden;}
 #maker .mk-prev canvas{position:absolute;inset:0;display:block;width:100%;height:100%;}
 #maker .mk-poses{margin:0;}
 /* touch-action is what stops the sheet scrolling out from under a drag */
 #maker .mk-pad{width:100%;margin:0 auto;}
 #maker .mk-pad canvas{display:block;width:100%;aspect-ratio:1;touch-action:none;
-  border-radius:16px;background:rgba(255,255,255,.05);border:1px solid var(--hair);}
+  border-radius:var(--r-card);background:rgba(255,255,255,.05);border:1px solid var(--hair);}
 
 /* colours: sixteen squares that wrap, as the design draws them */
 #maker .mk-pal{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0;margin:0;}
-#maker .mk-dot{flex:0 0 auto;width:46px;height:46px;padding:0;border-radius:14px;
+#maker .mk-dot{flex:0 0 auto;width:46px;height:46px;padding:0;border-radius:var(--r-card);
   border:2px solid transparent;font-family:inherit;font-size:15px;color:var(--ink2);}
 #maker .mk-dot.on{border-color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.35);}
 /* no colour: a dashed empty square that says what it is */
@@ -101,11 +101,11 @@
   border-top:1px solid rgba(255,255,255,.07);}
 #maker .mk-rowsel{flex:0 0 auto;align-self:center;
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;font-weight:700;color:#b184ff;}
-#maker .mk-row input{flex:1;min-width:0;min-height:46px;border-radius:14px;
+#maker .mk-row input{flex:1;min-width:0;min-height:46px;border-radius:var(--r-card);
   border:1px solid var(--hair);background:var(--panel2);color:var(--ink);
   font-family:inherit;font-size:14px;padding:0 12px;}
 #maker .mk-acts{display:flex;gap:8px;margin:10px 0 4px;}
-#maker .mk-btn{min-height:46px;padding:0 18px;border-radius:14px;border:none;
+#maker .mk-btn{min-height:46px;padding:0 18px;border-radius:var(--r-card);border:none;
   font-family:inherit;font-size:14px;font-weight:700;background:var(--panel2);color:var(--ink);}
 #maker .mk-acts .mk-btn{flex:1;}
 #maker .mk-btn.go{background:linear-gradient(180deg,#43b862,#2e9e4a);color:#fff;}
@@ -120,10 +120,10 @@
 #styleBody .st-sw.add .pl{font-size:21px;font-weight:700;color:var(--accent2);line-height:1;}
 
 /* the pose switch: a segment of three */
-#maker .mk-seg{display:flex;gap:4px;flex:1;min-width:0;padding:3px;border-radius:16px;
+#maker .mk-seg{display:flex;gap:4px;flex:1;min-width:0;padding:3px;border-radius:var(--r-card);
   background:var(--panel2);}
 /* 44px inside the segment's own 3px, so the pill clears the tap floor */
-#maker .mk-sm{flex:1;min-width:0;min-height:44px;border-radius:13px;border:none;
+#maker .mk-sm{flex:1;min-width:0;min-height:44px;border-radius:var(--r-ctl);border:none;
   font-family:inherit;font-size:13px;font-weight:700;background:transparent;color:var(--ink2);}
 #maker .mk-sm.on{background:var(--accent);color:#241b45;}
 
@@ -133,7 +133,7 @@
 /* the boxes, in draw order: left is behind */
 #maker .mk-parts{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0;margin:0;}
 #maker .mk-part{position:relative;flex:0 0 auto;width:46px;height:46px;padding:0;
-  display:flex;align-items:center;justify-content:center;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;border-radius:var(--r-card);
   background:rgba(255,255,255,.06);border:2px solid transparent;font-family:inherit;}
 #maker .mk-part.on{border-color:var(--accent);background:rgba(255,184,48,.16);}
 #maker .mk-part .pd{width:20px;height:20px;border-radius:6px;}
@@ -148,7 +148,7 @@
    chips, sized to their word, the way the design draws every choice that
    is one of a few */
 #maker .mk-shapes{display:flex;flex-wrap:wrap;gap:6px;margin:0;}
-#maker .mk-shape{flex:0 0 auto;min-height:44px;padding:0 17px;border-radius:12px;
+#maker .mk-shape{flex:0 0 auto;min-height:44px;padding:0 17px;border-radius:var(--r-ctl);
   border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);
   font-family:inherit;font-size:13px;font-weight:700;color:var(--ink2);}
 #maker .mk-shape.on{border-color:var(--accent);background:rgba(255,184,48,.18);color:var(--accent2);}
@@ -161,14 +161,14 @@
 #maker .mk-sect{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
   color:#8d82b8;}
 #maker .mk-secd{font-size:11.5px;font-weight:600;color:var(--ink2);}
-#maker .mk-was{margin:6px 2px 0;padding:9px 11px;border-radius:13px;
+#maker .mk-was{margin:6px 2px 0;padding:9px 11px;border-radius:var(--r-ctl);
   background:rgba(255,184,48,.10);border:1px solid rgba(255,184,48,.3);color:var(--ink);}
 
 #maker .mk-hint{margin:12px 2px 0;font-size:12.5px;line-height:1.5;color:var(--ink2);}
 
 /* the code the piece means */
 #maker .mk-code{margin:14px 0 0;}
-#maker .mk-code pre{margin:0;padding:12px;border-radius:14px;overflow-x:auto;
+#maker .mk-code pre{margin:0;padding:12px;border-radius:var(--r-card);overflow-x:auto;
   background:rgba(10,6,26,.5);border:1px solid var(--hair);
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.75;
   color:#dfe3ec;white-space:pre-wrap;overflow-wrap:anywhere;}
@@ -209,7 +209,7 @@
 /* the class name, on the shared name row: a selector is monospace and
    purple wherever it appears, so the row says which of the two names it is
    editing without a word of explanation */
-#maker .cp-input{flex:1;min-width:0;min-height:44px;border-radius:12px;
+#maker .cp-input{flex:1;min-width:0;min-height:44px;border-radius:var(--r-ctl);
   border:1px solid var(--hair);background:var(--panel2);color:var(--ink);
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;padding:0 10px;}
 
@@ -222,18 +222,18 @@
   font-size:12px;font-weight:700;color:#5ab8ff;}
 #maker .mk-insval{flex:0 0 auto;min-width:58px;text-align:center;
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;font-weight:800;color:var(--accent2);}
-#maker .mk-step{flex:0 0 auto;min-width:44px;min-height:44px;padding:0 8px;border-radius:11px;border:none;
+#maker .mk-step{flex:0 0 auto;min-width:44px;min-height:44px;padding:0 8px;border-radius:var(--r-ctl);border:none;
   font-family:inherit;font-size:13px;font-weight:800;background:var(--panel3);color:var(--ink);}
 #maker .mk-insx{flex:0 0 auto;width:36px;height:36px;margin-left:auto;padding:0;border:none;
-  border-radius:10px;background:rgba(255,255,255,.08);color:var(--ink2);font-size:13px;font-weight:700;}
+  border-radius:var(--r-ctl);background:rgba(255,255,255,.08);color:var(--ink2);font-size:13px;font-weight:700;}
 #maker .mk-step:active{transform:scale(.96);}
-#maker .mk-insname{flex:1;min-width:0;min-height:44px;border-radius:13px;
+#maker .mk-insname{flex:1;min-width:0;min-height:44px;border-radius:var(--r-ctl);
   border:1px solid var(--hair);background:var(--panel2);color:var(--ink);
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;padding:0 10px;}
 #maker .mk-inspal{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;padding:2px 0;
   scrollbar-width:none;-webkit-overflow-scrolling:touch;}
 #maker .mk-inspal::-webkit-scrollbar{width:0;height:0;}
-#maker .mk-insdot{flex:0 0 auto;width:44px;height:44px;padding:0;border-radius:13px;
+#maker .mk-insdot{flex:0 0 auto;width:44px;height:44px;padding:0;border-radius:var(--r-ctl);
   border:2px solid transparent;}
 #maker .mk-insdot.on{border-color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.35);}
 #maker .mk-copy{display:block;width:100%;margin:10px 0 0;}
@@ -243,7 +243,7 @@
 #maker .mk-inskw{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;padding:2px 0;
   scrollbar-width:none;-webkit-overflow-scrolling:touch;}
 #maker .mk-inskw::-webkit-scrollbar{width:0;height:0;}
-#maker .mk-kw{flex:0 0 auto;min-height:44px;padding:0 12px;border-radius:11px;
+#maker .mk-kw{flex:0 0 auto;min-height:44px;padding:0 12px;border-radius:var(--r-ctl);
   border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;font-weight:700;
   color:var(--ink2);white-space:nowrap;}
@@ -272,14 +272,14 @@
 #maker .fe-offer{margin:14px 0 0;}
 #maker .fe-go{display:block;width:100%;
   background:rgba(84,214,106,.16);border:1px solid rgba(84,214,106,.45);color:#b6f0c2;}
-#maker .fe-bar{margin:14px 0 0;padding:11px 12px 10px;border-radius:17px;
+#maker .fe-bar{margin:14px 0 0;padding:11px 12px 10px;border-radius:var(--r-card);
   background:rgba(84,214,106,.10);border:1px solid rgba(84,214,106,.38);}
 #maker .fe-head{display:flex;align-items:center;gap:8px;}
 #maker .fe-n{flex:0 0 auto;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;
   background:rgba(84,214,106,.22);color:#b6f0c2;}
 #maker .fe-title{flex:1;min-width:0;font-size:14px;font-weight:800;color:var(--ink);
   font-family:ui-monospace,Menlo,Consolas,monospace;}
-#maker .fe-x{flex:0 0 auto;width:30px;height:30px;padding:0;border:none;border-radius:10px;
+#maker .fe-x{flex:0 0 auto;width:30px;height:30px;padding:0;border:none;border-radius:var(--r-ctl);
   background:transparent;color:var(--ink2);font-size:13px;}
 #maker .fe-say{margin:6px 1px 0;font-size:13px;line-height:1.55;color:var(--ink);}
 #maker .fe-say code,#maker .fe-title{font-family:ui-monospace,Menlo,Consolas,monospace;}
@@ -338,7 +338,7 @@ body.sheets-full #maker.sized,
 
 /* Save belongs in the head, where it is reachable from every tab without
    scrolling. 40px is the height of Back and Exit either side of it. */
-#maker .mk-save{flex:0 0 auto;height:40px;padding:0 15px;border:none;border-radius:12px;
+#maker .mk-save{flex:0 0 auto;height:40px;padding:0 15px;border:none;border-radius:var(--r-ctl);
   font-family:inherit;font-size:13.5px;font-weight:800;
   background:#54d66a;color:#0b3d1c;}
 #maker .mk-save:active{transform:scale(.95);}
@@ -348,7 +348,7 @@ body.sheets-full #maker.sized,
 #maker .mk-crumb{display:flex;align-items:center;justify-content:center;gap:2px;
   overflow-x:auto;scrollbar-width:none;}
 #maker .mk-crumb::-webkit-scrollbar{width:0;height:0;}
-#maker .mk-crumb-b{flex:0 0 auto;height:32px;padding:0 10px;border:none;border-radius:10px;
+#maker .mk-crumb-b{flex:0 0 auto;height:32px;padding:0 10px;border:none;border-radius:var(--r-ctl);
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;font-weight:700;
   background:transparent;color:var(--ink2);white-space:nowrap;}
 #maker .mk-crumb-b.on{background:rgba(255,184,48,.18);color:var(--accent2);}
@@ -384,7 +384,7 @@ body.sheets-full #maker.sized,
 #maker .mk-tabbar{flex:0 0 auto;display:flex;gap:6px;
   padding:8px 12px calc(10px + var(--sab));
   border-top:1px solid var(--hair);background:rgba(26,19,50,.86);}
-#maker .mk-dtab{flex:1;min-height:44px;padding:0;border:none;border-radius:14px;
+#maker .mk-dtab{flex:1;min-height:44px;padding:0;border:none;border-radius:var(--r-card);
   font-family:inherit;font-size:10.5px;font-weight:800;letter-spacing:.04em;
   text-transform:uppercase;background:none;color:var(--ink-dim,var(--ink2));}
 #maker .mk-dtab.on{background:var(--glass-on);color:var(--ink);}
@@ -421,13 +421,13 @@ body.sheets-full #maker.sized,
   font-weight:800;color:#b184ff;}
 #maker .mk-lname.small .mk-lsel{font-size:12px;}
 /* what this component is, in a card the colour of a property name */
-#maker .cp-what{margin:6px 0 10px;padding:9px 11px;border-radius:13px;font-size:12.5px;line-height:1.55;
+#maker .cp-what{margin:6px 0 10px;padding:9px 11px;border-radius:var(--r-ctl);font-size:12.5px;line-height:1.55;
   background:rgba(90,184,255,.09);border:1px solid rgba(90,184,255,.18);color:var(--ink);}
 #maker .cp-what span{display:inline;}
 #maker .cp-what span+span::before{content:" ";}
 
 /* the card */
-#maker .mk-lgrp{margin:8px 0 0;border-radius:16px;background:rgba(255,255,255,.04);
+#maker .mk-lgrp{margin:8px 0 0;border-radius:var(--r-card);background:rgba(255,255,255,.04);
   border:1px solid var(--hair);overflow:hidden;}
 #maker .mk-lgrp.open{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);}
 #maker .mk-lgh{display:flex;align-items:center;gap:9px;width:100%;min-height:56px;padding:8px 10px 8px 11px;
@@ -469,7 +469,7 @@ body.sheets-full #maker.sized,
 #maker .mk-lval.kw{color:#8ff0a0;}
 #maker .mk-lctl{display:flex;align-items:center;gap:6px;margin:4px 0 0;}
 #maker .mk-lctl.words{flex-wrap:wrap;gap:6px;}
-#maker .mk-lb{flex:0 0 44px;width:44px;height:44px;padding:0;border:none;border-radius:12px;
+#maker .mk-lb{flex:0 0 44px;width:44px;height:44px;padding:0;border:none;border-radius:var(--r-ctl);
   font-family:inherit;font-size:20px;font-weight:800;background:var(--panel3);color:var(--ink);line-height:1;}
 #maker .mk-lb:active{transform:scale(.94);}
 /* the slider: a track the height of a finger, a thumb the size of one */
@@ -481,7 +481,7 @@ body.sheets-full #maker.sized,
 #maker .mk-rng::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--accent);
   border:3px solid #241b45;box-shadow:0 2px 6px rgba(0,0,0,.35);}
 #maker .mk-lctl .mk-kw{padding:0 12px;}
-#maker .mk-lnote{margin:8px 0 0;padding:9px 11px;border-radius:12px;font-size:12px;line-height:1.5;
+#maker .mk-lnote{margin:8px 0 0;padding:9px 11px;border-radius:var(--r-ctl);font-size:12px;line-height:1.5;
   color:var(--ink2);background:rgba(0,0,0,.18);}
 #maker .mk-lgo{display:block;width:100%;margin:8px 0 0;
   background:rgba(177,132,255,.16);border:1px solid rgba(177,132,255,.4);color:#d9ccff;}
@@ -512,7 +512,7 @@ body.sheets-full #maker.sized,
 #blocksTab .v5-edrow #routineTabs .rtab{flex:0 0 auto;min-height:36px;}
 #blocksTab .v5-edrow .ed-btns{
   display:flex;flex:0 0 auto;gap:3px;padding:3px;
-  border-radius:12px;background:rgba(0,0,0,.24);border:1px solid var(--hair);}
+  border-radius:var(--r-ctl);background:rgba(0,0,0,.24);border:1px solid var(--hair);}
 #blocksTab .v5-edrow .ed-btns button{width:36px;height:36px;border-radius:9px;}
 /* the run row: 58px of Run inside 23px of padding was a third of the
    program's height. 50 is still the biggest thing on the sheet. */
@@ -559,7 +559,7 @@ body.sheets-full #maker.sized,
 #editor:not(.max) #boardTab #t3Bar .t3h{grid-area:hr;align-self:start;justify-self:center;min-width:0;margin-top:4px;}
 #editor:not(.max) #boardTab #t3Bar .t3tag,
 #editor:not(.max) #boardTab #t3Bar .t3key{display:none;}
-#editor:not(.max) #boardTab #t3Bar .t3btn{width:40px;height:40px;border-radius:12px;}
+#editor:not(.max) #boardTab #t3Bar .t3btn{width:40px;height:40px;border-radius:var(--r-ctl);}
 /* the Tower DESIGNER's 3D view at HALF height: its rotate buttons beside
    the board (a second pair, made in tower-editor.js), the strip's own pair
    stepping aside. At full height the board is wide and the strip keeps
@@ -573,9 +573,9 @@ body.sheets-full #maker.sized,
 #editor:not(.max):has(#mgPanel.t3side) #t3EdRow #t3EdRotL,
 #editor:not(.max):has(#mgPanel.t3side) #t3EdRow #t3EdRotR{display:none !important;}
 #editor.max .t3side-btn,#boardTab #mgPanel:not(.t3side) > .t3side-btn{display:none !important;}
-#boardTab #mgPanel > .t3side-btn{width:40px;height:40px;border-radius:12px;}
+#boardTab #mgPanel > .t3side-btn{width:40px;height:40px;border-radius:var(--r-ctl);}
 #mgCreatorBar .cb-row.tools{gap:4px;padding:5px;}
-#mgCreatorBar .tool{width:auto;min-width:52px;height:50px;padding:0 6px;border-radius:12px;
+#mgCreatorBar .tool{width:auto;min-width:52px;height:50px;padding:0 6px;border-radius:var(--r-ctl);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
 #mgCreatorBar .tool .tl-em{font-size:18px;line-height:1;}
 #mgCreatorBar .tool .tl-em .ui-emoji{width:19px;height:19px;vertical-align:0;}
@@ -600,7 +600,7 @@ body.sheets-full #maker.sized,
    as holes. Darker fill, hairline edge, and the rows sit on top of it. */
 .dsec{display:flex;flex-direction:column;
   background:rgba(0,0,0,.16);
-  border:1px solid var(--hair);border-radius:16px;overflow:hidden;}
+  border:1px solid var(--hair);border-radius:var(--r-card);overflow:hidden;}
 /* Prefixed with #mgCreatorBar, and not by accident: styles.css carries a
    blanket `#mgCreatorBar button{background:var(--panel3);…}` that out-ranks
    any plain class, and the head is a button. Without the prefix it kept
@@ -657,7 +657,7 @@ body.sheets-full #maker.sized,
    the stripe below is a border, not the inset shadow it wants to be. */
 #mgCreatorBar .blkrow{display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;
   background:var(--panel3);border:1px solid transparent;border-left:3px solid transparent;
-  border-radius:12px;padding:9px 11px;color:var(--ink);font-family:inherit;
+  border-radius:var(--r-ctl);padding:9px 11px;color:var(--ink);font-family:inherit;
   font-size:13px;font-weight:400;}
 #mgCreatorBar .blkrow .br-ic{flex:0 0 auto;font-size:17px;line-height:1.2;}
 #mgCreatorBar .blkrow .br-ic .ui-emoji{width:18px;height:18px;vertical-align:0;}
@@ -710,7 +710,7 @@ body.sheets-full #maker.sized,
 #mgDock .cb-row.tools{position:static;display:grid;
   grid-template-columns:repeat(auto-fit,minmax(58px,1fr));gap:5px;
   overflow:visible;background:rgba(26,19,50,.86);
-  border:1px solid var(--hair);border-radius:16px;}
+  border:1px solid var(--hair);border-radius:var(--r-card);}
 /* the stepper belongs to the tool it edits: a full row above the tools,
    not a pill floating right above the actions */
 #mgDock .stp{position:static;display:flex;align-items:center;gap:2px;align-self:stretch;
@@ -727,7 +727,7 @@ body.sheets-full #maker.sized,
 #mgDock .stp button{width:36px;height:36px;padding:0;border-radius:999px;font-size:15px;
   background:rgba(255,255,255,.07);color:var(--ink);border:none;}
 #mgDock .num{min-width:24px;text-align:center;font-weight:900;font-size:13.5px;}
-#mgDock .tool{width:auto;min-width:0;height:52px;padding:0 4px;border-radius:12px;border:none;
+#mgDock .tool{width:auto;min-width:0;height:52px;padding:0 4px;border-radius:var(--r-ctl);border:none;
   background:transparent;color:var(--ink);font-family:inherit;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
 #mgDock .tool.on{background:rgba(255,184,48,.2);box-shadow:inset 0 0 0 1.5px rgba(255,214,107,.7);}
@@ -751,7 +751,7 @@ body.sheets-full #maker.sized,
    goal scrolls rather than eating the board it is describing. */
 #boardTab #mgGoal.open{-webkit-line-clamp:unset;max-height:38vh;overflow-y:auto;}
 #mgMore{display:none;align-items:center;gap:6px;margin:0;padding:4px 8px 4px 2px;
-  border:none;border-radius:10px;background:transparent;font-family:inherit;
+  border:none;border-radius:var(--r-ctl);background:transparent;font-family:inherit;
   font-size:11.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--accent2);}
 #mgMore.on{display:inline-flex;}
 #mgMore i{width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;
@@ -783,7 +783,7 @@ body.sheets-full #maker.sized,
 #quests .m-head{order:-2;}
 #statsBox{order:-1;display:flex;gap:6px;padding:8px 14px 2px;}
 #statsBox div{flex:1;min-width:0;padding:7px 4px 6px;text-align:center;font-size:10px;line-height:1.25;
-  border-radius:11px;}
+  border-radius:var(--r-ctl);}
 #statsBox b{display:block;font-size:14px;margin:0 0 2px;}
 #statsBox b .ui-emoji{width:13px;height:13px;vertical-align:-1px;}
 #questList{order:0;}
@@ -792,8 +792,8 @@ body.sheets-full #maker.sized,
 #styleBody .st-prev{position:relative;}
 #styleBody .st-prev canvas{height:186px;}
 #styleBody .st-modes{position:absolute;left:8px;right:8px;bottom:6px;margin:0;
-  padding:2px;border-radius:14px;background:rgba(23,17,48,.72);}
-#styleBody .st-mode{min-height:36px;max-width:none;border-radius:12px;font-size:12px;}
+  padding:2px;border-radius:var(--r-card);background:rgba(23,17,48,.72);}
+#styleBody .st-mode{min-height:36px;max-width:none;border-radius:var(--r-ctl);font-size:12px;}
 
 /* ---- 6. AGE GATE: "not yet" is grey, not a faded green that reads as an
    error ---- */
@@ -926,3 +926,26 @@ html.he #projList .acad-grp{letter-spacing:0;}
   scrollbar-width:none;-webkit-overflow-scrolling:touch;}
 #editor:not(.max) #mgDock .cb-row.tools::-webkit-scrollbar{display:none;}
 #editor:not(.max) #mgDock .cb-row.tools > *{flex:0 0 auto;min-width:62px;}
+
+/* ---- one list of levels (topic 5, game-app-design §5) ----
+   Tower and the Cyber Lab were a grid of tiles under a big header card;
+   every other list of levels was rows. They are rows now — ccCard, the
+   same element — and the header is a section title like "BUILD PROJECTS",
+   with its count. The subtitle it repeated is the page's own. */
+#projList .t3sec{background:none;border:0;padding:0;margin:0;box-shadow:none;}
+#projList .t3sec .t3grid{display:flex;flex-direction:column;gap:8px;}
+#projList .t3sec .t3head{display:flex;align-items:center;gap:8px;margin:6px 4px 8px;padding:0;
+  background:none;border:0;box-shadow:none;}
+#projList .t3sec .t3ico{width:auto;height:auto;background:none;font-size:13px;box-shadow:none;}
+#projList .t3sec .t3title{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);}
+html.he #projList .t3sec .t3title{letter-spacing:0;}
+#projList .t3sec .t3sub{display:none;}
+#projList .t3sec .t3prog{margin-left:auto;font-size:11.5px;font-weight:800;color:var(--ink2);
+  background:rgba(0,0,0,.22);padding:2px 8px;border-radius:999px;}
+#projList .t3sec .cy-act{margin:14px 4px 6px;}
+/* a level row inside those bands is a .pcard like any other — the tile
+   rules .t3card still carries (a column, its own padding, a dimmed "done")
+   must not reach it */
+#projList .t3sec .t3card.pcard{flex-direction:row;align-items:flex-start;gap:11px;opacity:1;
+  padding:12px;border-radius:var(--r-card);min-height:0;}
+#projList .t3sec .t3card.pcard.t3new{border-style:dashed;}

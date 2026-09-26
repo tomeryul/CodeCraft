@@ -489,24 +489,15 @@ window.renderProjects=function(){
   const sec=document.querySelector(".t3sec.cy-sec");
   if(!sec)return;
   const grid=document.createElement("div");grid.className="t3grid";
+  // the same rows as every other list of levels (ccCard)
   for(const e of (player.myChallenges||[]).filter(x=>x.cy)){
-    const c=document.createElement("button");
-    c.className="t3card cy-card mine";
-    c.innerHTML='<span class="t3badge">🔐</span>'+
-      '<span class="t3name">'+esc(e.name)+'</span>'+
-      '<span class="t3meta">'+"⭐".repeat(e.diff||1)+' · 🧩 '+e.maxBlocks+
-        ((e.strikes|0)?' · ⛔ '+(e.strikes|0):'')+'</span>'+
-      '<span class="t3mine">yours</span>';
-    c.onclick=()=>{$("projects").classList.remove("open");mgEnter(e);};
-    grid.appendChild(c);
+    ccCard(grid,{em:"🔐",name:'<span class="t3name">'+esc(e.name)+'</span>',cls:"t3card cy-card mine",
+      meta:"⭐".repeat(e.diff||1)+' · 🧩 '+e.maxBlocks+((e.strikes|0)?' · ⛔ '+(e.strikes|0):'')+' · <i>yours</i>',
+      onTap:()=>{$("projects").classList.remove("open");mgEnter(e);}});
   }
-  const add=document.createElement("button");
-  add.className="t3card t3new";
-  add.innerHTML='<span class="t3badge">✏️</span>'+
-    '<span class="t3name">Design a level</span>'+
-    '<span class="t3meta">Your own keypad — set the code, prove it, publish it</span>';
-  add.onclick=()=>{$("projects").classList.remove("open");cyDesign();};
-  grid.appendChild(add);
+  ccCard(grid,{em:"✏️",name:'<span class="t3name">Design a level</span>',cls:"t3card t3new pnew",
+    desc:"Your own keypad — set the code, prove it, publish it", badge:"＋",
+    onTap:()=>{$("projects").classList.remove("open");cyDesign();}});
   const h=document.createElement("div");h.className="cy-act";
   h.innerHTML='<span class="cy-act-n">Yours</span>'+
     '<span class="cy-act-s">Build a lock of your own and put it in front of everybody.</span>';

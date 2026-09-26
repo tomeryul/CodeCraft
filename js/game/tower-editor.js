@@ -691,22 +691,14 @@ window.renderProjects=function(){
   _renderProjects();
   const grid=document.querySelector(".t3sec .t3grid");
   if(!grid)return;
+  // the same rows as the levels around them (ccCard)
   for(const e of (player.myChallenges||[]).filter(x=>x.t3)){
-    const c=document.createElement("button");
-    c.className="t3card mine";
-    c.innerHTML='<span class="t3badge">🧊</span>'+
-      '<span class="t3name">'+esc(e.name)+'</span>'+
-      '<span class="t3meta">'+"⭐".repeat(e.diff||1)+' · 🧩 '+e.maxBlocks+' · ⛰ '+peak(lists(e))+'</span>'+
-      '<span class="t3mine">yours</span>';
-    c.onclick=()=>{$("projects").classList.remove("open");t3Enter(e);};
-    grid.appendChild(c);
+    ccCard(grid,{em:"🧊",name:'<span class="t3name">'+esc(e.name)+'</span>',cls:"t3card mine",
+      meta:"⭐".repeat(e.diff||1)+' · 🧩 '+e.maxBlocks+' · ⛰ '+peak(lists(e))+' · <i>yours</i>',
+      onTap:()=>{$("projects").classList.remove("open");t3Enter(e);}});
   }
-  const add=document.createElement("button");
-  add.className="t3card t3new";
-  add.innerHTML='<span class="t3badge">✏️</span>'+
-    '<span class="t3name">Design a level</span>'+
-    '<span class="t3meta">Your own tower — plan it, prove it, publish it</span>';
-  add.onclick=()=>{$("projects").classList.remove("open");mgEnterCreator();setMode(true);};
-  grid.appendChild(add);
+  ccCard(grid,{em:"✏️",name:'<span class="t3name">Design a level</span>',cls:"t3card t3new pnew",
+    desc:"Your own tower — plan it, prove it, publish it", badge:"＋",
+    onTap:()=>{$("projects").classList.remove("open");mgEnterCreator();setMode(true);}});
 };
 })();
