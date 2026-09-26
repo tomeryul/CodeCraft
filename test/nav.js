@@ -184,7 +184,12 @@ async function toWorld(pg){
 
     /* A component is no longer a sheet on top of the maker — it is the
        maker filtered to one class. Back still has to walk it one step at a
-       time: first the filter, then Style. Exit still skips all of it. */
+       time: first the filter, then Style. Exit still skips all of it.
+       Exit just landed in the world, and the world is where held news and
+       cards arrive (whenCalm in fx.js) — one may be up now, and a player
+       would dismiss it before going on, so the test does too. */
+    await pg.waitForTimeout(900);
+    await pg.evaluate(()=>{ HELD.length=0; const c=document.getElementById('ccCele'); if(c)c.remove(); });
     await pg.evaluate(()=>{ player.myWear=[]; makerOpen('hat',null);
       mkParts=[]; renderMaker(); mkAddPart(); });
     await pg.waitForTimeout(400);

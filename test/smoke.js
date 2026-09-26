@@ -307,6 +307,11 @@ async function ev(expr) {
   await sleep(7000);
   check("house project completed", await ev("player.projects.house") === 1, await ev("JSON.stringify(player.projects)"));
   check("monument placed in the world", await ev(`[...objects.values()].some(o=>o.type==='proj'&&o.em==='🏡')`) === true);
+  /* the level stays on screen under its card until the player moves on
+     (mgWinCard) — it no longer closes by itself behind the celebration */
+  check("the finished project waits under its card", await ev("!!mgState && !!document.querySelector('#ccCele .cc-cta')") === true);
+  await ev("document.querySelector('#ccCele .cc-cta').click()");
+  await sleep(500);
   check("mini-game exited cleanly", await ev("mgState === null && mgRobot === null") === true);
   const lockState = await ev(`(()=>{
     const cardFor=name=>[...document.querySelectorAll('#projList .pcard')]
