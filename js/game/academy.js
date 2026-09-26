@@ -193,19 +193,27 @@ function renderAcademySection(el){
         : "Six quick lessons take you from your first Move to loops &amp; conditions — then four more teach variables, functions and algorithms.",
     badge:all?"🔁":"▶",
     onTap:()=>{$("projects").classList.remove("open");academyStart();}});
-  // The lesson track lives under the text — and every dot is a door: tap one to
-  // jump straight to that lesson instead of being marched through in order.
-  const tr=document.createElement("div");tr.className="acad-track";
-  TUTS.forEach((t,i)=>{
-    const st=player.academy&&player.academy[t.id]?"done":(i===nextI?"now":"soon");
-    const d=document.createElement("span");
-    d.className="acad-dot tapp "+st+(i>=ACADEMY_CORE?" adv":"");
-    d.title=t.name+" — Lesson "+(i+1)+(i>=ACADEMY_CORE?" (advanced)":"");
-    d.textContent=t.em;
-    d.addEventListener("click",e=>{e.stopPropagation();$("projects").classList.remove("open");academyEnter(i);});
-    tr.appendChild(d);
-  });
-  card.querySelector(".pmain").appendChild(tr);
+  /* The Academy page used to be this one card and a strip of ten emoji
+     dots — a page for a single card, with the lessons as icons you had to
+     long-press to name (game-app-design §2: no page for one item). The card
+     stays as "carry on where you left off"; under it, every lesson is a row
+     of its own, named, in its group, with its state, and a tap opens it. */
+  const group=(title,from,to)=>{
+    // NOT an h4.qsec: the menu splits #projList into pages at those, and a
+    // group heading must stay inside the Academy's page
+    const g=document.createElement("div");g.className="acad-grp";g.textContent=title;
+    el.appendChild(g);
+    for(let i=from;i<to;i++){
+      const t=TUTS[i], isDone=!!(player.academy&&player.academy[t.id]), isNext=i===nextI;
+      const row=ccCard(el,{em:t.em,name:t.name,cls:"acad-lesson"+(isNext?" hot":""),done:isDone,
+        meta:'<i>Lesson '+(i+1)+'</i>'+(isDone?' · <i>✓</i>':isNext?' · <i>next</i>':''),
+        badge:isDone?"🔁":"▶",
+        onTap:()=>{$("projects").classList.remove("open");academyEnter(i);}});
+      row.dataset.lesson=String(i);
+    }
+  };
+  group("The basics",0,ACADEMY_CORE);
+  group("Going further",ACADEMY_CORE,TUTS.length);
 }
 
 /* ---------------- the lesson card ----------------

@@ -3237,9 +3237,10 @@ async function ev(expr) {
     const ac=document.querySelector('#projList .pcard.acad-card');
     out.hasCard=!!ac;
     out.acadMeta=ac?ac.querySelector('.pmeta').textContent.replace(/\\s+/g,' ').trim():null;
-    out.acadTrack=ac?ac.querySelectorAll('.pmain .acad-track .acad-dot').length:0;
+    // every lesson is a row of its own on the Academy page now (not a dot)
+    out.acadTrack=document.querySelectorAll('#projList .pcard.acad-lesson').length;
     out.oldMarkup=document.querySelectorAll('#projList .quest.proj').length; // must be zero
-    const packCards=[...document.querySelectorAll('#projList .pcard:not(.acad-card)')]
+    const packCards=[...document.querySelectorAll('#projList .pcard:not(.acad-card):not(.acad-lesson)')]
       .filter(c=>c.querySelector('.acad-track'));
     out.packCards=packCards.length;                 // one per chapter
     out.packDots=packCards.every((c,i)=>
@@ -3255,7 +3256,7 @@ async function ev(expr) {
     if(mgState)mgExit(false);
     // same for a lesson the player has not reached
     renderProjects();
-    document.querySelectorAll('#projList .pcard.acad-card .acad-dot')[5].click();
+    document.querySelector('#projList .pcard.acad-lesson[data-lesson="5"]').click();
     out.lessonJump=!!(mgState&&mgState.proj.id===TUTS[5].id);
     if(mgState)mgExit(false);
     mgState=null;mgRobot=null;
@@ -3278,7 +3279,7 @@ async function ev(expr) {
   check("treeAhead sensing works on the tutorial board", AC.treeAhead === true && AC.noTree === false, acad);
   check("Academy tracks partial progress", AC.incomplete === true, acad);
   check("Projects sheet shows the cohesive Academy section", AC.hasCard === true, acad);
-  check("Academy card is a compact .pcard with progress meta + lesson track",
+  check("Academy card is a compact .pcard with progress meta, and every lesson a row of its own",
     AC.acadTrack === AC.count && /4\/10 done/.test(AC.acadMeta || "")
       && /basics 4\/6/.test(AC.acadMeta || ""), AC.acadMeta + " dots=" + AC.acadTrack);
   check("Puzzle chapters use the same card, one dot per level",

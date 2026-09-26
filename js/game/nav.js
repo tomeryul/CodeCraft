@@ -34,8 +34,13 @@ const ICON_SIZE=
   '<svg class="ic-min" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" '+
   'stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
 
+/* The shop is a wrapper of its own (#shopWrap, with its own backdrop)
+   rather than a .sheet, and "go home" used to leave it open: every page
+   opened afterwards landed underneath it, and closing that page revealed
+   the shop again (game-app-design §2: one stack). Home closes it too. */
 function closeAll(){
   SHEETS.forEach(id=>{const e=$(id); if(e)e.classList.remove("open");});
+  const shop=$("shopWrap"); if(shop)shop.classList.remove("open");
 }
 
 /* Exit: out to the world from anywhere, with the challenge torn down so

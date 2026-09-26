@@ -902,3 +902,15 @@ body.sheets-full #maker.sized,
   #mgTip .cy-tip-t,.cy-tip .cy-tip-t{height:calc(1.42em * 2);}
   #mgTip,.cy-tip{padding-top:3px;}
 }
+
+/* My Challenges borrows the Tower band for the towers YOU designed — and
+   used to show the whole band, built-in levels and all, so it was the
+   Tower Mode page under another name. Here it keeps only yours and the
+   card that starts a new one (game-app-design §2: one place per thing). */
+#projects[data-page="mine"] .t3sec:not(.cy-sec) .t3card:not(.mine):not(.t3new),
+#projects[data-page="mine"] .t3sec:not(.cy-sec) .t3head{display:none;}
+
+/* the Academy page's lesson list: a small group title between rows */
+#projList .acad-grp{margin:14px 4px 6px;font-size:11.5px;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink2);}
+html.he #projList .acad-grp{letter-spacing:0;}

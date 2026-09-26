@@ -173,7 +173,12 @@ function bands(){
   }
   return out;
 }
-function hubPage(key,pointSel){
+/* Back returns to where you were, not to the top: a player who scrolled
+   down to the eighth chapter, played a level and came back used to land
+   at the first one (game-app-design §2, §4). The list's scroll is noted
+   as a level opens from a page and put back when Back returns to it. */
+const hubScroll={};
+function hubPage(key,pointSel,restore){
   const p=PAGES[key]; if(!p)return;
   hubClose();
   if(typeof mgState!=="undefined"&&mgState&&has("mgExit"))mgExit(false);
@@ -195,13 +200,15 @@ function hubPage(key,pointSel){
     const on=showAll||keep.indexOf(b.key)>=0;
     for(const n of b.nodes)n.style.display=on?"":"none";
   }
+  // the page is named on the sheet, so a band can show differently per page
+  $("projects").dataset.page=key;
   $("authBox").style.display=p.auth?"":"none";
   if(p.auth)accountRows();
   const t=$("projTitle"),s=$("projSub");
   if(t)t.textContent=p.em+" "+p.title;
   if(s)s.textContent=p.sub;
   $("projects").classList.add("open");
-  $("projList").scrollTop=0;
+  $("projList").scrollTop=restore?(hubScroll[key]||0):0;
   if(pointSel)setTimeout(()=>{
     const c=document.querySelector(pointSel); if(!c)return;
     c.classList.add("j-point");setTimeout(()=>c.classList.remove("j-point"),2600);
@@ -298,8 +305,16 @@ if(typeof mgExit==="function"){
   window.mgExit=function(reopen){
     const r=_mgExit.apply(this,arguments);
     if(reopen!==false&&$("projects").classList.contains("open"))
-      hubPage(hubCur||"academy");
+      hubPage(hubCur||"academy",null,true);
     return r;
+  };
+}
+if(typeof mgEnter==="function"){
+  const _mgEnter=window.mgEnter;
+  window.mgEnter=function(){
+    const pl=$("projList");
+    if(hubCur&&pl)hubScroll[hubCur]=pl.scrollTop;   // the sheet may already be shut; its scroll is not
+    return _mgEnter.apply(this,arguments);
   };
 }
 

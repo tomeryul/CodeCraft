@@ -66,8 +66,15 @@ not reopen this as a finding. Work inside it instead: the size problems
 that are real (the Tower board at half height, the board resizing under
 the text) belong to topic 2.
 
-## 4. Meta screens are screens, and there are fewer of them
-*Owner: keep all of it, full-screen menus included.*
+## 4. Fewer pages, one stack, Back to where you were  ✅ v187
+*Done:* My Challenges shows only your own towers (it was the Tower page
+under another name); the Academy page lists every lesson as a row
+instead of one card and a strip of dots; going home closes the shop, so
+nothing opens underneath it; Back from a level restores the list's
+scroll. Kept on purpose: the shop's Style row (a link that closes the
+shop first, not a second page). `test/pages.js`.
+*Owner: menus and destinations stay sheets with the half / full choice —
+do NOT make them full-screen. Everything else in this topic stands.*
 *Skill §1, §2*
 
 - The menu and every destination are half sheets over a dimmed,

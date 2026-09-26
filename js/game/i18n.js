@@ -1091,6 +1091,7 @@ const NUM=/\d+(?:[.,]\d+)?/g;
 const HE_N={
   "/min {n}":"{n} לדקה",
   "Lesson {n} of {n}":"שיעור {n} מתוך {n}",
+  "Lesson {n}":"שיעור {n}",
   "Level {n} of {n}":"שלב {n} מתוך {n}",
   "{n}/{n} done":"{n}/{n} הושלמו",
   "{n}/{n} open":"{n}/{n} פתוחים",
@@ -1483,6 +1484,7 @@ const HE_RAW={
 "🕳️ Not into a pit — pick solid ground.":"🕳️ לא לתוך בור — תבחר קרקע מוצקה.",
 "🗺️ Plan view":"🗺️ תצוגת תוכנית",
 "Plan":"תוכנית",
+"The basics":"הבסיס","Going further":"להתקדם","next":"הבא",
 "Next":"הבא","Not now":"לא עכשיו","Next lesson ▶":"לשיעור הבא ▶","Next level ▶":"לשלב הבא ▶",
 "target":"יעד","block":"בלוק","flag":"דגל","key":"מפתח","door":"דלת","plate":"לחצן",
 "It can walk to":"הוא יכול ללכת אל",
