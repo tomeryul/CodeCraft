@@ -555,9 +555,11 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 /* ---------- v2 extras: celebration overlay ---------- */
 /* The middle was 55% see-through, and a win card now comes up over a
    level: the lesson's own text read straight through the card's. The
-   world may show at the edges; behind the words it may not. */
-#ccCele{position:absolute;top:0;left:0;right:0;height:var(--vh,100lvh);z-index:95;background:radial-gradient(90% 70% at 50% 42%,rgba(20,13,45,.86),rgba(12,7,30,.94));
-  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+   world may show at the edges; behind the words it may not. Opaque rather
+   than blurred: a blur here costs every frame the confetti falls, and
+   Safari 26 turns blur on anything touching the screen's edge into a
+   band of its own glass (see the edge-glass check in test/layout.js). */
+#ccCele{position:absolute;top:0;left:0;right:0;height:var(--vh,100lvh);z-index:95;background:radial-gradient(90% 70% at 50% 42%,rgba(20,13,45,.985),rgba(12,7,30,.97));
   display:flex;align-items:center;justify-content:center;padding:28px;transition:opacity .3s;}
 #ccCele.out{opacity:0;}
 .cc-card{text-align:center;animation:popIn .45s var(--ease-celebrate);max-width:360px;position:relative;z-index:1;}

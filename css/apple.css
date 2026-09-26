@@ -103,8 +103,7 @@
   #mgBrickStp,#coach,.toast,.chip,.iconbtn{
     background-color:var(--panel,#241c46) !important;
   }
-  /* the win card's veil: blurred, it hid the level's text; unblurred it
-     has to be solid instead, or that text reads through the card again */
+  /* the win card's veil: solid, so no level text reads through the card */
   #ccCele{background:rgb(16,10,38) !important;}
   #fabRun{background-image:none !important;background-color:#3ca85a !important;}
 }
