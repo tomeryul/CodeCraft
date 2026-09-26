@@ -406,6 +406,16 @@ function chrome(){
   });
   $("t3EdRotL").addEventListener("click",()=>{if(window.t3Cam)t3Cam.rot(-1);});
   $("t3EdRotR").addEventListener("click",()=>{if(window.t3Cam)t3Cam.rot(1);});
+  /* The camera turns the BOARD, so its buttons live beside the board, the
+     way a Tower level has them at half height — not in the strip below
+     with the counts. They are moved next to the canvas; .t3side on the
+     panel (set in ui() while the 3D view is up) lays the three in a row. */
+  const cv=$("mgCanvas"), pn=cv&&cv.parentNode;
+  if(pn){
+    for(const id of ["t3EdRotL","t3EdRotR"])$(id).classList.add("t3side-btn");
+    pn.insertBefore($("t3EdRotL"),cv);
+    pn.insertBefore($("t3EdRotR"),cv.nextSibling);
+  }
 
   const hint=document.createElement("button");
   hint.id="t3Hint";hint.className="rowbtn";
@@ -446,6 +456,11 @@ function ui(){
   const row=$("t3EdRow"), warn=$("t3Warn"), hint=$("t3Hint");
   const three=cr&&on3();
   for(const el of [row,warn,hint])if(el)el.style.display=three?"":"none";
+  // out of the 3D designer, the board's row is the board alone again
+  const pn0=$("mgCanvas")&&$("mgCanvas").parentNode;
+  if(pn0&&!(three&&mgState.t3view==="3d")&&pn0.classList.contains("t3side")){
+    pn0.classList.remove("t3side"); if(window.mgFitReset)mgFitReset();
+  }
   if(!cr)return;
   btn.textContent=three?"🗺️ 2D":"🧊 3D";
   btn.classList.toggle("on",three);
@@ -465,6 +480,8 @@ function ui(){
   $("t3View").setAttribute("aria-pressed",String(solid));
   $("t3Plan").setAttribute("aria-pressed",String(!solid));
   for(const id of ["t3EdRotL","t3EdRotR","t3Leg3d"])$(id).style.display=solid?"":"none";
+  const pn=$("mgCanvas")&&$("mgCanvas").parentNode;
+  if(pn&&pn.classList.contains("t3side")!==solid){ pn.classList.toggle("t3side",solid); if(window.mgFitReset)mgFitReset(); }
   $("t3LegPlan").style.display=solid?"none":"";
   if(window.t3Cam)t3Cam.bar(false);          // the designer's strip is the only one
   $("t3Peak").textContent=peak(p);

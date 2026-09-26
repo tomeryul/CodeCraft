@@ -886,7 +886,8 @@ function mgFitBoard(aspect){
   if(ph<40)return;
   let used=0;
   for(const el of panel.children){
-    if(el===cv||el.id==="mgRead"||!el.offsetParent)continue;
+    // the rotate buttons beside a Tower board share the board's row
+    if(el===cv||el.id==="mgRead"||!el.offsetParent||el.classList.contains("t3side-btn"))continue;
     used+=el.getBoundingClientRect().height;
   }
   /* What is left after the fixed rows is shared. The reading area keeps a
@@ -1897,6 +1898,7 @@ function mgExit(reopen){
   /* the creator borrowed full height; hand the player's own size back */
   (window.ccSizeFlip||(f=>f()))(()=>$("editor").classList.toggle("max",!!sheetFull));
   $("editor").classList.remove("mg");
+  { const pn=$("mgCanvas")&&$("mgCanvas").parentNode; if(pn)pn.classList.remove("t3side"); }  // the Tower designer's board row
   $("mgCreatorBar").classList.remove("on");
   $("mgPanel").classList.remove("mk");
   setTab("blocks");

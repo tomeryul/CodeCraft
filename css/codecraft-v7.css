@@ -560,6 +560,16 @@ body.sheets-full #maker.sized,
 #editor:not(.max) #boardTab #t3Bar .t3tag,
 #editor:not(.max) #boardTab #t3Bar .t3key{display:none;}
 #editor:not(.max) #boardTab #t3Bar .t3btn{width:40px;height:40px;border-radius:12px;}
+/* the Tower DESIGNER's 3D view: the same idea at any height — its rotate
+   buttons are moved beside the canvas (tower-editor.js) and this lays them
+   out; every other child of the panel keeps a whole row */
+#boardTab #mgPanel.t3side{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;column-gap:6px;}
+#boardTab #mgPanel.t3side > *{grid-column:1 / -1;}
+#boardTab #mgPanel.t3side > #t3EdRotL{grid-column:1;align-self:center;justify-self:center;}
+#boardTab #mgPanel.t3side > #mgCanvas{grid-column:2;}
+#boardTab #mgPanel.t3side > #t3EdRotR{grid-column:3;align-self:center;justify-self:center;}
+#boardTab #mgPanel:not(.t3side) > .t3side-btn{display:none !important;}
+#boardTab #mgPanel > .t3side-btn{width:40px;height:40px;border-radius:12px;}
 #mgCreatorBar .cb-row.tools{gap:4px;padding:5px;}
 #mgCreatorBar .tool{width:auto;min-width:52px;height:50px;padding:0 6px;border-radius:12px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
