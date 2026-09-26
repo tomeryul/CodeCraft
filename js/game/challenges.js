@@ -925,8 +925,15 @@ function mgFitBoard(aspect){
      there) and half at full height — they scroll under the board. It was
      70%, and a half-height designer board came out 96×66. */
   const half=!$("editor").classList.contains("max");
+  /* …but never less than the box of tools itself: it is the thing you
+     design WITH, and it stays whole on screen under the board (at full
+     height the board is held by its width anyway, so this costs it
+     nothing). At half height it is the one row of tools that has to
+     show; the notes under it scroll. */
+  const toolRow=making&&half?dock.querySelector(".cb-row.tools"):null;
+  const dockH=making?Math.ceil((toolRow||dock).getBoundingClientRect().height):0;
   const want=making
-    ? Math.min(natural,Math.round(room*(half?.35:.5)))
+    ? Math.min(natural,Math.max(dockH+8,Math.round(room*(half?.35:.5))))
     : Math.min(Math.round(room*.30),64);
   const capH=Math.max(72,room-want);
   /* no floor under the width: a floor here would put the height back over
