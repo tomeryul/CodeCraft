@@ -541,8 +541,12 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     ck(`${W}x${H} but keeps the header it needs to get back`,
        focus.on.head > 0, focus.on);
     ck(`${W}x${H} the way back stays on screen`, focus.on.btn, focus.on);
+    /* within a pixel: the size change now glides on the transform
+       (ccSizeFlip), and a row measured on its last sub-pixel of travel can
+       round the other way — every row still has to come back */
     ck(`${W}x${H} pressing it again restores every row`,
-       JSON.stringify(focus.off) === JSON.stringify(focus.before), focus);
+       Object.keys(focus.before).every(k => typeof focus.before[k] !== 'number'
+         ? focus.off[k] === focus.before[k] : Math.abs(focus.off[k] - focus.before[k]) <= 1), focus);
 
     /* Focus used to be 100vh. The sheet is anchored to the bottom, so that
        started it at y=0 — behind the status bar, where iOS dims and the
