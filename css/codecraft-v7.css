@@ -560,15 +560,19 @@ body.sheets-full #maker.sized,
 #editor:not(.max) #boardTab #t3Bar .t3tag,
 #editor:not(.max) #boardTab #t3Bar .t3key{display:none;}
 #editor:not(.max) #boardTab #t3Bar .t3btn{width:40px;height:40px;border-radius:12px;}
-/* the Tower DESIGNER's 3D view: the same idea at any height — its rotate
-   buttons are moved beside the canvas (tower-editor.js) and this lays them
-   out; every other child of the panel keeps a whole row */
-#boardTab #mgPanel.t3side{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;column-gap:6px;}
-#boardTab #mgPanel.t3side > *{grid-column:1 / -1;}
-#boardTab #mgPanel.t3side > #t3EdRotL{grid-column:1;align-self:center;justify-self:center;}
-#boardTab #mgPanel.t3side > #mgCanvas{grid-column:2;}
-#boardTab #mgPanel.t3side > #t3EdRotR{grid-column:3;align-self:center;justify-self:center;}
-#boardTab #mgPanel:not(.t3side) > .t3side-btn{display:none !important;}
+/* the Tower DESIGNER's 3D view at HALF height: its rotate buttons beside
+   the board (a second pair, made in tower-editor.js), the strip's own pair
+   stepping aside. At full height the board is wide and the strip keeps
+   its pair — the owner's call. */
+#editor:not(.max) #boardTab #mgPanel.t3side{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;column-gap:6px;}
+#editor:not(.max) #boardTab #mgPanel.t3side > *{grid-column:1 / -1;}
+#editor:not(.max) #boardTab #mgPanel.t3side > #t3SideL{grid-column:1;align-self:center;justify-self:center;}
+#editor:not(.max) #boardTab #mgPanel.t3side > #mgCanvas{grid-column:2;}
+#editor:not(.max) #boardTab #mgPanel.t3side > #t3SideR{grid-column:3;align-self:center;justify-self:center;}
+#editor:not(.max) #mgPanel.t3side ~ * #t3EdRotL,#editor:not(.max) #mgPanel.t3side ~ * #t3EdRotR,
+#editor:not(.max):has(#mgPanel.t3side) #t3EdRow #t3EdRotL,
+#editor:not(.max):has(#mgPanel.t3side) #t3EdRow #t3EdRotR{display:none !important;}
+#editor.max .t3side-btn,#boardTab #mgPanel:not(.t3side) > .t3side-btn{display:none !important;}
 #boardTab #mgPanel > .t3side-btn{width:40px;height:40px;border-radius:12px;}
 #mgCreatorBar .cb-row.tools{gap:4px;padding:5px;}
 #mgCreatorBar .tool{width:auto;min-width:52px;height:50px;padding:0 6px;border-radius:12px;
@@ -914,3 +918,11 @@ body.sheets-full #maker.sized,
 #projList .acad-grp{margin:14px 4px 6px;font-size:11.5px;font-weight:800;letter-spacing:.06em;
   text-transform:uppercase;color:var(--ink2);}
 html.he #projList .acad-grp{letter-spacing:0;}
+
+/* Designing at half height: the box of tools is ONE row that scrolls
+   sideways instead of two rows that took most of the tab — the board is
+   what you are designing, and it came out 96×66. */
+#editor:not(.max) #mgDock .cb-row.tools{display:flex !important;flex-wrap:nowrap;overflow-x:auto;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+#editor:not(.max) #mgDock .cb-row.tools::-webkit-scrollbar{display:none;}
+#editor:not(.max) #mgDock .cb-row.tools > *{flex:0 0 auto;min-width:62px;}

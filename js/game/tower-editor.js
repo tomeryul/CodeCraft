@@ -410,11 +410,16 @@ function chrome(){
      way a Tower level has them at half height — not in the strip below
      with the counts. They are moved next to the canvas; .t3side on the
      panel (set in ui() while the 3D view is up) lays the three in a row. */
+  /* At HALF height only (owner's call): a second pair, beside the canvas,
+     and the pair in the strip steps aside. At full height the board is
+     wide and the strip's own pair is the one shown. CSS picks which. */
   const cv=$("mgCanvas"), pn=cv&&cv.parentNode;
-  if(pn){
-    for(const id of ["t3EdRotL","t3EdRotR"])$(id).classList.add("t3side-btn");
-    pn.insertBefore($("t3EdRotL"),cv);
-    pn.insertBefore($("t3EdRotR"),cv.nextSibling);
+  if(pn&&!$("t3SideL")){
+    const mk=(id,lbl,g,d)=>{const b=document.createElement("button");
+      b.className="t3btn t3side-btn";b.id=id;b.title=lbl;b.setAttribute("aria-label",lbl);b.textContent=g;
+      b.addEventListener("click",()=>{if(window.t3Cam)t3Cam.rot(d);});return b;};
+    pn.insertBefore(mk("t3SideL","Rotate left","↺",-1),cv);
+    pn.insertBefore(mk("t3SideR","Rotate right","↻",1),cv.nextSibling);
   }
 
   const hint=document.createElement("button");

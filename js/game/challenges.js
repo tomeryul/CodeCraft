@@ -920,8 +920,13 @@ function mgFitBoard(aspect){
      empty one lets it go, and every time it did the board changed size
      under the player's eyes (docs/ux-roadmap.md topic 2). The board is the
      same size from the moment the level opens to the moment it is won. */
+  /* Designing, the board you are designing comes first: the box of tools
+     and its notes get at most 35% at half height (the tools are one row
+     there) and half at full height — they scroll under the board. It was
+     70%, and a half-height designer board came out 96×66. */
+  const half=!$("editor").classList.contains("max");
   const want=making
-    ? Math.min(natural,Math.round(room*.70))
+    ? Math.min(natural,Math.round(room*(half?.35:.5)))
     : Math.min(Math.round(room*.30),64);
   const capH=Math.max(72,room-want);
   /* no floor under the width: a floor here would put the height back over

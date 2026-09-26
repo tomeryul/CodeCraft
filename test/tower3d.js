@@ -177,12 +177,18 @@ const ck = (n, ok, d) => { ok ? pass++ : fail++;
       const out = { strips: ['t3Bar', 't3EdRow'].filter(id => shown($(id))),
         hits, fits: row.scrollWidth <= row.clientWidth + 1 && rr.right <= innerWidth,
         rot3d: shown($('t3EdRotL')) && shown($('t3EdRotR')), pressed: $('t3View').getAttribute('aria-pressed') };
-      /* the camera turns the board, so its buttons sit beside the board —
-         and ONLY there: not also left behind in the strip under it */
-      { const c = $('mgCanvas').getBoundingClientRect(), l = $('t3EdRotL').getBoundingClientRect(), r = $('t3EdRotR').getBoundingClientRect();
-        out.beside = l.right <= c.left + 1 && r.left >= c.right - 1 && l.top < c.bottom && l.bottom > c.top;
-        out.inRow = row.querySelectorAll('.t3btn').length;
-        out.pairs = [...document.querySelectorAll('.t3btn')].filter(shown).length; }
+      /* Full height (the designer opens there): the board is wide, and the
+         camera's pair is the one in the strip. Half height: a pair beside
+         the board, and the strip's steps aside — one pair either way. */
+      out.fullRow = [...row.querySelectorAll('.t3btn')].filter(shown).length;
+      out.fullPairs = [...document.querySelectorAll('.t3btn')].filter(shown).length;
+      if ($('editor').classList.contains('max')) { $('edMax').click(); await wait(700); }
+      { const c = $('mgCanvas').getBoundingClientRect(), l = $('t3SideL').getBoundingClientRect(), r = $('t3SideR').getBoundingClientRect();
+        out.beside = l.width > 0 && l.right <= c.left + 1 && r.left >= c.right - 1 && l.top < c.bottom && l.bottom > c.top;
+        out.inRow = [...row.querySelectorAll('.t3btn')].filter(shown).length;
+        out.pairs = [...document.querySelectorAll('.t3btn')].filter(shown).length;
+        out.halfBoard = Math.round(c.height); }
+      $('edMax').click(); await wait(700);
       if (!$('t3Plan')) { mgExit(false); return Object.assign(out, { rotPlan: null, legPlan: false }); }
       $('t3Plan').click(); await wait(300);
       out.rotPlan = shown($('t3EdRotL'));
@@ -197,7 +203,9 @@ const ck = (n, ok, d) => { ok ? pass++ : fail++;
     ck(`${W}: the camera turns only where there is a 3D view to turn`,
       R.rot3d === true && R.rotPlan === false && R.pressed === 'true', R);
     ck(`${W}: the legend is the one for what is on screen`, R.legPlan === true, R);
-    ck(`${W}: the rotate buttons sit beside the board, and only there`,
+    ck(`${W}: at full height the camera's pair is in the strip, and only there`,
+      R.fullRow === 2 && R.fullPairs === 2, R);
+    ck(`${W}: at half height it sits beside the board instead`,
       R.beside === true && R.inRow === 0 && R.pairs === 2, R);
     await ap.close();
   }

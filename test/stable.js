@@ -111,6 +111,25 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   ck('which leaves the board the height the row used to take', T.h >= 125, T);
   ck('at full height the whole camera row, legend and all, is back', T.fullBar === true, T);
 
+  console.log('▶ designing, the board you design is the big thing');
+  /* The box of tools used to get up to 70% of the tab: at half height a
+     designer board came out 96×66 in every kind of level. */
+  const D = await pg.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    window.confirm = () => true;
+    mgEnterCreator(); await wait(600); setTab('board');
+    if ($('editor').classList.contains('max')) $('edMax').click();
+    await wait(700);
+    const h = () => { mgFitReset(); mgDraw(); return Math.round($('mgCanvas').getBoundingClientRect().height); };
+    const out = { flat: h() };
+    $('t3Btn').click(); await wait(500); setTab('board'); $('t3View').click(); await wait(500); out.tower = h();
+    $('cyBtn').click(); await wait(600); setTab('board'); await wait(200); out.cyber = h();
+    mgExit(false); await wait(300);
+    return out;
+  });
+  ck('at half height the designer board is no longer a thumbnail — flat, Tower and Cyber',
+    D.flat >= 130 && D.tower >= 130 && D.cyber >= 100, D);
+
   console.log('▶ nothing moves after the player stops touching it');
   await pg.keyboard.press('Shift');          // the tap that opens the designer
   const C = await pg.evaluate(async () => {
