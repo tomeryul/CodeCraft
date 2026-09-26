@@ -553,7 +553,11 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 }
 
 /* ---------- v2 extras: celebration overlay ---------- */
-#ccCele{position:absolute;top:0;left:0;right:0;height:var(--vh,100lvh);z-index:95;background:radial-gradient(90% 70% at 50% 42%,rgba(20,13,45,.55),rgba(12,7,30,.88));
+/* The middle was 55% see-through, and a win card now comes up over a
+   level: the lesson's own text read straight through the card's. The
+   world may show at the edges; behind the words it may not. */
+#ccCele{position:absolute;top:0;left:0;right:0;height:var(--vh,100lvh);z-index:95;background:radial-gradient(90% 70% at 50% 42%,rgba(20,13,45,.86),rgba(12,7,30,.94));
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
   display:flex;align-items:center;justify-content:center;padding:28px;transition:opacity .3s;}
 #ccCele.out{opacity:0;}
 .cc-card{text-align:center;animation:popIn .45s var(--ease-celebrate);max-width:360px;position:relative;z-index:1;}
@@ -570,6 +574,11 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   border-radius:999px;padding:14px 38px;font-size:17px;border-bottom:5px solid var(--accent-deep);
   box-shadow:inset 0 2px 0 rgba(255,255,255,.45),0 10px 30px rgba(255,184,48,.35);transition:transform .1s;}
 .cc-cta:active{transform:translateY(2px);}
+/* the quieter way out of a win card ("Not now"): text, not a second
+   yellow button — one accent per screen */
+.cc-alt{display:block;margin:10px auto 0;padding:10px 18px;background:none;border:none;
+  color:var(--ink2);font-family:inherit;font-weight:700;font-size:14.5px;cursor:pointer;}
+.cc-alt:active{opacity:.7;}
 .cc-conf{position:absolute;top:-24px;width:10px;height:13px;border-radius:3px;animation:cfall linear infinite;}
 @keyframes cfall{to{transform:translateY(110vh) rotate(560deg)}}
 /* ---------- v2 extras: splash mascot + returning state ---------- */

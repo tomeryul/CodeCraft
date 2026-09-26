@@ -47,8 +47,8 @@ function skillXP(name,n){
   while(s.lvl<SKILL_MAX&&s.xp>=skillNeed(s.lvl)){
     s.xp-=skillNeed(s.lvl);s.lvl++;
     const d=SKILL_DEFS[name];
-    bigToast(d.em+" "+d.name+" Lv "+s.lvl+"! "+d.perk(s.lvl));
-    confetti();sfx(700,.09);sfx(940,.09,.11);
+    const msg=d.em+" "+d.name+" Lv "+s.lvl+"! "+d.perk(s.lvl);
+    whenCalm("skill:"+name+s.lvl,()=>{confetti();sfx(700,.09);sfx(940,.09,.11);bigToast(msg);},Infinity,false,3000);
   }
 }
 const key=(x,y)=>y*W+x;

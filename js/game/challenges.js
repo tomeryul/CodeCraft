@@ -1589,8 +1589,13 @@ function packStageSolved(){
   const c=mgState.packCtx, next=c.i+1;
   confetti();sfx(760,.08);sfx(1040,.09,.09);
   if(next<c.total){
-    bigToast("✅ Level "+(c.i+1)+" complete! Next: Level "+(next+1)+"/"+c.total);
-    setTimeout(()=>{ if(mgState)packEnter({id:c.packId,name:c.name,em:c.em,stages:c.stages,community:c.community,coins:c.coins,xp:c.xp},next); },700);
+    const here=c.stages[c.i]||{}, nx=c.stages[next]||{}, st=mgState;
+    mgWinCard(here.em||c.em||"✅","Level "+(c.i+1)+" of "+c.total,esc(here.name||c.name),
+      '<span>Next</span> <b>'+esc((nx.em?nx.em+" ":"")+(nx.name||""))+'</b>',"Next level ▶",
+      {alt:"Not now",onClose:why=>{
+        if(why==="cta"&&mgState===st)
+          packEnter({id:c.packId,name:c.name,em:c.em,stages:c.stages,community:c.community,coins:c.coins,xp:c.xp},next);
+      }});
   }else{
     if(c.community&&!player.projects["cc_"+c.community]){ // first clear of a community pack: count the solve
       player.projects["cc_"+c.community]=1;
@@ -1604,10 +1609,9 @@ function packStageSolved(){
       if(c.xp)addXP(c.xp);
       qProg("proj");updateHud();saveNow();
     }
-    if(window.CC_EXTRAS)CC_EXTRAS.celebrate(c.em||"🎬","CHAPTER COMPLETE!",c.name,
-      (earned?"+"+earned+" 🪙 +"+c.xp+" ⭐ — ":"")+"You cleared all "+c.total+" levels! 🎉","Awesome! 🎉");
-    else bigToast("🎬 "+c.name+" complete — all "+c.total+" levels cleared!");
-    mgExit(true);
+    mgWinCard(c.em||"🎬","CHAPTER COMPLETE!",c.name,
+      (earned?"+"+earned+" 🪙 +"+c.xp+" ⭐ — ":"")+"You cleared all "+c.total+" levels! 🎉","Awesome! 🎉",
+      {onClose:mgLeaveAfter(mgState)});
   }
 }
 // (re)build the challenge robot's brick state, seeding any pre-placed numbered
@@ -2377,8 +2381,27 @@ function mgFinish(){
   sfx(220,.12);
   if(typeof ccFeel==="function")ccFeel("error");
 }
+/* A win is a moment, then a choice (.claude/skills/game-app-design §4).
+   It used to be a toast and a jump: an Academy lesson or a chapter level
+   loaded the next one 0.7s later, and a build project closed under its own
+   card, so the player never saw the robot finish. Now the board stays as
+   the robot left it for a beat, the card comes up, and what happens next
+   is the button the player presses. `onClose(why)` gets "cta", "alt" or
+   "away"; nothing happens behind the card on its own. */
+function mgWinCard(icon,kick,title,desc,cta,opts){
+  const st=mgState; if(!st)return;
+  st.winning=true;               // a second Run while the card is coming must not pay twice
+  const o=Object.assign({delay:650,guard:()=>mgState===st},opts||{});
+  const then=o.onClose;
+  o.onClose=why=>{ if(mgState===st)st.winning=false; if(then)then(why); };
+  if(window.CC_EXTRAS)CC_EXTRAS.celebrate(icon,kick,title,desc,cta,o);
+  else{ bigToast(icon+" "+title); o.onClose("cta"); }
+}
+// leave a level the card was about — unless the player already has
+const mgLeaveAfter=st=>()=>{ if(mgState===st)mgExit(true); };
 function mgSuccess(){
   const proj=mgState.proj;
+  if(mgState.winning)return;     // its card is already on the way
   /* Every solved challenge comes through this door — Academy, packs, the
      creator proving a level, community boards — so the hand hears it once,
      on the same frame as the sound and the confetti. */
@@ -2397,9 +2420,7 @@ function mgSuccess(){
   }
   if(proj.mine){ // solving your own saved challenge — celebrate, no farmable reward
     confetti();
-    if(window.CC_EXTRAS)CC_EXTRAS.celebrate(proj.em,"SOLVED!",proj.name,"You solved your own challenge! 🎉","Nice! 🎉");
-    else bigToast("🎉 Solved your challenge!");
-    mgExit(true);
+    mgWinCard(proj.em,"SOLVED!",proj.name,"You solved your own challenge! 🎉","Nice! 🎉",{onClose:mgLeaveAfter(mgState)});
     return;
   }
   if(proj.community){
@@ -2408,8 +2429,7 @@ function mgSuccess(){
     if(first){coins+=proj.coins;addXP(proj.xp);}
     confetti();coinFlash();updateHud();saveNow();
     sbRest("rpc/add_solve",{method:"POST",body:JSON.stringify({cid:proj.community})}).catch(()=>{});
-    if(window.CC_EXTRAS)CC_EXTRAS.celebrate("🌍","CHALLENGE SOLVED!",proj.name,(first?"+"+proj.coins+" 🪙 +"+proj.xp+" ⭐ — ":"")+"You beat a challenge made by another player!","Sweet! 🎉");
-    mgExit(true);
+    mgWinCard("🌍","CHALLENGE SOLVED!",proj.name,(first?"+"+proj.coins+" 🪙 +"+proj.xp+" ⭐ — ":"")+"You beat a challenge made by another player!","Sweet! 🎉",{onClose:mgLeaveAfter(mgState)});
     return;
   }
   player.projects[proj.id]=1;
@@ -2425,9 +2445,7 @@ function mgSuccess(){
     if(inB(x,y)&&canWalk(x,y)&&!objects.has(key(x,y))){objects.set(key(x,y),{type:"proj",em:proj.em});placed=true;}
   }
   confetti();coinFlash();updateHud();saveNow();
-  if(window.CC_EXTRAS)CC_EXTRAS.celebrate(proj.em,"PROJECT COMPLETE!",proj.name+" built!","+"+proj.coins+" 🪙 +"+proj.xp+" ⭐ — it now stands proudly next to your home base!","Amazing! 🎉");
-  else bigToast("🎉 "+proj.name+" built! +"+proj.coins+" 🪙");
-  mgExit(true);
+  mgWinCard(proj.em,"PROJECT COMPLETE!",proj.name+" built!","+"+proj.coins+" 🪙 +"+proj.xp+" ⭐ — it now stands proudly next to your home base!","Amazing! 🎉",{onClose:mgLeaveAfter(mgState)});
 }
 // deterministic per-cell hash (independent of the world seed) for grass texture
 function mgHash(x,y){let h=(x*374761393+y*668265263)^0x9e3779b9;h=Math.imul(h^(h>>>13),1274126177);return ((h^(h>>>16))>>>0)/4294967296;}

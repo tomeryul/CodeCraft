@@ -51,9 +51,9 @@ function mentorAnswer(q){
 let mentorFlags={};
 function mentorFlag(f){
   if(mentorFlags[f])return;mentorFlags[f]=true;
-  if(f==="bagFull")toast("🎒 A robot's bag is full! Sell at the market 🏪 or Drop into a chest 📦.");
-  if(f==="farFromMarket")toast("💰 Sell All only works within 2 tiles of the market 🏪.");
-  if(f==="tired")toast("😴 Your robot is worn out! Add a Rest 😴 block (put it in the loop so it rests as it works).");
+  if(f==="bagFull")worldNews("🎒 A robot's bag is full! Sell at the market 🏪 or Drop into a chest 📦.");
+  if(f==="farFromMarket")worldNews("💰 Sell All only works within 2 tiles of the market 🏪.");
+  if(f==="tired")worldNews("😴 Your robot is worn out! Add a Rest 😴 block (put it in the loop so it rests as it works).");
 }
 function say(txt,me){
   const d=document.createElement("div");

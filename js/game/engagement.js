@@ -8,9 +8,11 @@ function addXP(n){
     player.xp-=xpNeed(player.level);
     player.level++;
     const bonus=player.level*10;coins+=bonus;
-    confetti();sfx(660,.1);sfx(880,.1,.12);sfx(1320,.14,.24);
     const hat=HATS.find(h=>h.lvl===player.level);
-    bigToast("⭐ LEVEL "+player.level+"! +"+bonus+" 🪙"+(hat?" — new hat "+hat.em+" unlocked! (🛒 → Style)":""));
+    /* paid now; the fanfare waits for the world (a level-up earned inside
+       a level lands after that level's own card, not on top of it) */
+    const msg="⭐ LEVEL "+player.level+"! +"+bonus+" 🪙"+(hat?" — new hat "+hat.em+" unlocked! (🛒 → Style)":"");
+    whenCalm("level:"+player.level,()=>{confetti();sfx(660,.1);sfx(880,.1,.12);sfx(1320,.14,.24);bigToast(msg);},Infinity,false,3000);
   }
   updateHud();
 }
@@ -46,7 +48,7 @@ function qProg(type,extra,n){
     if(d.opt&&d.opt!==extra)continue;
     if(q.prog>=d.n)continue;
     q.prog=Math.min(d.n,q.prog+n);changed=true;
-    if(q.prog>=d.n&&!q.noted){q.noted=true;toast("📜 Quest complete: "+d.txt+" — tap 📜 to claim!");sfx(700,.08);sfx(900,.08,.1);}
+    if(q.prog>=d.n&&!q.noted){q.noted=true;worldNews("📜 Quest complete: "+d.txt+" — tap 📜 to claim!",false,Infinity);}
   }
   if(changed){
     updateQuestBadge();
@@ -117,6 +119,9 @@ function dailyGift(){
   if(player.lastGift===today)return;
   player.lastGift=today;player.days++;
   const c=20+player.days*5;
-  coins+=c;addXP(10);confetti();coinFlash();updateHud();saveSoon();
-  bigToast("🎁 Day "+player.days+" of your adventure! Daily gift: +"+c+" 🪙");
+  coins+=c;addXP(10);coinFlash();updateHud();saveSoon();
+  /* paid now, announced at a calm moment in the world — never over the
+     first lesson or the menu (game-app-design §3, §7) */
+  const msg="🎁 Day "+player.days+" of your adventure! Daily gift: +"+c+" 🪙";
+  whenCalm("daily-gift",()=>{confetti();bigToast(msg);},Infinity,true);
 }

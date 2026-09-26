@@ -12,7 +12,15 @@ repainted every frame while only one is visible.
 
 ---
 
-## 1. Calm — notifications that know where you are  ← first
+## 1. Calm — notifications that know where you are  ✅ v184
+*Done:* every message is sorted by cause; world news, level-ups and skill
+news are held while a level, a menu or a card is open (`whenCalm` in
+`js/game/fx.js`) and delivered one at a time in the world, rewards first,
+stale news dropped; the order-filled and daily-gift cards wait for the
+world; one fixed toast lane at the top; every win is a card after a beat,
+with Next / Not now — nothing loads by itself. `test/calm.js`.
+*Measured:* layout shift 1.34 → **0.46** (the rest is topic 2);
+notifications landing on a surface other than the world 5 → **0**.
 *Skill §3, §4 (no auto-advance), §7*
 
 - World news fires on top of whatever is open: 📋 New order over the

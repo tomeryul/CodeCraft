@@ -3312,17 +3312,29 @@ async function ev(expr) {
   check("saving with banked levels creates a multi-level pack", PS.isPack === true && PS.levels === 2, packSetup);
   check("pack keeps the chosen difficulty", PS.diff === 2, packSetup);
   check("pack starts on its first level", PS.startCtx === 0, packSetup);
-  await sleep(950); // let the auto-advance timer fire
-  const adv = await ev(`(()=>{
+  await sleep(950); // the win card comes up after a beat
+  /* A win is a moment and a choice: the level does NOT load the next one
+     by itself any more (it used to, 0.7s later, under a toast). The card
+     offers Next; pressing it is what advances. */
+  const adv = await ev(`(async()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
     const out={};
+    out.stayed = !!(mgState && mgState.packCtx && mgState.packCtx.i===0);
+    out.card = !!document.querySelector('#ccCele .cc-cta') && !!document.querySelector('#ccCele .cc-alt');
+    const c=document.querySelector('#ccCele .cc-cta'); if(c)c.click();
+    await wait(100);
     out.advanced = !!(mgState && mgState.packCtx && mgState.packCtx.i===1);
     if(out.advanced) window.__runProg([{t:'build',uid:1}]); // solve the final level
     out.packDone = Object.keys(player.projects).some(k=>k.indexOf('pack_')===0);
+    await wait(950);
+    const d=document.querySelector('#ccCele .cc-cta'); if(d)d.click();
+    await wait(100);
     out.exited = (mgState===null);
     return JSON.stringify(out);
   })()`);
   const AD = JSON.parse(adv);
-  check("solving a level auto-advances to the next", AD.advanced === true, adv);
+  check("solving a level shows a card and waits — no jump to the next", AD.stayed === true && AD.card === true, adv);
+  check("the card's Next is what advances", AD.advanced === true, adv);
   check("clearing the last level completes the pack", AD.packDone === true && AD.exited === true, adv);
 
   console.log("▶ creator: a banked level must not leak into the next one");

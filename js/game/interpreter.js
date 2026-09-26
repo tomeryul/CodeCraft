@@ -391,7 +391,7 @@ function sellInv(r){
 let saleAcc=0,saleT=null;
 function queueSaleToast(n){
   saleAcc+=n;clearTimeout(saleT);
-  saleT=setTimeout(()=>{toast("💰 Sold goods for "+saleAcc+" 🪙");saleAcc=0;},1200);
+  saleT=setTimeout(()=>{worldNews("💰 Sold goods for "+saleAcc+" 🪙",false,20000);saleAcc=0;},1200);
 }
 function coinFlash(){
   const c=$("coinChip");

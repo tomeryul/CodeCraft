@@ -89,10 +89,11 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 
   console.log('▶ the toast stack');
   /* Toasts sit in a column, and every arrival and departure used to move
-     the rest a whole row in one frame. Which ones move depends on where
-     the column is anchored, so both are checked:
-       no sheet open  — anchored at the TOP: a toast LEAVING pulls the rest up
-       a sheet open   — anchored at the BOTTOM: a toast ARRIVING pushes the rest up */
+     the rest a whole row in one frame. The column is anchored at the TOP,
+     always: it used to drop to the bottom whenever a sheet was open, and
+     that 658px jump was most of the app's layout shift (see the Calm topic
+     in docs/ux-roadmap.md). So a toast LEAVING pulls the rest up — that is
+     the move to glide — and one ARRIVING moves nothing at all. */
   const glide = (open, act) => pg.evaluate(async ([open, act]) => {
     const wait = ms => new Promise(r => setTimeout(r, ms));
     navHome(); await wait(300);
@@ -112,7 +113,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     const settled = watch.getBoundingClientRect().top;
     const after = watch.style.transform;
     navHome(); await wait(200);
-    return { rest, moved, gliding, settled, after,
+    return { rest, moved, gliding, settled, after, laneTop: Math.round(box.getBoundingClientRect().top),
              anchored: getComputedStyle(box).bottom !== 'auto' && open ? 'bottom' : 'top' };
   }, [open, act]);
 
@@ -125,9 +126,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   ck('and hands its position back to the layout when it gets there', L.after === '', L);
 
   const A = await glide(true, 'arrive');
-  ck('bottom-anchored, over a sheet: a new toast does not shove the rest up in one frame',
-     Math.abs(A.moved - A.rest) < 1 && A.gliding === true, A);
-  ck('and ends up a row higher, with the layout owning it again', A.settled < A.rest - 10 && A.after === '', A);
+  ck('one lane: opening a sheet does not move the toasts anywhere',
+     A.laneTop === L.laneTop, { closed: L.laneTop, open: A.laneTop });
+  ck('and a new toast arriving leaves the ones already showing where they are',
+     Math.abs(A.moved - A.rest) < 1 && Math.abs(A.settled - A.rest) < 1 && A.after === '', A);
 
   const R = await pg.evaluate(async () => {
     const wait = ms => new Promise(r => setTimeout(r, ms));

@@ -14,13 +14,31 @@
 "use strict";
 const CONF=["#ffb830","#54d66a","#5ab8ff","#ff5d73","#ffd66b","#b184ff"];
 
-/* ---- full-screen celebration overlay (mock board 1g) ---- */
-function celebrate(icon,kicker,title,desc,cta){
+/* ---- full-screen celebration overlay (mock board 1g) ----
+   `opts`, all optional (see .claude/skills/game-app-design §4):
+     delay    ms to wait first, so the player sees what they did — the
+              robot on the flag — before a card covers it. The words are
+              taken NOW; only the showing waits.
+     guard    () => bool, asked when the delay is up; false = the moment
+              has passed (the player already left), show nothing
+     alt      label of a second, quieter button ("Not now")
+     onClose  (why) => …, why is "cta", "alt" or "away" (the backdrop)
+   A card is a moment and a choice: whatever happens next is the
+   player's pick, never a side effect of the card. */
+function celebrate(icon,kicker,title,desc,cta,opts){
+  opts=opts||{};
+  if(opts.delay){
+    const a=[icon,kicker,title,desc,cta,Object.assign({},opts,{delay:0})];
+    clearTimeout(celebrate._t);
+    celebrate._t=setTimeout(()=>{ if(!opts.guard||opts.guard())celebrate.apply(null,a); },opts.delay);
+    return;
+  }
   const old=document.getElementById("ccCele"); if(old)old.remove();
   const o=document.createElement("div");o.id="ccCele";
   o.innerHTML='<div class="cc-card"><div class="cc-halo"><div class="cc-ic">'+icon+'</div></div>'+
     '<div class="cc-kick">'+kicker+'</div><div class="cc-title">'+title+'</div>'+
-    '<div class="cc-desc">'+desc+'</div><button class="cc-cta">'+(cta||"Let\u2019s try it! 🚀")+'</button></div>';
+    '<div class="cc-desc">'+desc+'</div><button class="cc-cta">'+(cta||"Let\u2019s try it! 🚀")+'</button>'+
+    (opts.alt?'<button class="cc-alt">'+opts.alt+'</button>':'')+'</div>';
   for(let i=0;i<14;i++){
     const s=document.createElement("i");s.className="cc-conf";
     s.style.left=(4+Math.random()*92)+"%";
@@ -31,9 +49,15 @@ function celebrate(icon,kicker,title,desc,cta){
     o.appendChild(s);
   }
   document.body.appendChild(o);
-  const close=()=>{o.classList.add("out");setTimeout(()=>o.remove(),320);};
-  o.querySelector(".cc-cta").addEventListener("click",close);
-  o.addEventListener("click",e=>{if(e.target===o)close();});
+  let done=false;
+  const close=why=>{
+    if(done)return; done=true;
+    o.classList.add("out");setTimeout(()=>o.remove(),320);
+    if(opts.onClose)opts.onClose(why);
+  };
+  o.querySelector(".cc-cta").addEventListener("click",()=>close("cta"));
+  const alt=o.querySelector(".cc-alt"); if(alt)alt.addEventListener("click",()=>close("alt"));
+  o.addEventListener("click",e=>{if(e.target===o)close("away");});
 }
 /* intercepts bigToast text; returns true if it showed an overlay instead */
 function maybeCelebrate(t){

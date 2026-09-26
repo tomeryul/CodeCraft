@@ -73,6 +73,72 @@ function bigToast(t){
   });
   tArm(d,4200,4450);
 }
+/* ---------------- the world waits its turn ----------------
+   (.claude/skills/game-app-design §3.) A message is sorted by what CAUSED
+   it. What the player just did answers at once — that is toast() above.
+   What the world or the clock did — the market moving, night falling, an
+   order arriving or filling, robots selling in the background — is news,
+   and news waits until the player is back in the world with nothing else
+   open. The audit found it everywhere it should not be: a new order over
+   the menu, a price rush inside the shop, nightfall inside the level
+   designer, a full-screen "order filled" card in the middle of a level.
+
+   Held messages are delivered when calm returns, ONE at a time, each given
+   its time in the lane before the next — two announcements a beat apart
+   is the pile-up this exists to stop. Rewards go first; of the news only
+   the newest three are kept. Each carries how long it stays true —
+   "prices spiked for a minute" is a lie ten minutes later — and a reward
+   never expires. */
+const HELD=[];
+let heldT=0;
+function calmNow(){
+  if(typeof mgState!=="undefined"&&mgState)return false;            // in a level
+  if(document.querySelector(".sheet.open,#shopWrap.open,#agegate.open,#ccCele"))return false;
+  const sp=$("splash"); if(sp&&!sp.classList.contains("hide"))return false;
+  return true;
+}
+/* run(now) if the player is calm and nothing is queued, otherwise in its
+   turn. `key` replaces an older copy of the same message; `ttl` ms it
+   stays worth saying (Infinity for a reward); a `reward` (a card) goes
+   first; `gap` is how long it holds the lane before the next one. */
+function whenCalm(key,run,ttl,reward,gap){
+  if(calmNow()&&!HELD.length&&!heldT){run();return;}
+  for(let i=HELD.length-1;i>=0;i--)if(HELD[i].key===key)HELD.splice(i,1);
+  HELD.push({key,run,at:performance.now(),ttl:ttl==null?60000:ttl,reward:!!reward,gap:gap||1100});
+  const news=HELD.filter(h=>!h.reward);
+  for(const h of news.slice(0,Math.max(0,news.length-3)))HELD.splice(HELD.indexOf(h),1);
+  heldSoon();
+}
+function worldNews(t,big,ttl){ whenCalm("n:"+t,()=>(big?bigToast:toast)(t),ttl,false,big?3000:1100); }
+/* After the surface that just closed has finished leaving. Scheduled once,
+   not restarted: confetti adds and removes nodes for seconds, and a timer
+   pushed back on every one of them never fired. */
+function heldSoon(){
+  if(heldT)return;
+  heldT=setTimeout(()=>{heldT=0;heldFlush();},700);
+}
+function heldFlush(){
+  if(!HELD.length||!calmNow())return;
+  const t=performance.now();
+  for(let i=HELD.length-1;i>=0;i--)if(t-HELD[i].at>HELD[i].ttl)HELD.splice(i,1);
+  if(!HELD.length)return;
+  const r=HELD.findIndex(h=>h.reward);
+  const h=HELD.splice(r>=0?r:0,1)[0];
+  h.run();
+  // the next one waits its turn; a card instead holds calm off until it closes
+  if(HELD.length)heldT=setTimeout(()=>{heldT=0;heldFlush();},h.reward?700:h.gap);
+}
+/* Calm returns when a surface closes or a card leaves — watch exactly
+   those, not the whole document. */
+function heldWatch(){
+  const mo=new MutationObserver(()=>{ if(HELD.length)heldSoon(); });
+  document.querySelectorAll(".sheet,#shopWrap,#agegate,#splash").forEach(el=>
+    mo.observe(el,{attributes:true,attributeFilter:["class"]}));
+  mo.observe(document.body,{childList:true});                        // #ccCele comes and goes
+}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",heldWatch);
+else heldWatch();
+
 let actx=null;
 function sfx(freq,dur,delay){
   if(muted)return;

@@ -146,24 +146,24 @@ function academySolved(proj){
   // Finishing lesson 6 is graduation: the world opens. The advanced four are
   // offered rather than imposed — a player who wants to go and play should not
   // have to sit through functions first, and one who wants them knows they exist.
+  /* every ending is a card; what follows is the player's choice (see
+     mgWinCard in challenges.js) — never a lesson loading by itself */
+  const st=mgState, leave=()=>{ if(mgState===st)academyExitToWorld(); };
   if(i===ACADEMY_CORE-1){
-    if(window.CC_EXTRAS)CC_EXTRAS.celebrate("🎓","ACADEMY COMPLETE!","The world is yours!",
+    mgWinCard("🎓","ACADEMY COMPLETE!","The world is yours!",
       "You've learned moving, turning, chopping, collecting, loops and conditions. "+
       "Four harder lessons are waiting whenever you want them — 🔄 While, 🔢 Variables, "+
-      "🔧 Functions and 🧠 Algorithms are how you build things that think.","Let's play! 🎉");
-    else bigToast("🎓 Academy complete — the world is yours! Four advanced lessons are waiting.");
-    academyExitToWorld();
+      "🔧 Functions and 🧠 Algorithms are how you build things that think.","Let's play! 🎉",{onClose:leave});
     return;
   }
   if(next){
-    bigToast("✅ "+proj.name+" done!  Next: "+next.em+" "+next.name);
-    setTimeout(()=>{ if(mgState)academyEnter(i+1); },700);
+    mgWinCard("✅","Lesson "+(i+1)+" of "+TUTS.length,esc(proj.name),
+      '<span>Next</span> <b>'+esc(next.em+" "+next.name)+'</b>',"Next lesson ▶",
+      {alt:"Not now",onClose:why=>{ if(why==="cta"&&mgState===st)academyEnter(i+1); }});
   }else{
-    if(window.CC_EXTRAS)CC_EXTRAS.celebrate("🧠","EVERY LESSON DONE!","You can write real programs now",
+    mgWinCard("🧠","EVERY LESSON DONE!","You can write real programs now",
       "Loops, conditions, variables, functions and algorithms — that is genuinely what programming is. "+
-      "Go and build something nobody has built yet.","Onwards! 🚀");
-    else bigToast("🧠 Every lesson done — you can write real programs now!");
-    academyExitToWorld();
+      "Go and build something nobody has built yet.","Onwards! 🚀",{onClose:leave});
   }
 }
 // leave the academy straight back to the open world (not the Projects sheet)

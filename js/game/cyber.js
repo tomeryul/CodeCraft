@@ -461,7 +461,8 @@ window.mgSuccess=function(){
   const p=mgState&&mgState.proj;
   if(!(p&&p.cyber&&p.why))return _mgSuccess.apply(this,arguments);
   const X=window.CC_EXTRAS, _c=X&&X.celebrate;
-  if(_c)X.celebrate=function(){ return _c.call(X,"🔐","LOCK OPENED!",p.name,p.why,"Got it! 🎉"); };
+  // the words are Cyber's; what happens after the card (opts) is still the level's
+  if(_c)X.celebrate=function(ic,k,t,d,cta,opts){ return _c.call(X,"🔐","LOCK OPENED!",p.name,p.why,"Got it! 🎉",opts); };
   try{ return _mgSuccess.apply(this,arguments); }
   finally{ if(_c)X.celebrate=_c; }
 };

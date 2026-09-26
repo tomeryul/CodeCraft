@@ -287,7 +287,7 @@ async function toWorld(pg,he){
         if(!(mgState&&mgState.running))break;
         await wait(12);
       }
-      await wait(250);
+      await wait(900);   // the card comes up a beat after the win (mgWinCard)
       const card=document.querySelector('#ccCele .cc-desc');
       if(card)cele=card.textContent;
       out.push({id:lv.id, done:!!player.projects[lv.id], tries,
@@ -721,7 +721,7 @@ async function toWorld(pg,he){
                   creator:!!mgState.creator, blank:mgRobot.program.length===0};
     mgRobot.program=prog(); renderProgram(); mgRun();
     for(let i=0;i<2000;i++){ if(!(mgState&&mgState.running))break; await wait(12); }
-    await wait(300);
+    await wait(900);   // the card comes up a beat after the win (mgWinCard)
     played.won=!!document.querySelector('#ccCele');
     c=document.querySelector('#ccCele .cc-cta'); if(c)c.click(); await wait(250);
     if(mgState)mgExit(false); await wait(200);
@@ -849,7 +849,7 @@ async function toWorld(pg,he){
     mgRobot.program=[loop(10,[tc({k:'var',name:'i'})]),B('move'),B('move'),B('move')];
     renderProgram(); mgRun();
     for(let i=0;i<900;i++){ if(!(mgState&&mgState.running))break; await wait(25); }
-    await wait(400);
+    await wait(900);   // the card comes up a beat after the win (mgWinCard)
     /* and take every card that comes up, not just the first — whichever
        one carries the lesson is the one under test */
     const seen=[];

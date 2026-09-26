@@ -75,7 +75,7 @@ function marketTick(){
     m.wantAt=now+MKT_WANT_MS;
     const pick=MKT_RES.filter(k=>k!==m.want);
     m.want=pick[Math.floor(Math.random()*pick.length)];
-    toast("📈 The market now wants "+RES[m.want].em+" most — worth "+priceOf(m.want)+" 🪙 each!");
+    worldNews("📈 The market now wants "+RES[m.want].em+" most — worth "+priceOf(m.want)+" 🪙 each!",false,30000);
     sfx(700,.06);sfx(900,.06,.08);
   }
   orderTick();
@@ -119,7 +119,7 @@ function newOrder(){
   let reward=0;for(const k in need)reward+=need[k]*priceOf(k);
   reward=Math.round(reward*(bulk?2.1:1.7))+40;   // hauling is paid for
   m.order={need,got:{},until:now+ORDER_MS,reward,shape,at:now};
-  bigToast("📋 New order! "+orderText(m.order)+" → "+reward+" 🪙");
+  worldNews("📋 New order! "+orderText(m.order)+" → "+reward+" 🪙",true,90000);
   sfx(660,.08);sfx(880,.08,.1);
 }
 function orderText(o){
@@ -139,10 +139,15 @@ function orderCredit(res,n){
     if(took>0&&(!player.orderBest||took<player.orderBest))player.orderBest=took;
     addXP(Math.ceil(o.reward/3));
     m.order=null;
-    if(window.CC_EXTRAS)CC_EXTRAS.celebrate("📋","ORDER FILLED!","+"+o.reward+" 🪙",
-      "Delivered before the clock ran out — that is what a fast program buys you.","Nice! 🎉");
-    else bigToast("📋 Order filled! +"+o.reward+" 🪙");
-    coinFlash();confetti();sfx(880,.1);sfx(1320,.12,.12);updateHud();
+    /* the coins are paid now; the card waits for the player to be back in
+       the world — robots fill orders while you are in a level */
+    coinFlash();updateHud();
+    whenCalm("order-filled",()=>{
+      if(window.CC_EXTRAS)CC_EXTRAS.celebrate("📋","ORDER FILLED!","+"+o.reward+" 🪙",
+        "Delivered before the clock ran out — that is what a fast program buys you.","Nice! 🎉");
+      else bigToast("📋 Order filled! +"+o.reward+" 🪙");
+      confetti();sfx(880,.1);sfx(1320,.12,.12);
+    },Infinity,true);
     setTimeout(()=>{if(market&&!market.order)newOrder();},4000);
   }
 }
@@ -150,7 +155,7 @@ function orderTick(){
   const m=marketReady();
   if(!m.order){ if(!m.orderNext)m.orderNext=now+6000; if(now>=m.orderNext){m.orderNext=0;newOrder();} return; }
   if(now>=m.order.until){
-    toast("📋 The order expired — a new one will come up.");
+    worldNews("📋 The order expired — a new one will come up.",false,20000);
     m.order=null;m.orderNext=now+9000;
   }
 }
@@ -190,13 +195,13 @@ function startRush(){
   const m=marketReady();
   const res=MKT_RES[Math.floor(Math.random()*MKT_RES.length)];
   m.event={kind:"rush",res,until:now+RUSH_MS};
-  bigToast("📣 "+RES[res].em+" RUSH! Prices spiked to "+priceOf(res)+" 🪙 for a minute — send everyone!");
+  worldNews("📣 "+RES[res].em+" RUSH! Prices spiked to "+priceOf(res)+" 🪙 for a minute — send everyone!",true,50000);
   sfx(880,.09);sfx(1180,.1,.1);
 }
 function startNight(){
   const m=marketReady();
   m.event={kind:"night",until:now+NIGHT_MS};
-  bigToast("🌙 Nightfall — everything costs more energy, but 💎 crystal is precious. Watch for 😴 tired!");
+  worldNews("🌙 Nightfall — everything costs more energy, but 💎 crystal is precious. Watch for 😴 tired!",true,60000);
   sfx(300,.12);
 }
 // a rich seam appears somewhere near home AND announces itself on the 📻
@@ -220,7 +225,7 @@ function startLode(){
   const c=spots[0];
   m.event={kind:"lode",res:NODE_YIELD[type],until:now+LODE_MS,x:c.x,y:c.y,spots};
   if(typeof radioPost==="function")radioPost(type==="rock"?"rock":type,c.x,c.y,-1,0);
-  bigToast("💎 A rich "+(OBJ_EM[type]||"")+" seam surfaced — it is on the 📻 team channel for "+Math.round(LODE_MS/1000)+"s!");
+  worldNews("💎 A rich "+(OBJ_EM[type]||"")+" seam surfaced — it is on the 📻 team channel for "+Math.round(LODE_MS/1000)+"s!",true,LODE_MS-5000);
   sfx(760,.09);sfx(1040,.1,.1);
 }
 function clearLode(e){

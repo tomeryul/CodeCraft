@@ -726,13 +726,14 @@ body.sheets-full #maker.sized,
 #mgCreatorBar .cb-act #mgAddStage,#mgCreatorBar .cb-act #mgPublish{flex:1;min-width:0;}
 #mgCreatorBar .cb-act .ibtn{width:40px;height:40px;}
 
-/* ---- 3. TOASTS over an open sheet ----
-   A banner about the world ("New order!") sat in the middle of the dimmed
-   world behind whatever sheet was open, and read as something stuck. With
-   a sheet open a toast is a notification, so it comes up from the bottom,
-   over the sheet, the way one does everywhere else on the phone. */
-body:has(.sheet.open) #toasts{top:auto;bottom:calc(var(--sab) + 18px);}
-body:has(.sheet.open) #toasts .toast{max-width:88vw;}
+/* ---- 3. TOASTS: one lane, and it does not move ----
+   They used to drop to the bottom whenever a sheet was open, because world
+   news ("New order!") read as something stuck in the dimmed world above.
+   The lane jumping 658px between top and bottom was most of the app's
+   layout shift, and at the bottom it sat on content and next to Run. World
+   news now waits until no sheet is open (whenCalm in fx.js), so what is
+   left is the answer to the player's own tap, and it can stay in the one
+   place: the top, clear of the thumb, taps passing through. */
 
 /* ---- 5. EMPTY STATES point at the next thing ---- */
 .ord-code{display:block;margin:14px auto 0;align-self:center;
