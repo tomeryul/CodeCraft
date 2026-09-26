@@ -48,17 +48,12 @@ and lets taps through; a lesson win is a moment and a choice.
 - The board resizes after a run when the text under it changes (0.03).
 - The HUD grows: ticker chips (📈, ⏱) push into the top bar mid-game.
 
-## 3. The play is a scene
-*Skill §1*
-
-- Every level — lesson, chapter, build, Cyber, Tower — opens in a
-  half-height sheet over a dimmed world. The Tower board ends up ~110px
-  wide; the top half of the phone is wallpaper.
-- The creator opens full height, levels half: the same kind of screen in
-  two sizes.
-
-Fix: a level is a full-screen scene with its own top bar (back, title,
-budget) and the Run bar at the thumb; no half mode for play.
+## 3. The play is a scene  — ✋ declined, keep as is
+*Owner's decision:* levels stay in the bottom sheet over the world, with
+its half / full sizes. Do not turn them into full-screen scenes, and do
+not reopen this as a finding. Work inside it instead: the size problems
+that are real (the Tower board at half height, the board resizing under
+the text) belong to topic 2.
 
 ## 4. Meta screens are screens, and there are fewer of them
 *Skill §1, §2*
