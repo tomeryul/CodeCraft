@@ -5,33 +5,84 @@ const COND_LBL={treeAhead:"tree ahead 🌳",rockAhead:"rock ahead 🪨",ironAhea
   taken:"another robot called it 🤝",
   // challenge-board sensors (see CHALLENGE_CONDS in challenges.js)
   wallAhead:"wall ahead 🧱",pitAhead:"pit ahead 🕳️",brickHere:"block under me 🟧",onTarget:"on a target 🎯",holding:"carrying a block ✊",
-  doorAhead:"locked door ahead 🚪",keyAhead:"key ahead 🔑",gateAhead:"closed gate ahead 🚧",onPlate:"on a plate 🔘"};
+  doorAhead:"locked door ahead 🚪",keyAhead:"key ahead 🔑",gateAhead:"closed gate ahead 🚧",onPlate:"on a plate 🔘",
+  /* Cyber Lab sensors (see js/game/cyber.js). They are offered only by a
+     board that could make them true, so they never turn up in the world. */
+  jammed:"keypad jammed ⛔",sealAhead:"sealed note ahead 🔏"};
+/* ---- negation ----
+   A sensor condition is a name; the same name with a "!" in front is that
+   sensor answered the other way round. Keeping it inside the string rather
+   than wrapping the condition in an object means every save ever written
+   still loads, every stored solution still runs, and negating costs no
+   block — "while NOT blocked" is one block, exactly like "while blocked".
+
+   It is worth having because half of what a program wants to say is
+   negative. "Keep going while the way is NOT blocked" is the shape of every
+   wall-follower; without it a child has to invert the whole program instead
+   of the one word they meant. */
+const condNeg  = c => typeof c==="string" && c.charAt(0)==="!";
+const condBase = c => condNeg(c) ? c.slice(1) : c;
+const condFlip = c => (typeof c!=="string") ? c : (condNeg(c) ? c.slice(1) : "!"+c);
+/* a save from someone else can carry a name this build has never heard of:
+   show the name rather than the word "undefined" */
+const condLbl  = c => COND_LBL[condBase(c)] || String(condBase(c));
+
 const BUILDS=["sapling","bridge","chest"];
 const BUILD_LBL={sapling:"🌱 sapling (1🪵)",bridge:"🌉 bridge (2🪨)",chest:"📦 chest (5🪵)"};
 // Everywhere 🚶 Walk To / 🧭 Face Nearest can send a robot. Water is TERRAIN, not
 // an object, and market/home/chest are places you go to finish a job — all four
 // were missing, so half the world was unreachable by name.
 const TARGETS=["tree","rock","iron","crystal","water","market","home","chest"];
-const TGT_EM={tree:"🌳",rock:"🪨",iron:"⛓️",crystal:"💎",water:"💧",market:"🏪",home:"🏠",chest:"📦"};
+const TGT_EM={tree:"🌳",rock:"🪨",iron:"⛓️",crystal:"💎",water:"💧",market:"🏪",home:"🏠",chest:"📦",
+  target:"🎯",block:"🟧",flag:"🚩",key:"🔑",door:"🚪",plate:"🔘"};
+/* …and everywhere it can send a robot on a challenge BOARD, where there are
+   no trees or markets but there are targets, blocks, a flag, keys, doors and
+   plates. A level's author chooses which of these its player may name; see
+   mgGoList() in challenges.js. */
+const BOARD_TARGETS=["target","block","flag","key","door","plate"];
 const DEFS={
-  move:{cat:"basic",ic:"⬆️",lbl:"Move"},
-  turnL:{cat:"basic",ic:"↩️",lbl:"Turn Left"},
-  turnR:{cat:"basic",ic:"↪️",lbl:"Turn Right"},
+  /* `tip` is what the block does, in one sentence, written for the person
+     DESIGNING a level rather than solving one — they are choosing which of
+     these the player gets, and a row of names told them nothing. Only the
+     blocks a designer can hand out carry one; see the chip rows in
+     js/game/tower-editor.js and js/game/cyber-editor.js. */
+  move:{cat:"basic",ic:"⬆️",lbl:"Move",
+    tip:"One step forward, in whatever direction the robot is already facing."},
+  turnL:{cat:"basic",ic:"↩️",lbl:"Turn Left",
+    tip:"Turns on the spot, to the left. It does not move — turning costs a block and changes only which way the robot looks."},
+  turnR:{cat:"basic",ic:"↪️",lbl:"Turn Right",
+    tip:"The same, to the right. Without one of these a robot can only ever walk in a straight line."},
   collect:{cat:"basic",ic:"✋",lbl:"Collect"},
   chop:{cat:"basic",ic:"🪓",lbl:"Chop"},
   mine:{cat:"basic",ic:"⛏️",lbl:"Mine"},
   scoop:{cat:"basic",ic:"🪣",lbl:"Scoop"},
-  drop:{cat:"basic",ic:"⤵️",lbl:"Drop"},
-  pickUp:{cat:"basic",ic:"✊",lbl:"Lift"},   // challenge-only: lift a numbered brick to carry it
-  build:{cat:"basic",ic:"🔨",lbl:"Build"},
+  drop:{cat:"basic",ic:"⤵️",lbl:"Drop",
+    tip:"Puts the carried brick down. Into a 🕳️ pit straight ahead if there is one — that is the only way to bridge a gap — otherwise on the tile underneath."},
+  pickUp:{cat:"basic",ic:"✊",lbl:"Lift",   // challenge-only: lift a numbered brick to carry it
+    tip:"Lifts the brick the robot is standing on and carries it. Give it out with ⤵️ Drop on any level that asks for things to be put in order."},
+  /* on a flat board this paints the tile the robot is STANDING on; in 3D
+     it is the tile ahead. One entry, two meanings — the Tower designer
+     passes its own sentence for this row, see T3_TIPS in tower3d.js. */
+  build:{cat:"basic",ic:"🔨",lbl:"Build",
+    tip:"Drops a brick on the tile the robot is STANDING on. To lay a row the robot builds, then moves on, then builds again — which is what a loop is for."},
+  /* Cyber Lab only: punch a number into the keypad in front. It is in DEFS
+     rather than in a CATS row because no world palette offers it — a level
+     hands it out through its own `allowed` list. */
+  tryCode:{cat:"basic",ic:"🔢",lbl:"Try Code",
+    tip:"Punches a number into the 🔢 keypad in front. Right number and it opens for good; wrong one and it counts against the player."},
   rest:{cat:"basic",ic:"😴",lbl:"Rest"},
-  wait:{cat:"basic",ic:"⏱️",lbl:"Wait"},
-  repeat:{cat:"loops",ic:"🔁",lbl:"Repeat",container:true},
-  forever:{cat:"loops",ic:"♾️",lbl:"Forever",container:true},
+  wait:{cat:"basic",ic:"⏱️",lbl:"Wait",
+    tip:"Does nothing, for a moment. Give it out when something on the board needs time to change — a jammed keypad cooling down."},
+  repeat:{cat:"loops",ic:"🔁",lbl:"Repeat",container:true,
+    tip:"Does the blocks inside it a set number of times. This is how a short program does a long job — keep it out and your level can only be walked step by step."},
+  forever:{cat:"loops",ic:"♾️",lbl:"Forever",container:true,
+    tip:"Never stops. The level ends when the goal is met, so this is for “keep doing it until it is done” — pair it with ❓ If."},
   // "keep going UNTIL" — the loop every algorithm needs. repeat/count run a KNOWN
   // number of times, so neither can express "while it isn't sorted yet".
-  whileLoop:{cat:"loops",ic:"🔄",lbl:"While",container:true},
-  "if":{cat:"logic",ic:"❓",lbl:"If",container:true},
+  whileLoop:{cat:"loops",ic:"🔄",lbl:"While",container:true,
+    tip:"Asks a question before every turn and keeps going while the answer is yes. Give it out when the player cannot know the number in advance."},
+  "if":{cat:"logic",ic:"❓",lbl:"If",container:true,
+    tip:"Asks a question right now and only runs the blocks inside when the answer is yes. This is what lets the robot LOOK at your board instead of following a memorised route."},
   faceNearest:{cat:"smart",ic:"🧭",lbl:"Face Nearest"},
   /* 🚶 Walk To is how you travel in the world — the FIRST block a player meets,
      not a reward. Stepping one tile at a time (⬆️ Move + ↩️/↪️) is a puzzle-board
@@ -43,19 +94,26 @@ const DEFS={
   goHome:{cat:"smart",ic:"🏠",lbl:"Go Home"},
   sellAll:{cat:"smart",ic:"💰",lbl:"Sell All"},
   bankAll:{cat:"smart",ic:"🏦",lbl:"Bank All"},
-  setVar:{cat:"vars",ic:"📦",lbl:"Set"},
-  changeVar:{cat:"vars",ic:"➕",lbl:"Change"},
-  countLoop:{cat:"vars",ic:"🔢",lbl:"Count",container:true},
+  setVar:{cat:"vars",ic:"📦",lbl:"Set",
+    tip:"Puts a number in a named box, so the program can remember something. A counter starts life here."},
+  changeVar:{cat:"vars",ic:"➕",lbl:"Change",
+    tip:"Adds to a box — plus one each time round a loop, or plus the key that unscrambles a note."},
+  countLoop:{cat:"vars",ic:"🔢",lbl:"Count",container:true,
+    tip:"A loop that counts as it goes: 1, 2, 3… and the blocks inside can use the number it is on. Trying every code from 1 to 10 is one of these."},
   // reads a value FROM the world INTO a variable. Without this the board is opaque:
   // the robot could carry a numbered block but never look at its number, so no
   // sorting/searching/counting algorithm was expressible at all.
-  read:{cat:"vars",ic:"📖",lbl:"Read"},
-  say:{cat:"vars",ic:"💬",lbl:"Say"},
+  read:{cat:"vars",ic:"📖",lbl:"Read",
+    tip:"Copies a number OFF the board into a box — the number on a brick, or the one written on a 📝 note. Without it the player has to already know the answer."},
+  say:{cat:"vars",ic:"💬",lbl:"Say",
+    tip:"The robot says a number out loud. On a level that asks a question, this is how the answer is given."},
   // 🔧 Call a function. A function takes PARAMETERS and can hand a value BACK,
   // so "do this thing" becomes "work this out for me" — the step from a named
   // block of steps to an actual abstraction.
-  call:{cat:"funcs",ic:"🔧",lbl:"Call"},
-  ret:{cat:"funcs",ic:"🔙",lbl:"Give Back"},
+  call:{cat:"funcs",ic:"🔧",lbl:"Call",
+    tip:"Runs a job the player wrote once and named. The blocks inside are counted once however many times it is called — that is what makes it worth doing."},
+  ret:{cat:"funcs",ic:"🔙",lbl:"Give Back",
+    tip:"Ends a routine and hands a number back to whoever called it. This is what turns “do these steps” into “work this out for me”."},
   /* 🤝 the team blocks. One program pasted onto every robot makes them all walk to
      the SAME nearest tree; these are how a fleet divides the work instead. */
   claim:{cat:"team",ic:"🤝",lbl:"Call It"},        // reserve what I'm facing
@@ -114,11 +172,15 @@ function newBlock(t){
   if(t==="rest")b.n=2;
   if(t==="build")b.opt="sapling";
   if(t==="faceNearest"||t==="goNear")b.opt="tree";
+  // on a board it starts on the first destination the level allows
+  if(t==="goNear"&&typeof mgState!=="undefined"&&mgState&&typeof mgGoList==="function")
+    b.opt=mgGoList(mgState.proj)[0];
   if(t==="broadcast"||t==="goTo")b.opt="tree"; // which channel on the noticeboard
   if(t==="setVar"){b.name="x";b.val={k:"num",n:5};}
   if(t==="changeVar"){b.name="x";b.n=1;}
   if(t==="countLoop"){b.name="i";b.to=5;b.body=[];}
   if(t==="say")b.val={k:"str",s:"Hello!"};
+  if(t==="tryCode")b.val={k:"num",n:1};
   return b;
 }
 // A comparison's right-hand side may be a bare number (old saves) or a value

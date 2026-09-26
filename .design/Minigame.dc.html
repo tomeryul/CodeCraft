@@ -1,0 +1,136 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: "Fredoka", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    a { color: #ffd66b; } a:hover { color: #ffb830; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden;
+            background: #241b45; color: #f6f3ff; display: flex; flex-direction: column">
+
+  <!-- ============ ONE header. Leave, name, budget, more. ============ -->
+  <div style="flex: 0 0 auto; display: flex; align-items: center; gap: 10px; padding: 12px 12px 10px;
+              border-bottom: 1px solid rgba(255,255,255,.1)">
+    <button style="width: 40px; height: 40px; border-radius: 13px; border: 0; background: rgba(255,255,255,.06);
+                   display: flex; align-items: center; justify-content: center; padding: 0; flex: 0 0 auto">
+      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M14.6 5.4L8 12l6.6 6.6" fill="none" stroke="#f6f3ff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div style="flex: 1 1 auto; min-width: 0">
+      <div style="font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Name the Job</div>
+      <div style="font-size: 11.5px; font-weight: 600; color: #b9aee0">Lesson 9 of 10 · Functions</div>
+    </div>
+    <div style="flex: 0 0 auto; display: flex; align-items: center; gap: 5px; padding: 6px 11px; border-radius: 999px;
+                background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); font-size: 13px; font-weight: 700">
+      <svg viewBox="0 0 24 24" width="14" height="14"><path d="M9.4 4.6h5.2a1.8 1.8 0 0 1 1.8 1.8v1.4h1.4a1.8 1.8 0 0 1 1.8 1.8v5.2a1.8 1.8 0 0 1-1.8 1.8h-1.4v1.4a1.8 1.8 0 0 1-1.8 1.8H9.4a1.8 1.8 0 0 1-1.8-1.8v-1.4H6.2a1.8 1.8 0 0 1-1.8-1.8V9.6a1.8 1.8 0 0 1 1.8-1.8h1.4V6.4a1.8 1.8 0 0 1 1.8-1.8z" fill="#54d66a"/></svg>
+      <span>12<span style="color: #b9aee0">/13</span></span>
+    </div>
+  </div>
+
+  <!-- ============ ONE tab row ============ -->
+  <div style="flex: 0 0 auto; display: flex; gap: 4px; padding: 10px 12px 0">
+    <button style="flex: 1 1 0; height: 40px; border-radius: 12px 12px 0 0; border: 0; border-bottom: 3px solid #ffb830;
+                   background: rgba(255,255,255,.07); color: #f6f3ff; font-size: 14px; font-weight: 700;
+                   display: flex; align-items: center; justify-content: center; gap: 7px">
+      <svg viewBox="0 0 24 24" width="17" height="17"><rect x="3.6" y="3.6" width="7.2" height="7.2" rx="1.6" fill="#ffb830"/><rect x="13.2" y="3.6" width="7.2" height="7.2" rx="1.6" fill="#ffb830" opacity=".55"/><rect x="3.6" y="13.2" width="7.2" height="7.2" rx="1.6" fill="#ffb830" opacity=".55"/><rect x="13.2" y="13.2" width="7.2" height="7.2" rx="1.6" fill="#ffb830"/></svg>
+      Board
+    </button>
+    <button style="flex: 1 1 0; height: 40px; border-radius: 12px 12px 0 0; border: 0; background: none;
+                   color: #b9aee0; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 7px">
+      <svg viewBox="0 0 24 24" width="17" height="17"><path d="M9.4 4.6h5.2a1.8 1.8 0 0 1 1.8 1.8v1.4h1.4a1.8 1.8 0 0 1 1.8 1.8v5.2a1.8 1.8 0 0 1-1.8 1.8h-1.4v1.4a1.8 1.8 0 0 1-1.8 1.8H9.4a1.8 1.8 0 0 1-1.8-1.8v-1.4H6.2a1.8 1.8 0 0 1-1.8-1.8V9.6a1.8 1.8 0 0 1 1.8-1.8h1.4V6.4a1.8 1.8 0 0 1 1.8-1.8z" fill="#b9aee0"/></svg>
+      Blocks
+    </button>
+    <button style="flex: 1 1 0; height: 40px; border-radius: 12px 12px 0 0; border: 0; background: none;
+                   color: #b9aee0; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 7px">
+      <svg viewBox="0 0 24 24" width="17" height="17"><path d="M8.6 7.4L4.4 12l4.2 4.6M15.4 7.4L19.6 12l-4.2 4.6" fill="none" stroke="#b9aee0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Python
+    </button>
+  </div>
+
+  <!-- ============ the board owns the space ============ -->
+  <div style="flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 12px; display: flex; flex-direction: column; gap: 10px">
+
+    <div style="flex: 0 0 auto; font-size: 13px; line-height: 1.5; color: #e2dbf5">
+      Three pairs of blocks, spaced unevenly. Teach the robot the job once inside
+      <b style="color: #ffd66b">A</b>, then call it three times.
+    </div>
+
+    <!-- the play surface -->
+    <div style="flex: 0 0 auto; border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,.1);
+                background: repeating-linear-gradient(90deg,#56a83f 0 30.5px,#5cb045 30.5px 61px); height: 132px;
+                display: flex; align-items: center; padding: 0 4px; gap: 0">
+      <div style="width: 44px; height: 50px; margin-left: 2px">
+        <div style="width: 5px; height: 11px; margin: 0 auto; background: #8a6210; border-radius: 3px"></div>
+        <div style="width: 9px; height: 9px; margin: -15px auto 5px; border-radius: 50%; background: #54d66a"></div>
+        <div style="width: 44px; height: 36px; border-radius: 13px; background: linear-gradient(180deg,#ffd066,#ffb830);
+                    border-bottom: 4px solid #c47d10; display: flex; align-items: center; justify-content: center; gap: 7px">
+          <div style="width: 11px; height: 12px; border-radius: 50%; background: #fff"></div>
+          <div style="width: 11px; height: 12px; border-radius: 50%; background: #fff"></div></div>
+      </div>
+      <div style="flex: 1 1 auto; display: flex; align-items: center; gap: 0">
+        <span style="width: 26px"></span>
+        <span style="width: 30px; height: 30px; border-radius: 7px; border: 2px dashed rgba(255,214,107,.85)"></span>
+        <span style="width: 30px"></span>
+        <span style="width: 30px; height: 30px; border-radius: 7px; border: 2px dashed rgba(255,214,107,.85)"></span>
+        <span style="width: 30px"></span>
+        <span style="width: 30px; height: 30px; border-radius: 7px; border: 2px dashed rgba(255,214,107,.85)"></span>
+        <span style="width: 24px"></span>
+        <span style="width: 30px; height: 30px; border-radius: 7px; border: 2px dashed rgba(255,214,107,.85)"></span>
+      </div>
+    </div>
+
+    <!-- the lesson card, scrolling under a fixed control bar -->
+    <div style="flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 12px 13px; border-radius: 15px;
+                background: rgba(122,92,255,.1); border: 1px solid rgba(150,120,255,.3)">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px">
+        <span style="font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #c9b8ff;
+                     background: rgba(150,120,255,.18); padding: 3px 9px; border-radius: 999px">What to do</span>
+        <svg viewBox="0 0 24 24" width="15" height="15"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" stroke="#b9aee0" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </div>
+      <div style="display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px; line-height: 1.5; color: #e2dbf5; margin-bottom: 6px">
+        <span style="flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%; background: rgba(150,120,255,.28);
+                     color: #fff; font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center">1</span>
+        <span>Tap the <b style="color:#fff">A</b> tab and write the job inside it.</span>
+      </div>
+      <div style="display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px; line-height: 1.5; color: #e2dbf5">
+        <span style="flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%; background: rgba(150,120,255,.28);
+                     color: #fff; font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center">2</span>
+        <span>Back in Main, call it three times.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ONE control bar. Run is the only primary. ============ -->
+  <div style="flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 10px 12px 14px;
+              border-top: 1px solid rgba(255,255,255,.1); background: rgba(26,19,50,.8); backdrop-filter: blur(16px)">
+    <button style="width: 46px; height: 46px; border-radius: 13px; border: 0; background: rgba(255,255,255,.06);
+                   display: flex; align-items: center; justify-content: center; padding: 0; flex: 0 0 auto">
+      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M5.4 11.4a6.8 6.8 0 0 1 11.4-4.2M18.6 12.6a6.8 6.8 0 0 1-11.4 4.2" fill="none" stroke="#b9aee0" stroke-width="2.2" stroke-linecap="round"/><path d="M16.4 3.6v4h-4M7.6 20.4v-4h4" fill="none" stroke="#b9aee0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button style="width: 46px; height: 46px; border-radius: 13px; border: 0; background: rgba(255,255,255,.06);
+                   display: flex; align-items: center; justify-content: center; padding: 0; flex: 0 0 auto">
+      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M6.4 5.4l8 6.6-8 6.6z" fill="#b9aee0"/><rect x="16" y="5.4" width="2.6" height="13.2" rx="1.3" fill="#b9aee0"/></svg>
+    </button>
+    <button style="height: 46px; padding: 0 14px; border-radius: 13px; border: 0; background: rgba(255,255,255,.06);
+                   color: #b9aee0; font-size: 14px; font-weight: 700; flex: 0 0 auto">1&times;</button>
+    <button style="flex: 1 1 auto; height: 54px; border-radius: 999px; border: 0; border-bottom: 5px solid #1e8a3c;
+                   background: linear-gradient(180deg,#7fe28f,#37c85c); color: #0b3d1c; font-size: 17px; font-weight: 700;
+                   display: flex; align-items: center; justify-content: center; gap: 9px;
+                   box-shadow: inset 0 2px 0 rgba(255,255,255,.45), 0 8px 24px rgba(55,200,92,.45)">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M8.4 5.2l11 6.8-11 6.8z" fill="#0b3d1c"/></svg>
+      Run
+    </button>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

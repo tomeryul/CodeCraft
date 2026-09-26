@@ -17,8 +17,12 @@ const CH_BUILD=["move","turnL","turnR","pickUp","drop","build","repeat","forever
 // the algorithm toolbox: everything needed to inspect data and act on it
 const CH_ALGO=["move","turnL","turnR","pickUp","drop","repeat","forever","whileLoop",
                "countLoop","if","setVar","changeVar","read","say","call"];
+// 🚶 Walk To, named rather than counted — see mgGoList() in challenges.js
+const CH_WALK=["move","turnL","turnR","goNear","repeat","if"];
+const CH_ERRAND=["move","turnL","turnR","goNear","pickUp","drop","repeat","if"];
 // terse level builders so the data below stays readable
 const mv={t:"move"},tL={t:"turnL"},tR={t:"turnR"},pk={t:"pickUp"},dr={t:"drop"},bd={t:"build"};
+const chGo=to=>({t:"goNear",opt:to});
 const rep=(n,body)=>({t:"repeat",n,body});
 const rd=(name,src)=>({t:"read",name,src:src||"here"});
 const setN=(name,n)=>({t:"setVar",name,val:{k:"num",n}});
@@ -158,11 +162,53 @@ const PUZZLE_PACKS=[
      sol:[pk,dr,rep(6,[mv])]},
    ]},
 
-  /* ---------- 5. algorithms: one program, every input ----------
+  /* ---------- 5. errands: name WHERE, not how ----------
+     The first chapter where the route is not the puzzle. Every level hands
+     out 🚶 Walk To with only the destinations it needs, and budgets that
+     leave no room to spell the walk out step by step — so what is left to
+     think about is what to fetch, in which order, and what a place does
+     while you stand on it. Walls make each one a route nobody would want to
+     count out, and Walk To's own rule (the NEAREST one it can REACH) is what
+     level 2 is built on. */
+  {id:"errands",em:"🚶",name:"Errands",diff:2,coins:350,xp:170,needs:"machine",
+   desc:"Stop counting steps. Name WHERE to go and the robot finds its own way — then think about what to fetch, and in which order.",
+   stages:[
+    {em:"🚶",name:"Fetch the Key",diff:1,maxBlocks:3,gw:7,gh:5,allowed:CH_WALK,goTargets:["key","flag"],
+     start:{x:0,y:2,dir:1},
+     tiles:[[1,1,"wall",0],[2,1,"wall",0],[3,1,"wall",0],[3,2,"wall",0],[3,3,"wall",0],
+            [5,1,"wall",0],[6,1,"wall",0],[5,3,"wall",0],[6,3,"wall",0],
+            [2,0,"key",1],[5,2,"door",1]],
+     cells:[],initial:[],goal:[6,2],goalType:"reach",
+     desc:"🚶 Walk To takes a place, not a number of steps — the robot finds its own way round the walls. The 🚩 is locked away: walk to the 🔑 first, then to the flag.",
+     sol:[chGo("key"),chGo("flag")]},
+    {em:"🔑",name:"Nearest First",diff:2,maxBlocks:3,gw:8,gh:5,allowed:CH_WALK,goTargets:["key","flag"],
+     start:{x:0,y:2,dir:1},
+     tiles:[[3,0,"wall",0],[3,1,"wall",0],[3,3,"wall",0],[3,4,"wall",0],[3,2,"door",1],
+            [6,0,"wall",0],[6,1,"wall",0],[6,3,"wall",0],[6,4,"wall",0],[6,2,"door",2],
+            [1,4,"key",1],[5,0,"key",2]],
+     cells:[],initial:[],goal:[7,2],goalType:"reach",
+     desc:"Walk To always goes to the NEAREST one it can reach. The second 🔑 is behind the first door — so one block, used twice, fetches them in the right order.",
+     sol:[rep(2,[chGo("key")]),chGo("flag")]},
+    {em:"🟧",name:"Delivery",diff:2,maxBlocks:5,gw:7,gh:5,allowed:CH_ERRAND,goTargets:["block","target"],
+     start:{x:3,y:2,dir:1},
+     tiles:[[2,1,"wall",0],[2,2,"wall",0],[2,3,"wall",0],[4,1,"wall",0],[4,2,"wall",0],[4,3,"wall",0]],
+     cells:[[6,0],[6,2],[6,4]],initial:[[0,0],[0,2],[0,4]],
+     desc:"Three 🟧 blocks on one side, three 🎯 targets on the other. Walk to a block, ✊ Lift it, walk to a target, ⤵️ Drop it — and let a 🔁 loop do it three times.",
+     sol:[rep(3,[chGo("block"),pk,chGo("target"),dr])]},
+    {em:"🔘",name:"Hold the Gate",diff:3,maxBlocks:5,gw:8,gh:5,allowed:CH_ERRAND,goTargets:["block","plate","flag"],
+     start:{x:0,y:2,dir:1},
+     tiles:[[5,0,"wall",0],[5,1,"wall",0],[5,3,"wall",0],[5,4,"wall",0],[5,2,"gate",1],
+            [2,4,"plate",1],[1,1,"wall",0],[2,1,"wall",0]],
+     cells:[],initial:[[1,0]],goal:[7,2],goalType:"reach",
+     desc:"The 🚧 gate is open only while its 🔘 plate is pressed. Stand on it and it opens — until you walk away. Fetch the 🟧 block and leave IT on the plate.",
+     sol:[chGo("block"),pk,chGo("plate"),dr,chGo("flag")]},
+   ]},
+
+  /* ---------- 6. algorithms: one program, every input ----------
      These are the levels the whole language work was for. Each ships several
      inputs, so a hardcoded answer cannot pass — the program has to READ the row,
      decide, and be right every time. */
-  {id:"algo",em:"🧠",name:"Algorithms",diff:3,coins:500,xp:260,needs:"machine",
+  {id:"algo",em:"🧠",name:"Algorithms",diff:3,coins:500,xp:260,needs:"errands",
    desc:"Now the real thing: write ONE program that is right for every row we give it — including one you never see.",
    stages:[
     {em:"🔍",name:"Find the Biggest",diff:2,maxBlocks:10,gw:6,gh:2,allowed:CH_ALGO,

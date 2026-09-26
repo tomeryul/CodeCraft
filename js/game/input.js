@@ -88,7 +88,7 @@ function handleTap(sx,sy){
   const ri=robots.findIndex(r=>Math.round(r.rx)===tx&&Math.round(r.ry)===ty);
   if(ri>=0){selRobot=ri;selBlock=null;elseSel=null;follow=true;updateChips();updateHud();updateFab();renderProgram();renderPy();toast("🤖 Selected "+robots[ri].name);sfx(500,.05);return;}
   const o=objects.get(key(tx,ty));
-  if(o&&PLAYER_BUILT[o.type]){openObjMenu(key(tx,ty),o);return;}
+  if(o&&PLAYER_BUILT[o.type]){openObjMenu(key(tx,ty),o,sx,sy);return;}
   const names={tree:"🌳 Tree — chop it for wood!",rock:"🪨 Rock — mine it for stone!",iron:"⛓️ Iron ore — mine it, worth 6🪙!",crystal:"💎 Crystal — mine it, worth 15🪙!",home:"🏠 Home base",market:"🏪 Market — sell resources here!",flower:"🌼 Just a pretty flower",item:"📦 Dropped items — a robot can collect these!",gift:"🎁 Treasure! Send a robot to collect it!",decor:"🔨 Your creation — tap 🔨 Build to move or remove it."};
   if(o){
     if(o.type==="tree"&&o.stage<2)toast("🌱 A young tree… it's still growing!");
@@ -97,11 +97,41 @@ function handleTap(sx,sy){
 }
 let movingObj=null;
 function closeObjMenu(){const m=$("objMenu");if(m)m.classList.remove("open");}
-function openObjMenu(k,o){
+/* The menu is about ONE thing in the world, and it used to appear in the
+   middle of the screen with nothing linking it to that thing. It now grows
+   out of the spot that was tapped — and shrinks back into it — so the
+   relationship between the object and its menu is visible rather than
+   remembered. The origin is a point on the menu's own box, so the growth
+   points at the object even though the menu itself stays where it fits. */
+function objMenuOrigin(m,sx,sy){
+  if(sx==null||sy==null){m.style.transformOrigin="";return;}
+  /* Measured with the scale AND the transition suppressed.
+     getBoundingClientRect reports the visual box, and a closed menu sits
+     at scale(.84) — but simply writing an unscaled transform does not
+     help, because `transition` then animates towards it and the value
+     read back is still the old one. Without the transition:none the box
+     came out 192px instead of 229 and every origin landed short, towards
+     the middle. Both properties are put back before anything paints. */
+  const pt=m.style.transform, pn=m.style.transition;
+  m.style.transition="none";
+  m.style.transform="translateX(-50%)";
+  const r=m.getBoundingClientRect();
+  m.style.transform=pt;
+  m.style.transition=pn;
+  if(!r.width)return;
+  const x=Math.max(0,Math.min(r.width, sx-r.left));
+  const y=Math.max(0,Math.min(r.height,sy-r.top));
+  m.style.transformOrigin=x+"px "+y+"px";
+}
+function openObjMenu(k,o,sx,sy){
   const m=$("objMenu");
   const label={proj:"🏗️ "+((o.em||"")+" build"),chest:"📦 Chest",bridge:"🌉 Bridge"}[o.type]||"Build";
   m.querySelector(".om-title").textContent=label+" — what to do?";
-  m.dataset.k=k;m.classList.add("open");sfx(500,.04);
+  m.dataset.k=k;
+  /* Origin first, then open: the measurement needs the menu at rest, and
+     the growth has to know where it is growing from before it starts. */
+  objMenuOrigin(m,sx,sy);
+  m.classList.add("open");sfx(500,.04);
 }
 $("objMove").addEventListener("click",()=>{
   const k=+$("objMenu").dataset.k, o=objects.get(k);

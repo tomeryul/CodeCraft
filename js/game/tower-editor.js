@@ -36,15 +36,25 @@ const ALL=ACTS.concat(CTRL);
 const LOCKED={move:1,turnL:1,turnR:1,build:1};   // a level without these is unplayable
 const DEF_ALLOWED=["move","turnL","turnR","build","climb","repeat"];
 
+/* `sh` is the word under the icon, `lbl` the sentence it holds on a
+   long press — a label has to fit a 52px button */
+/* `tip` is what the tool does, in one sentence, for somebody who has never
+   placed one — the same line the flat and Cyber designers show. */
 const TOOLS=[
-  {id:"plan",   em:"🧱", lbl:"Blueprint — tap to add a level, hold to clear"},
-  {id:"ground", em:"⛰️", lbl:"Ground — raise the terrain the robot starts on"},
-  {id:"pit",    em:"🕳️", lbl:"Pit — a hole to jump across"},
-  {id:"bot",    em:"🤖", lbl:"Start — tap the same tile again to turn"},
-  {id:"erase",  em:"🧹", lbl:"Erase everything on the tile"}
+  {id:"plan",   em:"🧱", sh:"Brick",  lbl:"Blueprint — tap to add a level, hold to clear",
+   tip:"How high a tower of bricks has to stand here when the player is done. Tap to add one level, hold to clear the tile."},
+  {id:"ground", em:"⛰️", sh:"Ground", lbl:"Ground — raise the terrain the robot starts on",
+   tip:"Raises the land itself. The robot starts standing on the ground, so it only has to build what is ABOVE it."},
+  {id:"pit",    em:"🕳️", sh:"Pit",    lbl:"Pit — a hole to jump across",
+   tip:"A hole in the ground. The robot has to 🦘 Jump across it, and a brick needs ground under it — not a pit."},
+  {id:"bot",    em:"🤖", sh:"Start",  lbl:"Start — tap the same tile again to turn",
+   tip:"Where the robot begins. Tap the same tile again to turn it round."},
+  {id:"erase",  em:"🧹", sh:"Erase",  lbl:"Erase everything on the tile",
+   tip:"Clears everything on the tile — brick, ground and pit."}
 ];
 
 const on3  =()=>!!(mgState&&mgState.proj&&mgState.proj.mode3d);
+window.on3d=on3;
 const edit3=()=>!!(mgState&&mgState.creator&&on3());
 
 /* ---------------- the level data ----------------
@@ -193,7 +203,10 @@ function drawBot(g,px,py,cs,dir){
 function drawGrid(){
   const p=mgState.proj, cv=$("mgCanvas");
   lists(p);
-  const W=Math.max(180,cv.clientWidth||320), cs=W/p.gw, H=cs*p.gh;
+  if(window.mgFitBoard)mgFitBoard(p.gh/p.gw);
+  /* the floor was 180, which put the height back over the cap mgFitBoard
+     had just set — the plan view has to fit the room like everything else */
+  const W=Math.max(110,cv.clientWidth||320), cs=W/p.gw, H=cs*p.gh;
   const dpr=(typeof DPR!=="undefined"?DPR:Math.min(3,window.devicePixelRatio||1));
   cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);cv.style.height=Math.round(H)+"px";
   const g=cv.getContext("2d");
@@ -331,7 +344,10 @@ function setMode(on){
 function chrome(){
   const bar=$("mgCreatorBar");
   if(!bar||$("t3Btn"))return;
-  const act=bar.querySelector(".cb-act");
+  /* Everything this file injects is APPENDED to the bar, and mgDesignLayout()
+     files it into a section. Positioning relative to .cb-act or the size
+     steppers used to work and cannot any more: the layout moves both of
+     those into sections, so neither is a child of the bar by then. */
   const b=document.createElement("button");
   b.id="t3Btn";b.className="ibtn wide";
   b.title="Switch between a flat 2D challenge and a 3D Tower level";
@@ -341,28 +357,71 @@ function chrome(){
       ? "Switch to 🧊 3D Tower mode?\n\nThe flat board and the program you've written are cleared — you design with heights instead."
       : "Back to the flat 2D board?\n\nYour 3D blueprint is cleared.";
     if(!confirm(msg))return;
+    /* A board is one kind of board. Cyber's button has always meant to turn
+       Tower off on the way in — it reached for a `setT3` that was never
+       exported, so the guard never fired and a board could end up flagged
+       BOTH, with two lists of blocks stacked in the Design tab and each one
+       overwriting the other's `allowed` on every tap. Both directions are
+       wired now, and both setters are exported. */
+    if(to&&window.onCyP&&onCyP()&&window.CC_CYED)CC_CYED.setMode(false);
     setMode(to);
   });
-  act.insertBefore(b,$("mgSetup"));
+  bar.appendChild(b);
 
   const row=document.createElement("div");
   row.id="t3EdRow";row.className="cb-row t3edrow";
-  row.innerHTML='<button class="t3vbtn" id="t3View"></button>'+
+  /* ONE strip under the board while designing. The play bar (t3Bar in
+     tower3d.js) used to stand above this one with its own 3D tag, its own
+     ⛰ and its own legend, so the screen carried two of everything and
+     this row, laid out as bare inline text, ran its toggle into its
+     numbers. The play bar stays off in the designer; its rotate buttons
+     live here, shown only when there is a 3D view to turn.
+     Every word is its own element, so the Hebrew layer can match it. */
+  row.innerHTML=
+    '<span class="t3seg">'+
+      '<button class="t3vbtn" id="t3View" data-v="3d">🧊 3D</button>'+
+      '<button class="t3vbtn" id="t3Plan" data-v="grid">🗺️ <span>Plan</span></button>'+
+    '</span>'+
+    '<button class="t3btn" id="t3EdRotL" title="Rotate left" aria-label="Rotate left">↺</button>'+
+    '<button class="t3btn" id="t3EdRotR" title="Rotate right" aria-label="Rotate right">↻</button>'+
+    '<span class="spacer"></span>'+
     '<span class="t3stat">⛰ <b id="t3Peak">0</b></span>'+
     '<span class="t3stat">🧱 <b id="t3Bricks">0</b></span>'+
-    '<span class="spacer"></span>'+
-    '<span class="t3leg"><i class="t3lg t3lg-p"></i>brick<i class="t3lg t3lg-g"></i>ground<i class="t3lg t3lg-h"></i>pit</span>';
-  bar.insertBefore(row,act);
+    '<span class="t3leg" id="t3LegPlan"><i class="t3lg t3lg-p"></i><span>brick</span>'+
+      '<i class="t3lg t3lg-g"></i><span>ground</span><i class="t3lg t3lg-h"></i><span>pit</span></span>'+
+    '<span class="t3leg" id="t3Leg3d"><i class="t3lg t3lg-ghost"></i><span>planned</span>'+
+      '<i class="t3lg t3lg-g"></i><span>ground</span><i class="t3lg t3lg-h"></i><span>pit</span></span>';
+  /* The stats and the 🧊/🗺️ view toggle stay with the BOARD: they are read
+     and used while drawing. The bar they used to sit in is a tab away now. */
+  const read=$("mgRead")||bar, dock=$("mgDock");
+  read.insertBefore(row,dock||null);
   const warn=document.createElement("div");
   warn.id="t3Warn";warn.className="t3warn";
-  bar.insertBefore(warn,act);
-  $("t3View").addEventListener("click",()=>{
-    mgState.t3view=mgState.t3view==="3d"?"grid":"3d";
-    if(window.t3Cam)t3Cam.bar(mgState.t3view==="3d");
+  read.insertBefore(warn,dock||null);
+  for(const id of ["t3View","t3Plan"])$(id).addEventListener("click",e=>{
+    const v=e.currentTarget.dataset.v;
+    if(mgState.t3view===v)return;
+    mgState.t3view=v;
     sfx(560,.03);ui();mgDraw();
   });
+  $("t3EdRotL").addEventListener("click",()=>{if(window.t3Cam)t3Cam.rot(-1);});
+  $("t3EdRotR").addEventListener("click",()=>{if(window.t3Cam)t3Cam.rot(1);});
+  /* The camera turns the BOARD, so its buttons live beside the board, the
+     way a Tower level has them at half height — not in the strip below
+     with the counts. They are moved next to the canvas; .t3side on the
+     panel (set in ui() while the 3D view is up) lays the three in a row. */
+  /* At HALF height only (owner's call): a second pair, beside the canvas,
+     and the pair in the strip steps aside. At full height the board is
+     wide and the strip's own pair is the one shown. CSS picks which. */
+  const cv=$("mgCanvas"), pn=cv&&cv.parentNode;
+  if(pn&&!$("t3SideL")){
+    const mk=(id,lbl,g,d)=>{const b=document.createElement("button");
+      b.className="t3btn t3side-btn";b.id=id;b.title=lbl;b.setAttribute("aria-label",lbl);b.textContent=g;
+      b.addEventListener("click",()=>{if(window.t3Cam)t3Cam.rot(d);});return b;};
+    pn.insertBefore(mk("t3SideL","Rotate left","↺",-1),cv);
+    pn.insertBefore(mk("t3SideR","Rotate right","↻",1),cv.nextSibling);
+  }
 
-  const pane=bar.querySelector(".cb-panel"), stprow=pane.querySelector(".stprow");
   const hint=document.createElement("button");
   hint.id="t3Hint";hint.className="rowbtn";
   hint.innerHTML='📜 <span class="lb">Level hint for the player</span>';
@@ -372,43 +431,41 @@ function chrome(){
     if(t===null)return;
     p.desc3=t.slice(0,240);sfx(560,.04);ui();
   });
-  const chips=document.createElement("div");
-  chips.id="t3Blocks";chips.className="t3chips";
-  pane.insertBefore(hint,stprow);
-  pane.insertBefore(chips,stprow);
+  bar.appendChild(hint);
 }
-function chipRow(p){
-  const chips=$("t3Blocks");
-  chips.innerHTML="";
-  const set=new Set(p.allowed||[]);
-  const mk=t=>{
-    const d=DEFS[t]; if(!d)return;
-    const lock=!!LOCKED[t], onx=set.has(t)||lock;
-    const c=document.createElement("button");
-    c.className="t3chip"+(onx?" on":"")+(lock?" lock":"");
-    c.innerHTML=d.ic+' <span>'+esc(d.lbl)+'</span>';
-    c.title=lock?"Always available":(onx?"Tap to take it away":"Tap to allow it");
-    if(!lock)c.addEventListener("click",()=>{
-      if(set.has(t))set.delete(t); else set.add(t);
-      p.allowed=ALL.filter(k=>set.has(k)||LOCKED[k]);
-      mgState.solved=false;
-      sfx(520,.03);
-      renderPalette();mgUpdateCount();ui();
-    });
-    chips.appendChild(c);
-  };
-  ACTS.forEach(mk);
-  const sep=document.createElement("i");sep.className="t3sep";chips.appendChild(sep);
-  CTRL.forEach(mk);
-}
+/* Tower's block set. It is REGISTERED, not drawn: challenges.js owns the
+   one list in the Design tab and picks whichever set matches the board.
+   See the note beside MG_SETS there. */
+mgRegisterBlocks({
+  id:"tower",
+  when:p=>!!p.mode3d,
+  list:()=>ALL,
+  locked:LOCKED,
+  /* 🔨 Build means the tile AHEAD up here, not the one underfoot */
+  tips:()=>window.T3_TIPS,
+  /* what the robot DOES, then what decides when it does it — the same two
+     halves the palette is split into */
+  after:host=>{
+    for(const k of CTRL){
+      const first=host.querySelector('[data-blk="'+k+'"]');
+      if(first){const sep=document.createElement("i");sep.className="t3sep";
+        host.insertBefore(sep,first);break;}
+    }
+  }
+});
 function ui(){
   const btn=$("t3Btn");
   if(!btn)return;
   const cr=!!(mgState&&mgState.creator);
   btn.style.display=cr?"":"none";
-  const row=$("t3EdRow"), warn=$("t3Warn"), chips=$("t3Blocks"), hint=$("t3Hint");
+  const row=$("t3EdRow"), warn=$("t3Warn"), hint=$("t3Hint");
   const three=cr&&on3();
-  for(const el of [row,warn,chips,hint])if(el)el.style.display=three?"":"none";
+  for(const el of [row,warn,hint])if(el)el.style.display=three?"":"none";
+  // out of the 3D designer, the board's row is the board alone again
+  const pn0=$("mgCanvas")&&$("mgCanvas").parentNode;
+  if(pn0&&!(three&&mgState.t3view==="3d")&&pn0.classList.contains("t3side")){
+    pn0.classList.remove("t3side"); if(window.mgFitReset)mgFitReset();
+  }
   if(!cr)return;
   btn.textContent=three?"🗺️ 2D":"🧊 3D";
   btn.classList.toggle("on",three);
@@ -423,11 +480,17 @@ function ui(){
     const e=$(id); if(e)e.style.display="none";
   }
   const solid=mgState.t3view==="3d";
-  $("t3View").textContent=solid?"🧊 3D view":"🗺️ Plan view";
   $("t3View").classList.toggle("on",solid);
+  $("t3Plan").classList.toggle("on",!solid);
+  $("t3View").setAttribute("aria-pressed",String(solid));
+  $("t3Plan").setAttribute("aria-pressed",String(!solid));
+  for(const id of ["t3EdRotL","t3EdRotR","t3Leg3d"])$(id).style.display=solid?"":"none";
+  const pn=$("mgCanvas")&&$("mgCanvas").parentNode;
+  if(pn&&pn.classList.contains("t3side")!==solid){ pn.classList.toggle("t3side",solid); if(window.mgFitReset)mgFitReset(); }
+  $("t3LegPlan").style.display=solid?"none":"";
+  if(window.t3Cam)t3Cam.bar(false);          // the designer's strip is the only one
   $("t3Peak").textContent=peak(p);
   $("t3Bricks").textContent=bricks(p);
-  chipRow(p);
   const v=check(p);
   if(v.errs.length){warn.className="t3warn bad";warn.textContent="⚠️ "+v.errs[0];}
   else if(v.warns.length){warn.className="t3warn hmm";warn.textContent="⚠️ "+v.warns[0];}
@@ -437,7 +500,15 @@ function ui(){
 
 /* ---------------- wrapping the creator ---------------- */
 const _mgCreatorUI=window.mgCreatorUI;
-window.mgCreatorUI=function(){_mgCreatorUI();chrome();ui();};
+/* mgDesignLayout() decides which sections have anything in them, so it has
+   to run after EVERY designer has said which of its rows are showing —
+   never from inside one of their ui()s, where an early return skips it and
+   the last word goes to whoever happened to run before the hiding. Both
+   wrappers end with it; it is idempotent, and whichever file loads last is
+   the one whose call lands last. */
+window.mgCreatorUI=function(){_mgCreatorUI();chrome();ui();
+  if(typeof mgDesignLayout==="function")mgDesignLayout();};
+window.t3SetMode=setMode;   // so Cyber's button can switch Tower off
 
 const _mgToolsUI=window.mgToolsUI;
 window.mgToolsUI=function(){
@@ -445,12 +516,24 @@ window.mgToolsUI=function(){
   const el=$("mgTools"); if(!el)return;
   el.innerHTML="";
   for(const t of TOOLS){
+    /* the name under the icon, exactly as the flat designer's tools do it —
+       five unlabelled glyphs is five things to guess */
     const b=document.createElement("button");
     b.className="tool"+(t.id===mgState.paintMode?" on":"");
-    b.textContent=t.em;b.title=t.lbl;
+    b.title=t.lbl;
+    const em=document.createElement("span");em.className="tl-em";em.textContent=t.em;
+    const lb=document.createElement("span");lb.className="tl-lb";lb.textContent=t.sh||t.lbl;
+    b.appendChild(em);b.appendChild(lb);
     b.addEventListener("click",()=>{mgState.paintMode=t.id;sfx(560,.03);mgCreatorUI();});
     el.appendChild(b);
   }
+  /* No Tower tool carries a number, so ui() below takes the stepper out
+     altogether rather than reserving a row nothing will ever use. Every
+     tool here is the same, so nothing moves between them either way. */
+  /* the same line every designer shows. No 📘: the flat guide's starter
+     boards would paint a flat board under a 3D blueprint. */
+  const cur=TOOLS.find(x=>x.id===mgState.paintMode);
+  if(cur&&typeof mgTipUI==="function")mgTipUI(cur.em,cur.sh,cur.tip,false);
 };
 
 const _mgPaintTile=window.mgPaintTile;
@@ -477,7 +560,6 @@ window.mgDraw=function(){
   if(!edit3())return _mgDraw();
   if(mgState.running&&mgState.t3view!=="3d"){
     mgState.t3view="3d";
-    if(window.t3Cam)t3Cam.bar(true);
     setTimeout(ui,0);
   }
   if(mgState.t3view==="3d"){
@@ -609,22 +691,14 @@ window.renderProjects=function(){
   _renderProjects();
   const grid=document.querySelector(".t3sec .t3grid");
   if(!grid)return;
+  // the same rows as the levels around them (ccCard)
   for(const e of (player.myChallenges||[]).filter(x=>x.t3)){
-    const c=document.createElement("button");
-    c.className="t3card mine";
-    c.innerHTML='<span class="t3badge">🧊</span>'+
-      '<span class="t3name">'+esc(e.name)+'</span>'+
-      '<span class="t3meta">'+"⭐".repeat(e.diff||1)+' · 🧩 '+e.maxBlocks+' · ⛰ '+peak(lists(e))+'</span>'+
-      '<span class="t3mine">yours</span>';
-    c.onclick=()=>{$("projects").classList.remove("open");t3Enter(e);};
-    grid.appendChild(c);
+    ccCard(grid,{em:"🧊",name:'<span class="t3name">'+esc(e.name)+'</span>',cls:"t3card mine",
+      meta:"⭐".repeat(e.diff||1)+' · 🧩 '+e.maxBlocks+' · ⛰ '+peak(lists(e))+' · <i>yours</i>',
+      onTap:()=>{$("projects").classList.remove("open");t3Enter(e);}});
   }
-  const add=document.createElement("button");
-  add.className="t3card t3new";
-  add.innerHTML='<span class="t3badge">✏️</span>'+
-    '<span class="t3name">Design a level</span>'+
-    '<span class="t3meta">Your own tower — plan it, prove it, publish it</span>';
-  add.onclick=()=>{$("projects").classList.remove("open");mgEnterCreator();setMode(true);};
-  grid.appendChild(add);
+  ccCard(grid,{em:"✏️",name:'<span class="t3name">Design a level</span>',cls:"t3card t3new pnew",
+    desc:"Your own tower — plan it, prove it, publish it", badge:"＋",
+    onTap:()=>{$("projects").classList.remove("open");mgEnterCreator();setMode(true);}});
 };
 })();

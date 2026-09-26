@@ -180,13 +180,33 @@ function editParams(id){
   f.params=t.split(",").map(x=>x.trim().replace(/\W+/g,"_").slice(0,10)).filter(Boolean).slice(0,4);
   sfx(560,.04); programChanged();
 }
+/* What to write, when nothing is written yet. In the world that is a
+   recipe from the blocks the world uses; in a challenge those blocks are
+   not in the palette at all — it offered Walk To and Chop on a Tower level
+   whose whole palette is Move, Turn, Build and Climb — so a challenge is
+   told what it actually has: its budget, and that the budget is the
+   puzzle. Two text nodes, not one glued sentence: js/game/i18n.js looks a
+   text node up whole. */
+function emptyMain(r){
+  const d=document.createElement("div");d.className="empty";
+  const line=t=>{const p=document.createElement("div");p.textContent=t;d.appendChild(p);};
+  if(typeof mgState!=="undefined"&&mgState&&mgState.proj){
+    line("Tap blocks below to write your program.");
+    const n=mgState.proj.maxBlocks|0;
+    line(n?n+" blocks is the whole budget — a 🔁 Repeat is how a short program does a long job."
+          :"Then press ▶ to run it on the board.");
+  }else{
+    line("Tap blocks below to program "+r.name+"!");
+    line("Try: 🚶 Walk To 🌳 → 🪓 Chop → 🚶 Walk To 🏪 → ⤵️ Drop.");
+  }
+  return d.outerHTML;
+}
 function renderProgram(){
   const r=R(), root=$("programEl");
   renderRoutineTabs();
   root.innerHTML="";
   if(!curList().length){
-    root.innerHTML=edTarget==="main"
-      ? '<div class="empty">🧩 Tap blocks below to program <b>'+r.name+'</b>!<br>Try: <b>🚶 Walk To 🌳</b> → <b>🪓 Chop</b> → <b>🚶 Walk To 🏪</b> → <b>⤵️ Drop</b>.</div>'
+    root.innerHTML=edTarget==="main"?emptyMain(r)
       : '<div class="empty">🔧 Routine <b>'+edTarget+'</b> is empty.<br>Put the steps you repeat in here, then 🔧 Call it from your main program.</div>';
   }else renderList(curList(),root);
   updateSelUI();
@@ -224,6 +244,7 @@ function renderList(list,parent){
     if(b.t==="countLoop")inner+='<button class="pbtn" data-p="vname">'+esc(b.name)+'</button><span>1→</span><button class="pbtn" data-p="tdec">−</button><span class="num">'+b.to+'</span><button class="pbtn" data-p="tinc">＋</button>';
     if(b.t==="setVar")inner+='<button class="pbtn" data-p="vname">'+esc(b.name)+'</button><span>=</span>'+valCtl(b.val);
     if(b.t==="say")inner+=valCtl(b.val);
+    if(b.t==="tryCode")inner+=valCtl(b.val);
     if(b.t==="read")inner+='<button class="pbtn" data-p="vname">'+esc(b.name)+'</button><span>=</span><button class="pbtn" data-p="rsrc">'+(READ_LBL[b.src]||b.src)+'</button>';
     if(b.t==="if"||b.t==="whileLoop"){
       if(typeof b.cond==="object"){
@@ -234,14 +255,20 @@ function renderList(list,parent){
         else inner+='<button class="pbtn" data-p="cvdec">−</button><span class="num">'+condNum(b.cond)+'</span><button class="pbtn" data-p="cvinc">＋</button>';
         inner+='<button class="pbtn" data-p="cvkind">'+(isVar?"🔢":"📦")+'</button>';
       }
-      else inner+='<button class="pbtn" data-p="cond">'+COND_LBL[b.cond]+'</button>';
+      else inner+='<button class="pbtn neg'+(condNeg(b.cond)?" on":"")+'" data-p="cneg">'+
+        (condNeg(b.cond)?"is not":"is")+
+        '</button><button class="pbtn" data-p="cond">'+condLbl(b.cond)+'</button>';
     }
     if(b.t==="build")inner+='<button class="pbtn" data-p="build">'+BUILD_LBL[b.opt]+'</button>';
     if(b.t==="faceNearest"||b.t==="goNear"){
       // a fixed place, or wherever a variable says — "walk to what the order wants"
       if(b.src)inner+='<button class="pbtn" data-p="tsrc">📦 '+esc(b.src)+'</button>';
-      else inner+='<button class="pbtn" data-p="tgt">'+TGT_EM[b.opt]+' '+b.opt+'</button>';
-      if(mgState||unlocks.vars)inner+='<button class="pbtn" data-p="tmode">'+(b.src?"🗺️":"📦")+'</button>';
+      /* the word in its own element: the Hebrew layer matches whole text
+         nodes, and "🔑 key" as one node came back as a word with no icon */
+      else inner+='<button class="pbtn" data-p="tgt">'+(TGT_EM[b.opt]||"❓")+' <span>'+b.opt+'</span></button>';
+      /* "wherever a variable says" is the world's: a board's destinations are
+         the few its author allowed, and a name typed into a box is none of them */
+      if(!mgState&&unlocks.vars)inner+='<button class="pbtn" data-p="tmode">'+(b.src?"🗺️":"📦")+'</button>';
     }
     if(b.t==="call"){
       const f=routineOf(R(),b.fn||"A");
@@ -295,10 +322,16 @@ function renderList(list,parent){
         if(p==="cond"){
           // inside a challenge the sensor list is the board's, not the world's
           const L=(mgState&&typeof mgCondList==="function")?mgCondList():CONDS;
-          const ci=L.indexOf(b.cond); // -1 for a cond carried in from the other list
+          /* the list holds plain sensors, so cycle the sensor and put the
+             player's is/is-not back on the one they land on */
+          const neg=condNeg(b.cond), base=condBase(b.cond);
+          const ci=L.indexOf(base);  // -1 for a cond carried in from the other list
           if(ci===L.length-1&&(mgState||unlocks.vars))b.cond={var:"x",op:">",val:3}; // compare variables freely
-          else b.cond=L[(ci+1)%L.length];
+          else b.cond=(neg?"!":"")+L[(ci+1)%L.length];
         }
+        /* the comparison form has ≠ among its operators, so is/is-not is only
+           offered on the sensors, which had no way to say "not" at all */
+        if(p==="cneg")b.cond=condFlip(b.cond);
         if(p==="cvar")b.cond.var=promptName(b.cond.var);
         if(p==="cop"){
           // cycle > < = ≠, then fall back out to the sensor list
@@ -323,7 +356,11 @@ function renderList(list,parent){
           b.src=SRCS[(i<0?0:i+1)%SRCS.length];
         }
         if(p==="build")b.opt=BUILDS[(BUILDS.indexOf(b.opt)+1)%BUILDS.length];
-        if(p==="tgt")b.opt=TARGETS[(TARGETS.indexOf(b.opt)+1)%TARGETS.length];
+        if(p==="tgt"){
+          // on a board, only the destinations this level's author allowed
+          const L=(mgState&&typeof mgGoList==="function")?mgGoList(mgState.proj):TARGETS;
+          b.opt=L[(L.indexOf(b.opt)+1)%L.length];
+        }
         if(p==="tmode")b.src=b.src?null:"what";
         if(p==="tsrc")b.src=promptName(b.src);
         if(p==="ch")b.opt=RADIO_CH[(RADIO_CH.indexOf(b.opt)+1)%RADIO_CH.length];

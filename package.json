@@ -1,0 +1,34 @@
+{
+  "name": "codecraft",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CodeCraft — an open-world game that teaches kids to program.",
+  "license": "MIT",
+  "scripts": {
+    "www": "node scripts/build-www.js",
+    "sync": "npm run www && cap sync",
+    "add:ios": "npm run www && cap add ios",
+    "add:android": "npm run www && cap add android",
+    "open:ios": "cap open ios",
+    "open:android": "cap open android",
+    "test": "node test/smoke.js",
+    "test:all": "node test/smoke.js && node test/layout.js && node test/hebrew.js && node test/cyber.js && node test/hub.js && node test/nav.js && node test/academy.js && node test/settings.js && node test/security.js && node test/age-gate.js && node test/delete-account.js && node test/privacy.js && node test/music.js && node test/native.js && node test/sheet-drag.js && node test/menus.js && node test/mobile.js && node test/motion.js && node test/a11y.js && node test/tower3d.js && node test/walk-to.js && node test/calm.js && node test/stable.js && node test/pages.js && node test/perf.js",
+    "sync:android": "npm run www && cap sync android",
+    "sync:ios": "npm run www && cap sync ios"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.0",
+    "playwright": "^1.56.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/browser": "^8.0.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.5.0",
+    "@capacitor/preferences": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.0"
+  }
+}

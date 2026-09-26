@@ -1,0 +1,951 @@
+/* v4 layout pass — the checklist the handoff ships with, run against the app.
+   These assert WHERE controls are, not what they look like: one action bar at
+   the foot of the editor, exactly one primary button at a time, and nothing
+   tappable stranded in the middle of the play area.
+
+   Two traps this file exists to avoid, both of which produced false results
+   while it was being written:
+     - .sheet closes by transform over .28s. Measuring in the same frame you
+       remove .open shows the sheet still on screen, so every control inside
+       it looks stranded in the play area. Wait for the transition.
+     - offsetParent is non-null for a sheet parked off-screen by a transform,
+       so it is not a visibility test. Hit-test the centre point instead.
+
+   Run: NODE_PATH=/opt/node22/lib/node_modules /opt/node22/bin/node test/layout.js */
+const { chromium } = require('playwright');
+const path = require('path');
+const ROOT = path.resolve(__dirname, '..');
+const CHROME = process.env.CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+let pass=0, fail=0;
+const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'':' — '+JSON.stringify(d)));};
+
+(async () => {
+  const b = await chromium.launch({ executablePath: CHROME });
+  const errs=[], bad=[];
+
+  for (const [W,H] of [[390,844],[360,780],[320,700]]) {
+    const pg = await b.newPage({ viewport:{width:W,height:H}, deviceScaleFactor:2 });
+    pg.on('pageerror', e=>errs.push(String(e)));
+    pg.on('response', r=>{ if(r.status()>=400) bad.push(r.status()+' '+r.url().split('/').pop()); });
+    await pg.goto('file://'+ROOT+'/index.html'); await pg.waitForTimeout(1000);
+    await pg.evaluate(()=>{ ageSet(true); document.getElementById('agegate').classList.remove('open'); });
+    await pg.click('#playBtn').catch(()=>{}); await pg.waitForTimeout(1400);
+    await pg.evaluate(()=>{ const c=document.querySelector('#ccCele .cc-cta'); if(c)c.click(); });
+    await pg.waitForTimeout(1800);
+
+    // ---------------------------------------------- world: three docks only
+    await pg.evaluate(()=>{
+      if(mgState) mgExit(false);
+      tutSet(0); $('editor').classList.remove('open','max');
+      document.querySelectorAll('.sheet.open,#splash.open').forEach(s=>s.classList.remove('open'));
+    });
+    await pg.waitForTimeout(500);   // let the sheets finish sliding out
+    const world = await pg.evaluate(()=>{
+      const H=innerHeight, W=innerWidth;
+      const tap=[...document.querySelectorAll('button,a,[role=button]')].filter(e=>{
+        const r=e.getBoundingClientRect();
+        if(r.width<8||r.height<8) return false;
+        if(r.bottom<0||r.top>H||r.right<0||r.left>W) return false;
+        const x=Math.min(Math.max(r.left+r.width/2,1),W-1),
+              y=Math.min(Math.max(r.top+r.height/2,1),H-1);
+        const hit=document.elementFromPoint(x,y);
+        return !!hit && (hit===e || e.contains(hit));
+      });
+      // #topbar and #bottombar are the docks; only strays between them count
+      const mid=tap.filter(e=>{
+        if(e.closest('#topbar,#bottombar')) return false;
+        const r=e.getBoundingClientRect();
+        return r.top>96 && r.bottom<H-140;
+      }).map(e=>e.id||e.className);
+      const fab=$('fabRun').getBoundingClientRect();
+      return { mid, fabH:Math.round(fab.height),
+               fabLabel:getComputedStyle($('fabRun'),'::after').content,
+               energyShown:!!$('energyChip').offsetParent };
+    });
+    ck(`${W}x${H} world: nothing tappable stranded in the play area`, world.mid.length===0, world.mid);
+    ck(`${W}x${H} world: the run button is a labelled pill`,
+       world.fabH>=52 && /Run/.test(world.fabLabel||''), world);
+    /* Energy used to be hidden whenever it was full, because four status chips
+       and four tools would not fit across 390px. The status cluster is one
+       42px pill now and the room is there, so a full battery is a number you
+       can see — except at 359px and under, where it folds back to showing
+       only when it is low enough to act on. */
+    ck(`${W}x${H} energy chip follows the width, not the battery`,
+       world.energyShown === (W>=384), world);
+
+    // ---------------------------------------------- the bottom row fits
+    /* The menu button costs this row 48px. At 320 (SE) that pushed Run past
+       the bar and 25px of it off the screen, and at 360 it collapsed to its
+       min-width. Run is the primary and the one control here that has to
+       keep its word, so the room comes out of the paddings. */
+    const bar = await pg.evaluate(()=>{
+      const ids=['hubBtn','codeBtn','buildBtn','fabRun'];
+      const bb=$('bottombar').getBoundingClientRect();
+      return { fits:ids.every(n=>$(n).getBoundingClientRect().right<=bb.right+.5),
+               tap:ids.every(n=>{const r=$(n).getBoundingClientRect();
+                                 return r.height>=40&&r.width>=40;}),
+               noClip:ids.every(n=>$(n).scrollWidth<=Math.round($(n).getBoundingClientRect().width)+1),
+               labels:[$('codeBtn').textContent.trim(),$('buildBtn').textContent.trim(),
+                       getComputedStyle($('fabRun'),'::after').content] };
+    });
+    ck(`${W}x${H} the whole bottom row fits, labels intact`,
+       bar.fits && bar.tap && bar.noClip &&
+       bar.labels[0]==='Code' && bar.labels[1]==='Build' && /Run/.test(bar.labels[2]), bar);
+
+    // ---------------------------------------------- world editor: Run only
+    const wed = await pg.evaluate(()=>{
+      $('editor').classList.add('open'); setTab('blocks'); renderPalette(); updateFab();
+      const v=n=>!!($(n)&&$(n).offsetParent);
+      const bar=$('actionBar').getBoundingClientRect(),
+            tabs=$('tabs').getBoundingClientRect(),
+            sh=$('editor').getBoundingClientRect();
+      return { run:v('runBtn'), stop:v('stopBtn'), reset:v('mgResetBtn'), step:v('mgStepBtn'),
+               /* v5 put #tabs last, where an app's tab bar goes, so the run
+                  row is the row above it rather than the final one. */
+               barAboveTabs:Math.abs(tabs.top-bar.bottom)<2,
+               tabsLast:Math.abs(tabs.bottom-sh.bottom)<2,
+               runH:Math.round($('runBtn').getBoundingClientRect().height) };
+    });
+    ck(`${W}x${H} world editor: Run only, no Reset/Step`,
+       wed.run && !wed.stop && !wed.reset && !wed.step, wed);
+    ck(`${W}x${H} the run row sits directly on the tab bar, which is last`,
+       wed.barAboveTabs && wed.tabsLast, wed);
+    ck(`${W}x${H} Run is 50px`, wed.runH===50, wed);
+
+    // ---------------------------------------------- challenge: all four
+    const mg = await pg.evaluate(()=>{
+      academyEnter(TUTS.findIndex(t=>t.id==='t_func'));
+      const v=n=>!!($(n)&&$(n).offsetParent);
+      return { run:v('runBtn'), stop:v('stopBtn'), reset:v('mgResetBtn'), step:v('mgStepBtn'),
+               // mgState is a top-level let, never on window — read the flag the CSS reads
+               mgFlag:$('editor').classList.contains('mg'),
+               labels:[...$('actionBar').querySelectorAll('i')].map(i=>i.textContent),
+               heights:[...document.querySelectorAll('#actionBar button')]
+                 .filter(e=>e.offsetParent).map(e=>Math.round(e.getBoundingClientRect().height)) };
+    });
+    ck(`${W}x${H} challenge: Reset + Step appear, labelled`,
+       mg.reset&&mg.step&&mg.run&&!mg.stop&&mg.mgFlag&&mg.labels.join()==='RESET,STEP', mg);
+    ck(`${W}x${H} every action-bar control >=40px`, mg.heights.every(h=>h>=40), mg.heights);
+
+    // ---------------------------------------------- one primary at a time
+    const run = await pg.evaluate(()=>{
+      applyProg(mgRobot,[{t:'move',uid:1},{t:'move',uid:2},{t:'move',uid:3}]);
+      renderProgram(); mgRun(); updateFab();
+      const v=n=>!!($(n)&&$(n).offsetParent);
+      const out={ run:v('runBtn'), stop:v('stopBtn'), running:$('editor').classList.contains('running') };
+      mgStop(); updateFab();
+      out.afterStop={ run:v('runBtn'), stop:v('stopBtn') };
+      return out;
+    });
+    ck(`${W}x${H} exactly one primary while running (Stop, not both)`,
+       run.stop && !run.run && run.running, run);
+    ck(`${W}x${H} ...and back to Run when stopped`, run.afterStop.run && !run.afterStop.stop, run);
+
+    // ---------------------------------------------- .max: bar still docked
+    await pg.evaluate(()=>{ $('editor').classList.add('open','max'); });
+    await pg.waitForTimeout(450);
+    const mx = await pg.evaluate(()=>{
+      const bar=$('actionBar').getBoundingClientRect(),
+            tabs=$('tabs').getBoundingClientRect(),
+            sh=$('editor').getBoundingClientRect();
+      return { gap:Math.round(tabs.top-bar.bottom),
+               tabsToSheet:Math.round(sh.bottom-tabs.bottom),
+               visible:bar.top<innerHeight&&tabs.top<innerHeight };
+    });
+    ck(`${W}x${H} at .max both bottom rows are still docked`,
+       Math.abs(mx.gap)<2 && Math.abs(mx.tabsToSheet)<2 && mx.visible, mx);
+
+    // ---------------------------------------------- the home indicator, once
+    // The desktop engine reports env(safe-area-inset-bottom) as 0, so the
+    // double-count is invisible here unless a real inset is simulated.
+    await pg.addStyleTag({content:':root{--sab:34px !important;}'});
+    await pg.evaluate(()=>{ $('editor').classList.remove('max'); });
+    await pg.waitForTimeout(200);
+    /* Stated against whichever row is last, so a future reshuffle moves the
+       inset instead of silently losing it: exactly one row may reserve it,
+       and that row has to be the one against the bottom edge. */
+    const sab = await pg.evaluate(()=>{
+      const ed=$('editor'), e=ed.getBoundingClientRect();
+      const rows=[...ed.children].filter(c=>c.getBoundingClientRect().height>0);
+      const last=rows[rows.length-1];
+      const pad=c=>parseFloat(getComputedStyle(c).paddingBottom)||0;
+      return { lastRow:last.id||last.className,
+               lastIsFlush:Math.abs(e.bottom-last.getBoundingClientRect().bottom)<2,
+               lastReserves:pad(last)>=34,
+               othersReserving:rows.slice(0,-1).filter(c=>pad(c)>=34).map(c=>c.id||c.className),
+               sheetPad:pad(ed) };
+    });
+    ck(`${W}x${H} the home indicator is reserved once, by the last row`,
+       sab.lastIsFlush && sab.lastReserves &&
+       sab.othersReserving.length===0 && sab.sheetPad<34, sab);
+    await pg.evaluate(()=>{
+      [...document.querySelectorAll('style')].forEach(s=>{
+        if(s.textContent.includes('--sab:34px')) s.remove(); });
+    });
+
+    /* The scrim used to be a ::before on .sheet. A z-index:-1 child paints
+       above its own stacking context's background, so instead of dimming
+       the world it dimmed every sheet by 52% black — #241b45 rendering as
+       #150e2e, which is why the editor read as a dark hole. */
+    const scrim = await pg.evaluate(()=>{
+      $('editor').classList.add('open');
+      const ed=$('editor');
+      const before=getComputedStyle(ed,'::before');
+      const sc=$('scrim');
+      const alpha=c=>{const m=/rgba?\(([^)]+)\)/.exec(c);
+        if(!m)return 0; const p=m[1].split(',');
+        return p.length>3?parseFloat(p[3]):1;};
+      return { sheetPseudoPaints:alpha(before.backgroundColor)>0.02,
+               hasScrim:!!sc,
+               scrimShown:sc?+getComputedStyle(sc).opacity:0,
+               scrimZ:sc?+getComputedStyle(sc).zIndex:0,
+               sheetZ:+getComputedStyle(ed).zIndex,
+               scrimInSheet:!!(sc&&sc.closest('.sheet')) };
+    });
+    ck(`${W}x${H} the scrim dims the world, not the sheet`,
+       !scrim.sheetPseudoPaints && scrim.hasScrim && scrim.scrimShown>0.9 &&
+       !scrim.scrimInSheet && scrim.scrimZ<scrim.sheetZ, scrim);
+
+    /* Shrink/expand resizes the screen, so it is chrome. It used to sit in
+       the Blocks tab's tool row, and a challenge opens maximised on the
+       Board tab — where that row is not rendered — so from the first
+       screen you land on there was no way to shrink the sheet at all. */
+    const mini = await pg.evaluate(async ()=>{
+      const ed=$('editor'), m=$('edMax');
+      const vis=e=>!!(e&&e.offsetParent);
+      const top=()=>Math.round(ed.getBoundingClientRect().top/innerHeight*100);
+      academyEnter(0);
+      await new Promise(r=>setTimeout(r,600));
+      /* it no longer matters which size a challenge opens at — that follows
+         the player's preference now — only that the control is reachable
+         from the Board tab and moves between the two sizes. */
+      const onBoard={inHeader:!!m.closest('.v5-head'), shown:vis(m), start:top()};
+      m.click(); await new Promise(r=>setTimeout(r,450));
+      const other=top();
+      m.click(); await new Promise(r=>setTimeout(r,450));
+      const back=top();
+      setTab('blocks'); renderPalette();
+      await new Promise(r=>setTimeout(r,300));
+      return { onBoard, other, back, shownOnBlocks:vis(m),
+               size:(()=>{const r=m.getBoundingClientRect();
+                         return r.width>=40&&r.height>=40;})() };
+    });
+    const sizes2=[mini.onBoard.start,mini.other].sort((a,b)=>a-b);
+    ck(`${W}x${H} the shrink control is in the header and works from any tab`,
+       mini.onBoard.inHeader && mini.onBoard.shown && mini.shownOnBlocks && mini.size &&
+       sizes2[0]<15 && sizes2[1]>38 && sizes2[1]<55 && mini.back===mini.onBoard.start, mini);
+    await pg.evaluate(()=>{ if(mgState)mgExit(false); });
+    await pg.waitForTimeout(400);
+
+    /* Shrinking the code sheet then opening the menu used to hand you a
+       different height, so the two never agreed on how much of the world
+       stayed visible. One state now, mirrored onto body from #editor.max
+       so render.js's camera offset and the size a challenge restores stay
+       in step. */
+    const sizes = await pg.evaluate(async ()=>{
+      const ids=['mentor','quests','hub','projects','guide','funcLib','orders','settings'];
+      const measure=async()=>{
+        const o={};
+        for(const id of ids){
+          const e=$(id); e.classList.add('open');
+          await new Promise(r=>setTimeout(r,40));
+          o[id]=Math.round(e.getBoundingClientRect().height/innerHeight*100);
+          e.classList.remove('open');
+        }
+        o.editor=Math.round($('editor').getBoundingClientRect().height/innerHeight*100);
+        return o;
+      };
+      $('editor').classList.add('open');
+      if(!$('editor').classList.contains('max'))$('edMax').click();
+      await new Promise(r=>setTimeout(r,400));
+      const full=await measure();
+      $('edMax').click(); await new Promise(r=>setTimeout(r,400));
+      const half=await measure();
+      /* the control has to work from a page that is not the editor */
+      $('editor').classList.remove('open'); hubOpen();
+      await new Promise(r=>setTimeout(r,300));
+      /* guarded so a missing control fails this check instead of throwing
+         and taking the rest of the suite with it */
+      const sz=$('hubSize'); if(sz)sz.click();
+      await new Promise(r=>setTimeout(r,400));
+      const fromMenu={present:!!sz,
+                      hub:Math.round($('hub').getBoundingClientRect().height/innerHeight*100),
+                      editorMax:$('editor').classList.contains('max')};
+      hubClose();
+      const missing=ids.filter(id=>!$(id).querySelector('.m-head .iconbtn.size'));
+      return {full,half,fromMenu,missing};
+    });
+    const same=o=>Object.values(o).every(v=>v===Object.values(o)[0]);
+    ck(`${W}x${H} every page is the size the code page is`,
+       same(sizes.full) && same(sizes.half) &&
+       Object.values(sizes.full)[0]>Object.values(sizes.half)[0], sizes);
+    ck(`${W}x${H} every page carries the shrink control, and it works from any of them`,
+       sizes.missing.length===0 && sizes.fromMenu.present &&
+       sizes.fromMenu.hub>80 && sizes.fromMenu.editorMax,
+       {missing:sizes.missing,fromMenu:sizes.fromMenu});
+    /* the creator check below measures inside an open editor, which is the
+       state this block found and has to hand back */
+    await pg.evaluate(()=>{ $('editor').classList.add('open'); });
+    await pg.waitForTimeout(350);
+
+    /* The size is a preference, not a mode a screen may set. Opening a
+       challenge forced full, leaving restored whatever it had been, and
+       Exit cleared it — so the choice reset every time you went in and out
+       of code. Only the control may change it now. */
+    const holds = await pg.evaluate(async ()=>{
+      const wait=ms=>new Promise(r=>setTimeout(r,ms));
+      const now=()=>$('editor').classList.contains('max');
+      const out={};
+      for(const want of [false,true]){
+        $('editor').classList.add('open'); await wait(200);
+        if(now()!==want){$('edMax').click(); await wait(350);}
+        out[want?'full':'half']={chose:now()};
+        academyEnter(0); await wait(700);
+        out[want?'full':'half'].inLesson=now();
+        mgExit(true); await wait(600);
+        out[want?'full':'half'].afterLesson=now();
+        navHome(); await wait(400);
+        out[want?'full':'half'].afterExit=now();
+      }
+      /* and it is saved, so it survives a reload the way sound does */
+      saveNow();
+      out.inSave=JSON.parse(localStorage.getItem(SAVE_KEY)).sheetFull;
+      return out;
+    });
+    ck(`${W}x${H} the chosen size survives going in and out of code`,
+       holds.half.chose===false && holds.half.inLesson===false &&
+       holds.half.afterLesson===false && holds.half.afterExit===false &&
+       holds.full.chose===true && holds.full.inLesson===true &&
+       holds.full.afterLesson===true && holds.full.afterExit===true &&
+       holds.inSave===true, holds);
+
+    /* every one of these controls is the same object; only the editor's was
+       in the design language's selector list, so the rest fell back to the
+       base .iconbtn and came out a different size and shape. */
+    const styled = await pg.evaluate(()=>{
+      const box=e=>{const c=getComputedStyle(e);
+        return [c.width,c.height,c.borderRadius,c.backgroundColor].join('|');};
+      const ref=box($('edMax'));
+      return [...document.querySelectorAll('.m-head .iconbtn.size')]
+        .filter(e=>box(e)!==ref)
+        .map(e=>(e.closest('.sheet,#shop')||{}).id+': '+box(e)+'  vs  '+ref);
+    });
+    ck(`${W}x${H} every shrink control is styled the same`, styled.length===0, styled);
+    await pg.evaluate(()=>{ $('editor').classList.add('open'); });
+    await pg.waitForTimeout(350);
+
+    // ---------------------------------------------- creator tool tray
+    const cr = await pg.evaluate(async ()=>{
+      if(mgState) mgExit(false);
+      await new Promise(r=>setTimeout(r,180));
+      mgEnterCreator();
+      /* Measured after a beat, not in the same frame: the board sizes
+         itself to whatever the tray leaves (see mgFitBoard), and reading
+         the tray before that has run measures the layout it is replacing.
+         It used to pass by luck, on a tray short enough not to care. */
+      await new Promise(r=>setTimeout(r,650));
+      /* the tray is the dock at the foot of the board's scroll: sticky
+         never leaves its parent, so it is a direct child of the panel and
+         has to be on screen with the board, at the half height too */
+      const d=document.getElementById('mgDock');
+      const st=d?getComputedStyle(d).position:null, r=d?d.getBoundingClientRect():null;
+      const bt=document.getElementById('boardTab').getBoundingClientRect();
+      const named=[...document.querySelectorAll('#mgDock .tool .tl-lb')].map(e=>e.textContent.trim()).filter(Boolean).length;
+      const tools=document.querySelectorAll('#mgDock .tool').length;
+      if(mgState) mgExit(false);
+      await new Promise(r=>setTimeout(r,200));
+      return { sticky:st, inView:r?(r.bottom<=bt.bottom+1&&r.top<innerHeight):false, named, tools };
+    });
+    ck(`${W}x${H} creator tool tray is sticky at the foot of the board`, cr.sticky==='sticky'&&cr.inView, cr);
+    ck(`${W}x${H} every creator tool carries its name`, cr.tools>0&&cr.named===cr.tools, cr);
+
+    // ---------------------------------------------- the status pill is one line
+    /* The corner used to hold two objects on three rows, 105px of map. It is
+       one 42px pill now, market handle included. What is worth protecting is
+       the shape, not the pixel: one object, one row, and the handle inside
+       the pill rather than hanging off the end of it — which is exactly what
+       it did until #stats stopped reserving room for a tool column that
+       #topbar's own padding already reserves. */
+    const pill = await pg.evaluate(async () => {
+      if (typeof mgState !== 'undefined' && mgState) mgExit(false);
+      document.querySelectorAll('.sheet.open').forEach(x => x.classList.remove('open'));
+      coins = 1234; player.level = 7; R().energy = 100; updateHud();
+      market.order = { need:{wood:6}, got:{}, until: now + 94000, reward: 40, shape:'spread' };
+      if (typeof renderMarket === 'function') renderMarket();
+      await new Promise(r => setTimeout(r, 400));
+      const box = s => { const e = document.querySelector(s); if (!e) return null;
+        const r = e.getBoundingClientRect();
+        return { l: Math.round(r.left), r: Math.round(r.right), h: Math.round(r.height) }; };
+      const st = document.getElementById('stats');
+      const kids = [...st.children].filter(e => e.offsetParent);
+      const bx = kids.map(e => e.getBoundingClientRect());
+      return {
+        inPill: (document.getElementById('ticker') || {}).parentNode === st,
+        /* one row means every chip overlaps every other vertically; comparing
+           tops alone counts chips of different heights as separate rows */
+        oneRow: bx.every(a => bx.every(c => a.top < c.bottom && c.top < a.bottom)),
+        stats: box('#stats'), ticker: box('#ticker'),
+        handleH: (box('#ticker .tk-btn') || {}).h,
+        tools: box('#tbBtns'),
+        bag: (document.getElementById('bagEl') || {}).textContent,
+        /* the market handle and the order clock are two buttons, not two
+           halves of one — they open different screens */
+        buttons: document.querySelectorAll('#ticker button').length,
+        ordH: (box('#ticker .tk-ord') || {}).h,
+        gap: (() => { const a = document.querySelector('#ticker .tk-btn'),
+                            c = document.querySelector('#ticker .tk-ord');
+          return (a && c) ? Math.round(c.getBoundingClientRect().left -
+                                       a.getBoundingClientRect().right) : null; })(),
+        fills: [...document.querySelectorAll('#ticker button')]
+          .map(e => getComputedStyle(e).backgroundColor)
+      };
+    });
+    await pg.waitForTimeout(200);
+    ck(`${W}x${H} the status cluster is one object, one row`,
+       pill.inPill === true && pill.oneRow === true, pill);
+    ck(`${W}x${H} the pill is a single 42px line`, pill.stats.h === 42, pill.stats);
+    ck(`${W}x${H} the market handle sits inside the pill, clear of the tools`,
+       pill.ticker.r <= pill.stats.r + 1 && pill.ticker.r <= pill.tools.l, pill);
+    ck(`${W}x${H} the handle is still a tap target`, pill.handleH >= 32, pill);
+    /* One pill-shaped button used to open the price panel on its left and the
+       Orders sheet on its right, with nothing on it saying so. */
+    ck(`${W}x${H} the market and the order are two separate chips`,
+       pill.buttons === 2 && pill.gap >= 3 && pill.ordH >= 32, pill);
+    ck(`${W}x${H} and they do not look like one`,
+       pill.fills.length === 2 && pill.fills[0] !== pill.fills[1], pill.fills);
+    ck(`${W}x${H} the bag chip is a count, not a changing-width preview`,
+       /^\d+\/\d+$/.test((pill.bag || '').trim()), pill.bag);
+
+    // ---------------------------------------------- iOS 26 edge glass
+    /* Safari 26 samples position:fixed elements near the top and bottom of
+       the viewport, folds their backdrop-filter into the system's own Liquid
+       Glass, and paints the result across the whole width of that edge — a
+       blurred band over the world where the HUD floats. Nothing pinned to an
+       edge may carry one. Sheets are exempt: they cover the screen, so there
+       is no edge being read through. */
+    const glass = await pg.evaluate(() => {
+      const EDGE = 90, bad = [];
+      for (const e of document.querySelectorAll('body *')) {
+        const cs = getComputedStyle(e);
+        const bf = cs.backdropFilter || cs.webkitBackdropFilter;
+        if (!bf || bf === 'none') continue;
+        const r = e.getBoundingClientRect();
+        if (r.width < 1 || r.height < 1) continue;
+        if (r.bottom <= 0 || r.top >= innerHeight) continue;      // parked off-screen
+        if (e.closest('.sheet')) continue;
+        if (r.top < EDGE || r.bottom > innerHeight - EDGE)
+          bad.push((e.id || e.className || e.tagName) + ' ' + bf);
+      }
+      return bad;
+    });
+    ck(`${W}x${H} nothing pinned to a screen edge carries a backdrop-filter`,
+       glass.length === 0, glass);
+
+    // ---------------------------------------------- one full-size height
+    /* Maximise, focus and every other full-size sheet are one height. It was
+       a bare 94vh in four places while focus alone also capped itself
+       against the safe area, so on a notched phone the two landed a dozen
+       pixels apart and the sheet visibly twitched between them. The inset is
+       simulated: a desktop Chromium reports none. */
+    const heights = await pg.evaluate(async () => {
+      const root = document.documentElement, was = root.style.getPropertyValue('--sat');
+      const h = s => { const e = document.querySelector(s);
+        return e ? Math.round(e.getBoundingClientRect().height) : null; };
+      const ed = $('editor'), out = {};
+      for (const inset of [0, 62]) {
+        root.style.setProperty('--sat', inset + 'px');
+        ed.className = 'sheet open'; setTab('blocks'); renderPalette();
+        await new Promise(r => setTimeout(r, 300));
+        ed.classList.add('max');
+        await new Promise(r => setTimeout(r, 350));
+        const max = h('#editor');
+        ed.classList.remove('max'); ed.classList.add('focused');
+        await new Promise(r => setTimeout(r, 350));
+        const focused = h('#editor');
+        /* nav.js mirrors #editor.max onto body.sheets-full, so the editor
+           stays maximised while another sheet is measured */
+        ed.classList.remove('focused'); ed.classList.add('max');
+        document.body.classList.add('sheets-full');
+        $('shop').classList.add('open');
+        await new Promise(r => setTimeout(r, 350));
+        const shop = h('#shop');
+        $('shop').classList.remove('open'); ed.classList.remove('max');
+        out[inset] = { max, focused, shop };
+      }
+      root.style.setProperty('--sat', was);
+      ed.className = 'sheet';
+      await new Promise(r => setTimeout(r, 300));
+      return out;
+    });
+    await pg.waitForTimeout(300);
+    const oneHeight = o => o.max === o.focused && o.max === o.shop;
+    ck(`${W}x${H} maximise, focus and the other sheets are one height`,
+       oneHeight(heights[0]) && oneHeight(heights[62]), heights);
+    ck(`${W}x${H} and that height gets out of the safe area's way`,
+       heights[62].max < heights[0].max, heights);
+
+    // ---------------------------------------------- focus: blocks only
+    /* Making the sheet taller only ever bought a little room: the rows above
+       the program and the run bar below it keep their height whatever the
+       sheet does. Focus drops them, so the two things you edit with — the
+       program and the palette — get the screen. */
+    const focus = await pg.evaluate(async () => {
+      if (mgState) mgExit(false);
+      $('editor').classList.remove('focused');
+      $('editor').classList.add('open');
+      setTab('blocks'); renderPalette();
+      await new Promise(r => setTimeout(r, 400));
+      const h = s => { const e = document.querySelector(s); if (!e) return null;
+        const r = e.getBoundingClientRect(); return r.height < 1 ? 0 : Math.round(r.height); };
+      const x = s => { const e = document.querySelector(s);
+        return (e && e.offsetParent) ? Math.round(e.getBoundingClientRect().left) : null; };
+      const snap = () => ({ program:h('#programWrap'), palette:h('#palette'),
+        tabs:h('#tabs'), bar:h('#actionBar'), row:h('#blocksTab .v5-edrow'),
+        head:h('#editor .v5-head'), sheet:h('#editor'),
+        btn:!!($('edFocus')||{}).offsetParent, vh:innerHeight,
+        xFocus:x('#edFocus'), xMax:x('#edMax'), xClose:x('#edClose') });
+      const before = snap();
+      $('edFocus').click();
+      await new Promise(r => setTimeout(r, 450));
+      const on = snap();
+      $('edFocus').click();
+      await new Promise(r => setTimeout(r, 450));
+      const off = snap();
+      $('editor').classList.remove('open');
+      return { before, on, off };
+    });
+    await pg.waitForTimeout(400);
+    /* The promise is not a ratio — the sheet may already be large — it is
+       that the blocks get everything the sheet has apart from its header. */
+    const area = s => s.program + s.palette;
+    ck(`${W}x${H} focus gives the blocks all of the sheet but its header`,
+       area(focus.on) >= focus.on.sheet - focus.on.head - 14 &&
+       area(focus.on) > area(focus.before),
+       { on:area(focus.on), sheet:focus.on.sheet, head:focus.on.head,
+         before:area(focus.before) });
+
+    /* Turning the mode on must not move a header control sideways. Hiding
+       all of the header but the one button sent that button from the left of
+       the row to the right — a control changing sides at the moment you are
+       about to press it again — and took Back, shrink and exit with it. */
+    const heldX = k => focus.before[k] !== null && focus.on[k] !== null &&
+                       Math.abs(focus.before[k] - focus.on[k]) <= 2;
+    ck(`${W}x${H} no header control moves or vanishes when focus turns on`,
+       heldX('xFocus') && heldX('xMax') && heldX('xClose'),
+       { before:[focus.before.xFocus, focus.before.xMax, focus.before.xClose],
+         on:[focus.on.xFocus, focus.on.xMax, focus.on.xClose] });
+    ck(`${W}x${H} focus keeps the program AND the palette`,
+       focus.on.program > 0 && focus.on.palette > 0, focus.on);
+    ck(`${W}x${H} focus hides the rows that are not the program`,
+       focus.on.tabs === 0 && focus.on.bar === 0 && focus.on.row === 0, focus.on);
+    ck(`${W}x${H} but keeps the header it needs to get back`,
+       focus.on.head > 0, focus.on);
+    ck(`${W}x${H} the way back stays on screen`, focus.on.btn, focus.on);
+    /* within a pixel: the size change now glides on the transform
+       (ccSizeFlip), and a row measured on its last sub-pixel of travel can
+       round the other way — every row still has to come back */
+    ck(`${W}x${H} pressing it again restores every row`,
+       Object.keys(focus.before).every(k => typeof focus.before[k] !== 'number'
+         ? focus.off[k] === focus.before[k] : Math.abs(focus.off[k] - focus.before[k]) <= 1), focus);
+
+    /* Focus used to be 100vh. The sheet is anchored to the bottom, so that
+       started it at y=0 — behind the status bar, where iOS dims and the
+       button that turns focus off is hard to see and hard to press. The
+       inset is simulated: a desktop Chromium reports none. */
+    const clears = await pg.evaluate(async () => {
+      const root = document.documentElement, was = root.style.getPropertyValue('--sat');
+      const read = async inset => {
+        root.style.setProperty('--sat', inset + 'px');
+        $('editor').classList.add('open', 'focused');
+        await new Promise(r => setTimeout(r, 350));
+        const btn = $('edFocus').getBoundingClientRect();
+        const sheet = $('editor').getBoundingClientRect();
+        return { inset, btnTop: Math.round(btn.top), sheetH: Math.round(sheet.height) };
+      };
+      const flat = await read(0), notch = await read(62);
+      root.style.setProperty('--sat', was);
+      $('editor').classList.remove('focused', 'open');
+      await new Promise(r => setTimeout(r, 300));
+      return { flat, notch, vh: innerHeight };
+    });
+    await pg.waitForTimeout(300);
+    ck(`${W}x${H} focus keeps its button clear of the status bar`,
+       clears.notch.btnTop >= 62 && clears.flat.btnTop >= 0, clears);
+    ck(`${W}x${H} focus is no taller than the other full-size sheets`,
+       clears.flat.sheetH <= Math.round(clears.vh * 0.945), clears);
+
+    /* Focus hides Back, the tabs and Run, so leaving it on when the editor
+       closes would drop the player into a screen they did not choose. */
+    const sticky = await pg.evaluate(async () => {
+      $('editor').classList.add('open');
+      await new Promise(r => setTimeout(r, 250));
+      $('edFocus').click();
+      await new Promise(r => setTimeout(r, 250));
+      const during = $('editor').classList.contains('focused');
+      $('editor').classList.remove('open');
+      await new Promise(r => setTimeout(r, 250));
+      return { during, after: $('editor').classList.contains('focused') };
+    });
+    await pg.waitForTimeout(400);
+    ck(`${W}x${H} focus does not survive closing the editor`,
+       sticky.during && !sticky.after, sticky);
+
+    /* Content past the bottom of a fixed-height sheet has to be reachable.
+       Both of these were laid out as plain flex children with no scroller,
+       so the maker overflowed its own height by 59px and the Save button
+       was what fell off the end. A sheet may not clip: whatever does not
+       fit belongs to a body that scrolls. */
+    const clipped = await pg.evaluate(async () => {
+      const out = [];
+      /* the maker is checked three ways, because its dock changes shape:
+         the Boxes tab, the Code tab (a whole stylesheet), and the Layout
+         tab (a row per declaration) are three very different heights */
+      const opens = {
+        style:  () => styleOpen(),
+        maker:  () => makerOpen('hat', null),
+        maker2: () => { makerOpen('hat', null); mkParts = []; renderMaker();
+                        mkAddPart(); mkAddPart(); mkTab = 'code'; renderMaker(); },
+        maker3: () => { makerOpen('hat', null); mkParts = []; renderMaker();
+                        mkAddPart(); mkFocusOn(mkParts[0].cls); mkTab = 'layout'; renderMaker(); }
+      };
+      for (const id of ['style', 'maker', 'maker2', 'maker3']) {
+        if (typeof makerOpen !== 'function') continue;
+        document.querySelectorAll('.sheet.open').forEach(x => x.classList.remove('open'));
+        player.level = 20; player.myWear = [];
+        opens[id]();
+        await new Promise(r => setTimeout(r, 300));
+        const sheetId = id.replace(/\d$/, '');
+        const sh = document.getElementById(sheetId);
+        const body = document.getElementById(sheetId + 'Body');
+        const scrolls = body && body.scrollHeight > body.clientHeight
+          ? getComputedStyle(body).overflowY !== 'visible' : true;
+        if (sh.scrollHeight > sh.clientHeight + 1 || !scrolls)
+          out.push(id + ' sheet=' + sh.scrollHeight + '/' + sh.clientHeight +
+                   ' body=' + (body ? body.scrollHeight + '/' + body.clientHeight : '?') +
+                   ' scrolls=' + scrolls);
+      }
+      document.querySelectorAll('.sheet.open').forEach(x => x.classList.remove('open'));
+      return out;
+    });
+    await pg.waitForTimeout(300);
+    ck(`${W}x${H} no sheet clips content it cannot scroll to`, clipped.length===0, clipped);
+
+    // ---------------------------------------------- the designers' tool box
+    /* The tools used to be one nowrap row that scrolled sideways, so half
+       the box was off the edge with nothing saying it was there. People
+       painted with whichever four they could see. */
+    const tools = await pg.evaluate(async () => {
+      const wait=ms=>new Promise(r=>setTimeout(r,ms));
+      const out={};
+      for(const [name,fn] of [["flat",()=>mgEnterCreator()],
+                              ["cyber",()=>cyDesign()],
+                              /* the 3D switch asks "are you sure?" and Playwright answers no by
+                                 default, which quietly ran the FLAT designer twice and passed */
+                              ["tower",()=>{mgEnterCreator();
+                                const c=window.confirm; window.confirm=()=>true;
+                                document.getElementById('t3Btn').click(); window.confirm=c;}]]){
+        if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+        await wait(180); fn(); await wait(650);
+        const t=document.getElementById('mgTools');
+        const box=t.getBoundingClientRect();
+        const bs=[...t.querySelectorAll('.tool')];
+        const tip=document.getElementById('mgTip');
+        const tr=tip?tip.getBoundingClientRect():null;
+        out[name]={
+          n:bs.length,
+          /* no sideways scroll, and every tool inside the box that holds them */
+          scrolls:t.scrollWidth>t.clientWidth+1,
+          inside:bs.every(x=>{const r=x.getBoundingClientRect();
+            return r.left>=box.left-1&&r.right<=box.right+1;}),
+          /* and the whole box, and the line under it, actually on screen */
+          onScreen:box.top>=0&&box.bottom<=innerHeight+1&&
+                   !!tr&&tr.top>=0&&tr.bottom<=innerHeight+1,
+          tapOk:bs.every(x=>x.getBoundingClientRect().height>=40),
+          /* the design chrome is a tab away, not on top of the board */
+          actOnBoard:!!document.getElementById('boardTab').querySelector('.cb-act'),
+          tip:(document.querySelector('#mgTip .cy-tip-t')||{}).textContent||'',
+          names:bs.map(x=>(x.querySelector('.tl-lb')||{}).textContent||'').join()
+        };
+      }
+      if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+      await wait(250);
+      return out;
+    });
+    /* The board must not move when you pick a different tool. It did: some
+       tools carry a number and some do not, so the stepper came and went,
+       and a tip that wrapped to two lines for one tool and three for the
+       next changed height too — and what is under the board is what
+       decides how much board there is. Three heights in the flat designer,
+       three in Cyber, and the thing you are looking at jumped under your
+       finger every time you switched. */
+    const steady = await pg.evaluate(async () => {
+      const wait=ms=>new Promise(r=>setTimeout(r,ms));
+      const out={};
+      for(const [name,fn] of [["flat",()=>mgEnterCreator()],
+                              ["cyber",()=>cyDesign()],
+                              /* the 3D switch asks "are you sure?" and Playwright answers no by
+                                 default, which quietly ran the FLAT designer twice and passed */
+                              ["tower",()=>{mgEnterCreator();
+                                const c=window.confirm; window.confirm=()=>true;
+                                document.getElementById('t3Btn').click(); window.confirm=c;}]]){
+        if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+        await wait(180); fn(); await wait(700);
+        const seen=[];
+        for(const t of [...document.querySelectorAll('#mgTools .tool')]){
+          t.click();
+          await wait(120);
+          /* Force the fit rather than waiting for whatever would have
+             driven the next draw: mgFitBoard is throttled to a window of
+             its own, so measuring on a timer measures the timer. */
+          if(window.mgFitReset)mgFitReset();
+          mgDraw(); await wait(120);
+          /* the tool's name and the dock's height come along, because when
+             this fails the question is always WHICH tool and by how much */
+          const T=id=>Math.round(document.getElementById(id).getBoundingClientRect().top);
+          seen.push({h:Math.round(document.getElementById('mgCanvas').getBoundingClientRect().height),
+            t:(t.querySelector('.tl-lb')||{}).textContent,
+            dock:Math.round(document.getElementById('mgDock').getBoundingClientRect().height),
+            /* and where the GRID is: the board holding still is only half of
+               it — the tools are what you are aiming at, and they used to
+               slide by the height of a stepper as you moved between a tool
+               that carries a value and one that does not */
+            tools:T('mgTools'), stp:T('mgBrickStp')});
+        }
+        const hs=[...new Set(seen.map(x=>x.h))];
+        out[name]={heights:hs,n:seen.length,
+                   toolTops:[...new Set(seen.map(x=>x.tools))],
+                   stpTops:[...new Set(seen.map(x=>x.stp))],
+                   /* the value control belongs after the tools and the line
+                      that explains them, not above the lot */
+                   order:[...document.getElementById('mgDock').children]
+                     .map(c=>c.id).filter(Boolean).join('>'),
+                   /* only the outliers, so a failure reads at a glance */
+                   odd:hs.length>1?seen.filter(x=>x.h!==hs[0]).slice(0,4):[],
+                   tools:[...document.querySelectorAll('#mgTools .tl-lb')].map(e=>e.textContent).join()};
+      }
+      if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+      await wait(250);
+      return out;
+    });
+    for(const k of ["flat","cyber","tower"]){
+      ck(`${W}x${H} ${k}: the board is the same size whichever tool is picked`,
+         steady[k].n>0 && steady[k].heights.length===1, steady[k]);
+      ck(`${W}x${H} ${k}: and the tools stay exactly where they are`,
+         steady[k].toolTops.length===1 && steady[k].stpTops.length===1, steady[k]);
+    }
+    /* the value control is the LAST thing in the dock: it used to sit above
+       the tools, so picking a tool that carries a number pushed the whole
+       grid down and picking one that does not pulled it back up */
+    ck(`${W}x${H} the value control sits under the tools, not over them`,
+       ["flat","cyber"].every(k=>steady[k].order==='mgTools>mgTip>mgBrickStp'),
+       {flat:steady.flat.order,cyber:steady.cyber.order});
+    /* and these really are three different designers — the 3D switch asks
+       a confirm() that a headless browser says no to, which ran the flat
+       one twice and passed twice */
+    ck(`${W}x${H} the three designers are three different tool sets`,
+       steady.tower.tools==='Brick,Ground,Pit,Start,Erase' &&
+       steady.cyber.tools.indexOf('Keypad')>=0 &&
+       steady.flat.tools.indexOf('Target')>=0,
+       {flat:steady.flat.tools,cyber:steady.cyber.tools,tower:steady.tower.tools});
+
+    for(const k of ["flat","cyber","tower"]){
+      const t=tools[k];
+      ck(`${W}x${H} ${k}: every tool is on screen, none of it scrolled out of reach`,
+         t.n>0 && !t.scrolls && t.inside && t.onScreen, t);
+      ck(`${W}x${H} ${k}: a tool is big enough to hit, and says what it does`,
+         t.tapOk && t.tip.length>30, {tapOk:t.tapOk,tip:t.tip.slice(0,40)});
+      ck(`${W}x${H} ${k}: the design buttons are not stacked on the board`,
+         t.actOnBoard===false, t);
+    }
+
+    // ---------------------------------------------- the Design tab
+    /* It was one undifferentiated stack: a fold-out drawer, two steppers,
+       a strip of chips carrying nothing but a name, and the publish row,
+       with nothing saying which of them belonged together or what any of
+       them was for. "Count" and "While" mean something only to somebody
+       who has already met them, and this screen is where an author decides
+       whether a child will. */
+    const design = await pg.evaluate(async () => {
+      const wait=ms=>new Promise(r=>setTimeout(r,ms));
+      const out={};
+      for(const [name,fn] of [["flat",()=>mgEnterCreator()],
+                              ["cyber",()=>cyDesign()],
+                              ["tower",()=>{mgEnterCreator();
+                                const c=window.confirm; window.confirm=()=>true;
+                                document.getElementById('t3Btn').click(); window.confirm=c;}]]){
+        if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+        await wait(180); fn(); await wait(650);
+        document.getElementById('designTabBtn').click(); await wait(350);
+        const vis=e=>!!e.offsetParent&&getComputedStyle(e).visibility!=='hidden';
+        const secs=[...document.querySelectorAll('#mgCreatorBar .dsec')].filter(vis);
+        /* The block list is the one section that starts shut — it is four
+           times the size of every other — so the rows have to be let out
+           before they can be measured. Opening it is also the check that
+           the head is a real control. */
+        const blocksSec=document.getElementById('dsBlocks');
+        const wasShut=!!blocksSec&&blocksSec.classList.contains('shut');
+        let toggles=false;
+        if(blocksSec){
+          const head=blocksSec.querySelector('.ds-head');
+          head.click(); await wait(420);
+          const flipped=blocksSec.classList.contains('shut')!==wasShut;
+          if(blocksSec.classList.contains('shut')){head.click(); await wait(420);}
+          toggles=flipped&&!blocksSec.classList.contains('shut');
+        }
+        const rows=[...document.querySelectorAll('#mgCreatorBar .blkrow')].filter(vis);
+        /* a heading with nothing under it is worse than no heading, and
+           the answer now lives inside .ds-in — the head is always there */
+        const empty=secs.filter(e=>{
+          const inn=e.querySelector('.ds-in');
+          return !inn||![...inn.children].some(c=>getComputedStyle(c).display!=='none');
+        }).map(e=>e.id);
+        /* nothing may be left loose in the bar: every control is filed */
+        const loose=[...document.getElementById('mgCreatorBar').children]
+          .filter(c=>!c.classList.contains('dsec')&&vis(c))
+          .map(c=>c.id||c.className);
+        /* every block starts switched ON for a flat board, so there is no
+           "not given" row to compare against until one is taken away */
+        if(rows.length&&!rows.some(r=>!r.classList.contains('on'))){
+          const t=rows.find(r=>!r.classList.contains('lock'));
+          if(t){t.click(); await wait(350);}
+        }
+        /* re-query: that tap re-rendered the list, and the nodes collected
+           before it are detached now — a detached element measures 0x0, so
+           anything checked against the old array silently "fails" */
+        const now=[...document.querySelectorAll('#mgCreatorBar .blkrow')].filter(vis);
+        const on=now.find(r=>r.classList.contains('on'));
+        const off=now.find(r=>!r.classList.contains('on')&&!r.classList.contains('lock'));
+        const cs=e=>e?getComputedStyle(e):null;
+        out[name]={
+          blocksStartsShut:wasShut,
+          blocksToggles:toggles,
+          /* a shut section still has to say what it is holding */
+          sums:secs.map(e=>({id:e.id,s:(e.querySelector('.ds-sum')||{}).textContent||''}))
+                   .filter(x=>['dsKind','dsBoard','dsBlocks'].indexOf(x.id)>=0),
+          heads:secs.every(e=>{
+            const h=e.querySelector('.ds-head');
+            return !!h&&h.tagName==='BUTTON'&&h.hasAttribute('aria-expanded');
+          }),
+          secs:secs.map(e=>e.querySelector('h4').textContent),
+          subs:secs.every(e=>((e.querySelector('h4 + p')||{}).textContent||'').length>20),
+          empty, loose,
+          rows:now.length,
+          /* exactly one of the three lists is on screen at a time */
+          /* which set the one list is showing — there used to be three
+             separate hosts and that was the bug */
+          set:(document.getElementById('mgBlocks')||{}).dataset?
+              document.getElementById('mgBlocks').dataset.set||'':'(no host)',
+          untold:now.filter(r=>((r.querySelector('.br-tip')||{}).textContent||'').length<25)
+                    .map(r=>r.querySelector('b').textContent),
+          /* given and not given have to be told apart at a glance */
+          split:!!on&&!!off&&cs(on).backgroundColor!==cs(off).backgroundColor&&
+                cs(on).borderLeftColor!==cs(off).borderLeftColor,
+          tapOk:now.every(r=>r.getBoundingClientRect().height>=40)
+        };
+      }
+      if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+      await wait(250);
+      return out;
+    });
+    /* Shut by default only the FIRST time: the block list is four times
+       the size of every other section, so it starts folded — and once an
+       author opens it, switching the kind of board does not fold it again.
+       That is the same session remembering, which is the whole point of
+       keeping the state rather than recomputing it. */
+    ck(`${W}x${H} the oversized block list starts folded`,
+       design.flat.blocksStartsShut===true, design.flat.blocksStartsShut);
+    ck(`${W}x${H} and once opened it stays open through a change of board`,
+       design.cyber.blocksStartsShut===false && design.tower.blocksStartsShut===false,
+       {cyber:design.cyber.blocksStartsShut, tower:design.tower.blocksStartsShut});
+    for(const k of ["flat","cyber","tower"]){
+      const d=design[k];
+      ck(`${W}x${H} ${k}: the Design tab is sections, each one explained`,
+         d.secs.length>=4 && d.subs && d.empty.length===0, d);
+      ck(`${W}x${H} ${k}: nothing is left loose outside a section`,
+         d.loose.length===0, d.loose);
+      /* Six topics on one screen instead of 2400px of scroll: each head is
+         a control, the big one starts shut, and a shut head still carries
+         the answer underneath it. */
+      ck(`${W}x${H} ${k}: every section head is a control that says open or shut`,
+         d.heads===true, d.heads);
+      ck(`${W}x${H} ${k}: pressing a section head opens and shuts it`,
+         d.blocksToggles===true, d.blocksToggles);
+      ck(`${W}x${H} ${k}: a shut section still says what it is holding`,
+         d.sums.length===3 && d.sums.every(x=>x.s.length>0), d.sums);
+    }
+    /* All three kinds let an author choose now. The flat board did not, which
+       is why the section came and went depending on what you were building. */
+    ck(`${W}x${H} every kind of board lets you choose the player's blocks`,
+       design.flat.rows>=16 && design.cyber.rows>=10 && design.tower.rows>=12,
+       {flat:design.flat.rows,cyber:design.cyber.rows,tower:design.tower.rows});
+    /* one list, showing the set that matches the board — never two stacked,
+       never a stale one, never none */
+    ck(`${W}x${H} the one block list shows the set that matches the board`,
+       design.flat.set==='flat' && design.tower.set==='tower' &&
+       design.cyber.set==='cyber',
+       {flat:design.flat.set,tower:design.tower.set,cyber:design.cyber.set});
+    /* Switching between the three kinds of board, which is the one thing
+       the top section invites you to do. Two things went wrong here: a
+       board could end up flagged BOTH Cyber and Tower (Cyber's button
+       reached for a setter that was never exported, and Tower's had no
+       such guard at all), which stacked two lists of blocks that then
+       fought over the same `allowed` array; and the layout ran from inside
+       each designer's ui(), where an early return skips it — so a flat
+       board kept the previous mode's "Blocks the player gets" heading with
+       nothing at all underneath it. */
+    const modes = await pg.evaluate(async () => {
+      const wait=ms=>new Promise(r=>setTimeout(r,ms));
+      const vis=e=>!!(e&&e.offsetParent);
+      const seen=[];
+      window.confirm=()=>true;
+      if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+      await wait(200); mgEnterCreator(); await wait(600);
+      const hop=async(id,tag)=>{
+        document.getElementById(id).click(); await wait(500);
+        /* entering a designer sends you to the board tab, so the design tab
+           has to be re-selected before anything on it can be measured */
+        setTab('design'); await wait(300);
+        const p=mgState.proj;
+        seen.push({tag, cyber:!!p.cyber, tower:!!p.mode3d,
+          section:vis(document.getElementById('dsBlocks')),
+          rows:[...document.querySelectorAll('#mgCreatorBar .blkrow')].filter(vis).length});
+      };
+      await hop('cyBtn','->cyber');
+      await hop('t3Btn','cyber->tower');
+      await hop('cyBtn','tower->cyber');
+      await hop('cyBtn','cyber->flat');
+      if(typeof mgState!=='undefined'&&mgState)mgExit(false);
+      await wait(250);
+      return seen;
+    });
+    const at=t=>modes.find(m=>m.tag===t)||{};
+    ck(`${W}x${H} a board is one kind of board, never two at once`,
+       modes.every(m=>!(m.cyber&&m.tower)), modes);
+    ck(`${W}x${H} switching kinds swaps the block list, it does not add one`,
+       at('cyber->tower').rows===14 && at('tower->cyber').rows===12, modes);
+    /* 19: the challenge toolbox, plus 🚶 Walk To — listed for the author to
+       hand out, never handed out by default (see FLAT_BLOCKS) */
+    ck(`${W}x${H} coming back to a flat board leaves the FLAT list, not the old one`,
+       at('cyber->flat').section===true && at('cyber->flat').rows===19,
+       at('cyber->flat'));
+
+    for(const k of ["flat","cyber","tower"]){
+      const d=design[k];
+      /* the row count rides along on purpose: with no rows at all there is
+         nothing to be untold, and this passed against a Design tab that
+         offered no blocks whatsoever */
+      ck(`${W}x${H} ${k}: every block on offer says what it does`,
+         d.rows>=10 && d.untold.length===0, {rows:d.rows,untold:d.untold});
+      ck(`${W}x${H} ${k}: given and not given look different, and both are tappable`,
+         d.split && d.tapOk, {split:d.split,tapOk:d.tapOk});
+    }
+
+    await pg.close();
+  }
+
+  console.log('  404s:', bad.length?bad.join(', '):'none');
+  ck('no console errors', errs.length===0, errs.slice(0,3));
+  console.log(`\n${pass} passed, ${fail} failed`);
+  await b.close();
+  process.exit(fail?1:0);
+})();

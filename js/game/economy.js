@@ -75,7 +75,7 @@ function marketTick(){
     m.wantAt=now+MKT_WANT_MS;
     const pick=MKT_RES.filter(k=>k!==m.want);
     m.want=pick[Math.floor(Math.random()*pick.length)];
-    toast("📈 The market now wants "+RES[m.want].em+" most — worth "+priceOf(m.want)+" 🪙 each!");
+    worldNews("📈 The market now wants "+RES[m.want].em+" most — worth "+priceOf(m.want)+" 🪙 each!",false,30000);
     sfx(700,.06);sfx(900,.06,.08);
   }
   orderTick();
@@ -119,7 +119,7 @@ function newOrder(){
   let reward=0;for(const k in need)reward+=need[k]*priceOf(k);
   reward=Math.round(reward*(bulk?2.1:1.7))+40;   // hauling is paid for
   m.order={need,got:{},until:now+ORDER_MS,reward,shape,at:now};
-  bigToast("📋 New order! "+orderText(m.order)+" → "+reward+" 🪙");
+  worldNews("📋 New order! "+orderText(m.order)+" → "+reward+" 🪙",true,90000);
   sfx(660,.08);sfx(880,.08,.1);
 }
 function orderText(o){
@@ -139,10 +139,15 @@ function orderCredit(res,n){
     if(took>0&&(!player.orderBest||took<player.orderBest))player.orderBest=took;
     addXP(Math.ceil(o.reward/3));
     m.order=null;
-    if(window.CC_EXTRAS)CC_EXTRAS.celebrate("📋","ORDER FILLED!","+"+o.reward+" 🪙",
-      "Delivered before the clock ran out — that is what a fast program buys you.","Nice! 🎉");
-    else bigToast("📋 Order filled! +"+o.reward+" 🪙");
-    coinFlash();confetti();sfx(880,.1);sfx(1320,.12,.12);updateHud();
+    /* the coins are paid now; the card waits for the player to be back in
+       the world — robots fill orders while you are in a level */
+    coinFlash();updateHud();
+    whenCalm("order-filled",()=>{
+      if(window.CC_EXTRAS)CC_EXTRAS.celebrate("📋","ORDER FILLED!","+"+o.reward+" 🪙",
+        "Delivered before the clock ran out — that is what a fast program buys you.","Nice! 🎉");
+      else bigToast("📋 Order filled! +"+o.reward+" 🪙");
+      confetti();sfx(880,.1);sfx(1320,.12,.12);
+    },Infinity,true);
     setTimeout(()=>{if(market&&!market.order)newOrder();},4000);
   }
 }
@@ -150,7 +155,7 @@ function orderTick(){
   const m=marketReady();
   if(!m.order){ if(!m.orderNext)m.orderNext=now+6000; if(now>=m.orderNext){m.orderNext=0;newOrder();} return; }
   if(now>=m.order.until){
-    toast("📋 The order expired — a new one will come up.");
+    worldNews("📋 The order expired — a new one will come up.",false,20000);
     m.order=null;m.orderNext=now+9000;
   }
 }
@@ -190,13 +195,13 @@ function startRush(){
   const m=marketReady();
   const res=MKT_RES[Math.floor(Math.random()*MKT_RES.length)];
   m.event={kind:"rush",res,until:now+RUSH_MS};
-  bigToast("📣 "+RES[res].em+" RUSH! Prices spiked to "+priceOf(res)+" 🪙 for a minute — send everyone!");
+  worldNews("📣 "+RES[res].em+" RUSH! Prices spiked to "+priceOf(res)+" 🪙 for a minute — send everyone!",true,50000);
   sfx(880,.09);sfx(1180,.1,.1);
 }
 function startNight(){
   const m=marketReady();
   m.event={kind:"night",until:now+NIGHT_MS};
-  bigToast("🌙 Nightfall — everything costs more energy, but 💎 crystal is precious. Watch for 😴 tired!");
+  worldNews("🌙 Nightfall — everything costs more energy, but 💎 crystal is precious. Watch for 😴 tired!",true,60000);
   sfx(300,.12);
 }
 // a rich seam appears somewhere near home AND announces itself on the 📻
@@ -220,7 +225,7 @@ function startLode(){
   const c=spots[0];
   m.event={kind:"lode",res:NODE_YIELD[type],until:now+LODE_MS,x:c.x,y:c.y,spots};
   if(typeof radioPost==="function")radioPost(type==="rock"?"rock":type,c.x,c.y,-1,0);
-  bigToast("💎 A rich "+(OBJ_EM[type]||"")+" seam surfaced — it is on the 📻 team channel for "+Math.round(LODE_MS/1000)+"s!");
+  worldNews("💎 A rich "+(OBJ_EM[type]||"")+" seam surfaced — it is on the 📻 team channel for "+Math.round(LODE_MS/1000)+"s!",true,LODE_MS-5000);
   sfx(760,.09);sfx(1040,.1,.1);
 }
 function clearLode(e){
@@ -266,11 +271,24 @@ function renderMarket(){
   const open=el.classList.contains("open");
   const cpm=coinsPerMin();
   /* the handle: rate, the order clock, and a dot when the world is doing something */
-  let html='<button class="tk-btn'+(ev?" live":"")+'" type="button" aria-expanded="'+open+'">'+
+  /* The order's shape is already spelled out in the panel's own order row, so
+     the handle drops it. q0 hides the rate while it reads zero — a number
+     that has never moved is not worth a chip's width — and .tk-rate stays in
+     the DOM either way, because it is what the smoke test reads. */
+  /* TWO buttons, not one with two halves. The clock used to sit inside the
+     📈 handle, and tapping it opened the Orders sheet while tapping two
+     millimetres to the left opened the price panel — one pill, one shape,
+     two different screens, and nothing on it saying so. They are separate
+     chips now, with a gap and their own colours: amber for the market, the
+     Orders sheet's own violet for the order. */
+  let html='<button class="tk-btn'+(ev?" live":"")+(cpm?"":" q0")+'" type="button"'+
+    ' aria-expanded="'+open+'" title="Market prices" aria-label="Market prices">'+
     '<span class="tk-ic">📈</span>'+
     '<span class="tk-rate">🪙/min '+cpm+'</span>'+
-    (m.order?'<span class="tk-shape">'+(m.order.shape==="bulk"?"⛓":"⇉")+'</span><span class="tk-clk">⏱ '+mktClock(m.order.until)+'</span>':'')+
-    '<span class="tk-car">'+(open?"▴":"▾")+'</span></button>';
+    '<span class="tk-car">'+(open?"▴":"▾")+'</span></button>'+
+    (m.order?'<button class="tk-ord" type="button" title="The order on the clock"'+
+      ' aria-label="The order on the clock">'+
+      '<span class="tk-clk">⏱ '+mktClock(m.order.until)+'</span></button>':'');
   if(open){
     html+='<div class="tk-panel">';
     if(ev){
@@ -292,12 +310,35 @@ function renderMarket(){
     }
     html+='</div>';
   }
+  /* Rewritten only when something other than the clock changed; a clock
+     that ticks is one text node set in place. Every rewrite wakes the
+     Hebrew and icon observers, and this runs every second. */
+  const clk=m.order?"⏱ "+mktClock(m.order.until):"";
+  const shape=clk?html.split(clk).join("\u0000"):html;
+  if(el._shape===shape){
+    el.querySelectorAll(".tk-clk").forEach(c=>{if(c.textContent!==clk)c.textContent=clk;});
+    return;
+  }
+  el._shape=shape;
   el.innerHTML=html;
 }
 /* one delegated listener — renderMarket rewrites innerHTML on every tick */
 $("ticker").addEventListener("click",e=>{
   if(!e.target.closest(".tk-btn"))return;
-  $("ticker").classList.toggle("open");
+  const el=$("ticker");
+  const opening=!el.classList.contains("open");
+  el.classList.toggle("open");
   if(typeof sfx==="function")sfx(520,.03);
   renderMarket();
+  /* The grow goes on the panel THIS tap created, not on .tk-panel in the
+     stylesheet: the ticker rewrites its own markup once a second, so a
+     plain CSS animation would replay every second for as long as the
+     panel stayed open.
+
+     There is no matching shrink, and that is a decision rather than an
+     omission. The panel does not survive the close — innerHTML takes it —
+     so animating the exit would mean holding the ticker's state 150ms
+     behind the tap, or lifting the panel out to somewhere its own styles
+     no longer reach. Neither is worth a shrink on a 300px popover. */
+  if(opening){ const p=el.querySelector(".tk-panel"); if(p)p.classList.add("tk-grow"); }
 });

@@ -46,18 +46,39 @@ function loop(t){
         {a.x=nx;a.y=ny;}
     }
   }
-  draw(t);
+  /* the world is not drawn while something opaque covers all of it —
+     a sheet at full height, a win card. The simulation above still runs. */
+  if(--coverChk<=0){coverChk=6;worldCovered=worldHidden();}
+  if(!worldCovered)draw(t);
   if(mgState&&typeof mgDraw==="function")mgDraw(); // keep the mini-game board live & animated
 }
+/* Looked at ten times a second, not on every frame, and never trusted
+   while a sheet is moving: a sheet being dragged or springing shows the
+   world again from its first pixel, so it is drawn again at once. A press
+   anywhere may be the start of that, so it draws for a moment regardless. */
+let worldCovered=false, coverChk=0;
+function worldHidden(){
+  if(document.getElementById("ccCele"))return true;
+  const hud=$("stats"), top=(hud?hud.getBoundingClientRect().bottom:0)+1, bot=innerHeight-1;
+  for(const s of document.querySelectorAll(".sheet.open")){
+    if(s.classList.contains("sheet-drag")||s.classList.contains("sheet-anim"))continue;
+    const r=s.getBoundingClientRect();
+    if(r.top<=top&&r.bottom>=bot&&getComputedStyle(s).opacity==="1")return true;
+  }
+  return false;
+}
+addEventListener("pointerdown",()=>{worldCovered=false;coverChk=30;},true);
 function updateExecHighlight(){
   if(!$("editor").classList.contains("open"))return;
   const r=R();
-  document.querySelectorAll("#programEl .blk.exec").forEach(el=>el.classList.remove("exec"));
-  if(r.running&&r.curUid){
-    const el=document.querySelector('#programEl .blk[data-uid="'+r.curUid+'"]');
-    if(el)el.classList.add("exec");
-  }
+  const on=r.running&&r.curUid?document.querySelector('#programEl .blk[data-uid="'+r.curUid+'"]'):null;
+  document.querySelectorAll("#programEl .blk.exec").forEach(el=>{if(el!==on)el.classList.remove("exec");});
+  if(on&&!on.classList.contains("exec"))on.classList.add("exec");
+  /* rebuilt only when a value changed: this runs three times a second */
   const vw=$("varWatch"), ks=Object.keys(r.vars||{});
+  const sig=ks.map(k2=>k2+"="+r.vars[k2]).join("\n");
+  if(vw.dataset.sig===sig)return;
+  vw.dataset.sig=sig;
   if(ks.length){
     vw.style.display="flex";vw.innerHTML="";
     for(const k2 of ks){

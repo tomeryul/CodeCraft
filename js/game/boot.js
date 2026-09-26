@@ -76,13 +76,14 @@ function renderSplashAuth(){
   }
   box.innerHTML=
     '<div class="sp-card"><div class="sp-h">☁️ Sign in to save your world to your account</div>'+
-    '<input id="spEmail" type="email" placeholder="Email" autocomplete="email">'+
-    '<input id="spPass" type="password" placeholder="Password (6+)" autocomplete="current-password">'+
+    '<input id="spEmail" type="email" placeholder="Email" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next">'+
+    '<input id="spPass" type="password" placeholder="Password (6+)" autocomplete="current-password" enterkeyhint="go">'+
     '<div class="sp-row"><button class="authbtn go" id="spLogin">Log in</button><button class="authbtn" id="spSignup">Sign up</button></div>'+
     '<div id="spMsg" class="sp-msg"></div></div>'+PRIV_LINK;
   $("playBtn").textContent="▶ Play offline";
   const m=t=>{$("spMsg").textContent=t;};
   const creds=()=>[($("spEmail").value||"").trim(),$("spPass").value||""];
+  if(typeof authKeys==="function")authKeys($("spEmail"),$("spPass"),$("spLogin"));
   $("spLogin").addEventListener("click",async()=>{
     const[e,p]=creds(); if(!e||p.length<6)return m("Enter your email and a 6+ character password");
     m("⏳ Logging in…");
@@ -99,11 +100,53 @@ function renderSplashAuth(){
     }catch(err){ m("⚠️ "+err.message); }
   });
 }
-// The age answer decides whether a sign-in box is offered at all, so it has
-// to be settled before the splash renders one.
-ageGateInit(()=>{ renderSplashAuth(); sbRestore().then(renderSplashAuth).catch(()=>{}); });
+// In the native shell the save may need recovering from device storage
+// before anything reads it; nativeInit resolves true only when it reloaded.
+// In a browser it resolves false immediately and changes nothing.
+(typeof nativeInit==="function"?nativeInit():Promise.resolve(false)).then(reloading=>{
+  if(reloading)return;
+  // The age answer decides whether a sign-in box is offered at all, so it has
+  // to be settled before the splash renders one.
+  ageGateInit(()=>{ renderSplashAuth(); sbRestore().then(renderSplashAuth).catch(()=>{}); });
+  /* The first real screen — the age gate, or the splash behind it — is in
+     the page now. Two frames so it has actually been painted, then the
+     native launch screen lifts off it. Not inside ageGateInit's callback:
+     that waits for the child to answer the gate, and they cannot answer
+     a gate they cannot see. */
+  if(typeof nativeSplashHide==="function")
+    requestAnimationFrame(()=>requestAnimationFrame(nativeSplashHide));
+});
 $("playBtn").addEventListener("click",()=>enterGame(true));
 
-if("serviceWorker" in navigator&&location.protocol.indexOf("http")===0){
-  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+/* Registering and walking away was not enough to get an update onto a phone.
+   Two things kept an old build alive there: the browser serves sw.js itself
+   from its own HTTP cache (for up to a day) unless told not to, and a page
+   that is already open never re-runs its scripts — an app resumed from the
+   home screen can sit on a build from days ago while the server has moved on.
+
+   So: never cache the worker script, check for a new one on load and every
+   time the app comes back to the foreground, and reload once when a new
+   worker actually takes over. The reload is guarded, because a page that
+   reloads on every controllerchange can loop. */
+/* And in the packaged app there is no worker at all: the files are already
+   local, www/ deliberately ships no sw.js, and a network-first worker aimed
+   at capacitor://localhost would only add a way to fail. */
+if("serviceWorker" in navigator&&location.protocol.indexOf("http")===0
+   &&!(typeof isNative==="function"&&isNative())){
+  navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"}).then(reg=>{
+    const check=()=>{ try{ reg.update(); }catch(e){} };
+    check();
+    document.addEventListener("visibilitychange",()=>{ if(!document.hidden)check(); });
+    window.addEventListener("focus",check);
+  }).catch(()=>{});
+  /* Read before the event, not inside it: by the time controllerchange fires
+     there is always a controller, so the first install would look like an
+     update and reload a page that is already running the newest code. */
+  const hadController=!!navigator.serviceWorker.controller;
+  let reloading=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    if(reloading||!hadController)return;
+    reloading=true;
+    location.reload();
+  });
 }

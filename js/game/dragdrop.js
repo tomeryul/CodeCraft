@@ -29,7 +29,19 @@ function attachDrag(row,b){
 }
 function isDescUid(uid){return !!byUid(dragCtx.b.body||[],uid)||!!byUid(dragCtx.b.els||[],uid);}
 function beginDrag(b,row,x,y,pid){
-  dragCtx={b,uid:b.uid,w:row.offsetWidth,h:row.offsetHeight,row,pid};
+  /* Where the finger landed ON the block, kept so the block stays under
+     that same point for the whole drag. It used to be centred under the
+     finger on the first move — grab a block by its right edge and it
+     jumped left before it moved anywhere, which is the one thing that
+     breaks the feeling of holding the thing you touched.
+
+     Not clamped: the clone is the same width as the row it came from, so
+     holding the grab point puts it exactly where the original was. A
+     clamp here would re-introduce the jump it exists to remove. */
+  const r=row.getBoundingClientRect();
+  const gx=Math.max(0,Math.min(r.width, x-r.left));
+  const gy=Math.max(0,Math.min(r.height,y-r.top));
+  dragCtx={b,uid:b.uid,w:row.offsetWidth,h:row.offsetHeight,row,pid,gx,gy};
   // NOTE: do NOT setPointerCapture here — on iOS capturing a pointer inside a
   // scroll container fires an immediate pointercancel, which kills the drag on
   // the first move. Document-level listeners already receive every move.
@@ -40,14 +52,15 @@ function beginDrag(b,row,x,y,pid){
   document.body.appendChild(clone);
   dragCtx.clone=clone;
   $("programWrap").classList.add("dragging");
-  if(navigator.vibrate)navigator.vibrate(15);
+  if(typeof ccFeel==="function")ccFeel("snap");   // it came loose in your fingers
   sfx(600,.04);
   dragMove(x,y);
 }
 function dragMove(x,y){
   const c=dragCtx.clone;
-  c.style.left=(x-dragCtx.w*0.5)+"px";
-  c.style.top=(y-dragCtx.h*0.6)+"px";
+  /* 1:1 with the finger, from the point it grabbed */
+  c.style.left=(x-dragCtx.gx)+"px";
+  c.style.top=(y-dragCtx.gy)+"px";
   // auto-scroll the program list when dragging near its top/bottom edge so long
   // programs stay fully reachable (otherwise you can't reach far-away targets)
   const wrap=$("programWrap"), wr=wrap.getBoundingClientRect(), EDGE=44;
@@ -92,7 +105,8 @@ function dragEnd(x,y){
   $("programEl").querySelectorAll(".blk.dz-into").forEach(el=>el.classList.remove("dz-into"));
   $("programWrap").classList.remove("dragging");
   dragCtx=null;
-  if(t){moveBlock(ctx.uid,t.mode,t.uid);sfx(780,.05);}
+  if(t){moveBlock(ctx.uid,t.mode,t.uid);sfx(780,.05);
+    if(typeof ccFeel==="function")ccFeel("snap");}  // and it landed
   else renderProgram();
 }
 // aborted drag (OS cancel): tear down without moving anything
@@ -219,7 +233,11 @@ function updateChips(){
   robots.forEach((r,i)=>{
     const c=document.createElement("button");
     c.className="rchip"+(i===selRobot?" sel":"");
-    c.innerHTML='<span class="dot" style="background:'+r.color+'"></span>'+r.name+(r.running?' <span class="live">●RUN</span>':'');
+    /* r.name and r.color come out of the save file, and an imported save is
+       someone else's data: unescaped, a crafted name landed an <img onerror>
+       here and a crafted colour broke out of the style attribute. */
+    c.innerHTML='<span class="dot" style="background:'+safeColor(r.color)+'"></span>'+
+      esc(r.name)+(r.running?' <span class="live">●RUN</span>':'');
     c.addEventListener("click",()=>{selRobot=i;selBlock=null;elseSel=null;renderProgram();renderPy();updateChips();updateHud();updateFab();updateUndoBtns();follow=true;});
     wrap.appendChild(c);
   });

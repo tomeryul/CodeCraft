@@ -4,7 +4,7 @@ function makeRobot(x,y,name){
   return {id:uid(),x,y,rx:x,ry:y,dir:1,name:name||("Robo-"+(robots.length+1)),
     color:ROBOT_COLORS[robots.length%ROBOT_COLORS.length],
     inv:{wood:0,stone:0,iron:0,crystal:0,water:0},cap:8,speed:1,energy:100,
-    vars:{},hat:null,say:null,pop:0,tired:false,
+    vars:{},hat:null,outfit:null,shoes:null,say:null,pop:0,tired:false,
     program:[],routines:{A:[],B:[]}, // 🔧 named routines the program can Call
     frames:null,running:false,wait:0,path:null,blocked:false,curUid:null,nextAct:0};
 }

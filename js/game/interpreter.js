@@ -49,6 +49,8 @@ function evalCond(r,c){
     if(c.op==="!=")return v!==w;
     return v===w;   // no op / "=" — the shape every save before ≠ existed used
   }
+  /* "!blocked" is "blocked", answered the other way round */
+  if(condNeg(c))return !evalCond(r,condBase(c));
   const a=ahead(r), o=inB(a.x,a.y)?objects.get(key(a.x,a.y)):null;
   switch(c){
     case "taken":return inB(a.x,a.y)&&claimedByOther(r,key(a.x,a.y));
@@ -389,7 +391,7 @@ function sellInv(r){
 let saleAcc=0,saleT=null;
 function queueSaleToast(n){
   saleAcc+=n;clearTimeout(saleT);
-  saleT=setTimeout(()=>{toast("💰 Sold goods for "+saleAcc+" 🪙");saleAcc=0;},1200);
+  saleT=setTimeout(()=>{worldNews("💰 Sold goods for "+saleAcc+" 🪙",false,20000);saleAcc=0;},1200);
 }
 function coinFlash(){
   const c=$("coinChip");

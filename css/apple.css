@@ -1,0 +1,340 @@
+/* =====================================================================
+   The house rules for motion and material
+   ---------------------------------------------------------------------
+   Apple's fluid-interface principles (WWDC "Designing Fluid Interfaces",
+   "The Details of UI Typography", "Principles of Great Design"), applied
+   to this game. The skill they come from lives in
+   .claude/skills/apple-design/SKILL.md; the rules a human has to KEEP
+   following are written down in CLAUDE.md. This file is the part a
+   stylesheet can enforce on its own.
+
+   It loads LAST so it can answer for rules written anywhere before it.
+   Nothing here restyles the game: it adds the three accessibility
+   settings the game never answered, names the curves the game already
+   uses so the next person picks one instead of inventing a sixth, and
+   fixes tracking on the two sizes where a fixed value is wrong.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. Motion tokens — the vocabulary, not a restyle
+   ---------------------------------------------------------------------
+   Apple replaced mass/stiffness/damping with two ideas a designer can
+   hold: RESPONSE (how fast it reaches the target) and DAMPING (whether
+   it overshoots). There is no spring engine here and the game does not
+   need one — nothing in it is thrown or flicked, every surface is opened
+   by a tap. These curves are the CSS approximation of the two cases:
+
+     --ease-settle   damping 1.0 — reaches the target and stops. The
+                     default for anything that simply moves or appears.
+     --ease-carry    damping ~0.8 — a touch of overshoot. ONLY for
+                     something the hand pushed (a block landing home).
+
+   Overshoot on a menu that merely appeared feels wrong; overshoot on
+   something you threw feels right. That is the whole rule.
+
+   If a gesture ever becomes continuous here — a sheet you can drag down
+   and fling — these curves stop being enough and the thing needs a real
+   spring that starts from the live on-screen value. CLAUDE.md says so.
+   --------------------------------------------------------------------- */
+:root{
+  /* Radius, three values and a reason for each (game-app-design §5): a
+     control, a card, a sheet. There were twenty-odd — 10, 11, 13, 14, 15,
+     17, 18… — each picked by whichever feature came along. Things smaller
+     than a thumb (dots, bars, swatches) keep their own tiny radius, and a
+     round button is a circle, not a token. */
+  --r-ctl:12px; --r-card:16px; --r-sheet:24px;
+  --ease-settle:cubic-bezier(.32,.9,.35,1);   /* what the sheets already use */
+  --ease-carry:cubic-bezier(.22,1.2,.36,1);   /* slight overshoot */
+  /* A THIRD curve, and CLAUDE.md asks for a reason you can say out loud,
+     so: this is the celebration card and nothing else. It is the one rare,
+     high-emotion moment in the game — a solved level — and the only place
+     the delight budget is spent on a big, visible pop. Anything seen more
+     than a few times a session uses --ease-carry instead. */
+  --ease-celebrate:cubic-bezier(.34,1.6,.64,1);
+  --dur-quick:.12s;   /* press feedback — must feel instant */
+  --dur-move:.28s;    /* a surface arriving or leaving */
+  --dur-settle:.4s;   /* something finding its place */
+}
+
+/* ---------------------------------------------------------------------
+   2. Reduced motion
+   ---------------------------------------------------------------------
+   The game had 47 transitions and 18 keyframe animations and answered
+   this setting nowhere. Several of those animations are slow ambient
+   loops — the drifting sky, the bobbing robot, a spinning halo — which
+   are exactly what the setting exists to stop.
+
+   Reduced motion does not mean no feedback. Colour and opacity still
+   carry meaning and stay; what goes is travel across the screen, scale,
+   and anything that loops. The sheets keep a short cross-fade so they
+   still read as arriving rather than blinking into place.
+   --------------------------------------------------------------------- */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    animation-delay:0s !important;
+    transition-duration:.01ms !important;
+    transition-delay:0s !important;
+    scroll-behavior:auto !important;
+  }
+  /* A sheet still has to hide itself, and it hides by sitting off the
+     bottom of the screen — so the transform stays and only its travel
+     is removed. Opacity carries the arrival instead. */
+  .sheet{opacity:0;transition:opacity 160ms linear !important;}
+  .sheet.open{opacity:1;}
+  /* The press is the one piece of motion worth keeping: it is the
+     answer to a touch, it is 120ms, and it goes nowhere. */
+  .blk:active,button:active,.pcard:active,.hub-tile:active{
+    transition-duration:var(--dur-quick) !important;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   3. Reduced transparency
+   ---------------------------------------------------------------------
+   29 surfaces blur what is behind them. Dropping the blur alone would
+   make things WORSE — a semi-transparent panel with the blur removed is
+   less legible, not more — so every one of them also becomes solid.
+
+   The two bars and the toasts sit over a moving, painted world, which is
+   the worst case for reading text through glass.
+   --------------------------------------------------------------------- */
+@media (prefers-reduced-transparency:reduce){
+  *{backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}
+  #topbar #stats,#topbar #tbBtns,#stats .chip,#tbBtns .iconbtn,
+  #bottombar #codeBtn,#bottombar #buildBtn,#buildBar,#actionBar,
+  #objMenu,#shopWrap,#splashAuth,#splashAuth .sp-card,
+  #ticker .tk,#ticker .tk-btn,#ticker .tk-order,#ticker .tk-panel,
+  #mgBrickStp,#coach,.toast,.chip,.iconbtn{
+    background-color:var(--panel,#241c46) !important;
+  }
+  /* the win card's veil: solid, so no level text reads through the card */
+  #ccCele{background:rgb(16,10,38) !important;}
+  #fabRun{background-image:none !important;background-color:#3ca85a !important;}
+}
+
+/* ---------------------------------------------------------------------
+   4. More contrast
+   ---------------------------------------------------------------------
+   Apple's rule for this setting is near-solid backgrounds with a defined
+   border. The game separates surfaces almost entirely by fill, so under
+   this setting they get an edge to be separated BY.
+   --------------------------------------------------------------------- */
+@media (prefers-contrast:more){
+  .sheet,.pcard,.hub-tile,.toast,#actionBar,#objMenu,#shopWrap,
+  #mgCreatorBar .blkrow,.dsec{
+    border:1px solid var(--ink2,#b9b0d8) !important;
+  }
+  .blk{outline:1px solid rgba(0,0,0,.45);outline-offset:-1px;}
+}
+
+/* ---------------------------------------------------------------------
+   5. Tracking is size-specific
+   ---------------------------------------------------------------------
+   A single letter-spacing value is wrong somewhere: large text reads too
+   loose as it grows and wants negative tracking; small uppercase labels
+   want a little more.
+
+   The small-label half is already right throughout (.04–.09em on the
+   uppercase eyebrows). The large half was never done — the big display
+   numbers and headings run at default tracking.
+
+   Scoped deliberately: this game is bilingual, and negative tracking
+   that flatters large Latin display type damages Hebrew, where the
+   letters are not meant to be pulled together. So the rule applies to
+   the numerals and Latin headings, and Hebrew is left alone.
+   --------------------------------------------------------------------- */
+:root:not([lang="he"]) h1,
+:root:not([lang="he"]) .v5-title b,
+:root:not([lang="he"]) .m-head h3{
+  letter-spacing:-.015em;
+}
+/* Numbers are numbers in both languages. Anywhere digits line up in a
+   column they also line up with each other. */
+#stats .chip,#mgCount,#mgBudget,#mgW,#mgH,.num,.ht-n,.pmeta{
+  font-variant-numeric:tabular-nums;
+}
+
+/* ---------------------------------------------------------------------
+   6. Sheets that can be dragged
+   ---------------------------------------------------------------------
+   The condition in CLAUDE.md finally arrived: a surface you can throw
+   needs a spring, not a curve. js/game/sheet-drag.js is that spring.
+   What belongs here is only what a stylesheet can hold — the grip, and
+   getting the CSS transition out of the way while JS owns the transform.
+   --------------------------------------------------------------------- */
+
+/* The grip, the way iOS draws a sheet's grabber: 36×5, fully rounded,
+   6px below the sheet's top edge, and with a strip of its own — the
+   header's content starts well clear of it. The first version tucked it
+   into padding the header already had, and in the editor that left ONE
+   pixel between the grip and the buttons: it read as a scratch on the
+   toolbar, not as a handle. --grip-zone is the whole strip.
+
+   The editor needs its own line because `#editor .v5-head` (codecraft-v5)
+   outranks any class selector — which is exactly why the earlier
+   padding never reached it. */
+:root{ --grip-zone:20px; }
+.sheet.grabbable > .m-head,
+.sheet.grabbable > .v5-head,
+.sheet.grabbable > .ed-head{ position:relative; touch-action:none; }
+.sheet.grabbable > .m-head,
+#editor.sheet.grabbable > .v5-head,
+#editor.sheet.grabbable > .ed-head{ padding-top:var(--grip-zone); }
+/* One header height for every page. A one-line subtitle made it 71px and
+   a two-line one 85px, so going from Community to Account moved every row
+   under it by 14px — a jump nobody asked for. The taller of the two is the
+   height for all of them, so a page's content starts at the same place on
+   every page. */
+.sheet > .m-head{ min-height:calc(var(--grip-zone) + 65px); }
+.sheet.grabbable > .m-head::before,
+.sheet.grabbable > .v5-head::before,
+.sheet.grabbable > .ed-head::before{
+  content:"";position:absolute;top:6px;left:50%;
+  width:36px;height:5px;margin-left:-18px;border-radius:2.5px;
+  background:var(--ink2,#b9b0d8);opacity:.34;pointer-events:none;
+  transition:opacity var(--dur-quick) var(--ease-settle);
+}
+/* Pressed, the grip answers on the press — not on the release, and not
+   only once the sheet has started to move. */
+.sheet.grabbable.sheet-drag > .m-head::before,
+.sheet.grabbable.sheet-drag > .v5-head::before,
+.sheet.grabbable.sheet-drag > .ed-head::before{ opacity:.62; }
+
+/* While a finger or the spring owns the transform, the CSS curve must
+   not also be trying to own it — two animations on one property is a
+   fight the finger loses. Height has no curve anywhere: a size change is
+   one frame of layout and a spring on the transform (ccSizeFlip). */
+.sheet.sheet-drag,.sheet.sheet-anim{ transition:none; will-change:transform; }
+/* #editor declares its own transition, and an id outranks the two classes
+   above — without this the spring and a CSS curve fight over the same
+   transform and the sheet lurches */
+#editor.sheet-drag,#editor.sheet-anim{ transition:none; }
+/* The one frame a drag hands the size over: the height changes with no
+   curve at all and the transform absorbs the difference, so the top edge
+   stays under the finger (resize() in sheet-drag.js). Last, so it beats
+   the editor's own height curve just above. */
+.sheet.sheet-resize,#editor.sheet-resize{ transition:none; }
+
+/* Nothing is thrown when the setting says nothing should be: the drag
+   still tracks, but the release lands instantly (handled in JS) and the
+   grip stops inviting a gesture that no longer has motion to show. */
+@media (prefers-reduced-motion:reduce){
+  .sheet.grabbable > .m-head::before,
+  .sheet.grabbable > .v5-head::before,
+  .sheet.grabbable > .ed-head::before{ opacity:.22; }
+}
+
+/* ---------------------------------------------------------------------
+   7. A menu grows out of the thing that opened it
+   ---------------------------------------------------------------------
+   Two popovers in the game appeared with no visible tie to what summoned
+   them. The object menu is the worse of the two: it is about one build in
+   the world and it arrived in the middle of the screen, so nothing on it
+   said which build. It now scales out of the tapped point — the origin is
+   set in js/game/input.js from the tap — and shrinks back into it, which
+   is the same path in reverse.
+
+   The scale is small (.95) and the curve is --ease-settle, not --ease-carry:
+   this appeared because a finger asked for it, it was not thrown, and
+   overshoot on something that merely appeared feels wrong.
+   --------------------------------------------------------------------- */
+#objMenu{
+  /* Always laid out, hidden by visibility, so (a) the exit has something
+     to animate rather than blinking out on a display flip, and (b) the
+     menu can be MEASURED before it is shown — which is what turns a tap
+     coordinate into a transform-origin. */
+  display:block;visibility:hidden;pointer-events:none;
+  /* From .95, not .84: a small popover arrives from close by. And it
+     leaves faster than it came (140ms against 180ms) — the player asked
+     for it to open, the closing is only the system answering. */
+  transform:translateX(-50%) scale(.95);
+  transition:opacity 140ms var(--ease-settle),
+             transform 140ms var(--ease-settle),
+             visibility 0s linear 140ms;
+}
+#objMenu.open{
+  visibility:visible;pointer-events:auto;
+  transform:translateX(-50%) scale(1);
+  transition:opacity var(--dur-quick) var(--ease-settle),
+             transform 180ms var(--ease-settle),
+             visibility 0s;
+}
+
+/* The market panel already hangs off its own button, but it appeared with
+   no motion at all. It grows from the corner it is pinned to — the other
+   corner in Hebrew, where the topbar is mirrored. The class is put on by
+   the tap rather than by the stylesheet, because the ticker rewrites its
+   own markup every second and a plain animation would replay every time. */
+#ticker .tk-panel{ transform-origin:top left; }
+:root[lang="he"] #ticker .tk-panel{ transform-origin:top right; }
+#ticker .tk-panel.tk-grow{ animation:tkGrow .19s var(--ease-settle) both; }
+@keyframes tkGrow{
+  from{ opacity:0; transform:scale(.9) translateY(-6px); }
+  to  { opacity:1; transform:none; }
+}
+
+@media (prefers-reduced-motion:reduce){
+  /* Scale is travel. What is left is the cross-fade, which still says
+     "this arrived" without moving anything across the screen. */
+  #objMenu{ transform:translateX(-50%); }
+  #objMenu.open{ transform:translateX(-50%); }
+  #ticker .tk-panel.tk-grow{ animation:none; }
+}
+
+/* ---------------------------------------------------------------------
+   8. The platform layer
+   ---------------------------------------------------------------------
+   The things a phone does to a web page that a native app never suffers.
+   Most were already answered elsewhere — no hover rules to stick, the
+   tap highlight is off, overscroll is off, safe areas are padded, the
+   full-height sheets use dvh. These are the ones that were not.
+   --------------------------------------------------------------------- */
+
+/* Rotate an iPhone in Safari and it inflates body text it thinks is too
+   small to read in landscape. A game lays its own text out; it does not
+   want the browser second-guessing the sizes. */
+html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+
+/* iOS zooms the whole page into any field whose text is under 16px, and
+   does not zoom back out — a child typing an email is left looking at a
+   cropped, drifted screen. The viewport tag's maximum-scale happens to
+   block that today, but it is the wrong thing to lean on: Android's
+   "force enable zoom" accessibility setting overrides it, and then every
+   one of these fields zooms. So the cause is fixed instead. Every field
+   in the game was 14-15px, which is also simply small for the audience.
+
+   !important because the rules it answers are id-scoped (#askrow input,
+   #splashAuth input) and this file's job is to win regardless. Range and
+   file inputs are excluded: they have no text to be too small. */
+input:not([type="range"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+textarea, select{
+  font-size:16px !important;
+}
+
+/* The one piece of the game that is CONTENT rather than a control: the
+   Python the blocks turn into. body is user-select:none so a long press
+   on a button never selects its label — correct for controls, but it
+   also meant a child could not copy the code the game had just taught
+   them to write. */
+#pyTab, #pyTab *{
+  -webkit-user-select:text; user-select:text;
+  -webkit-touch-callout:default;
+}
+
+/* ---------------------------------------------------------------------
+   9. The menu's tiles arrive in order, not all at once
+   ---------------------------------------------------------------------
+   The menu opens a few times a session, which is the budget for a
+   stagger: 35ms a tile, capped at the ninth so the last one is never
+   waiting on the first. It only plays as the sheet OPENS (the selector
+   starts matching), so it neither replays while you use the menu nor
+   holds up a tap — tiles take presses from the first frame. Opacity and
+   6px of travel, both compositor-only.
+   --------------------------------------------------------------------- */
+#hub.open .hub-tile{
+  animation:hubTileIn 220ms var(--ease-settle) both;
+  animation-delay:calc(min(var(--i,0),8) * 35ms);
+}
+@keyframes hubTileIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
