@@ -310,6 +310,16 @@ function renderMarket(){
     }
     html+='</div>';
   }
+  /* Rewritten only when something other than the clock changed; a clock
+     that ticks is one text node set in place. Every rewrite wakes the
+     Hebrew and icon observers, and this runs every second. */
+  const clk=m.order?"⏱ "+mktClock(m.order.until):"";
+  const shape=clk?html.split(clk).join("\u0000"):html;
+  if(el._shape===shape){
+    el.querySelectorAll(".tk-clk").forEach(c=>{if(c.textContent!==clk)c.textContent=clk;});
+    return;
+  }
+  el._shape=shape;
   el.innerHTML=html;
 }
 /* one delegated listener — renderMarket rewrites innerHTML on every tick */

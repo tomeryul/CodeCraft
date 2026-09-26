@@ -106,7 +106,18 @@ render as one icon family through `ui-icons.js`, so they stay.
 Fix: tokens (3 radii, 4px grid, a type scale), one row, one tile, one
 card, one button set; each kind of content always uses the same one.
 
-## 6. Performance
+## 6. Performance  ✅ v190
+*Done:* a board's canvas is sized only when its size changes
+(`mgCanvasSize`, both the flat and the Tower painter) and cleared in place
+otherwise; the world is not drawn while an opaque surface covers all of it
+(a sheet at full height, a win card — `worldHidden()` in `js/game/loop.js`,
+checked ten times a second, and a press anywhere draws it again at once in
+case it is the start of a drag); the market ticker, the journey bar and the
+variable watch are rebuilt only when what they show changed — the order
+clock is one text node set in place. `test/perf.js`.
+*Measured:* in a level, canvas attribute writes 120/s → **0**; world
+draws under a full sheet 60/s → **0**; ticker and journey rebuilds at idle
+1/s each → **0** (the clock's text node only).
 *Skill §9*
 
 - The world canvas is drawn every frame under full-height surfaces; with

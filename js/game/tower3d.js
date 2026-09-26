@@ -544,9 +544,7 @@ window.mgDraw=function(){
   if(window.mgFitBoard)mgFitBoard(0.72);
   const W=cv.clientWidth||320, H=Math.round(W*0.72);
   const dpr=(typeof DPR!=="undefined"?DPR:Math.min(3,window.devicePixelRatio||1));
-  cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);cv.style.height=H+"px";
-  const g=cv.getContext("2d");
-  g.setTransform(dpr,0,0,dpr,0,0);
+  const g=mgCanvasSize(cv,W,H,dpr);
   g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
   yaw+=(yawT-yaw)*0.18;
   if(Math.abs(yawT-yaw)<0.001)yaw=yawT;

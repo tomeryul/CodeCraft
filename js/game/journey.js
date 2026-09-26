@@ -170,10 +170,12 @@ function renderJourney(){
   if(hidden||!s){el.style.display="none";return;}
   el.style.display="";
   const n=journeyProgress();
-  el.innerHTML='<button class="j-btn" type="button">'+
+  const html='<button class="j-btn" type="button">'+
     '<span class="j-em">'+s.em+'</span>'+
     '<span class="j-tx"><b>'+esc(s.title)+'</b><small>'+esc(s.hint)+'</small></span>'+
     '<span class="j-go">'+n+'/'+JOURNEY.length+'</span></button>';
+  if(el._html===html)return;   // called every second; the step rarely changes
+  el._html=html; el.innerHTML=html;
 }
 $("journey").addEventListener("click",e=>{
   if(!e.target.closest(".j-btn"))return;

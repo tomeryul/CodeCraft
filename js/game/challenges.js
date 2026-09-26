@@ -2474,6 +2474,21 @@ function mgSuccess(){
 }
 // deterministic per-cell hash (independent of the world seed) for grass texture
 function mgHash(x,y){let h=(x*374761393+y*668265263)^0x9e3779b9;h=Math.imul(h^(h>>>13),1274126177);return ((h^(h>>>16))>>>0)/4294967296;}
+/* Size the board canvas only when its size really changed. Assigning
+   width/height reallocates the backing store and clears it, and the board
+   is drawn every frame: that was ~120 attribute writes a second, each one
+   waking every MutationObserver on the page. Otherwise it is cleared and
+   its state reset in place. Returns the context, scaled to CSS pixels. */
+function mgCanvasSize(cv,W,H,dpr){
+  const w=Math.round(W*dpr), h=Math.round(H*dpr), g=cv.getContext("2d");
+  if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
+  else if(g.reset)g.reset();
+  else{g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,w,h);g.globalAlpha=1;g.globalCompositeOperation="source-over";
+    g.shadowBlur=0;g.shadowColor="rgba(0,0,0,0)";g.setLineDash([]);g.lineWidth=1;g.textAlign="start";g.textBaseline="alphabetic";}
+  const sh=H+"px"; if(cv.style.height!==sh)cv.style.height=sh;
+  g.setTransform(dpr,0,0,dpr,0,0);
+  return g;
+}
 function mgDraw(){
   if(!mgState)return;
   if($("boardTab").style.display==="none")return; // board hidden — nothing to draw
@@ -2485,10 +2500,7 @@ function mgDraw(){
   // render at device-pixel resolution so the board is crisp/HD on retina, then
   // draw in CSS-pixel space (same handling as the main game canvas)
   const dpr=(typeof DPR!=="undefined"?DPR:Math.min(3,window.devicePixelRatio||1));
-  cv.width=Math.round(CW*dpr);cv.height=Math.round(CH*dpr);
-  cv.style.height=CH+"px";
-  const g=cv.getContext("2d");
-  g.setTransform(dpr,0,0,dpr,0,0);
+  const g=mgCanvasSize(cv,CW,CH,dpr);
   g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
   const bp=new Set((p.cells||[]).map(c=>c[0]+"_"+c[1]));
   const GR=(typeof GRASS!=="undefined")?GRASS:["#79c34e","#71ba47","#7fc957"];
