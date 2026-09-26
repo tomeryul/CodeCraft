@@ -2810,12 +2810,15 @@ async function ev(expr) {
     t3Enter(TOWER_LEVELS[0]);
     await wait(900);
     out.t3Fits=box('#mgCanvas').bot<=fold();
-    const bar=box('#t3Bar');
-    out.t3BarSeen=!!bar&&bar.bot<=fold();
+    /* at half height the camera row is display:contents — its rotate
+       buttons sit beside the board — so it is the buttons that must be
+       on screen, not a row that no longer has a box of its own */
+    const rl=box('#t3RotL'), rr=box('#t3RotR');
+    out.t3BarSeen=!!rl&&!!rr&&rl.bot<=fold()&&rr.bot<=fold();
     out.t3Rot=!!$('t3RotL')&&!!$('t3RotR');
     /* the board and its own status bar come before anything that is only
        reading, so what scrolls away is never the thing being looked at */
-    out.order=[...$('mgPanel').children].filter(e=>e.offsetParent).map(e=>e.id)
+    out.order=[...$('mgPanel').children].filter(e=>e.offsetParent||e.id==='t3Bar').map(e=>e.id)
       .filter(id=>['mgGoal','mgCanvas','t3Bar','mgRead'].indexOf(id)>=0);
     /* a folded goal says so, and saying so unfolds it. The prose is set
        here rather than taken from a level, so the check is of the fold and

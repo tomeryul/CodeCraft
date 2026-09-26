@@ -52,7 +52,11 @@ await pg.addInitScript(()=>{
 });
 const shot=async(name)=>{await pg.waitForTimeout(450);await pg.screenshot({path:OUT+name+'.png'});};
 const cele=async()=>{const had=await pg.evaluate("(()=>{const c=document.querySelector('#ccCele .cc-cta');const v=c&&c.offsetParent;if(v){window.__log.push({t:0,k:'cele',msg:(document.getElementById('ccCele').textContent||'').replace(/\\s+/g,' ').slice(0,80)});c.click();}return !!v;})()");if(had)await pg.waitForTimeout(700);};
-const step=async(name,fn,wait)=>{try{await pg.evaluate(`window.__mark(${JSON.stringify(name)})`);await cele();await fn();await pg.waitForTimeout(wait||600);await cele();await shot(name);}catch(e){console.log('STEP FAIL',name,e.message.slice(0,200));}};
+/* Every step is something the player DID, so it starts with an input
+   event: a layout shift inside the next 500ms is then the answer to that
+   tap (the browser marks it hadRecentInput and does not count it), and
+   only what moves by itself later is scored — which is what "a jump" is. */
+const step=async(name,fn,wait)=>{try{await pg.evaluate(`window.__mark(${JSON.stringify(name)})`);await cele();await pg.keyboard.press('Shift');await fn();await pg.waitForTimeout(wait||600);await cele();await shot(name);}catch(e){console.log('STEP FAIL',name,e.message.slice(0,200));}};
 const ev=s=>pg.evaluate(s);
 // frame sampler: how smooth is the page over ms
 const frames=async(label,ms)=>{

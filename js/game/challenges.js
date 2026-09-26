@@ -320,8 +320,11 @@ function mgEnterCreator(){
      is below the fold with nothing saying so. Playing a challenge still
      opens at whatever size the player chose — this does NOT touch that
      preference, and mgExit puts their size back. */
-  $("editor").classList.add("max");
+  (window.ccSizeFlip||(f=>f()))(()=>$("editor").classList.add("max"));
   mgCreatorUI();
+  /* the board shares the tab with the box of tools, which only exists
+     now — fit to it at once rather than shrinking half a second later */
+  if(window.mgFitReset){ mgFitReset(); mgDraw(); }
 }
 /* Resuming is its own door, NOT something mgEnterCreator() does for you.
    Seven callers funnel through that function and every one of them means
@@ -911,9 +914,14 @@ function mgFitBoard(aspect){
      takes what is left. Capping it at the DOCK alone was not enough: the
      status line and the rest of the strip are in there too, and the panel
      came out taller than the tab it lives in. */
+  /* Playing, the strip's share is FIXED, not "as much as it has to say":
+     a run fills it (the robot's variables, what each input cost) and an
+     empty one lets it go, and every time it did the board changed size
+     under the player's eyes (docs/ux-roadmap.md topic 2). The board is the
+     same size from the moment the level opens to the moment it is won. */
   const want=making
     ? Math.min(natural,Math.round(room*.70))
-    : Math.min(natural,Math.round(room*.30),64);
+    : Math.min(Math.round(room*.30),64);
   const capH=Math.max(72,room-want);
   /* no floor under the width: a floor here would put the height back over
      the cap it was just given, which is the whole point of the cap */
@@ -1806,6 +1814,9 @@ function mgNoteOrigin(){
 }
 function mgEnter(proj0){
   mgNoteOrigin();
+  /* a new level fits its board NOW, not on the first throttled pass a
+     quarter of a second in — that late re-fit was a visible jump */
+  if(window.mgFitReset)mgFitReset();
   // Own a private copy. Two callers hand us LIVE objects — the PROJECTS entry and a
   // saved player.myChallenges entry — so anything that writes to mgState.proj during
   // play (the test-case loop does) would corrupt the built-in level for the session,
@@ -1884,7 +1895,7 @@ function mgExit(reopen){
      list — which is the bug this whole arrangement exists to prevent. */
   mgBlocksUI();
   /* the creator borrowed full height; hand the player's own size back */
-  $("editor").classList.toggle("max",!!sheetFull);
+  (window.ccSizeFlip||(f=>f()))(()=>$("editor").classList.toggle("max",!!sheetFull));
   $("editor").classList.remove("mg");
   $("mgCreatorBar").classList.remove("on");
   $("mgPanel").classList.remove("mk");

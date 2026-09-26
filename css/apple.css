@@ -176,6 +176,12 @@
 .sheet.grabbable > .m-head,
 #editor.sheet.grabbable > .v5-head,
 #editor.sheet.grabbable > .ed-head{ padding-top:var(--grip-zone); }
+/* One header height for every page. A one-line subtitle made it 71px and
+   a two-line one 85px, so going from Community to Account moved every row
+   under it by 14px — a jump nobody asked for. The taller of the two is the
+   height for all of them, so a page's content starts at the same place on
+   every page. */
+.sheet > .m-head{ min-height:calc(var(--grip-zone) + 65px); }
 .sheet.grabbable > .m-head::before,
 .sheet.grabbable > .v5-head::before,
 .sheet.grabbable > .ed-head::before{
@@ -192,12 +198,13 @@
 
 /* While a finger or the spring owns the transform, the CSS curve must
    not also be trying to own it — two animations on one property is a
-   fight the finger loses. The editor keeps its height curve, which is a
-   different property and still the editor's own business. */
+   fight the finger loses. Height has no curve anywhere: a size change is
+   one frame of layout and a spring on the transform (ccSizeFlip). */
 .sheet.sheet-drag,.sheet.sheet-anim{ transition:none; will-change:transform; }
-#editor.sheet-drag,#editor.sheet-anim{
-  transition:height .26s var(--ease-settle);
-}
+/* #editor declares its own transition, and an id outranks the two classes
+   above — without this the spring and a CSS curve fight over the same
+   transform and the sheet lurches */
+#editor.sheet-drag,#editor.sheet-anim{ transition:none; }
 /* The one frame a drag hands the size over: the height changes with no
    curve at all and the transform absorbs the difference, so the top edge
    stays under the finger (resize() in sheet-drag.js). Last, so it beats

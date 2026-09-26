@@ -39,7 +39,18 @@ system); ambient and reward are held while the player is focused and
 delivered, merged, in the world; one fixed toast lane that does not move
 and lets taps through; a lesson win is a moment and a choice.
 
-## 2. Stable — nothing moves by itself
+## 2. Stable — nothing moves by itself  ✅ v185
+*Done:* no height curve anywhere — a size change is one frame of layout
+and a spring on the transform, for every open sheet (`ccSizeFlip`), and
+the board re-fits in that same frame; one header height for every page;
+the strip under the board has a fixed share, so a run no longer resizes
+the board; the designer fits its board to the tool box at once; a Tower
+level at half height puts its rotate buttons beside the board (board
+102px → 133px tall). The HUD turned out not to push anything — new chips
+join the end of the row. `test/stable.js`. The audit now presses a key
+before each step, so only what moves after the tap is scored.
+*Measured:* layout shift 0.46 → **0.026**.
+
 *Skill §4*
 
 - The editor animates `height` when a level borrows full height (the
@@ -56,6 +67,7 @@ that are real (the Tower board at half height, the board resizing under
 the text) belong to topic 2.
 
 ## 4. Meta screens are screens, and there are fewer of them
+*Owner: keep all of it, full-screen menus included.*
 *Skill §1, §2*
 
 - The menu and every destination are half sheets over a dimmed,

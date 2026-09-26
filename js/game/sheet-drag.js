@@ -210,6 +210,35 @@ function resize(el,vel){
   settle(el,0,vel,()=>clearY(el));
   return true;
 }
+/* A size change that nobody is dragging — the size button, a level that
+   borrows full height, focus mode. The height used to animate on its own
+   curve: a layout on every frame of it, which stutters and was a quarter
+   of the app's layout shift; every OTHER sheet (sized by
+   body.sheets-full) had no curve at all and simply jumped. Now all of
+   them do what resize() does under a finger: the height changes in one
+   frame, and each open sheet glides from where its top edge was to where
+   it is, on the transform, by the same spring. Exported as ccSizeFlip so
+   every place that changes a size goes through it. */
+function sizeFlip(change){
+  const open=[...document.querySelectorAll(".sheet.open")]
+    .filter(el=>!el.classList.contains("sheet-drag"));
+  // where each top edge IS on screen, mid-glide or not
+  const before=new Map(open.map(el=>[el,el.getBoundingClientRect().top]));
+  change(); mirrorSize();
+  // the board re-fits to the new height in this same frame, not 250ms late
+  if(window.mgFitReset){ mgFitReset(); if(typeof mgDraw==="function")mgDraw(); }
+  for(const el of open){
+    const s=stateOf(el);
+    const d=before.get(el)-(el.getBoundingClientRect().top-s.y);   // from there to its new resting place
+    if(Math.abs(d)<1||reduced()){ if(s.anim){s.anim.stop();s.anim=null;} if(s.y)clearY(el); continue; }
+    if(s.anim){s.anim.stop();s.anim=null;}
+    el.classList.add("sheet-anim");
+    setY(el,d);
+    settle(el,0,0,()=>clearY(el));
+  }
+}
+window.ccSizeFlip=sizeFlip;
+
 /* What dismissal means is the sheet's own ✕ — never a rule invented here,
    so a sheet added next year behaves correctly without being listed. */
 function dismiss(el){

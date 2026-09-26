@@ -154,7 +154,8 @@ $("edClose").addEventListener("click",()=>{
   $("editor").classList.remove("open");
 });
 $("edMax").addEventListener("click",()=>{
-  const on=$("editor").classList.toggle("max");
+  let on=false;
+  (window.ccSizeFlip||(f=>f()))(()=>{ on=$("editor").classList.toggle("max"); });
   sheetFull=on; saveSoon();
   $("edMax").title=on?"Shrink editor":"Expand editor";
   sfx(on?620:460,.05);

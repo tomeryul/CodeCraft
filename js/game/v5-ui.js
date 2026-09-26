@@ -97,7 +97,8 @@ function editor(){
        from the board or the Python listing it takes you there first
        rather than hiding the screen you are looking at. */
     if(has("setTab")&&$("blocksTab")&&$("blocksTab").style.display==="none")setTab("blocks");
-    const on=ed.classList.toggle("focused");
+    let on=false;
+    (window.ccSizeFlip||(f=>f()))(()=>{ on=ed.classList.toggle("focused"); });
     fc.title=on?"Show everything again":"Blocks only — hide everything else";
     fc.setAttribute("aria-label",on?"Show everything again":"Blocks only");
     if(has("renderProgram"))renderProgram();

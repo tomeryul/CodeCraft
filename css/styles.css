@@ -126,7 +126,9 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .sheet.open{transform:translateY(0);}
 
 /* ---------- editor ---------- */
-#editor{height:48vh;transition:transform var(--dur-move) var(--ease-settle),height .26s var(--ease-settle);}
+/* no height curve: a size change is one frame of layout and a glide on
+   the transform (ccSizeFlip in sheet-drag.js) */
+#editor{height:48vh;transition:transform var(--dur-move) var(--ease-settle);}
 #editor.max{height:var(--sheet-full);max-height:var(--sheet-full);}
 #edMax svg{width:17px;height:17px;display:block;}
 #edMax .ic-min{display:none;}
