@@ -868,7 +868,11 @@ function mgStepArg(d){
      where the design stands. */
   const design=$("designTab"), bar=$("mgCreatorBar"), status=$("mgStatus");
   if(status)read.appendChild(status);
-  for(const id of ["mgVars","mgCost","mgLesson","mgBoardHint"]){
+  /* the lesson's "How do I do this?" first: the strip under the board shows
+     a line of itself, and that line has to be the help, not the variable
+     watch — which, a little taller at the type scale's sizes, pushed the
+     help below the fold (design-audit stage 2) */
+  for(const id of ["mgLesson","mgVars","mgCost","mgBoardHint"]){
     const el=$(id); if(el)read.appendChild(el);
   }
   read.appendChild(dock);

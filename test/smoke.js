@@ -2801,9 +2801,11 @@ async function ev(expr) {
     await wait(700);
     out.flatFits=box('#mgCanvas').bot<=fold();
     /* the reading area is a scroller that shows a line of itself, not an
-       edge: the lesson has to start above the fold and continue past it */
+       edge: the lesson has to start above the fold. At half height it is one
+       row, "How do I do this?" (v192), and being wholly in view is better
+       still — what matters is that it is not below the fold. */
     const ls=box('#mgLesson');
-    out.lessonStarts=!!ls&&ls.top<fold()&&ls.bot>fold();
+    out.lessonStarts=!!ls&&ls.top<fold();
     out.readScrolls=$('boardTab').scrollHeight>$('boardTab').clientHeight;
     mgExit(false); await wait(300);
     /* the 3D level: its board AND its rotate bar are what you look at */
