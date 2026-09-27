@@ -104,7 +104,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   console.log('▶ the market panel grows from its own button');
   const T = await pg.evaluate(async () => {
     const wait = ms => new Promise(r => setTimeout(r, ms));
+    player.fresh = false;   // a new game's market sleeps until graduation (first-session.js)
     const el = $('ticker');
+    renderMarket();
     el.style.display = '';
     const btn = () => el.querySelector('.tk-btn');
     if (el.classList.contains('open')) { btn().click(); await wait(60); }

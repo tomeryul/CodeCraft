@@ -110,6 +110,12 @@ before any change to navigation, notifications or the structure of a
 screen. `docs/ux-roadmap.md` is the work it found, in topics — take the
 next one, fix it, re-run `scripts/ux-audit.js`, record the numbers there.
 
+A new game is quiet on purpose (topic 7): the market sleeps — no orders,
+events, news or ticker — until the Academy is graduated or level 3
+(`marketAwake()` in `js/game/economy.js`), and day one's gift is the
+starting purse, not a card. A test that needs the market in a fresh game
+sets `player.fresh = false` first.
+
 ### The skills pack
 
 `.claude/skills/` holds Emil Kowalski's set (github.com/emilkowalski/skills,

@@ -114,14 +114,17 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     const wait = ms => new Promise(r => setTimeout(r, ms));
     await __home();
     // an order on the clock: the ticker's timer ticks, the rest stands still
+    player.fresh = false;   // a new game's market sleeps until graduation (first-session.js)
     const m = marketReady();
     m.order = { need: { wood: 3 }, got: {}, reward: 10, until: now + 120000, at: now };
     renderMarket(); await wait(300);
     const w = await __watch(3000);
     const rebuilt = Object.entries(w.by).filter(([k]) => /^childList:(ticker|journey)$/.test(k));
-    return { total: w.total, rebuilt, by: w.by, clock: !!document.querySelector('#ticker .tk-clk') };
+    return { total: w.total, rebuilt, by: w.by, clock: !!document.querySelector('#ticker .tk-clk'),
+      ticks: (w.by['childList:tk-clk'] || 0) > 0 };
   });
   ck('the market ticker and the journey bar are not rebuilt every second', I.rebuilt.length === 0, I.by);
+  ck('while the order clock on it does tick', I.clock && I.ticks, I);
   ck('the world at idle writes a handful of text nodes a second, not markup', I.total <= 30, I.by);
 
   const V = await pg.evaluate(async () => {
