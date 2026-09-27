@@ -328,7 +328,7 @@ html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
    file inputs are excluded: they have no text to be too small. */
 input:not([type="range"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]),
 textarea, select{
-  font-size:var(--fs-lg) !important;
+  font-size:16px !important;   /* exactly 16px: the iOS no-zoom threshold, a platform rule and not a size on the type scale */
 }
 
 /* The one piece of the game that is CONTENT rather than a control: the
