@@ -237,11 +237,22 @@ function renderLessonCard(proj){
       '<span><b>'+esc(t.name)+'</b> — '+esc(t.txt)+'</span></div>').join("");
   const steps=(proj.steps||[]).map((t,n)=>
     '<li><span class="ls-n">'+(n+1)+'</span><span>'+esc(t)+'</span></li>').join("");
+  /* At half height the reading area under the board is one line tall, so
+     the card showed its badge and ✕ and nothing a child could act on — the
+     explanation sat below, in a scroller nothing pointed at. There it is one
+     row that says what it holds; a tap presses the sheet's own size button,
+     and at full height the whole card is there. */
   el.innerHTML=
+    '<button type="button" class="ls-peek" id="lsPeek"><span class="ls-pk-ic">📖</span>'+
+      '<span class="ls-pk-t">How do I do this?</span>'+
+      '<span class="ls-badge">Lesson '+(i+1)+' of '+TUTS.length+'</span>'+
+      '<span class="ls-pk-go" aria-hidden="true">›</span></button>'+
     '<div class="ls-head"><span class="ls-badge">Lesson '+(i+1)+' of '+TUTS.length+'</span>'+
       '<button class="ls-x" id="lsClose" title="Hide">✕</button></div>'+
     (teach?'<div class="ls-sec">🧩 What these blocks do</div>'+teach:"")+
     (steps?'<div class="ls-sec">👣 What to do</div><ol class="ls-steps">'+steps+'</ol>':"");
+  const pk=$("lsPeek");
+  if(pk)pk.addEventListener("click",()=>{ const ed=$("editor"), mx=$("edMax"); if(!ed.classList.contains("max")&&mx)mx.click(); });
   const x=$("lsClose");
   if(x)x.addEventListener("click",()=>{el.classList.add("hid");lessonBtn(true);});
 }

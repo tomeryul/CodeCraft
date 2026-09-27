@@ -73,6 +73,19 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   ck('back in the world after a lesson: no card, no toast', W.seen.length === 0, W);
   ck('the market sleeps: no order, no event, no ticker in the HUD',
     !W.order && !W.event && !W.ticker, W);
+  const O1 = await pg.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    ordersOpen(); await wait(400);
+    const t = $('ordBody').textContent, b = $('ordToAcad');
+    if (b) b.click(); await wait(800);
+    const out = { t, promisesSoon: /every few seconds/.test(t), saysWhen: /Academy/.test(t),
+      wentToLesson: !!mgState && !!mgState.proj.tut };
+    if (mgState) mgExit(false); navHome(); await wait(400);
+    return out;
+  });
+  ck('the Orders page does not promise an order in seconds while the market sleeps',
+    !O1.promisesSoon && O1.saysWhen, O1);
+  ck('and its button goes where the market opens — the Academy', O1.wentToLesson === true, O1);
 
   console.log('▶ graduation wakes the world');
   const G = await pg.evaluate(async () => {

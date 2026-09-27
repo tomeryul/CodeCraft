@@ -234,7 +234,13 @@ async function loadCommunity(){
             ()=>blockAuthor(row.author,row.display_name||row.author_name||"builder"));
       }
     }
-  }catch(e){el.innerHTML='<div class="authnote">⚠️ Could not load: '+esc(e.message)+'</div>';}
+  }catch(e){
+    /* "Failed to fetch" is the browser talking to a developer; the player
+       needs to know what happened and what to do about it */
+    const offline=navigator.onLine===false||/fetch|network|load failed/i.test(String(e&&e.message));
+    el.innerHTML='<div class="authnote">'+(offline?"📡 Can't reach the internet right now.":"⚠️ The levels didn't load.")+
+      '<small>Tap ↻ to try again.</small></div>';
+  }
 }
 /* ---- the author's draft ----
    The creator had no memory. mgEnterCreator() always built a blank board,

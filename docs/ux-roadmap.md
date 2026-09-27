@@ -149,3 +149,28 @@ font).
 - First load: the splash's feature chips wrap to a second line when the
   web font arrives (layout shift ~0.08 on a cold cache).
 - HUD slots are not reserved (see 2).
+
+---
+
+## Second pass (v191 audit)  ✅ v192
+The whole tour re-run after topics 1–7 (390×844, first run):
+**60fps in every state** (world, menu over the world, editor, a board, a 3D
+level), p95 frame 16.8ms, 0 frames over 33ms; layout shift **0.027** (was
+1.34); **1** notification, and it answers the player's own tap (was 5
+landing on the wrong surface); 2 DOM writes a second at idle. The long
+tasks the audit prints sit right after its own screenshots — a profile of
+the same taps without them finds one, 69ms, on the first Play.
+
+What it still found, and what was done:
+- The Orders page told a brand-new player "a new order goes up every few
+  seconds" while topic 7's market was asleep. It now says orders start
+  after the Academy's basics, and its button goes there.
+- A lesson at half height showed a badge and a ✕ — the explanation sat
+  below them in a scroller nothing pointed at. At half height it is now one
+  row, "📖 How do I do this?", that opens the sheet to full height, where
+  the whole card is.
+- Community offline printed the browser's "Failed to fetch". It says the
+  internet can't be reached, and to tap ↻.
+- The audit's own lesson step clicked a dot the Academy page no longer has
+  (v187), so steps 19–22 never opened a lesson. Fixed.
+`test/pages.js`, `test/first-session.js`.

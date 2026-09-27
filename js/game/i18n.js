@@ -1263,6 +1263,7 @@ const HE_RAW={
 "You've learned moving, turning, chopping, collecting, loops and conditions. Four harder lessons are waiting whenever you want them — 🔄 While, 🔢 Variables, 🔧 Functions and 🧠 Algorithms are how you build things that think.":
   "למדת לזוז, לפנות, לכרות, לאסוף, לולאות ותנאים. ארבעה שיעורים קשים יותר מחכים מתי שתרצה — 🔄 כל עוד, 🔢 משתנים, 🔧 פונקציות ו-🧠 אלגוריתמים הם איך שבונים דברים שחושבים.",
 "❓ How do I do this?":"❓ איך עושים את זה?",
+"How do I do this?":"איך עושים את זה?",
 "⬆️ Move toward the 💎 gem.":"⬆️ זוז לכיוון 💎 האבן.",
 "⬆️ Move until the robot is standing right next to the 🌳 tree.":
   "⬆️ זוז עד שהרובוט עומד ממש ליד 🌳 העץ.",
@@ -1637,6 +1638,12 @@ const HE_RAW={
 "⇉ A spread order":"⇉ הזמנה מפוזרת",
 "⛓ A bulk order":"⛓ הזמנת כמות",
 "📭 The board is empty right now.":"📭 הלוח ריק כרגע.",
+"📭 No orders yet.":"📭 עדיין אין הזמנות.",
+"The market opens once you finish the six basic lessons at the Academy.":"השוק נפתח אחרי שמסיימים את שישת שיעורי הבסיס באקדמיה.",
+"🎓 Go to the Academy":"🎓 לאקדמיה",
+"📡 Can't reach the internet right now.":"📡 אין חיבור לאינטרנט כרגע.",
+"⚠️ The levels didn't load.":"⚠️ השלבים לא נטענו.",
+"Tap ↻ to try again.":"לחצו על ↻ כדי לנסות שוב.",
 "🚶 Walk To the resource → gather → 🚶 Walk To 🏪 → ⤵️ Drop.":
   "🚶 לך אל החומר ← תאסוף ← 🚶 לך אל 🏪 ← ⤵️ הפל.",
 "🧩 Open the code editor":"🧩 פתח את עורך הקוד",

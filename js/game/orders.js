@@ -43,7 +43,12 @@ function renderOrders(){
   const o=m&&m.order;
   const filled=player.orders|0, best=player.orderBest|0;
   let h="";
-  if(!o){
+  if(!o&&typeof marketAwake==="function"&&!marketAwake()){
+    /* a new game's market sleeps until graduation (economy.js); saying an
+       order is seconds away would be a promise the game does not keep */
+    h+='<div class="ord-none">📭 No orders yet.<small>The market opens once you finish the six basic lessons at the Academy.</small>'+
+       '<button type="button" class="ord-go ord-code" id="ordToAcad">🎓 Go to the Academy</button></div>';
+  }else if(!o){
     h+='<div class="ord-none">📭 The board is empty right now.<small>A new order goes up every few seconds — keep gathering in the meantime.</small>'+
        '<button type="button" class="ord-go ord-code" id="ordToCode">🧩 Open the code editor</button></div>';
   }else{
@@ -70,6 +75,8 @@ function renderOrders(){
      '</div>';
   el.innerHTML=h;
   /* an empty board points at the one thing that fills it */
+  const ga=$("ordToAcad");
+  if(ga)ga.addEventListener("click",()=>{ ordersClose(); if(typeof academyStart==="function")academyStart(); });
   const go0=$("ordToCode");
   if(go0)go0.addEventListener("click",()=>{ ordersClose(); $("editor").classList.add("open"); if(typeof setTab==="function")setTab("blocks"); });
   const go=$("ordCode");

@@ -91,7 +91,7 @@ await step('16-editor-closed',async()=>{await ev("navHome()");},700);
 await step('17-mentor',async()=>{await ev("$('mentor').classList.add('open')");},800);
 await step('18-home2',async()=>{await ev("navHome()");},700);
 // a lesson from the hub, solved, and what happens after
-await step('19-academy-lesson1',async()=>{await ev("hubOpen()");await pg.waitForTimeout(300);await ev("hubPage('academy')");await pg.waitForTimeout(400);await ev("(document.querySelector('#projList .acad-dot')||{click(){}}).click()");},1200);
+await step('19-academy-lesson1',async()=>{await ev("hubOpen()");await pg.waitForTimeout(300);await ev("hubPage('academy')");await pg.waitForTimeout(400);await ev("{const r=document.querySelector('#projList .acad-lesson');if(r)r.click();else academyEnter(0);}");},1200);
 await frames('challenge board open',3000);
 await step('20-lesson-run',async()=>{await ev("applyProg(mgRobot,[{t:'move'},{t:'move'},{t:'move'},{t:'move'}]);renderProgram();mgRun()");},4000);
 await step('21-after-success',async()=>{},2500);

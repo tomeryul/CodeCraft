@@ -68,6 +68,34 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     R.backPage === 'puzzles' && Math.abs(R.backScroll - R.scrolled) <= 2, R);
   ck('while a page opened from the menu starts at the top', R.freshPage === 0, R);
 
+  console.log('▶ what a page says is true, and a child can act on it');
+  const P = await pg.evaluate(async () => {
+    const w = ms => new Promise(r => setTimeout(r, ms)), out = {};
+    HELD.length = 0; document.querySelectorAll('#ccCele').forEach(e => e.remove());
+    if (mgState) mgExit(false); navHome(); await w(300);
+    // a lesson at half height: one row that says what it holds
+    if ($('editor').classList.contains('max')) $('edMax').click();
+    academyEnter(0); await w(700);
+    const pk = $('lsPeek');
+    out.peek = !!pk && !!pk.offsetParent && /How do I do this/.test(pk.textContent) && pk.getBoundingClientRect().height >= 44;
+    out.badgeOnly = !!document.querySelector('#mgLesson .ls-head') && !!document.querySelector('#mgLesson .ls-head').offsetParent;
+    pk.click(); await w(800);
+    out.opensFull = $('editor').classList.contains('max');
+    out.cardAtFull = !!document.querySelector('#mgLesson .ls-steps').offsetParent && !pk.offsetParent;
+    $('edMax').click(); await w(600); mgExit(false); navHome(); await w(300);
+    // no internet: words a child understands, not the browser's
+    const f = window.fetch; window.fetch = () => Promise.reject(new TypeError('Failed to fetch'));
+    const ready = window.sbReady; window.sbReady = () => true;
+    await loadCommunity();
+    out.offline = $('ccList').textContent;
+    window.fetch = f; window.sbReady = ready;
+    return out;
+  });
+  ck('a lesson at half height is one row that says what it holds, big enough to tap', P.peek === true && P.badgeOnly === false, P);
+  ck('tapping it opens the sheet to full height, where the whole lesson is', P.opensFull && P.cardAtFull, P);
+  ck('with no internet, Community says so in words — not "Failed to fetch"',
+    /internet/.test(P.offline) && /try again/.test(P.offline) && !/Failed to fetch/.test(P.offline), P.offline);
+
   ck('no uncaught exceptions', errs.length === 0, errs.slice(0, 3));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await b.close();
