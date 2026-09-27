@@ -157,9 +157,16 @@ function editor(){
       const ti=$("v5EdTitle"), su=$("v5EdSub");
       if(!ti||!su)return;
       if(mg){
-        ti.textContent=($("mgTitle")||{}).textContent||"Challenge";
+        /* "Mind the Gap — Level 1/4" did not fit beside four buttons even
+           at full height; the level number goes to the line under the name,
+           next to the block count (design-audit bug 3). Split on the last
+           dash so it works after the Hebrew layer has translated it. */
+        const full=($("mgTitle")||{}).textContent||"Challenge";
+        const m=/^(.*\S)\s+[—–]\s+(\S[^—–]*\d+\s*\/\s*\d+)\s*$/.exec(full);
+        ti.textContent=m?m[1]:full;
         const c=($("mgCount")||{}).textContent||"";
-        su.textContent=c?("🧩 "+c.replace(/^🧩\s*/,"")):"";
+        const cnt=c?("🧩 "+c.replace(/^🧩\s*/,"")):"";
+        su.textContent=m?(m[2]+(cnt?"  ·  "+cnt:"")):cnt;
       }else{
         const r=(typeof R==="function")?R():null;
         ti.textContent=r&&r.name?r.name:"Your code";

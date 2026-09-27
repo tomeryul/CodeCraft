@@ -22,7 +22,10 @@ if(window.__nav)return; window.__nav=1;
 
 /* The destination sheets. #splash, #agegate and #delacc are modal — they
    own their own buttons and must not gain a Back to somewhere behind. */
-const SHEETS=["editor","mentor","quests","hub","projects","guide","funcLib","orders","style","maker","report","settings"];
+/* every sheet there is: "go home" closes each of these. delacc was missing,
+   so the delete-account page survived going home and sat under whatever
+   opened next (docs/design-audit.md, bug 1). */
+const SHEETS=["editor","mentor","quests","hub","projects","guide","funcLib","orders","style","maker","report","settings","delacc"];
 const has=n=>typeof window[n]==="function";
 
 const ICON_BACK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" '+

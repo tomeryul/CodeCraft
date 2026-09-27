@@ -150,8 +150,11 @@ function journeyCheck(){
   const next=journeyStep();
   if(typeof confetti==="function")confetti();
   if(typeof sfx==="function"){sfx(760,.08);sfx(1040,.09,.09);}
+  /* what was done, and only that: the next step is on the journey bar,
+     which is on screen at the same moment — saying it twice is the toast
+     and the bar competing for the same line (design-audit bug 5) */
   bigToast("✅ "+(n>1?n+" steps done — ":"")+last.title+
-    (next?"  →  Next: "+next.em+" "+next.title:"  —  that's the whole journey! 🏆"));
+    (next?"":"  —  that's the whole journey! 🏆"));
   if(typeof saveSoon==="function")saveSoon();
   return true;
 }

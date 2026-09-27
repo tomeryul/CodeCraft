@@ -109,7 +109,17 @@ function whenCalm(key,run,ttl,reward,gap){
   for(const h of news.slice(0,Math.max(0,news.length-3)))HELD.splice(HELD.indexOf(h),1);
   heldSoon();
 }
-function worldNews(t,big,ttl){ whenCalm("n:"+t,()=>(big?bigToast:toast)(t),ttl,false,big?3000:1100); }
+/* News is about the world, so it leaves when the world is covered: a
+   toast that arrived in the world does not stay on over the page that
+   opened after it, where it sat on the page's title (design-audit bug 2). */
+function worldNews(t,big,ttl){ whenCalm("n:"+t,()=>{ (big?bigToast:toast)(t); newsMark(t,big); },ttl,false,big?3000:1100); }
+function newsMark(t,big){
+  const box=$("toasts"); if(!box)return;
+  const d=big?box.querySelector(".toast.big:last-child")||[...box.querySelectorAll(".toast.big")].pop()
+             :[...box.querySelectorAll(".toast:not(.big)")].find(e=>e.dataset.msg===t);
+  if(d)d.classList.add("news");
+}
+function newsLeave(){ document.querySelectorAll("#toasts .toast.news").forEach(tKill); }
 /* After the surface that just closed has finished leaving. Scheduled once,
    not restarted: confetti adds and removes nodes for seconds, and a timer
    pushed back on every one of them never fired. */
@@ -131,13 +141,28 @@ function heldFlush(){
 /* Calm returns when a surface closes or a card leaves — watch exactly
    those, not the whole document. */
 function heldWatch(){
-  const mo=new MutationObserver(()=>{ if(HELD.length)heldSoon(); });
+  const mo=new MutationObserver(()=>{ if(!calmNow())newsLeave(); if(HELD.length)heldSoon(); });
   document.querySelectorAll(".sheet,#shopWrap,#agegate,#splash").forEach(el=>
     mo.observe(el,{attributes:true,attributeFilter:["class"]}));
   mo.observe(document.body,{childList:true});                        // #ccCele comes and goes
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",heldWatch);
 else heldWatch();
+
+/* A scroller cut at an arbitrary height cuts a line of text in half, and
+   the half-line reads as broken rather than as "there is more". Where there
+   is more below, the bottom edge fades instead (design-audit bug 4). */
+function edgeFade(el){
+  if(!el||el._fade)return;
+  const f=el._fade=()=>el.classList.toggle("fade-b",el.scrollHeight-el.clientHeight-el.scrollTop>4);
+  el.addEventListener("scroll",f,{passive:true});
+  try{new ResizeObserver(f).observe(el);}catch(_){}
+  new MutationObserver(()=>requestAnimationFrame(f)).observe(el,{childList:true,subtree:true,characterData:true});
+  f();
+}
+function edgeFadeWire(){ ["boardTab","programWrap","palette"].forEach(id=>edgeFade($(id))); }
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",edgeFadeWire);
+else edgeFadeWire();
 
 let actx=null;
 function sfx(freq,dur,delay){

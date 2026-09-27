@@ -96,6 +96,62 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   ck('with no internet, Community says so in words — not "Failed to fetch"',
     /internet/.test(P.offline) && /try again/.test(P.offline) && !/Failed to fetch/.test(P.offline), P.offline);
 
+  console.log('▶ design audit, stage 1 — the five bugs');
+  const B = await pg.evaluate(async () => {
+    const w = ms => new Promise(r => setTimeout(r, ms)), out = {};
+    const home = async () => { document.querySelectorAll('#ccCele').forEach(e => e.remove());
+      HELD.length = 0; clearTimeout(heldT); heldT = 0; if (mgState) mgExit(false); navHome(); await w(400);
+      if ($('editor').classList.contains('max')) { $('edMax').click(); await w(500); } };
+    await home();
+    // 1. going home closes the delete-account page too
+    const ready = window.sbReady; window.sbReady = () => true; sbUser = { uid: 'u1', email: 'kid@example.com' };
+    openDeleteAccount(); await w(300);
+    out.delOpen = $('delacc').classList.contains('open');
+    navHome(); await w(300);
+    out.delAfterHome = $('delacc').classList.contains('open');
+    window.sbReady = ready; sbUser = null;
+    // 2. news that arrived in the world leaves when a page opens; a reply to the player stays
+    await home(); $('toasts').innerHTML = '';
+    worldNews('📣 news in the world', true); toast('👍 your own tap');
+    out.newsShown = !!document.querySelector('#toasts .toast.news');
+    hubOpen(); await w(250);
+    out.newsAfter = !!document.querySelector('#toasts .toast.news');
+    out.replyAfter = [...$('toasts').children].some(t => /your own tap/.test(t.textContent));
+    // 3. a level's title fits, and its number is on the line under it
+    await home(); packEnter(PUZZLE_PACKS[1], 0); await w(700);
+    $('edMax').click(); await w(700);
+    const ti = $('v5EdTitle');
+    out.title = ti.textContent; out.sub = $('v5EdSub').textContent;
+    out.fits = ti.scrollWidth <= ti.clientWidth + 1;
+    $('edMax').click(); await w(600);
+    // 4. at half height a cut-off area fades at its edge, and stops fading at the end
+    await home(); t3Enter(TOWER_LEVELS[1]); await w(1000);
+    const bt = $('boardTab');
+    out.over = bt.scrollHeight > bt.clientHeight + 4;
+    out.faded = bt.classList.contains('fade-b');
+    bt.scrollTop = bt.scrollHeight; await w(200);
+    out.fadedAtEnd = bt.classList.contains('fade-b');
+    // 5. finishing a journey step says what was done; the bar says what is next
+    await home(); $('toasts').innerHTML = '';
+    const st = journeyState(), first = JOURNEY.find(j => !st.claimed[j.id]);
+    const was = first.done; first.done = () => true;
+    journeyCheck(); await w(300);
+    first.done = was;
+    out.stepToast = [...$('toasts').children].map(t => t.textContent).join(' | ');
+    out.bar = $('journey').textContent;
+    await home();
+    return out;
+  });
+  ck('going home closes the delete-account page', B.delOpen && B.delAfterHome === false, B);
+  ck('world news leaves when a page opens over it', B.newsShown && B.newsAfter === false, B);
+  ck('while a reply to the player\'s own tap stays', B.replyAfter === true, B);
+  ck('a level\'s name fits its header at full height', B.fits === true && !/Level/.test(B.title), B);
+  ck('and the level number sits on the line under it, with the block count', /Level 1\/4/.test(B.sub) && /0\/\d/.test(B.sub), B);
+  ck('a board tab with more below fades at its edge, not in the middle of a line', B.over && B.faded, B);
+  ck('scrolled to the end, the fade goes', B.fadedAtEnd === false, B);
+  ck('a finished journey step says what was done, not what is next (the bar shows that)',
+    B.stepToast.trim().length > 0 && !/Next/.test(B.stepToast) && B.bar.length > 0, B);
+
   ck('no uncaught exceptions', errs.length === 0, errs.slice(0, 3));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await b.close();

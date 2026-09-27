@@ -161,7 +161,8 @@ $("edMax").addEventListener("click",()=>{
   sfx(on?620:460,.05);
   /* Every sheet's size control routes through this button now, so the tip
      has to check that the thing it describes is actually on screen. */
-  if(on&&$("editor").classList.contains("open")&&!mentorFlags.dblTap){
+  const blocksShown=$("blocksTab")?$("blocksTab").offsetParent!==null:true;
+  if(on&&$("editor").classList.contains("open")&&blocksShown&&!mentorFlags.dblTap){
     mentorFlags.dblTap=true;toast("💡 Tip: in full-screen mode, double-tap a block to delete it!");}
 });
 $("centerBtn").addEventListener("click",()=>{follow=true;toast("🎯 Following "+R().name);});

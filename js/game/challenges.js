@@ -903,6 +903,7 @@ function mgFitBoard(aspect){
      191px board tab on a small phone does not end up with an 8px scroller
      under a board too tall to fit beside it. */
   const room=Math.max(60,ph-used-8);
+  const bt=$("boardTab"); if(bt&&bt._fade)requestAnimationFrame(bt._fade);
   /* a strip of what is under the board stays in view, so the scroll
      announces itself — but only as much as there is to say, and never more
      than its share, so a board is not handed to an empty panel */

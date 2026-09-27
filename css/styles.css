@@ -1206,3 +1206,7 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .authbtn.danger.sm{padding:7px 11px;font-size:11.5px;}
 /* advanced Academy lessons read as a second half of the track */
 .acad-dot.adv{box-shadow:inset 0 0 0 1.5px rgba(150,120,255,.55);}
+
+/* more below: the edge fades rather than cutting a line in half (fx.js edgeFade) */
+.fade-b{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 26px),transparent);
+        mask-image:linear-gradient(to bottom,#000 calc(100% - 26px),transparent);}
