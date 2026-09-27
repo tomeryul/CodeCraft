@@ -496,8 +496,8 @@ const HE={
 "Menu ▸ Market Orders":"תפריט ▸ הזמנות מהשוק",
 "Starter Academy":"אקדמיית הפתיחה",
 "Levels other players published.":"שלבים שחקנים אחרים פרסמו.",
-"Short lessons, in order. They teach every block the rest of the game needs.":
-  "שיעורים קצרים, לפי הסדר. הם מלמדים כל בלוק שהמשחק צריך.",
+"Short lessons, in order. Each one teaches a block you will need.":
+  "שיעורים קצרים, לפי הסדר. כל אחד מלמד בלוק שתצטרכו.",
 "A flat board and one new trick per chapter.":"לוח שטוח, וטריק חדש אחד בכל פרק.",
 "A blueprint to fill in. What you finish appears in your world.":
   "תוכנית בנייה למלא. מה שתסיים מופיע בעולם שלך.",

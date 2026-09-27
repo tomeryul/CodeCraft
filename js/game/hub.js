@@ -33,7 +33,7 @@ const num=fn=>{try{const v=fn();return v==null?null:v;}catch(_){return null;}};
    key -> which band of #projList belongs to it, and what to call it.
    The band keys come from bandKey() below. */
 const PAGES={
-  academy  :{em:"🎓",title:"Academy",     sub:"Short lessons, in order. They teach every block the rest of the game needs.",bands:["academy"]},
+  academy  :{em:"🎓",title:"Academy",     sub:"Short lessons, in order. Each one teaches a block you will need.",bands:["academy"]},
   puzzles  :{em:"🧩",title:"Puzzle Chapters",sub:"A flat board and one new trick per chapter.",bands:["puzzles"]},
   builds   :{em:"🏗️",title:"Build Projects",sub:"A blueprint to fill in. What you finish appears in your world.",bands:["builds"]},
   tower    :{em:"🧊",title:"Tower Mode — 3D",sub:"The same board with height. Stack, climb, and rebuild the blueprint in 3D.",bands:["tower"]},
