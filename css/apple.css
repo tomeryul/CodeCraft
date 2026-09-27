@@ -43,6 +43,21 @@
      than a thumb (dots, bars, swatches) keep their own tiny radius, and a
      round button is a circle, not a token. */
   --r-ctl:12px; --r-card:16px; --r-sheet:24px;
+  /* Type, six sizes and a job for each (docs/design-audit.md, stage 2).
+     There were sixteen, seven of them between 11 and 14px — too close to
+     read as a decision, far enough apart to read as a mess.
+       xs  11    labels, section titles, meta chips
+       sm  12.5  secondary text: descriptions, subtitles, hints
+       md  14.5  body: row titles, buttons, the text you read
+       lg  16.5  a page's title
+       xl  22    display: the big call to action, a card's headline
+       xxl 33    a moment: the win card
+     and the wordmark on the splash, which is a logo, not a size. Emoji and
+     icon glyphs are sized to their box and are not type. */
+  --fs-xs:11px; --fs-sm:12.5px; --fs-md:14.5px; --fs-lg:16.5px; --fs-xl:22px; --fs-xxl:33px; --fs-brand:48px;
+  /* Three weights, because Fredoka is one variable file from 400 to 700:
+     the 800s and 900s the stylesheets asked for all drew as 700 anyway. */
+  --fw-regular:400; --fw-medium:600; --fw-bold:700;
   --ease-settle:cubic-bezier(.32,.9,.35,1);   /* what the sheets already use */
   --ease-carry:cubic-bezier(.22,1.2,.36,1);   /* slight overshoot */
   /* A THIRD curve, and CLAUDE.md asks for a reason you can say out loud,
@@ -55,6 +70,9 @@
   --dur-move:.28s;    /* a surface arriving or leaving */
   --dur-settle:.4s;   /* something finding its place */
 }
+/* The browser's <b> is "bolder" than its parent, so bold inside a bold row
+   computed to 900 — a fourth weight nobody chose. Bold is bold. */
+b,strong{font-weight:var(--fw-bold);}
 
 /* ---------------------------------------------------------------------
    2. Reduced motion
@@ -310,7 +328,7 @@ html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
    file inputs are excluded: they have no text to be too small. */
 input:not([type="range"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]),
 textarea, select{
-  font-size:16px !important;
+  font-size:var(--fs-lg) !important;
 }
 
 /* The one piece of the game that is CONTENT rather than a control: the

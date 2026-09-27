@@ -21,8 +21,8 @@
    The glyph is swapped to an SVG by js/ui-icons.js; ::after adds the word.
    ------------------------------------------------------------------ */
 #fabRun{width:auto;min-width:64px;height:56px;padding:0 22px;border-radius:999px;
-  display:flex;align-items:center;justify-content:center;gap:9px;font-size:17px;font-weight:700;}
-#fabRun::after{content:"Run";font-family:inherit;font-weight:700;font-size:17px;}
+  display:flex;align-items:center;justify-content:center;gap:9px;font-size:17px;font-weight:var(--fw-bold);}
+#fabRun::after{content:"Run";font-family:inherit;font-weight:var(--fw-bold);font-size:var(--fs-lg);}
 #fabRun.running::after{content:"Stop";}
 #fabRun .ui-emoji{width:21px;height:21px;}
 #bottombar{align-items:center;gap:10px;}
@@ -54,7 +54,7 @@
 #actionBar .ibtn{flex:0 0 auto;width:52px;height:52px;padding:0;border:none;border-radius:var(--r-card);
   background:var(--glass-hi);color:var(--ink2);box-shadow:none;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-  font-family:inherit;font-size:9px;font-weight:800;letter-spacing:.03em;
+  font-family:inherit;font-size:var(--fs-xs);font-weight:var(--fw-bold);letter-spacing:.03em;
   transition:transform .08s,background .12s;}
 #actionBar .ibtn i{font-style:normal;}
 #actionBar .ibtn .ui-emoji{width:20px;height:20px;}
@@ -65,7 +65,7 @@
 
 #actionBar #runBtn,#actionBar #stopBtn{flex:1 1 auto;width:auto;height:58px;padding:0 20px;
   display:flex;align-items:center;justify-content:center;gap:10px;
-  border:none;border-radius:999px;font-family:inherit;font-size:18px;font-weight:700;
+  border:none;border-radius:999px;font-family:inherit;font-size:var(--fs-lg);font-weight:var(--fw-bold);
   transition:transform .1s;}
 #actionBar #runBtn{background:linear-gradient(180deg,#7fe28f,#37c85c);color:var(--green-text);
   border-bottom:5px solid var(--green-deep);
@@ -111,19 +111,19 @@
    ------------------------------------------------------------------ */
 #mgPanel{background:none;padding:0;margin:0 0 8px;}
 .mg-top{gap:10px;padding:0 0 2px;}
-.mg-top b{font-size:16.5px;font-weight:700;}
-.mg-top #mgCount{background:none;padding:0;font-size:11.5px;font-weight:600;color:var(--ink2);}
+.mg-top b{font-size:var(--fs-lg);font-weight:var(--fw-bold);}
+.mg-top #mgCount{background:none;padding:0;font-size:var(--fs-sm);font-weight:var(--fw-medium);color:var(--ink2);}
 .mg-top .ibtn{width:40px;height:40px;border-radius:var(--r-ctl);background:var(--glass-hi);
   border:none;box-shadow:none;color:var(--ink2);}
 .mg-top .ibtn:active{transform:scale(.94);background:var(--glass-on);}
-.mg-top .ibtn.wide{width:auto;min-width:44px;padding:0 12px;font-size:13.5px;font-weight:800;}
+.mg-top .ibtn.wide{width:auto;min-width:44px;padding:0 12px;font-size:var(--fs-md);font-weight:var(--fw-bold);}
 /* the goal leads the board — it is the first thing a player has to read */
-#mgGoal{margin:2px 0 10px;font-size:13px;line-height:1.5;color:#e2dbf5;}
+#mgGoal{margin:2px 0 10px;font-size:var(--fs-sm);line-height:1.5;color:#e2dbf5;}
 #mgGoal b{color:var(--accent2);}
 /* the level question, now its own node so it can be translated on its own */
 #mgGoal .mg-q{margin-inline-start:8px;color:var(--accent2);}
 #mgCanvas{border-radius:var(--r-card);border:1px solid var(--hair);}
-#mgBoardHint{margin-top:9px;font-size:12px;color:var(--ink2);}
+#mgBoardHint{margin-top:9px;font-size:var(--fs-sm);color:var(--ink2);}
 #mgCases{gap:6px;margin:0 0 9px;}
 #mgVars{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 0;}
 
@@ -153,8 +153,8 @@
    G. Sheets: one header, one close button, always in the same place
    ------------------------------------------------------------------ */
 .m-head{gap:12px;padding:6px 16px 12px;}
-.m-head h3{font-size:16.5px;}
-.m-head p{font-size:11.5px;}
+.m-head h3{font-size:var(--fs-lg);}
+.m-head p{font-size:var(--fs-sm);}
 
 /* ---------------------------------------------------------------------
    H. Legibility pass
@@ -238,7 +238,7 @@ button:focus-visible,input:focus-visible,.blk:focus-visible{outline:2px solid va
   #bottombar{gap:8px;}
   #bottombar #hubBtn{width:44px;height:44px;}
   #bottombar #hubBtn svg{width:20px;height:20px;}
-  #bottombar #codeBtn,#bottombar #buildBtn{padding:0 12px;}
+  #bottombar #codeBtn,#bottombar #buildBtn{padding:0 11px;}   /* the labels are 14.5px now (the type scale) */
   #fabRun{flex:0 0 auto;padding:0 16px;}
 }
 /* 320px (SE) has 292px of row for four controls. Code|Build close up into
@@ -248,10 +248,10 @@ button:focus-visible,input:focus-visible,.blk:focus-visible{outline:2px solid va
 @media (max-width:359px){
   #bottombar{gap:6px;}
   #bottombar #hubBtn{width:42px;height:42px;}
-  #bottombar #codeBtn,#bottombar #buildBtn{padding:0 9px;font-size:14px;gap:6px;}
+  #bottombar #codeBtn,#bottombar #buildBtn{padding:0 7px;font-size:var(--fs-md);gap:6px;}
   #bottombar #buildBtn{margin-left:-6px;}
   #fabRun{padding:0 13px;font-size:16px;}
-  #fabRun::after{font-size:16px;}
+  #fabRun::after{font-size:var(--fs-lg);}
 }
 
 #hubBody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
@@ -269,7 +269,7 @@ button:focus-visible,input:focus-visible,.blk:focus-visible{outline:2px solid va
 :root{--ink-dim:#8f83b8;}
 
 .hub-next{margin:0 0 16px;}
-.hub-nlab{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+.hub-nlab{font-size:var(--fs-xs);font-weight:var(--fw-bold);letter-spacing:.09em;text-transform:uppercase;
   color:var(--ink-dim);margin:0 0 7px 2px;}
 .hub-next .j-btn{display:flex;align-items:center;gap:10px;width:100%;
   padding:11px 13px;border-radius:var(--r-card);text-align:left;cursor:pointer;color:inherit;font:inherit;
@@ -280,15 +280,15 @@ button:focus-visible,input:focus-visible,.blk:focus-visible{outline:2px solid va
 .hub-next .j-em{font-size:22px;line-height:1;flex:0 0 auto;}
 .hub-next .j-em .ui-emoji{width:24px;height:24px;vertical-align:0;}
 .hub-next .j-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
-.hub-next .j-tx b{font-size:14px;font-weight:800;color:var(--ink);}
-.hub-next .j-tx small{font-size:11px;font-weight:600;color:var(--ink2);line-height:1.35;}
-.hub-next .j-go{flex:0 0 auto;font-size:11px;font-weight:800;color:#2b1c40;
+.hub-next .j-tx b{font-size:var(--fs-md);font-weight:var(--fw-bold);color:var(--ink);}
+.hub-next .j-tx small{font-size:var(--fs-xs);font-weight:var(--fw-medium);color:var(--ink2);line-height:1.35;}
+.hub-next .j-go{flex:0 0 auto;font-size:var(--fs-xs);font-weight:var(--fw-bold);color:#2b1c40;
   background:var(--accent2);border-radius:999px;padding:3px 9px;
   font-variant-numeric:tabular-nums;}
 
 /* J3. Three groups: play something, make something, or deal with your
    world. The group heading is the only text at this level. */
-h4.hub-sec{margin:18px 0 9px 2px;font-size:10.5px;font-weight:800;letter-spacing:.09em;
+h4.hub-sec{margin:18px 0 9px 2px;font-size:var(--fs-xs);font-weight:var(--fw-bold);letter-spacing:.09em;
   text-transform:uppercase;color:var(--ink-dim);}
 h4.hub-sec:first-child{margin-top:2px;}
 .hub-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
@@ -302,12 +302,12 @@ h4.hub-sec:first-child{margin-top:2px;}
 .hub-tile:active{transform:scale(.975);background:var(--glass-on);}
 .ht-em{font-size:23px;line-height:1;}
 .ht-em .ui-emoji{width:25px;height:25px;vertical-align:0;}
-.ht-name{margin-top:8px;font-size:14.5px;font-weight:700;line-height:1.2;}
+.ht-name{margin-top:8px;font-size:var(--fs-md);font-weight:var(--fw-bold);line-height:1.2;}
 .ht-foot{display:flex;align-items:baseline;gap:6px;margin-top:auto;padding-top:6px;}
-.ht-tag{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+.ht-tag{font-size:var(--fs-xs);font-weight:var(--fw-bold);letter-spacing:.04em;text-transform:uppercase;
   color:var(--ink-dim);font-style:normal;}
 /* the count is the only figure on the tile, so it gets the accent */
-.ht-n{margin-left:auto;font-size:11.5px;font-weight:800;font-style:normal;
+.ht-n{margin-left:auto;font-size:var(--fs-sm);font-weight:var(--fw-bold);font-style:normal;
   color:var(--accent);font-variant-numeric:tabular-nums;}
 
 /* J5. Back on the left, Exit on the right, on every header. The two were
@@ -342,22 +342,22 @@ h4.hub-sec:first-child{margin-top:2px;}
 #splash .tag{margin-bottom:22px;}
 
 /* the primary gets the space it earns */
-#playBtn{padding:18px 62px;font-size:22px;}
+#playBtn{padding:18px 62px;font-size:var(--fs-xl);}
 #splashStatus{margin-top:10px;}
 
 /* sign-in is secondary: same card, quieter glass, tighter type */
 #splashAuth{width:min(320px,84vw);margin:14px 0 0;}
 #splashAuth .sp-card{background:rgba(20,14,45,.44);border-color:rgba(255,255,255,.1);
   padding:12px;gap:7px;}
-#splashAuth .sp-h{font-size:12.5px;font-weight:600;color:#bdb2e4;}
-#splashAuth input{padding:10px 12px;font-size:14px;}
+#splashAuth .sp-h{font-size:var(--fs-sm);font-weight:var(--fw-medium);color:#bdb2e4;}
+#splashAuth input{padding:10px 12px;font-size:var(--fs-md);}
 
 /* the feature row read as five dead toggles: a strong pill with an
    unreadable 12px sprite in front of the label. Quieter pill, legible icon. */
 #splash .feats{gap:7px;margin-top:24px;max-width:360px;}
 #splash .feats>span{display:flex;align-items:center;gap:6px;
   background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.08);
-  padding:6px 13px;font-size:12px;color:#cec2ee;}
+  padding:6px 13px;font-size:var(--fs-sm);color:#cec2ee;}
 #splash .feats span .ui-emoji{width:1.4em;height:1.4em;vertical-align:-.3em;}
 /* Two to a row, always, and each pill the height its icon will make it.
    The row paints with plain emoji and ui-icons.js (the last script) swaps
@@ -374,9 +374,9 @@ h4.hub-sec:first-child{margin-top:2px;}
 @media (max-height:700px){
   #splash{padding:16px;}
   #splash .bot{font-size:56px;}
-  #splash h1{font-size:38px;margin:4px 0 0;}
-  #splash .tag{font-size:14px;margin-bottom:16px;}
-  #playBtn{padding:15px 52px;font-size:19px;}
+  #splash h1{font-size:var(--fs-xxl);margin:4px 0 0;}
+  #splash .tag{font-size:var(--fs-md);margin-bottom:16px;}
+  #playBtn{padding:15px 52px;font-size:var(--fs-lg);}
   #splashAuth{margin-top:10px;}
   #splash .feats{margin-top:16px;}
 }
@@ -385,4 +385,4 @@ h4.hub-sec:first-child{margin-top:2px;}
    J. Editor: the empty program should look like a place, not a gap
    ------------------------------------------------------------------ */
 #programWrap .empty{margin:6px 0;padding:30px 18px;
-  border:1.5px dashed rgba(255,255,255,.13);border-radius:var(--r-card);font-size:13.5px;}
+  border:1.5px dashed rgba(255,255,255,.13);border-radius:var(--r-card);font-size:var(--fs-md);}

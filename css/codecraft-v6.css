@@ -28,7 +28,7 @@
    from twitching by 2px when a chip that happens to be the tallest — ⭐ and
    its XP bar — folds away on a narrow screen. */
 #topbar #stats{flex-wrap:nowrap;gap:0;max-width:100%;min-height:42px;}
-#stats .chip{padding:5px 8px;font-size:12.5px;gap:4px;}
+#stats .chip{padding:5px 8px;font-size:var(--fs-sm);gap:4px;}
 /* the hairline divider styles.css already draws — the 600px breakpoint
    switched it off because the pill used to wrap; it does not any more */
 #stats .chip+.chip::before{display:block;}
@@ -39,7 +39,7 @@
 
 @media (max-width:600px){
   #topbar #stats{flex-wrap:nowrap;border-radius:999px;gap:0;}
-  #stats .chip{padding:5px 8px;font-size:12.5px;}
+  #stats .chip{padding:5px 8px;font-size:var(--fs-sm);}
   #stats .chip+.chip::before{display:block;}
 }
 
@@ -47,7 +47,7 @@
 #topbar #stats #ticker{position:static;order:9;display:flex;flex:0 0 auto;margin:0;padding:0;}
 /* min-height, not more padding: 32px inside the pill's own 3px keeps the
    handle a real tap target without making the pill taller than 42px */
-#stats #ticker .tk-btn{padding:5px 8px;gap:4px;font-size:12px;font-weight:800;
+#stats #ticker .tk-btn{padding:5px 8px;gap:4px;font-size:var(--fs-sm);font-weight:var(--fw-bold);
   min-height:32px;border:none;box-shadow:none;border-radius:999px;
   background:rgba(255,184,48,.16);color:var(--accent2);}
 #stats #ticker .tk-btn .tk-car{display:none;}   /* the caret costs 14px and says nothing */
@@ -67,7 +67,7 @@
 #stats #ticker{flex-direction:row;align-items:center;gap:4px;}
 #stats #ticker .tk-ord{
   pointer-events:auto;display:inline-flex;align-items:center;font-family:inherit;
-  padding:5px 8px;min-height:32px;font-size:12px;font-weight:800;
+  padding:5px 8px;min-height:32px;font-size:var(--fs-sm);font-weight:var(--fw-bold);
   border:none;box-shadow:none;border-radius:999px;
   background:rgba(122,77,255,.28);color:var(--ink);
   transition:transform .09s;}

@@ -938,9 +938,19 @@ function mgFitBoard(aspect){
      nothing). At half height it is the one row of tools that has to
      show; the notes under it scroll. */
   const toolRow=making&&half?dock.querySelector(".cb-row.tools"):null;
-  const dockH=making?Math.ceil((toolRow||dock).getBoundingClientRect().height):0;
+  /* everything in the strip down to the bottom of the tools, measured, not
+     guessed: the status line above them and the strip's own padding were an
+     "+8" that held until the type scale made those lines fractional, and the
+     tray came out a pixel and a quarter below the tab (design-audit stage 2) */
+  let dockH=0;
+  if(making&&toolRow) dockH=Math.ceil(toolRow.getBoundingClientRect().height)+6;   // half: the one row; what is above it scrolls
+  else if(making){
+    let above=parseFloat(getComputedStyle(read).paddingTop)||0;
+    for(const el of read.children){ if(el===dock)break; if(el.offsetParent)above+=el.getBoundingClientRect().height; }
+    dockH=Math.ceil(above+dock.getBoundingClientRect().height);
+  }
   const want=making
-    ? Math.min(natural,Math.max(dockH+8,Math.round(room*(half?.35:.5))))
+    ? Math.min(natural,Math.max(dockH+2,Math.round(room*(half?.35:.5))))
     : Math.min(Math.round(room*.30),64);
   const capH=Math.max(72,room-want);
   /* no floor under the width: a floor here would put the height back over

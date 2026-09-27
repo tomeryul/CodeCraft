@@ -110,6 +110,12 @@ before any change to navigation, notifications or the structure of a
 screen. `docs/ux-roadmap.md` is the work it found, in topics — take the
 next one, fix it, re-run `scripts/ux-audit.js`, record the numbers there.
 
+**Type is six sizes and three weights** — `--fs-xs/sm/md/lg/xl/xxl` and
+`--fw-regular/medium/bold` in `css/apple.css`. Write the token, never a
+number: `test/design.js` walks the pages and fails on any text off the
+scale. Emoji and icon glyphs are sized to their box and are not type.
+`docs/design-audit.md` is the page-by-page audit and its plan.
+
 A new game is quiet on purpose (topic 7): the market sleeps — no orders,
 events, news or ticker — until the Academy is graduated or level 3
 (`marketAwake()` in `js/game/economy.js`), and day one's gift is the

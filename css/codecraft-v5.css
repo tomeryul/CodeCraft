@@ -32,11 +32,13 @@
   flex:1;min-width:0;text-align:center;
 }
 .m-head h3,#editor .v5-head b{
-  margin:0;font-size:16.5px;font-weight:700;line-height:1.2;color:var(--ink);
+  margin:0;font-size:var(--fs-lg);font-weight:var(--fw-bold);line-height:1.2;color:var(--ink);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;
 }
 .m-head p,#editor .v5-head small{
-  margin:2px 0 0;font-size:11.5px;font-weight:600;line-height:1.35;color:var(--ink2);
+  /* 1.25 at 12.5px: two lines take what two lines at 11.5px/1.35 took, so
+     the one header height holds (stable.js) */
+  margin:2px 0 0;font-size:var(--fs-sm);font-weight:var(--fw-medium);line-height:1.25;color:var(--ink2);
   display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;
 }
 /* One line left ~240px between two 40px buttons, and four of the eleven
@@ -76,7 +78,7 @@
 }
 .shopitem button,#settingsList button{
   height:40px;padding:0 15px;border-radius:var(--r-ctl);
-  font-family:inherit;font-size:13px;font-weight:700;color:var(--ink);
+  font-family:inherit;font-size:var(--fs-sm);font-weight:var(--fw-bold);color:var(--ink);
   background:var(--glass-hi);border:1px solid var(--hair);
   transition:transform .08s,background .12s;
 }
@@ -120,7 +122,7 @@
 #editor #tabs button{
   flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
   padding:8px 0 7px;border-radius:var(--r-card);background:none;
-  font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  font-size:var(--fs-xs);font-weight:var(--fw-bold);letter-spacing:.04em;text-transform:uppercase;
   color:var(--ink-dim);
 }
 #editor #tabs button .ui-emoji{width:19px;height:19px;vertical-align:0;}
@@ -133,7 +135,7 @@
   flex:0 0 auto;width:52px;height:52px;padding:0;border:none;border-radius:var(--r-card);
   background:var(--glass-hi);color:var(--ink2);box-shadow:none;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-  font-family:inherit;font-size:14px;font-weight:800;
+  font-family:inherit;font-size:var(--fs-md);font-weight:var(--fw-bold);
 }
 #editor:not(.mg) #actionBar #mgSpeedBtn{display:none;}
 #actionBar #mgSpeedBtn:active{transform:scale(.94);background:var(--glass-on);}
@@ -178,8 +180,8 @@
   display:flex;align-items:center;justify-content:center;font-size:21px;
 }
 .shopitem .em .ui-emoji{width:25px;height:25px;vertical-align:0;}
-.shopitem .tx b{font-size:14.5px;font-weight:700;line-height:1.25;}
-.shopitem .tx small{font-size:12px;line-height:1.42;margin-top:5px;}
+.shopitem .tx b{font-size:var(--fs-md);font-weight:var(--fw-bold);line-height:1.25;}
+.shopitem .tx small{font-size:var(--fs-sm);line-height:1.42;margin-top:5px;}
 .shopitem>button,.shopitem>div:last-child:not(.tx):not(.em){align-self:center;}
 
 /* the row v5-ui.js builds at the top of the Blocks tab: which robot,
