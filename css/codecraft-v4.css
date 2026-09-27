@@ -359,6 +359,15 @@ h4.hub-sec:first-child{margin-top:2px;}
   background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.08);
   padding:6px 13px;font-size:12px;color:#cec2ee;}
 #splash .feats span .ui-emoji{width:1.4em;height:1.4em;vertical-align:-.3em;}
+/* Two to a row, always, and each pill the height its icon will make it.
+   The row paints with plain emoji and ui-icons.js (the last script) swaps
+   them for drawn icons half a second later; the icons are wider, so a
+   flowing row re-wrapped from two lines to three and the whole centred
+   splash jumped (layout shift 0.15 on a cold load). A fixed shape does not
+   care how wide a glyph is. */
+#splash .feats{display:grid;grid-template-columns:repeat(2,max-content);justify-content:center;}
+#splash .feats>span{min-height:calc(1.4em + 14px);justify-content:center;}  /* icon + padding + border */
+#splash .feats>span:last-child:nth-child(odd){grid-column:1 / -1;justify-self:center;}
 
 /* a short viewport (landscape phone, small laptop) pushed Play and the
    features below the fold. Compress the vertical rhythm instead. */

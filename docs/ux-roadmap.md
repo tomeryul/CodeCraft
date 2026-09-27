@@ -127,7 +127,21 @@ draws under a full sheet 60/s → **0**; ticker and journey rebuilds at idle
   one runs the Hebrew and icon observers.
 - Tower's `mgDraw` sets the canvas size on every draw.
 
-## 7. First session and the HUD
+## 7. First session and the HUD  ✅ v191
+*Done:* a brand-new player meets lesson 1 and nothing else. Day one's
+gift is in the starting purse (25 🪙) instead of a full-screen card — the
+daily gift starts the next day, as Day 2; the market sleeps (no orders,
+rushes, "market wants…" news, not even its ticker) until the player
+graduates the Academy or reaches level 3, and wakes quietly — its clocks
+start then, the first order six seconds later; a returning player's "while
+you were away" joins the same queue as the gift instead of landing on it.
+The splash chips hold one shape (two to a row, each the height its icon
+makes it), so the icon swap no longer re-wraps them. The HUD item turned
+out not to be a problem (see 2). `test/first-session.js`.
+*Measured:* things to dismiss before the first block 1 → **0**, and before
+the first calm look at the world 2 (gift card, order) → **0**; layout shift
+loading the splash **0.151 → 0.015** (the cause was the icon swap, not the
+font).
 *Skill §6, §7*
 
 - First run: lesson 1 opens, then the daily gift, then a market order —

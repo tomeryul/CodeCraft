@@ -3,10 +3,14 @@
 function newGame(){
   seed=(Math.random()*1e9)|0;
   buildTerrain();genObjects();genAnimals();
-  coins=0;stash={wood:0,stone:0,iron:0,crystal:0,water:0};
+  coins=25;stash={wood:0,stone:0,iron:0,crystal:0,water:0};
   totals={collected:0,earned:0,dist:0};
   unlocks={loops:false,logic:false,smart:false,vars:false,team:false};
-  player={xp:0,level:1,quests:[],lastGift:"",days:0,projects:{},projPrograms:{},myChallenges:[],academy:{},funcLib:[]};
+  /* Day one's gift is in the starting purse instead of a card: a first
+     session is one thing at a time, and a reward the player did nothing to
+     earn is not that thing (game-app-design §7). The daily gift starts
+     tomorrow, as Day 2. `fresh` keeps the market asleep until graduation. */
+  player={xp:0,level:1,quests:[],lastGift:new Date().toDateString(),days:1,projects:{},projPrograms:{},myChallenges:[],academy:{},funcLib:[],fresh:true};
   skills=freshSkills();
   robots=[makeRobot(homePos.x-1,homePos.y+1,"Robo-1")];
   market=freshMarket();
@@ -33,7 +37,9 @@ function startGame(){
   if(isNew&&typeof academyComplete==="function"&&!academyComplete())
     setTimeout(()=>academyStart(),750);
   else if(!tut.done)setTimeout(()=>tutSet(1),800);
-  if(pendingAway){const msg=pendingAway;pendingAway=null;setTimeout(()=>bigToast(msg),1400);}
+  /* world news like any other: it waits for a calm world and its turn in
+     the queue, behind the daily gift, instead of landing on top of it */
+  if(pendingAway){const msg=pendingAway;pendingAway=null;worldNews(msg,true);}
   setTimeout(dailyGift,tut.done?900:9000);
 }
 let entering=false;

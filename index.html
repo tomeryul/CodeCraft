@@ -22,6 +22,10 @@
 <link rel="icon" href="./icon-192.png?v=4">
 <meta name="description" content="CodeCraft — an open-world game where kids learn programming by automating robots, building factories and shaping a living world.">
 <title>CodeCraft — Program Your World</title>
+<!-- the face every first screen is set in, fetched with the page rather than
+     discovered in the stylesheet, so a cold load is less likely to paint the
+     splash in a fallback face and then re-set it -->
+<link rel="preload" href="./fonts/fredoka-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="./css/styles.css">
 <link rel="stylesheet" href="./css/codecraft-v4.css">
   <link rel="stylesheet" href="./css/codecraft-v5.css">

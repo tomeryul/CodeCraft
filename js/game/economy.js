@@ -39,6 +39,16 @@ function freshMarket(){
   };
 }
 function marketReady(){ if(!market)market=freshMarket(); return market; }
+/* A brand-new player's first minutes are the Academy, and nothing else
+   (game-app-design §7): no orders on a clock, no rushes, no "the market
+   wants…" news, not even the ticker in the HUD. The market wakes when they
+   graduate — or reach level 3 some other way — and stays awake. A save from
+   before this rule has no `fresh`, so it is awake already. */
+function marketAwake(){
+  if(!player.fresh)return true;
+  if((typeof academyComplete==="function"&&academyComplete())||player.level>=3){player.fresh=false;return true;}
+  return false;
+}
 
 // what one unit sells for RIGHT NOW: the drifting price, x the most-wanted
 // premium, x any 📣 Rush spike. This is the number 📖 Read reports, so what the
@@ -70,6 +80,7 @@ function marketTick(){
       m.prices[k]=Math.min(base*1.9,Math.max(base*0.45,(m.prices[k]||base)+step));
     }
   }
+  if(!marketAwake())return;   // prices drift quietly; nothing is announced
   if(!m.wantAt)m.wantAt=now+MKT_WANT_MS;
   if(now>=m.wantAt){
     m.wantAt=now+MKT_WANT_MS;
@@ -264,7 +275,7 @@ function mktClock(t){
 function renderMarket(){
   const el=$("ticker");if(!el)return;
   const m=marketReady();
-  const showing=!$("editor").classList.contains("open")&&!$("projects").classList.contains("open");
+  const showing=marketAwake()&&!$("editor").classList.contains("open")&&!$("projects").classList.contains("open");
   el.style.display=showing?"":"none";
   if(!showing)return;
   const ev=m.event&&now<m.event.until?m.event:null;
