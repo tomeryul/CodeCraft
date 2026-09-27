@@ -90,8 +90,9 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
 
   // and after the reload the game really is fresh
   await pg.waitForTimeout(900);
-  const fresh = await pg.evaluate(()=>({coins, lvl:player.level, save:!!localStorage.getItem(SAVE_KEY)}));
-  ck('the game comes back as a brand-new player', fresh.coins===0 && fresh.lvl===1, fresh);
+  const fresh = await pg.evaluate(()=>({coins, lvl:player.level, isNew:player.fresh===true, save:!!localStorage.getItem(SAVE_KEY)}));
+  /* a new game starts with day one's gift, 25 🪙, in the purse (first-session.js) */
+  ck('the game comes back as a brand-new player', fresh.coins===25 && fresh.lvl===1 && fresh.isNew, fresh);
 
   console.log('  pageerrors:', errs.length?errs.slice(0,3).join(' | '):'none');
   ck('no uncaught exceptions', errs.length===0);
