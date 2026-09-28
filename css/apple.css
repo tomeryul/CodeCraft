@@ -241,7 +241,7 @@ b,strong{font-weight:var(--fw-bold);}
 /* the designer's buttons were solid --panel3, a purple, from one blanket
    rule — secondary, like everything else that is not the screen's one job.
    The tools keep their own look, and anything chosen keeps its "on". */
-#mgCreatorBar button:not(.tool):not(.on):not(.lvchip):not(.cy-help){
+#mgCreatorBar button:not(.tool):not(.on):not(.lvchip):not(.cy-help):not(.ds-head){
   background:var(--glass-hi) !important;border:1px solid var(--hair) !important;box-shadow:none !important;color:var(--ink) !important;
 }
 /* danger keeps its red; and it is as tall as the choice beside it */

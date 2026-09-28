@@ -641,7 +641,9 @@ body.sheets-full #maker.sized,
 .dsec .ds-in{overflow:hidden;min-height:0;display:flex;flex-direction:column;gap:8px;
   padding:0 12px;visibility:visible;transition:visibility 0s;}
 .dsec.shut .ds-in{visibility:hidden;transition:visibility 0s linear var(--dur-move);}
-.dsec:not(.shut) .ds-in{padding-bottom:12px;}
+/* open, it is inset on all four sides: with no top padding the first row
+   sat flush against the heading above it */
+.dsec:not(.shut) .ds-in{padding-top:4px;padding-bottom:12px;}
 @media (prefers-reduced-motion:reduce){
   .dsec .ds-body,.dsec .ds-chev,.dsec .ds-in{transition:none;}
 }
@@ -825,6 +827,12 @@ body.sheets-full #maker.sized,
    names. The label is the point of a number nobody can guess. */
 #mgCreatorBar .stprow{gap:6px;}
 #mgCreatorBar .stprow .stp{flex:1 1 auto;justify-content:space-between;}
+/* One fixed shape, not whatever the width wraps to: on a wide phone the
+   budget and Width shared a row and Height was left alone, stretched
+   across it. The budget is its own line; Width and Height are a pair. */
+#mgCreatorBar .stprow{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+#mgCreatorBar .stprow .stp:first-child{grid-column:1 / -1;}
+#mgCreatorBar .stprow .stp{min-width:0;}
 #mgCreatorBar .stp .clab{white-space:nowrap;}
 /* designing is not writing: the Blocks hint belongs to playing a level */
 #mgPanel.mk #mgBoardHint{display:none;}
