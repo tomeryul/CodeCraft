@@ -196,7 +196,7 @@ function shop(){
   back.addEventListener("click",()=>{close();if(has("hubOpen"))setTimeout(hubOpen,120);});
 
   const t=document.createElement("div");
-  t.innerHTML='<h3>🛒 Robo-Mart</h3><p>Sell at the 🏪 market, then upgrade your robots.</p>';
+  t.innerHTML='<h3>🛒 Robo-Mart</h3><p>Upgrade your robots.</p>';
 
   const x=document.createElement("button");
   x.className="iconbtn x";x.textContent="✕";

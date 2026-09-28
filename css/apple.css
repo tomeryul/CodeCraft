@@ -168,6 +168,88 @@ b,strong{font-weight:var(--fw-bold);}
 :root:not([lang="he"]) .m-head h3{
   letter-spacing:-.015em;
 }
+/* ONE section title (docs/design-audit.md, stage 3). The menu's groups,
+   every page's bands, the Academy's two groups, the Cyber chapters, the
+   block palette, the lesson card and the web-page maker each drew their
+   own — eight styles, in three sizes and four colours. A section title is
+   a label: small, bold, uppercase, the secondary ink. The !important is
+   deliberate and scoped to these few properties: the old rules are
+   id-scoped all over, and this is the one place that decides. */
+:is(#hub .hub-sec,#hub .hub-nlab,.sheet h4.qsec,#projList .acad-grp,#projList .t3title,
+    #projList .cy-act-n,#palette h4,#maker .mk-sect,#mgLesson .ls-sec){
+  font-size:var(--fs-xs) !important;font-weight:var(--fw-bold) !important;
+  text-transform:uppercase !important;color:var(--ink2) !important;
+}
+:root:not([lang="he"]) :is(#hub .hub-sec,#hub .hub-nlab,.sheet h4.qsec,#projList .acad-grp,#projList .t3title,
+    #projList .cy-act-n,#palette h4,#maker .mk-sect,#mgLesson .ls-sec){ letter-spacing:.08em !important; }
+:root[lang="he"] :is(#hub .hub-sec,#hub .hub-nlab,.sheet h4.qsec,#projList .acad-grp,#projList .t3title,
+    #projList .cy-act-n,#palette h4,#maker .mk-sect,#mgLesson .ls-sec){ letter-spacing:0 !important; }
+/* A page that is ONE list does not title the list again under its own
+   name: "Academy" and then "ACADEMY — LEARN THE BASICS". The pages that
+   keep theirs say something the header does not (Account's "Your save"),
+   or carry a control (Community's ↻). */
+#projects:is([data-page="academy"],[data-page="puzzles"],[data-page="builds"]) #projList > h4.qsec,
+#projects:is([data-page="tower"],[data-page="cyber"]) #projList .t3sec > .t3head{ display:none; }
+
+/* ---------------------------------------------------------------------
+   BUTTONS — one system (docs/design-audit.md, stage 4)
+   ---------------------------------------------------------------------
+   There were 59 kinds: the main action in eight shapes and four colours,
+   an amber circle that meant "play" in one list and "download" in the
+   next, a secondary button in five heights. Six kinds, each with one job:
+
+   primary    green, a pill — the one thing this screen is for. One per
+              screen. (Play, Run, Next lesson, Send, Save, Keep my account)
+   play       the amber circle on a row: play THIS. Nothing else is amber
+              and round.
+   secondary  glass, 40px, the control radius — everything else you tap
+   danger     red glass — it cannot be undone
+   quiet      words with a 44px target — "Not now", the way out
+   tab        one bar of tabs (the editor's), wherever there are tabs
+
+   Purple is not a button colour any more: it means "selected". */
+:root{
+  --btn-primary:linear-gradient(180deg,#7fe28f,#37c85c);
+  --btn-primary-ink:var(--green-text,#0b3d1c);
+}
+/* primary */
+.cc-cta,#askrow button,#askSend,.del-actions #delCancel,#mkSaveBtn{
+  background:var(--btn-primary) !important;color:var(--btn-primary-ink) !important;
+  border:none !important;box-shadow:none !important;font-weight:var(--fw-bold) !important;
+}
+.cc-cta,.del-actions #delCancel{ border-radius:999px !important;min-height:48px; }
+/* the sign-in pair are two equal choices on a screen whose one job is Play */
+#splashAuth .authbtn.go{ background:var(--glass-hi) !important;border:1px solid var(--hair) !important;color:var(--ink) !important; }
+/* play circle only for ▶ — every other badge is the quiet circle */
+.pcard .pbadge.pb-alt{ background:var(--glass-hi);color:var(--ink);border:1px solid var(--hair);box-shadow:none; }
+/* secondary: one height, one radius, one weight */
+#splashAuth .authbtn,.ord-go,.ord-code,.qsec .secbtn,#undoBtn,#redoBtn,
+#designTab .rowbtn,#designTab .cb-act button:not(.tool),#mgCreatorBar .rowbtn,#funcLibBody .fl-save{
+  min-height:40px;border-radius:var(--r-ctl) !important;font-size:var(--fs-sm);font-weight:var(--fw-bold);
+}
+.ord-go,.ord-code,#designTab .rowbtn,#mgCreatorBar .rowbtn{
+  background:var(--glass-hi) !important;color:var(--ink) !important;border:1px solid var(--hair) !important;
+  box-shadow:none !important;
+}
+.qsec .secbtn{ width:40px;height:40px;padding:0; }
+#funcLibBody .fl-save .rowbtn{ min-height:40px; }
+#maker .fe-go{ background:var(--glass-hi) !important;border:1px solid var(--hair) !important;color:var(--ink) !important;
+  border-radius:var(--r-ctl) !important; }
+/* tab: one bar. The Board tab was amber when chosen and every other tab
+   glass — a second idea of "selected" on the same bar. */
+#editor #tabs #boardTabBtn.on,#editor #tabs #designTabBtn.on{ background:var(--glass-on) !important;color:var(--ink) !important; }
+/* the designer's buttons were solid --panel3, a purple, from one blanket
+   rule — secondary, like everything else that is not the screen's one job.
+   The tools keep their own look, and anything chosen keeps its "on". */
+#mgCreatorBar button:not(.tool):not(.on):not(.lvchip):not(.cy-help){
+  background:var(--glass-hi) !important;border:1px solid var(--hair) !important;box-shadow:none !important;color:var(--ink) !important;
+}
+/* danger keeps its red; and it is as tall as the choice beside it */
+.del-actions .authbtn.danger{ min-height:48px;border-radius:999px; }
+/* quiet: the way out is still a target a thumb can hit */
+.cc-alt{ min-height:44px;padding:0 20px !important;border-radius:var(--r-ctl);color:var(--ink2) !important; }
+.cc-alt:active{ background:var(--glass-hi);opacity:1; }
+
 /* Numbers are numbers in both languages. Anywhere digits line up in a
    column they also line up with each other. */
 #stats .chip,#mgCount,#mgBudget,#mgW,#mgH,.num,.ht-n,.pmeta{
@@ -205,7 +287,16 @@ b,strong{font-weight:var(--fw-bold);}
    under it by 14px — a jump nobody asked for. The taller of the two is the
    height for all of them, so a page's content starts at the same place on
    every page. */
-.sheet > .m-head{ min-height:calc(var(--grip-zone) + 65px); }
+/* ONE header, 71px everywhere: the grip, a row of 40px controls, 10px
+   under it. The pages were 85 (room for a two-line subtitle), the level
+   and the editor 71 and 75 — three heights for one component, and the
+   level's is the one that pays in board (docs/design-audit.md, stage 3).
+   So the subtitle is one line, and says it in one line. */
+.sheet > .m-head,#shopWrap .m-head,#editor .v5-head{ height:calc(var(--grip-zone) + 51px); min-height:0; box-sizing:border-box; }
+.m-head p,#editor .v5-head small{ -webkit-line-clamp:1 !important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block !important; }
+/* and a title is words: the emoji in front of some (not others) made a
+   header a different shape on every page */
+.m-head h3 .ui-emoji,#editor .v5-head b .ui-emoji{ display:none; }
 .sheet.grabbable > .m-head::before,
 .sheet.grabbable > .v5-head::before,
 .sheet.grabbable > .ed-head::before{

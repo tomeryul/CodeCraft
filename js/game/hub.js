@@ -33,14 +33,14 @@ const num=fn=>{try{const v=fn();return v==null?null:v;}catch(_){return null;}};
    key -> which band of #projList belongs to it, and what to call it.
    The band keys come from bandKey() below. */
 const PAGES={
-  academy  :{em:"🎓",title:"Academy",     sub:"Short lessons, in order. Each one teaches a block you will need.",bands:["academy"]},
-  puzzles  :{em:"🧩",title:"Puzzle Chapters",sub:"A flat board and one new trick per chapter.",bands:["puzzles"]},
-  builds   :{em:"🏗️",title:"Build Projects",sub:"A blueprint to fill in. What you finish appears in your world.",bands:["builds"]},
-  tower    :{em:"🧊",title:"Tower Mode — 3D",sub:"The same board with height. Stack, climb, and rebuild the blueprint in 3D.",bands:["tower"]},
-  cyber    :{em:"🔐",title:"Cyber Lab",     sub:"What makes a secret a secret — locks, codes and notes that lie.",bands:["cyber"]},
-  mine     :{em:"🛠️",title:"My Challenges",sub:"Levels you designed — flat boards and towers.",bands:["mine","tower"]},
+  academy  :{em:"🎓",title:"Academy",     sub:"A short lesson for every block.",bands:["academy"]},
+  puzzles  :{em:"🧩",title:"Puzzle Chapters",sub:"One new trick per chapter.",bands:["puzzles"]},
+  builds   :{em:"🏗️",title:"Build Projects",sub:"Finish one, it joins your world.",bands:["builds"]},
+  tower    :{em:"🧊",title:"Tower Mode — 3D",sub:"The same board, with height.",bands:["tower"]},
+  cyber    :{em:"🔐",title:"Cyber Lab",     sub:"Locks, codes and notes that lie.",bands:["cyber"]},
+  mine     :{em:"🛠️",title:"My Challenges",sub:"Levels you designed.",bands:["mine","tower"]},
   community:{em:"🌍",title:"Community",   sub:"Levels other players published.",bands:["community"]},
-  account  :{em:"👤",title:"Account & save",sub:"Sign in to keep your world on every device. Export a copy any time.",bands:[],auth:true}
+  account  :{em:"👤",title:"Account & save",sub:"Keep your world on every device.",bands:[],auth:true}
 };
 
 /* ---------------- the menu ----------------

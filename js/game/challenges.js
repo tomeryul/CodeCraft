@@ -180,7 +180,10 @@ function ccCard(parent,o){
     '<div class="pmain"><div class="pname">'+o.name+(o.stars?' <s>'+o.stars+'</s>':'')+'</div>'+
     (o.meta?'<div class="pmeta">'+o.meta+'</div>':'')+
     (o.desc?'<div class="pdesc">'+o.desc+'</div>':'')+'</div>'+
-    '<div class="pgo"><span class="pbadge">'+(o.badge||"▶")+'</span></div>';
+    /* the amber circle means "play this", and only that: a ＋, a ⤓ or a 📖
+       is another kind of action and gets the quiet circle (design-audit
+       stage 4) */
+    '<div class="pgo"><span class="pbadge'+(o.badge&&o.badge!=="▶"?" pb-alt":"")+'">'+(o.badge||"▶")+'</span></div>';
   if(!o.locked&&o.onTap)d.addEventListener("click",o.onTap);
   parent.appendChild(d);
   return d;

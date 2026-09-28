@@ -552,7 +552,10 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   .iconbtn{width:40px;height:40px;font-size:17px;border-radius:var(--r-ctl);}
   #tbBtns{flex-direction:column;}
   #stats{max-width:calc(100% - 52px);}
-  #toasts{top:calc(var(--sat) + 108px);}
+  /* one lane, still — but under where a full-height page's header ends
+     (51px + the 71px header), so a toast never sits on a page's title
+     (docs/design-audit.md, stage 3) */
+  #toasts{top:calc(var(--sat) + 128px);}
   .toast{max-width:66vw;}
   .ed-btns{gap:5px;}
   .ed-btns button{width:33px;height:33px;font-size:var(--fs-md);border-radius:var(--r-ctl);}

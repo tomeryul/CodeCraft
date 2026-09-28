@@ -51,12 +51,39 @@ const WEIGHTS = ['400', '600', '700'];
         off.push(name + ': ' + (e.id ? '#' + e.id : e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]) +
           ' ' + cs.fontSize + '/' + cs.fontWeight + ' "' + e.textContent.trim().slice(0, 24) + '"');
     }
-    return { sizes: [...sizes], weights: [...weights], off };
+    /* stage 3: section titles, the header; stage 4: buttons */
+    const vis = e => { const r = e.getBoundingClientRect(); return r.width > 1 && r.height > 1 && getComputedStyle(e).visibility !== 'hidden'; };
+    const secs = [...document.querySelectorAll('#hub .hub-sec,#hub .hub-nlab,.sheet h4.qsec,#projList .acad-grp,#projList .t3title,#projList .cy-act-n,#palette h4,#maker .mk-sect,#mgLesson .ls-sec')]
+      .filter(vis).map(e => { const c = getComputedStyle(e); return c.fontSize + ' ' + c.fontWeight + ' ' + c.textTransform + ' ' + c.color; });
+    const sheet = [...document.querySelectorAll('.sheet.open,#shopWrap.open')].pop();
+    const hd = sheet && (sheet.querySelector(':scope > .m-head') || sheet.querySelector('.m-head') || sheet.querySelector('.v5-head'));
+    let head = null;
+    if (hd && vis(hd)) {
+      const sub = hd.querySelector('p,small'), ttl = hd.querySelector('h3,b');
+      head = { h: Math.round(hd.getBoundingClientRect().height),
+        subCut: !!sub && vis(sub) && sub.scrollWidth > sub.clientWidth + 1,
+        titleIcon: !!ttl && [...ttl.querySelectorAll('.ui-emoji')].some(vis) };
+    }
+    /* the amber circle is "play this" — a ▶, or a row already done / locked */
+    const amber = [...document.querySelectorAll('.pcard .pbadge')].filter(vis).filter(e => {
+      const c = getComputedStyle(e); return c.backgroundImage !== 'none' && !e.closest('.done,.locked'); })
+      .map(e => { const ic = e.querySelector('.ui-emoji'); return ((ic && ic.dataset.e) || e.textContent).trim(); })   // an icon keeps its glyph in data-e
+      .filter(t => t !== '▶');
+    /* purple is "selected", never a button's resting colour */
+    const purple = [...document.querySelectorAll('button')].filter(vis).filter(b => !b.classList.contains('on') && !b.closest('#routineTabs,#ticker')).filter(b => {
+      const c = getComputedStyle(b), bg = c.backgroundImage + ' ' + c.backgroundColor;
+      return /(155, 107, 255|122, 77, 255|95, 52, 214|69, 58, 119)/.test(bg); })
+      .map(b => (b.id ? '#' + b.id : '.' + String(b.className).split(' ')[0]) + ' "' + b.textContent.trim().slice(0, 18) + '"');
+    return { sizes: [...sizes], weights: [...weights], off, secs, head, amber, purple };
   }, [name, SIZES, WEIGHTS]);
 
   console.log('▶ every page is set in the six sizes and three weights');
-  const seen = { sizes: new Set(), weights: new Set(), off: [] };
-  const add = s => { s.sizes.forEach(x => seen.sizes.add(x)); s.weights.forEach(x => seen.weights.add(x)); seen.off.push(...s.off); };
+  const seen = { sizes: new Set(), weights: new Set(), off: [], secs: new Set(), heads: {}, cut: [], icon: [], amber: [], purple: [] };
+  let where = '';
+  const add = s => { s.sizes.forEach(x => seen.sizes.add(x)); s.weights.forEach(x => seen.weights.add(x)); seen.off.push(...s.off);
+    s.secs.forEach(x => seen.secs.add(x));
+    if (s.head) { seen.heads[where] = s.head.h; if (s.head.subCut) seen.cut.push(where); if (s.head.titleIcon) seen.icon.push(where); }
+    s.amber.forEach(t => seen.amber.push(where + ': ' + t)); s.purple.forEach(t => seen.purple.push(where + ': ' + t)); };
   add(await survey('age gate'));
   await pg.selectOption('#ageMonth', '6');
   await pg.selectOption('#ageYear', String(new Date().getFullYear() - 30));
@@ -83,7 +110,7 @@ const WEIGHTS = ['400', '600', '700'];
       $('shopWrap').classList.remove('open'); if (mgState) mgExit(false); navHome(); });
     await wait(250);
     await pg.evaluate(js); await wait(700);
-    add(await survey(name));
+    where = name; add(await survey(name));
   }
   await pg.evaluate(() => { setTab('design'); }); await wait(400);
   add(await survey('the designer, design tab'));
@@ -96,6 +123,34 @@ const WEIGHTS = ['400', '600', '700'];
   ck('text comes in at most the six sizes and the wordmark (it was 16)', sizes.every(s => SIZES.includes(s)), sizes);
   ck('and in three weights — Fredoka has no heavier (it was 5)', [...seen.weights].every(w => WEIGHTS.includes(w)), [...seen.weights]);
   ck('nothing on any page is off the scale', seen.off.length === 0, seen.off.slice(0, 10));
+
+  console.log('▶ stage 3 — one section title, one header');
+  ck('every section title on every page is the same label (it was 8 styles)', seen.secs.size === 1, [...seen.secs]);
+  const hs = new Set(Object.values(seen.heads));
+  ck('every page header is the same height (it was 85, 75 and 71)', hs.size === 1, seen.heads);
+  ck('no header subtitle is cut — each says it in one line', seen.cut.length === 0, seen.cut);
+  ck('a page title is words, with no icon in front', seen.icon.length === 0, seen.icon);
+
+  console.log('▶ stage 4 — one set of buttons');
+  ck('the amber circle on a row only ever means "play this"', seen.amber.length === 0, seen.amber);
+  ck('no button rests in purple — purple means "selected"', seen.purple.length === 0, seen.purple.slice(0, 6));
+  const B = await pg.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const bg = e => { const c = getComputedStyle(e); return c.backgroundImage !== 'none' ? c.backgroundImage : c.backgroundColor; };
+    const green = e => !!e && /(127, 226, 143|55, 200, 92|46, 158, 74|84, 214, 106)/.test(bg(e));
+    const out = {};
+    document.querySelectorAll('#ccCele').forEach(e => e.remove());
+    CC_EXTRAS.celebrate('✅', 'Lesson 1 of 10', 'First Steps', 'Next', 'Next lesson ▶', { alt: 'Not now' }); await wait(500);
+    out.cta = green(document.querySelector('#ccCele .cc-cta'));
+    const alt = document.querySelector('#ccCele .cc-alt'); out.altH = alt ? Math.round(alt.getBoundingClientRect().height) : 0;
+    document.querySelectorAll('#ccCele').forEach(e => e.remove());
+    navHome(); $('mentor').classList.add('open'); await wait(400);
+    out.send = green($('askSend') || document.querySelector('#askrow button'));
+    navHome(); await wait(300);
+    return out;
+  });
+  ck('the main action is green: the win card\'s Next, and Send to Byte', B.cta && B.send, B);
+  ck('"Not now" is a quiet button a thumb can hit (44px), not bare words', B.altH >= 44, B);
 
   ck('no uncaught exceptions', errs.length === 0, errs.slice(0, 3));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

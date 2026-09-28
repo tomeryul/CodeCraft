@@ -73,11 +73,9 @@ const HE={
 "Harder coding challenges — finished builds appear in your world!":
   "אתגרי תכנות קשים יותר — מה שתסיים לבנות מופיע בעולם שלך!",
 "Design a great challenge":"לעצב אתגר טוב",
-"Six rules, then five boards to start from.":"שישה כללים, ואז חמישה לוחות להתחיל מהם.",
-"Save a function once — use it in every world and minigame.":
-  "שמור פונקציה פעם אחת — והשתמש בה בכל עולם ובכל מיני-משחק.",
-"A job on a clock. Deliver it before time runs out.":
-  "עבודה על השעון. תספק אותה לפני שהזמן נגמר.",
+"Six rules and five starters.":"שישה כללים וחמישה לוחות פתיחה.",
+"Save once, use it everywhere.":"שמור פעם אחת, השתמש בכל מקום.",
+"Deliver before time runs out.":"לספק לפני שהזמן נגמר.",
 "New pieces unlock as you level up.":"חלקים חדשים נפתחים כשאתה עולה רמה.",
 "Dress your robots. New pieces unlock as you level up.":
   "תלביש את הרובוטים שלך. פריטים חדשים נפתחים כשאתה עולה רמה.",
@@ -332,7 +330,7 @@ const HE={
 "🛒 Robo-Mart":"🛒 רובו-מרט",
 "Sell resources near the market 🏪, then power up your automation empire!":
   "תמכור חומרים ליד השוק 🏪, ואז תשדרג את אימפריית האוטומציה שלך!",
-"Sell at the 🏪 market, then upgrade your robots.":"תמכור בשוק 🏪, ואז תשדרג את הרובוטים שלך.",
+"Upgrade your robots.":"שדרג את הרובוטים שלך.",
 "Done":"סיום",
 
 /* ---- shop ---- */
@@ -496,24 +494,19 @@ const HE={
 "Menu ▸ Market Orders":"תפריט ▸ הזמנות מהשוק",
 "Starter Academy":"אקדמיית הפתיחה",
 "Levels other players published.":"שלבים שחקנים אחרים פרסמו.",
-"Short lessons, in order. Each one teaches a block you will need.":
-  "שיעורים קצרים, לפי הסדר. כל אחד מלמד בלוק שתצטרכו.",
-"A flat board and one new trick per chapter.":"לוח שטוח, וטריק חדש אחד בכל פרק.",
-"A blueprint to fill in. What you finish appears in your world.":
-  "תוכנית בנייה למלא. מה שתסיים מופיע בעולם שלך.",
-"The same board with height. Stack, climb, and rebuild the blueprint in 3D.":
-  "אותו לוח, עם גובה. תערים, תטפס, ותבנה את התוכנית מחדש ב-3D.",
-"Levels you designed — flat boards and towers.":"שלבים שעיצבת — לוחות שטוחים ומגדלים.",
-"Sign in to keep your world on every device. Export a copy any time.":
-  "התחבר כדי לשמור את העולם שלך בכל מכשיר. אפשר לייצא עותק בכל רגע.",
+"A short lesson for every block.":"שיעור קצר לכל בלוק.",
+"One new trick per chapter.":"טריק חדש אחד בכל פרק.",
+"Finish one, it joins your world.":"מה שתסיים יופיע בעולם שלך.",
+"The same board, with height.":"אותו לוח, עם גובה.",
+"Levels you designed.":"שלבים שעיצבת.",
+"Keep your world on every device.":"העולם שלך, בכל מכשיר.",
 "Tower Mode — 3D":"מצב מגדל — 3D",
 
 /* ---- Cyber Lab ----
         The level names and the lessons on the celebration card carry no
         emoji at all, so they live here rather than in HE_RAW. */
 "Cyber Lab":"מעבדת סייבר",
-"What makes a secret a secret — locks, codes and notes that lie.":
-  "מה עושה סוד לסוד — מנעולים, קודים ופתקים שמשקרים.",
+"Locks, codes and notes that lie.":"מנעולים, קודים ופתקים שמשקרים.",
 "Locks to open, notes that lie — and why a long password is a strong one.":
   "מנעולים לפתוח, פתקים שמשקרים — ולמה סיסמה ארוכה היא סיסמה חזקה.",
 "security":"אבטחה","Cyber":"סייבר","codes tried":"קודים שנוסו",

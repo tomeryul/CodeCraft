@@ -655,7 +655,7 @@ window.openGuide=function(){
     const head=document.querySelector("#guide .m-head h3"),
           sub=document.querySelector("#guide .m-head p");
     if(head)head.textContent="Design a great challenge";
-    if(sub)sub.textContent="Six rules, then five boards to start from.";
+    if(sub)sub.textContent="Six rules and five starters.";
   }
   return _openGuide();
 };
