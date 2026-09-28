@@ -80,13 +80,20 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
   ck('the local save is wiped', done.save===null, done);
   ck('the stored session is wiped', done.auth===null, done);
   ck('autosave is switched off so nothing resurrects it', done.off===true, done);
-  await pg.screenshot({path:OUT+'del-3-done.png'});
-
-  // the real trap: autosave / visibilitychange must not rewrite the save
-  await pg.evaluate(()=>{ saveNow(); saveSoon(); document.dispatchEvent(new Event('visibilitychange')); });
+  // the real trap: autosave / visibilitychange must not rewrite the save.
+  // Fired straight away: the app reloads itself 1.2s after deleting, and a
+  // screenshot taken first sometimes ate that whole window — the reload
+  // then landed in the middle of this call. A reload that arrives while it
+  // runs is the app doing its job, not a failure; what is checked is the
+  // save, wherever the page is by then.
+  const survive = async fn => { try { return await pg.evaluate(fn); }
+    catch (e) { if (!/Execution context was destroyed|navigation/.test(String(e))) throw e;
+      await pg.waitForLoadState('load'); return await pg.evaluate(fn); } };
+  await survive(()=>{ saveNow(); saveSoon(); document.dispatchEvent(new Event('visibilitychange')); });
   await pg.waitForTimeout(1800);
   ck('save stays gone after autosave + visibilitychange fire',
-     await pg.evaluate(()=>localStorage.getItem(SAVE_KEY)===null));
+     await survive(()=>localStorage.getItem(SAVE_KEY)===null));
+  await pg.screenshot({path:OUT+'del-3-done.png'});
 
   // and after the reload the game really is fresh
   await pg.waitForTimeout(900);
