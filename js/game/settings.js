@@ -15,6 +15,9 @@ function settingsRow(el,em,title,sub,btnText,fn,cls,off){
   const d=document.createElement("div"); d.className="shopitem";
   d.innerHTML='<div class="em">'+em+'</div><div class="tx"><b>'+title+
               '</b><small>'+sub+'</small></div>';
+  /* no action, no button: a greyed "None" still looked like a control
+     (design-audit stage 5) — the line under the title already says why */
+  if(btnText==null){ el.appendChild(d); return d; }
   const b=document.createElement("button");
   b.textContent=btnText; if(cls)b.className=cls;
   /* A button that looks pressable and does nothing is the same fault as a
@@ -73,7 +76,7 @@ function renderSettings(){
     const nb=(player.blocked||[]).length;
     settingsRow(el,"\u{1F6AB}","Hidden players: "+nb,
       nb?"Their challenges are hidden from you.":"You haven't hidden anyone.",
-      nb?"Show all":"None",()=>{unblockAll();renderSettings();},null,!nb);
+      nb?"Show all":null,()=>{unblockAll();renderSettings();});
   }
 
   settingsRow(el,"🌍","New World",

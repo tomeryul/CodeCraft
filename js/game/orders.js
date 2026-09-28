@@ -70,8 +70,10 @@ function renderOrders(){
     h+='<button class="ord-go" id="ordCode">🧩 Open the code editor</button>';
     h+='</div>';
   }
-  h+='<div class="ord-stats"><span>📦 Filled <b>'+filled+'</b></span>'+
-     (best?'<span>🏁 Best <b>'+Math.floor(best/60)+":"+("0"+(best%60)).slice(-2)+'</b></span>':'')+
+  /* the same strip as Quests: the number, and under it what it counts —
+     it was a line of small text floating in the middle of the sheet */
+  h+='<div class="ord-stats"><div><b>'+filled+'</b><span>Orders filled</span></div>'+
+     (best?'<div><b>'+Math.floor(best/60)+":"+("0"+(best%60)).slice(-2)+'</b><span>Best time</span></div>':'')+
      '</div>';
   el.innerHTML=h;
   /* an empty board points at the one thing that fills it */

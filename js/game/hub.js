@@ -70,7 +70,7 @@ const GROUPS=[
     {em:"✏️",name:()=>(window.mgHasDraft&&mgHasDraft())?"Continue my challenge":"New challenge",
      tag:"2D",go:()=>{hubClose();
        if(window.mgHasDraft&&mgHasDraft())mgResumeDraft(); else mgEnterCreator();}},
-    {em:"🧊",name:"New tower level",tag:"3D",go:()=>hubPage("tower",".t3card.t3new")},
+    {em:"📐",name:"New tower level",tag:"3D",go:()=>hubPage("tower",".t3card.t3new")},
     {em:"🛠️",name:"My Challenges",tag:"yours",page:"mine",
      meta:()=>num(()=>((player.myChallenges||[]).length||null)+"")},
     {em:"📚",name:"My Functions",tag:"reusable",go:()=>{hubClose();openFuncLib();}},

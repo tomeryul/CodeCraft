@@ -249,7 +249,7 @@ async function toWorld(pg){
     // the entry points must say which of the two they are about to do
     renderProjects(); await wait(300);
     const card=[...document.querySelectorAll('#projList .pcard .pname')]
-      .map(e=>e.textContent).find(x=>/Continue|Create your own/.test(x))||'';
+      .map(e=>e.textContent).find(x=>/Continue|Design a level/.test(x))||'';
     const side=!!document.querySelector('#projList .pcard.pnew .pside');
     hubOpen(); await wait(300);
     const tile=[...document.querySelectorAll('.hub-tile .ht-name')]

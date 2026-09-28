@@ -213,7 +213,9 @@ function renderStyle(){
     const found=list.find(x=>(x.id||x.em)===cur)||wearFind(cur);
     const owned=list.filter(x=>x.lvl<=player.level).length;
     const lab=document.createElement("div");lab.className="st-lab";
-    lab.innerHTML=esc(label)+' <i>'+esc(found?(found.name||found.id):"None")+'</i><b>'+owned+"/"+list.length+"</b>";
+    /* the slot's name is a section title like every other one; what is worn
+       now reads beside it (design-audit stage 5) */
+    lab.innerHTML='<span class="st-name">'+esc(label)+'</span> <i>'+esc(found?(found.name||found.id):"None")+'</i><b>'+owned+"/"+list.length+"</b>";
     wrap.appendChild(lab);
     const row=document.createElement("div");row.className="st-row";
     const sw=(val,locked,lvl,paint,mine,nm)=>{

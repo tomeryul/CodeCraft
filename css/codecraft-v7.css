@@ -45,7 +45,8 @@
 #styleBody .st-slot{display:flex;flex-direction:column;gap:9px;margin:16px 0 0;}
 #styleBody .st-lab{display:flex;align-items:baseline;gap:8px;font-size:var(--fs-sm);font-weight:var(--fw-bold);}
 #styleBody .st-lab i{flex:1;font-style:normal;font-size:var(--fs-sm);color:var(--ink2);}
-#styleBody .st-lab b{font-size:var(--fs-xs);color:#8f83b8;}
+#styleBody .st-lab i{color:var(--ink);font-weight:var(--fw-medium);}
+#styleBody .st-lab b{font-size:var(--fs-xs);color:var(--ink2);}
 /* seven 52px swatches do not fit 354px of sheet: the row scrolls, and the
    right edge fades so it says so */
 #styleBody .st-row{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;
@@ -616,8 +617,10 @@ body.sheets-full #maker.sized,
 .dsec .ds-em{flex:0 0 auto;font-size:16px;line-height:1.35;}
 .dsec .ds-em .ui-emoji{width:17px;height:17px;vertical-align:0;}
 .dsec .ds-t{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px;}
-.dsec .ds-t h4{margin:0;font-size:var(--fs-sm);font-weight:var(--fw-bold);letter-spacing:.05em;
-  text-transform:uppercase;color:var(--accent2);}
+/* a card's title, like the title of any row in a list — it was amber
+   capitals, a fourth kind of heading only the designer had (design-audit
+   stage 5) */
+.dsec .ds-t h4{margin:0;font-size:var(--fs-md);font-weight:var(--fw-bold);color:var(--ink);}
 .dsec .ds-t p{margin:0;font-size:var(--fs-sm);line-height:1.45;color:var(--ink2);}
 /* The answer the section is holding, so a shut one still says something.
    Tabular figures because these sit in a column down the page. */
@@ -920,7 +923,10 @@ body.sheets-full #maker.sized,
    used to show the whole band, built-in levels and all, so it was the
    Tower Mode page under another name. Here it keeps only yours and the
    card that starts a new one (game-app-design §2: one place per thing). */
-#projects[data-page="mine"] .t3sec:not(.cy-sec) .t3card:not(.mine):not(.t3new),
+/* …and not the tower's own "Design a level" either: My Challenges has ONE
+   way to start a level, and the kind (flat, 3D, Cyber) is chosen inside
+   the designer (docs/design-audit.md, stage 5) */
+#projects[data-page="mine"] .t3sec:not(.cy-sec) .t3card:not(.mine),
 #projects[data-page="mine"] .t3sec:not(.cy-sec) .t3head{display:none;}
 
 /* the Academy page's lesson list: a small group title between rows */

@@ -53,7 +53,7 @@ const WEIGHTS = ['400', '600', '700'];
     }
     /* stage 3: section titles, the header; stage 4: buttons */
     const vis = e => { const r = e.getBoundingClientRect(); return r.width > 1 && r.height > 1 && getComputedStyle(e).visibility !== 'hidden'; };
-    const secs = [...document.querySelectorAll('#hub .hub-sec,#hub .hub-nlab,.sheet h4.qsec,#projList .acad-grp,#projList .t3title,#projList .cy-act-n,#palette h4,#maker .mk-sect,#mgLesson .ls-sec')]
+    const secs = [...document.querySelectorAll('#hub .hub-sec,#hub .hub-nlab,.sheet h4.qsec,#projList .acad-grp,#projList .t3title,#projList .cy-act-n,#palette h4,#maker .mk-sect,#mgLesson .ls-sec,#styleBody .st-name')]
       .filter(vis).map(e => { const c = getComputedStyle(e); return c.fontSize + ' ' + c.fontWeight + ' ' + c.textTransform + ' ' + c.color; });
     const sheet = [...document.querySelectorAll('.sheet.open,#shopWrap.open')].pop();
     const hd = sheet && (sheet.querySelector(':scope > .m-head') || sheet.querySelector('.m-head') || sheet.querySelector('.v5-head'));
@@ -151,6 +151,46 @@ const WEIGHTS = ['400', '600', '700'];
   });
   ck('the main action is green: the win card\'s Next, and Send to Byte', B.cta && B.send, B);
   ck('"Not now" is a quiet button a thumb can hit (44px), not bare words', B.altH >= 44, B);
+
+  console.log('▶ stage 5 — the pages that were still their own thing');
+  const P = await pg.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const vis = e => !!e && !!e.offsetParent;
+    const home = async () => { document.querySelectorAll('#ccCele').forEach(e => e.remove()); if (mgState) mgExit(false); navHome(); await wait(300); };
+    const out = {};
+    await home(); hubOpen(); hubPage('mine'); await wait(500);
+    const creates = [...document.querySelectorAll('#projList .pnew,#projList .t3new')].filter(vis);
+    out.creates = creates.length;
+    out.cyan = creates.some(c => getComputedStyle(c).backgroundImage !== 'none');
+    await home(); await wait(300);
+    const c = $('codeBtn').getBoundingClientRect(), b = $('buildBtn').getBoundingClientRect();
+    out.pairGap = Math.round(b.left - c.right);
+    out.pairSame = getComputedStyle($('codeBtn')).backgroundImage === getComputedStyle($('buildBtn')).backgroundImage &&
+                   getComputedStyle($('codeBtn')).backgroundColor === getComputedStyle($('buildBtn')).backgroundColor;
+    const ready = window.sbReady; window.sbReady = () => true;
+    hubOpen(); hubPage('account'); await wait(500);
+    const tog = document.querySelector('#authBox .authtoggle');
+    out.signIn = tog ? { h: Math.round(tog.getBoundingClientRect().height), r: getComputedStyle(tog).borderTopLeftRadius } : null;
+    window.sbReady = ready;
+    await home(); renderQuests(); $('quests').classList.add('open'); await wait(400);
+    out.questsLink = vis($('projBanner'));
+    await home(); window.confirm = () => true; mgEnterCreator(); await wait(700); setTab('design'); await wait(300);
+    const h = document.querySelector('.dsec .ds-t h4');
+    out.cardTitle = h ? getComputedStyle(h).textTransform + ' ' + getComputedStyle(h).color : null;
+    await home(); $('editor').classList.add('open'); setTab('blocks'); renderProgram(); await wait(400);
+    const lm = document.querySelector('#palette .lockmsg');
+    out.lockInk = lm ? getComputedStyle(lm).color : null;
+    out.ink2 = getComputedStyle(document.documentElement).getPropertyValue('--ink2').trim();
+    await home();
+    return out;
+  });
+  ck('My Challenges has one way to start a level, not two', P.creates === 1, P);
+  ck('and it is the dashed card, not a colour nothing else uses', P.cyan === false, P);
+  ck('Code | Build is one control: the same surface, no gap through the middle', P.pairSame && P.pairGap <= 1, P);
+  ck('"Sign in" is a row like the others (a card, not a strip)', !!P.signIn && P.signIn.h >= 56 && P.signIn.r === '16px', P);
+  ck('Quests no longer has a second door into Build Projects', P.questsLink === false, P);
+  ck('a designer card\'s title is a title, not amber capitals', !!P.cardTitle && !/uppercase/.test(P.cardTitle), P);
+  ck('how to unlock a group of blocks is information, not amber', !!P.lockInk && !/255, 184, 48/.test(P.lockInk), P);
 
   ck('no uncaught exceptions', errs.length === 0, errs.slice(0, 3));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

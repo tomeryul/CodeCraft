@@ -176,19 +176,19 @@ b,strong{font-weight:var(--fw-bold);}
    deliberate and scoped to these few properties: the old rules are
    id-scoped all over, and this is the one place that decides. */
 :is(#hub .hub-sec,#hub .hub-nlab,.sheet h4.qsec,#projList .acad-grp,#projList .t3title,
-    #projList .cy-act-n,#palette h4,#maker .mk-sect,#mgLesson .ls-sec){
+    #projList .cy-act-n,#palette h4,#maker .mk-sect,#mgLesson .ls-sec,#styleBody .st-name){
   font-size:var(--fs-xs) !important;font-weight:var(--fw-bold) !important;
   text-transform:uppercase !important;color:var(--ink2) !important;
 }
 :root:not([lang="he"]) :is(#hub .hub-sec,#hub .hub-nlab,.sheet h4.qsec,#projList .acad-grp,#projList .t3title,
-    #projList .cy-act-n,#palette h4,#maker .mk-sect,#mgLesson .ls-sec){ letter-spacing:.08em !important; }
+    #projList .cy-act-n,#palette h4,#maker .mk-sect,#mgLesson .ls-sec,#styleBody .st-name){ letter-spacing:.08em !important; }
 :root[lang="he"] :is(#hub .hub-sec,#hub .hub-nlab,.sheet h4.qsec,#projList .acad-grp,#projList .t3title,
-    #projList .cy-act-n,#palette h4,#maker .mk-sect,#mgLesson .ls-sec){ letter-spacing:0 !important; }
+    #projList .cy-act-n,#palette h4,#maker .mk-sect,#mgLesson .ls-sec,#styleBody .st-name){ letter-spacing:0 !important; }
 /* A page that is ONE list does not title the list again under its own
    name: "Academy" and then "ACADEMY — LEARN THE BASICS". The pages that
    keep theirs say something the header does not (Account's "Your save"),
    or carry a control (Community's ↻). */
-#projects:is([data-page="academy"],[data-page="puzzles"],[data-page="builds"]) #projList > h4.qsec,
+#projects:is([data-page="academy"],[data-page="puzzles"],[data-page="builds"],[data-page="mine"]) #projList > h4.qsec,
 #projects:is([data-page="tower"],[data-page="cyber"]) #projList .t3sec > .t3head{ display:none; }
 
 /* ---------------------------------------------------------------------

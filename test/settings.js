@@ -99,7 +99,8 @@ const titles = sel => `[...document.querySelectorAll('${sel} .shopitem')]
     const row=[...document.querySelectorAll('#settingsList .shopitem')]
       .find(d=>/Hidden players/.test(d.querySelector('.tx b').textContent));
     const b=row.querySelector('button');
-    return { n:(player.blocked||[]).length, disabled:b.disabled, text:b.textContent };
+    // no button at all is the cleanest way to offer no dead one
+    return { n:(player.blocked||[]).length, disabled:!b||b.disabled, text:b?b.textContent:'(none)' };
   });
   ck('with nobody hidden, that row offers no dead button',
      dead.n===0 ? dead.disabled : !dead.disabled, dead);

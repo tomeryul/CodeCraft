@@ -35,8 +35,11 @@ function jGoto(open,find){
     setTimeout(()=>el.classList.remove("j-point"),2600);
   },260);
 }
-function jProjects(find){
-  jGoto(()=>{if(typeof hubPage==="function")hubPage("builds");
+/* opens the page the card lives on — it always opened Build Projects, so
+   the Tower step and the Create step pointed at a card on a page that was
+   not the one on screen */
+function jProjects(find,page){
+  jGoto(()=>{if(typeof hubPage==="function")hubPage(page||"builds");
     else{renderProjects();$("projects").classList.add("open");}},find);
 }
 function jEditor(tip){
@@ -45,7 +48,7 @@ function jEditor(tip){
   if(tip)setTimeout(()=>toast(tip),420);
 }
 const jCard=re=>()=>[...document.querySelectorAll("#projList .pcard, #projList .t3card")]
-  .find(c=>re.test(c.textContent));
+  .find(c=>c.offsetParent&&re.test(c.textContent));   // on screen: an Academy lesson is also called "First Steps"
 
 /* ---------------- the spine ----------------
    Ordered so each step is the smallest next thing that is possible, and
@@ -99,13 +102,13 @@ const JOURNEY=[
    hint:"The board gets a third dimension. You can only reach one brick above your feet.",
    where:"Projects ▸ Tower Mode",
    done:()=>typeof TOWER_LEVELS!=="undefined"&&TOWER_LEVELS.some(l=>player.projects[l.id]),
-   go:()=>jProjects(jCard(/First Steps/i))},
+   go:()=>jProjects(jCard(/First Steps/i),"tower")},
 
   {id:"create", em:"✏️", title:"Design a challenge of your own",
    hint:"Draw a board, prove it can be solved, then share it with everyone.",
-   where:"Projects ▸ Create your own",
+   where:"My Challenges ▸ Design a level",
    done:()=>((player.myChallenges||[]).length)>=1,
-   go:()=>jProjects(jCard(/Create your own/i))}
+   go:()=>jProjects(jCard(/Design a level|Continue/i),"mine")}
 ];
 
 function journeyState(){

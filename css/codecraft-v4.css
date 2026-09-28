@@ -27,6 +27,10 @@
 #fabRun .ui-emoji{width:21px;height:21px;}
 #bottombar{align-items:center;gap:10px;}
 #bottombar #codeBtn,#bottombar #buildBtn{height:56px;}
+/* Code|Build is ONE segmented control: the row's gap goes between the
+   controls, not through the middle of this one (it showed the world
+   through a slot between the halves). Each width below cancels its own gap. */
+#bottombar #buildBtn{margin-left:-10px;}
 
 /* ---------------------------------------------------------------------
    B. Top row: three values, four tools — they have to fit in 390px
@@ -239,6 +243,7 @@ button:focus-visible,input:focus-visible,.blk:focus-visible{outline:2px solid va
   #bottombar #hubBtn{width:44px;height:44px;}
   #bottombar #hubBtn svg{width:20px;height:20px;}
   #bottombar #codeBtn,#bottombar #buildBtn{padding:0 11px;}   /* the labels are 14.5px now (the type scale) */
+  #bottombar #buildBtn{margin-left:-8px;}
   #fabRun{flex:0 0 auto;padding:0 16px;}
 }
 /* 320px (SE) has 292px of row for four controls. Code|Build close up into

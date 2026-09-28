@@ -128,7 +128,9 @@ function renderAuthBox(){
   // so the sheet opens on challenges instead of on a login prompt
   const tog=document.createElement("button");
   tog.className="authtoggle";
-  tog.innerHTML='🌍 <b>Sign in</b><span>publish challenges &amp; sync progress</span>';
+  /* the same row as every other entry on these pages — icon, title, the
+     line under it — not a strip of its own (design-audit stage 5) */
+  tog.innerHTML='<span class="pico">🌍</span><span class="at-t"><b>Sign in</b><span>publish challenges &amp; sync progress</span></span><span class="at-chev" aria-hidden="true">›</span>';
   tog.addEventListener("click",()=>box.classList.toggle("open"));
   box.innerHTML='<div class="authform">'+
     '<input id="authEmail" type="email" placeholder="Email" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next">'+
@@ -2628,10 +2630,12 @@ function renderProjects(){
     ? {em:"✏️",name:"Continue “"+esc(dr.proj.name)+"”",cls:"pnew",
        desc:"Your unfinished board is still here. Pick it up where you left it.",
        onTap:()=>{$("projects").classList.remove("open");mgResumeDraft();}}
-    : {em:"✏️",name:"Create your own",cls:"pnew",
-       desc:"Design a blueprint, prove it solvable, then share it with other players.",
+    : {em:"✏️",name:"Design a level",cls:"pnew",
+       desc:"A flat board, a 3D tower or a Cyber lock — you pick inside.",
        onTap:()=>{$("projects").classList.remove("open");mgEnterCreator();}});
-  nc.querySelector(".pbadge").textContent=dr?"↩️":"＋";
+  /* set after the card is built, so it takes the quiet circle by hand —
+     the amber one is "play this" (design-audit stage 4) */
+  const nb=nc.querySelector(".pbadge"); nb.textContent=dr?"↩️":"＋"; nb.classList.add("pb-alt");
   if(dr)ccSideBtn(nc,"＋","Start a new board instead (throws this draft away)",()=>{
     if(!confirm("Start a new board?\n\n“"+dr.proj.name+"” is not saved — it will be gone."))return;
     $("projects").classList.remove("open");mgNewChallenge();

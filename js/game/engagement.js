@@ -62,15 +62,9 @@ function updateQuestBadge(){
 function renderQuests(){
   fillQuests();
   const el=$("questList");el.innerHTML="";
-  // build-projects entry banner
-  const pb=document.createElement("button");pb.id="projBanner";
-  pb.innerHTML='<span class="pb-em">🏗️</span><span class="pb-tx"><b>Build Projects</b><small>Coding challenges: Big House, Car, Theme Park…</small></span><span class="pb-go">▶</span>';
-  pb.addEventListener("click",()=>{
-    $("quests").classList.remove("open");
-    if(typeof hubPage==="function")hubPage("builds");
-    else{renderProjects();$("projects").classList.add("open");}
-  });
-  el.appendChild(pb);
+  /* no Build Projects banner here any more: it is in the menu, and a second
+     door to the same room from inside Quests was one more thing to learn
+     (game-app-design §2, one way to each place; design-audit stage 5) */
   // skills grid
   const sh=document.createElement("h4");sh.className="qsec";sh.textContent="⚡ Skills — level up by doing";
   el.appendChild(sh);
