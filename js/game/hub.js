@@ -70,7 +70,10 @@ const GROUPS=[
     {em:"✏️",name:()=>(window.mgHasDraft&&mgHasDraft())?"Continue my challenge":"New challenge",
      tag:"2D",go:()=>{hubClose();
        if(window.mgHasDraft&&mgHasDraft())mgResumeDraft(); else mgEnterCreator();}},
-    {em:"📐",name:"New tower level",tag:"3D",go:()=>hubPage("tower",".t3card.t3new")},
+    /* opens the designer in 3D, the same as the Tower page's "Design a level"
+       card — it opened the Tower page itself, so it and "Tower Mode" went to
+       the same place */
+    {em:"📐",name:"New tower level",tag:"3D",go:()=>{hubClose();mgEnterCreator();if(window.t3SetMode)t3SetMode(true);}},
     {em:"🛠️",name:"My Challenges",tag:"yours",page:"mine",
      meta:()=>num(()=>((player.myChallenges||[]).length||null)+"")},
     {em:"📚",name:"My Functions",tag:"reusable",go:()=>{hubClose();openFuncLib();}},

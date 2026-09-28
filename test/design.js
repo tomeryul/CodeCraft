@@ -181,6 +181,11 @@ const WEIGHTS = ['400', '600', '700'];
     const lm = document.querySelector('#palette .lockmsg');
     out.lockInk = lm ? getComputedStyle(lm).color : null;
     out.ink2 = getComputedStyle(document.documentElement).getPropertyValue('--ink2').trim();
+    // "New tower level" makes a tower; "Tower Mode" is the page of tower levels
+    await home(); hubOpen(); await wait(300);
+    const tile = [...document.querySelectorAll('.hub-tile')].find(t => /New tower level/.test(t.textContent));
+    if (tile) tile.click(); await wait(900);
+    out.newTower = { designer3d: !!(mgState && mgState.proj.mode3d), towerPage: $('projects').classList.contains('open') };
     await home();
     return out;
   });
@@ -191,6 +196,8 @@ const WEIGHTS = ['400', '600', '700'];
   ck('Quests no longer has a second door into Build Projects', P.questsLink === false, P);
   ck('a designer card\'s title is a title, not amber capitals', !!P.cardTitle && !/uppercase/.test(P.cardTitle), P);
   ck('how to unlock a group of blocks is information, not amber', !!P.lockInk && !/255, 184, 48/.test(P.lockInk), P);
+  ck('"New tower level" opens the designer in 3D — not the same page as "Tower Mode"',
+    P.newTower && P.newTower.designer3d && !P.newTower.towerPage, P.newTower);
 
   ck('no uncaught exceptions', errs.length === 0, errs.slice(0, 3));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
