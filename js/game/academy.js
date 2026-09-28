@@ -184,8 +184,11 @@ function renderAcademySection(el){
   // no `hot` here — .acad-card's purple glow is the Academy's own marker, and
   // .pcard.hot would out-specify it and repaint the border amber
   const card=ccCard(el,{em:all?"🏆":"🎓",name:"Starter Academy",cls:"acad-card",done:all,
-    meta:'<i>'+done+'/'+total+' done</i>'+(grad?" · 🎓 graduated":" · basics "+core+"/"+ACADEMY_CORE)
-      +(all?"":" · next: "+TUTS[nextI].em+" "+esc(TUTS[nextI].name)),
+    /* each piece its own element: the Hebrew layer matches a text node
+       whole, and "· 🎓 graduated · next: 🔁 Until It's Done" as one node
+       matched nothing and stayed English (design-audit stage 6) */
+    meta:'<i>'+done+'/'+total+' done</i>'+(grad?' · <span>🎓 graduated</span>':' · <span>basics '+core+'/'+ACADEMY_CORE+'</span>')
+      +(all?"":' · <span>next:</span> <span>'+TUTS[nextI].em+' '+esc(TUTS[nextI].name)+'</span>'),
     desc:all
       ? "Every lesson done — loops, conditions, variables, functions and algorithms. Replay any of them any time."
       : grad

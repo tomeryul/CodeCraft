@@ -15,7 +15,7 @@ const GUIDE_RULES=[
   {t:"Say it in one sentence",
    d:'Before you paint anything, finish this: "the robot has to ___". Like <b>"fetch the key, then open the door"</b>, or <b>"fill every tile in the row"</b>. If it takes you two sentences, you have two levels — and that is good news, see rule 5.'},
   {t:"One idea per level",
-   d:'A 🧱 wall in the way teaches turning. A long row of targets teaches 🔁 Repeat. Gaps in the row teach ❓ If. Numbered 🔢 blocks teach comparing. Pick <b>one</b> and build the whole board around it. Two new ideas at once and nobody finishes.'},
+   d:'A 🧱 wall in the way teaches turning. A long row of targets teaches 🔁 Repeat. Gaps in the row teach ❓ If. Numbered 🔢 blocks teach comparing. Pick <b>one idea</b> and build the whole board around it. Two new ideas at once and nobody finishes.'},
   {t:"The block budget is your difficulty dial",
    d:'🧩 is the strongest tool in the creator. Solve your own level first, count the blocks you used, then set the budget to <b>that exact number</b>. A generous budget lets the player paste "move, build" twenty times. A tight one forces them to find the pattern — which was the whole point.'},
   {t:"Make the robot look, not remember",
@@ -23,7 +23,7 @@ const GUIDE_RULES=[
   {t:"Build a ladder, not a wall",
    d:'Use ➕ Add level. Level 1 shows the trick with two blocks. Level 2 makes them use it twice. Level 4 makes it the only way through. Four small levels beat one giant one — and your player actually finishes them.'},
   {t:"Prove it, then try to break it",
-   d:'▶ until it is solved — the game will not let you 💾 Save a level you have not solved yourself. Then change <b>one</b> thing (move a block, move the start) and run the same program again. What happens next is rule number seven…'},
+   d:'▶ until it is solved — the game will not let you 💾 Save a level you have not solved yourself. Then change <b>one thing</b> (move a block, move the start) and run the same program again. What happens next is rule number seven…'},
 ];
 
 const GUIDE_RECIPES=[
@@ -100,7 +100,7 @@ function renderGuide(){
   });
   sec("🧠 When is it an algorithm question?");
   const n=document.createElement("div");n.className="gnote";
-  n.innerHTML='A <b>path</b> is directions you memorised. An <b>algorithm</b> still works after the board changes — that is the whole difference.'+
+  n.innerHTML='<b>A path</b> is directions you memorised. <b>An algorithm</b> still works after the board changes — that is the whole difference.'+
     '<br><br>So run the <b>shuffle test</b>: solve your level, then move the 🔢 blocks around (or move the robot\'s start) and press ▶ again with the <b>same program, unchanged</b>.'+
     '<br><br>✅ <b>Still solves it?</b> You wrote an algorithm. That is a question worth publishing.'+
     '<br>❌ <b>Breaks?</b> Your player will just memorise the answer. Give the robot a way to look at the board instead of a route to follow: 📖 Read, ❓ If, 🔄 While.'+
@@ -111,7 +111,7 @@ function renderGuide(){
   m.innerHTML='You do not have to shuffle by hand. Open the 🛠️ Design tab and use <b>🔢 Split into inputs</b>:'+
     '<br><br><b>1.</b> Lay out your numbered blocks and add them as input 1.'+
     '<br><b>2.</b> Move the blocks, add them again as input 2. Up to eight.'+
-    '<br><b>3.</b> Write <b>one</b> program and press ▶. It runs against <b>every</b> input, and you only prove the level — and only unlock 💾 Save — if all of them pass.'+
+    '<br><b>3.</b> Write <b>one program</b> and press ▶. It runs against <b>every input</b>, and you only prove the level — and only unlock 💾 Save — if all of them pass.'+
     '<br><br>Then tap 👁 on your last input to make it <b>🙈 secret</b>. A hidden input is never shown to the player, so they cannot study it while writing. Guessing stops working; only a real algorithm gets through.'+
     '<br><br>And if your question needs a building block that is not the point of the puzzle — a swap, a step, a turn-around — write it in routine 🔧 A and switch on <b>🎁 Starter routines</b>. Players open the challenge with your routine already written, so they spend their thinking on the algorithm instead of rebuilding your tools.';
   el.appendChild(m);

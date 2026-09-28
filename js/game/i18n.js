@@ -849,7 +849,7 @@ const HE={
 "same program, unchanged":"אותה תוכנית, בלי שינוי",
 "shuffle test":"מבחן הערבוב",
 "that exact number":"בדיוק את המספר הזה",
-"The built-in 🧠":"ה-🧠 המובנה",
+"The built-in 🧠":"הפרק המובנה 🧠",
 "One idea per level":"רעיון אחד לכל שלב",
 "Say it in one sentence":"תגיד את זה במשפט אחד",
 "Build a ladder, not a wall":"תבנה סולם, לא קיר",
@@ -1087,6 +1087,9 @@ const HE_N={
   "/min {n}":"{n} לדקה",
   "Lesson {n} of {n}":"שיעור {n} מתוך {n}",
   "Lesson {n}":"שיעור {n}",
+  "basics {n}/{n}":"יסודות {n}/{n}",
+  "A ({n} blocks)":"A ({n} בלוקים)",
+  "B ({n} blocks)":"B ({n} בלוקים)",
   "Level {n} of {n}":"שלב {n} מתוך {n}",
   "{n}/{n} done":"{n}/{n} הושלמו",
   "{n}/{n} open":"{n}/{n} פתוחים",
@@ -1111,6 +1114,13 @@ const HE_N={
    became "Play", and the button ended up reading the heading's wording.
    A scoped entry wins over the global one for that element. */
 const SCOPED=[
+  /* design-audit stage 6: words that are whole text nodes only inside these —
+     "one", "check" or "Building" elsewhere could be anyone's name */
+  ["#guideBody",     {"one idea":"רעיון אחד","one thing":"דבר אחד","one program":"תוכנית אחת","every input":"כל קלט",
+                      "check":"לבדוק","A path":"מסלול","An algorithm":"אלגוריתם","Write":"תכתוב","secret":"סודי"}],
+  ["#orders",        {"selling":"מכירה","pipeline":"פס ייצור","parallel":"במקביל"}],
+  [".sk-nm",         {"Woodcutting":"כריתת עצים","Mining":"כרייה","Agility":"זריזות","Building":"בנייה","Trading":"מסחר"}],
+  ["#statsBox",      {"Collected":"נאספו","Earned":"הרווחת"}],
   ["#playBtn",       {"Play":"שחק","Play offline":"שחק במצב לא מקוון"}],
   ["#actionBar",     {"Reset":"אפס"}],
   [".hub-sec",       {"Play":"לשחק"}],
@@ -1132,6 +1142,17 @@ const SCOPED=[
    the ⛓️ from "Collect 5 ⛓️ iron". These are used verbatim instead, and
    ui-icons.js turns whatever emoji they carry into icons either way. */
 const HE_RAW={
+  /* design-audit stage 6 */
+  "Try: 🚶 Walk To 🌳 → 🪓 Chop → 🚶 Walk To 🏪 → ⤵️ Drop.":
+    "נסה: 🚶 לך אל 🌳 ← 🪓 כרות ← 🚶 לך אל 🏪 ← ⤵️ הנח.",
+  "and press ▶. It runs against":"ותלחץ ▶. היא רצה מול",
+  ", and you only prove the level — and only unlock 💾 Save — if all of them pass.":
+    ", ואתה מוכיח את השלב — ופותח 💾 שמור — רק אם כולם עוברים.",
+  "teaches turning":"מלמד לפנות",
+  "teaches 🔁 Repeat":"מלמד 🔁 חזור",
+  "teaches ❓ If":"מלמד ❓ אם",
+  "teaches ✊ Lift & ⤵️ Drop":"מלמד ✊ הרם ו-⤵️ הנח",
+  "teaches 📖 Read & comparing":"מלמד 📖 קרא והשוואה",
   /* the Errands chapter: flags, keys and blocks named mid-sentence */
   "🚶 Walk To takes a place, not a number of steps — the robot finds its own way round the walls. The 🚩 is locked away: walk to the 🔑 first, then to the flag.":
   "🚶 לך אל מקבל מקום, לא מספר צעדים — הרובוט מוצא לבד את הדרך מסביב לקירות. ה-🚩 נעול: תלך קודם אל ה-🔑, ורק אז אל הדגל.",
@@ -1634,6 +1655,25 @@ const HE_RAW={
 "⛓ A bulk order":"⛓ הזמנת כמות",
 "📭 The board is empty right now.":"📭 הלוח ריק כרגע.",
 "📭 No orders yet.":"📭 עדיין אין הזמנות.",
+/* ---- design-audit stage 6: what the Hebrew pass found still in English ---- */
+"The order on the clock":"ההזמנה על השעון",
+"Yours":"שלך",
+"graduated":"סיימת את היסודות",
+"next:":"הבא:",
+"Bulk":"בכמות גדולה","Spread":"מפוזרת","⇉ Spread":"⇉ מפוזרת",   /* ⇉ is an arrow, not an emoji: it is not trimmed off the edge */
+"Switch between a flat 2D challenge and a Cyber Lab level":"החלף בין אתגר שטוח דו-ממדי לשלב של מעבדת הסייבר",
+", or":", או",
+". If it takes you two sentences, you have two levels — and that is good news, see rule 5.":
+  ". אם צריך לזה שני משפטים, יש לך שני שלבים — וזה דווקא טוב, ראה כלל 5.",
+". A generous budget lets the player paste \"move, build\" twenty times. A tight one forces them to find the pattern — which was the whole point.":
+  ". תקציב נדיב נותן לשחקן להדביק „זוז, בנה” עשרים פעמים. תקציב צמוד מכריח אותו למצוא את הדפוס — וזו בדיוק הנקודה.",
+"(move a block, move the start) and run the same program again. What happens next is rule number seven…":
+  "(תזיז בלוק, תזיז את ההתחלה) ותריץ את אותה תוכנית שוב. מה שקורה אחר כך הוא כלל מספר שבע…",
+"is directions you memorised.":"הוא הוראות ששיננת.",
+". A hidden input is never shown to the player, so they cannot study it while writing. Guessing stops working; only a real algorithm gets through.":
+  ". קלט מוסתר אף פעם לא מוצג לשחקן, אז אי אפשר ללמוד אותו בזמן הכתיבה. ניחושים מפסיקים לעבוד; רק אלגוריתם אמיתי עובר.",
+". Players open the challenge with your routine already written, so they spend their thinking on the algorithm instead of rebuilding your tools.":
+  ". השחקנים פותחים את האתגר כשהשגרה שלך כבר כתובה, אז הם משקיעים את המחשבה באלגוריתם במקום לבנות מחדש את הכלים שלך.",
 "Orders filled":"הזמנות שמולאו",
 "Best time":"הזמן הטוב ביותר",
 "The market opens once you finish the six basic lessons at the Academy.":"השוק נפתח אחרי שמסיימים את שישת שיעורי הבסיס באקדמיה.",
@@ -1687,6 +1727,7 @@ const HE_RAW={
    the ENTIRE node matches it; {1} {2} in the Hebrew pick captures by
    position, for the places where Hebrew wants them in a different order. */
 const HE_T={
+"Tap blocks below to program {s}!":"לחץ על בלוקים למטה כדי לתכנת את {1}!",
 /* ---- academy ---- */
 "{s} — Lesson {n}":"{1} — שיעור {2}",
 /* ---- the creator's draft ---- */
@@ -2106,6 +2147,19 @@ function on(){
   if(mo)return;
   mo=new MutationObserver(ms=>{
     for(const m of ms){
+      /* a label set AFTER the element arrived — the size button's title
+         flips between "Expand" and "Shrink", the market chip gets its
+         aria-label when it is first drawn — was never seen: only new nodes
+         and changed text were. VoiceOver read it in English (design-audit
+         stage 6). Setting the Hebrew value queues one more record, which
+         translates to nothing and stops. */
+      if(m.type==="attributes"){
+        const v=m.target.getAttribute(m.attributeName);
+        if(v&&!(m.target.closest&&m.target.closest(SKIP_IN))){
+          const out=tr(v,m.target); if(out!==null&&out!==v)m.target.setAttribute(m.attributeName,out);
+        }
+        continue;
+      }
       if(m.type==="characterData")walk(m.target);
       else for(const n of m.addedNodes)walk(n);
       /* The reassembly in runs() only ever ran on an element that arrived
@@ -2120,7 +2174,8 @@ function on(){
         runs(t);
     }
   });
-  mo.observe(document.body,{childList:true,subtree:true,characterData:true});
+  mo.observe(document.body,{childList:true,subtree:true,characterData:true,
+    attributes:true,attributeFilter:["title","aria-label","placeholder"]});
 }
 /* Off is a reload: the English strings were replaced in place, and putting
    them all back by reverse lookup would be guesswork the moment one of them
