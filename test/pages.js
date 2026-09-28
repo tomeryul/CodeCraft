@@ -32,8 +32,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     if (mgState) mgExit(false); navHome(); await w(300);
 
     hubOpen(); await w(200); hubPage('mine'); await w(300);
+    // only your own towers — and ONE card that starts a level (design-audit stage 5)
     out.mine = [...document.querySelectorAll('#projList .t3sec:not(.cy-sec) .t3card')].filter(shown)
-      .map(c => c.classList.contains('mine') || c.classList.contains('t3new'));
+      .map(c => c.classList.contains('mine'));
+    out.creates = [...document.querySelectorAll('#projList .pnew,#projList .t3new')].filter(shown).length;
     out.mineHead = shown(document.querySelector('#projList .t3sec:not(.cy-sec) .t3head'));
     hubPage('tower'); await w(300);
     out.tower = [...document.querySelectorAll('#projList .t3sec:not(.cy-sec) .t3card')].filter(shown).length;
@@ -58,8 +60,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     navHome(); await w(300);
     return out;
   });
-  ck('My Challenges holds only your own towers and the card to make one',
-    R.mine.length >= 1 && R.mine.every(Boolean) && R.mineHead === false, R);
+  ck('My Challenges holds only your own towers and the one card to make a level',
+    R.mine.every(Boolean) && R.creates === 1 && R.mineHead === false, R);
   ck('the built-in Tower levels live on the Tower page', R.tower >= 6, R);
   ck('the Academy page lists every lesson as a row of its own', R.lessons === R.lessonsTotal, R);
   ck('and a row opens its lesson', R.opened === true, R);
