@@ -248,7 +248,8 @@ async function toWorld(pg){
     if(typeof mgState!=='undefined'&&mgState)mgExit(false); await wait(250);
     // the entry points must say which of the two they are about to do
     renderProjects(); await wait(300);
-    const card=[...document.querySelectorAll('#projList .pcard .pname')]
+    // the challenge card itself — the tower band has a "Design a level" of its own
+    const card=[...document.querySelectorAll('#projList .pcard.pnew:not(.t3new) .pname')]
       .map(e=>e.textContent).find(x=>/Continue|Design a level/.test(x))||'';
     const side=!!document.querySelector('#projList .pcard.pnew .pside');
     hubOpen(); await wait(300);
