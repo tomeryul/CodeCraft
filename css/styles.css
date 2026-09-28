@@ -1213,3 +1213,8 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 /* more below: the edge fades rather than cutting a line in half (fx.js edgeFade) */
 .fade-b{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 26px),transparent);
         mask-image:linear-gradient(to bottom,#000 calc(100% - 26px),transparent);}
+/* scrolled under the header: the top edge fades too (both edges when both apply) */
+.fade-t{-webkit-mask-image:linear-gradient(to bottom,transparent,#000 22px);
+        mask-image:linear-gradient(to bottom,transparent,#000 22px);}
+.fade-t.fade-b{-webkit-mask-image:linear-gradient(to bottom,transparent,#000 22px,#000 calc(100% - 26px),transparent);
+        mask-image:linear-gradient(to bottom,transparent,#000 22px,#000 calc(100% - 26px),transparent);}

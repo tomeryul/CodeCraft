@@ -154,13 +154,16 @@ else heldWatch();
    is more below, the bottom edge fades instead (design-audit bug 4). */
 function edgeFade(el){
   if(!el||el._fade)return;
-  const f=el._fade=()=>el.classList.toggle("fade-b",el.scrollHeight-el.clientHeight-el.scrollTop>4);
+  /* and the top edge too, once something has scrolled up under the header:
+     text cut hard against the header's line reads as glued to it */
+  const f=el._fade=()=>{ el.classList.toggle("fade-b",el.scrollHeight-el.clientHeight-el.scrollTop>4);
+                         el.classList.toggle("fade-t",el.scrollTop>4); };
   el.addEventListener("scroll",f,{passive:true});
   try{new ResizeObserver(f).observe(el);}catch(_){}
   new MutationObserver(()=>requestAnimationFrame(f)).observe(el,{childList:true,subtree:true,characterData:true});
   f();
 }
-function edgeFadeWire(){ ["boardTab","programWrap","palette"].forEach(id=>edgeFade($(id))); }
+function edgeFadeWire(){ ["boardTab","programWrap","palette","designTab","pyTab"].forEach(id=>edgeFade($(id))); }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",edgeFadeWire);
 else edgeFadeWire();
 
