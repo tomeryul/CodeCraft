@@ -22,9 +22,12 @@ function buildTerrain(){
   for(let y=homePos.y-4;y<=homePos.y+4;y++)for(let x=homePos.x-4;x<=homePos.x+4;x++)
     if(x>=0&&y>=0&&x<W&&y<H) terrain[key(x,y)]=T_GRASS;
 }
-function genObjects(){
+/* What the seed itself puts in the world: trees, flowers and the rock, iron
+   and crystal nodes. A node is mined and comes back on the same tile, so this
+   is also the full list of tiles where a node may ever stand — see worldTidy. */
+function baseObjects(){
   const rnd=mulberry32(seed^0x9e37);
-  objects=new Map();
+  const objects=new Map();
   for(let y=0;y<H;y++)for(let x=0;x<W;x++){
     if(Math.abs(x-homePos.x)<=3&&Math.abs(y-homePos.y)<=3)continue;
     const t=terrain[key(x,y)], r=rnd();
@@ -37,6 +40,10 @@ function genObjects(){
       else if(r<.255)objects.set(key(x,y),{type:"crystal"});
     }
   }
+  return objects;
+}
+function genObjects(){
+  objects=baseObjects();
   objects.set(key(homePos.x,homePos.y),{type:"home"});
   objects.set(key(marketPos.x,marketPos.y),{type:"market"});
   objects.set(key(homePos.x-2,homePos.y),{type:"chest"});
@@ -59,4 +66,25 @@ function genAnimals(){
     if(terrain[key(x,y)]===T_GRASS&&!objects.has(key(x,y)))
       animals.push({x,y,rx:x,ry:y,em:kinds[animals.length%kinds.length],next:rnd()*2000});
   }
+}
+/* A 💎 rich seam is a visit, not a feature: it sinks away when its event
+   ends. Two ways it used to stay for good, and the world near home slowly
+   filled with stone until a robot could not take a step:
+   - the event is not saved, so a seam up when the game closed (every update
+     reloads it) never got its ending, and its nodes stayed;
+   - a seam node that was mined went on the respawn queue like any other, and
+     came back as a plain, permanent node.
+   Both are closed at the source (hitNode, applySave). This also heals a world
+   that already filled up: any rock, iron or crystal on a tile where the seed
+   never put one — standing, or waiting to come back — is removed. */
+const NODE_TYPES={rock:1,iron:1,crystal:1};
+function worldTidy(){
+  const base=baseObjects();
+  const stray=(k,type)=>NODE_TYPES[type]&&!(base.get(k)&&base.get(k).type===type);
+  let gone=0;
+  for(const [k,o] of [...objects]){
+    if(o.lode||stray(k,o.type)){objects.delete(k);gone++;}
+  }
+  respawnQ=respawnQ.filter(e=>!stray(key(e.x,e.y),e.type));
+  return gone;
 }

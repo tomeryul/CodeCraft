@@ -36,7 +36,8 @@ function hitNode(r,a,k,o){
   if(o.hp>0){addPop(a.x,a.y,o.type==="tree"?"🪓":"⛏️");return;}
   const got=NODE_YIELD[o.type];
   objects.delete(k);
-  respawnQ.push({at:now+NODE_RESPAWN[o.type],x:a.x,y:a.y,type:o.type});
+  // a seam's node is gone when it is mined — only the world's own nodes regrow
+  if(!o.lode)respawnQ.push({at:now+NODE_RESPAWN[o.type],x:a.x,y:a.y,type:o.type});
   r.inv[got]++;totals.collected++;addPop(a.x,a.y,"+1 "+RES[got].em);
   addXP(o.type==="crystal"?4:2);qProg("collect",got);
   const sk=o.type==="tree"?"wood":"mine";

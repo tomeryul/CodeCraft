@@ -141,6 +141,7 @@ function applySave(d){
         objects.set(k2,o);grew++;
       }else{objects.set(k2,{type:e.type});back++;}
     }
+    worldTidy(); // seams that outlived their event, and what they left behind
     if(elapsed>60000&&(grew||back))
       pendingAway="🌍 While you were away: "+(grew?grew+" 🌳 grew":"")+(grew&&back?", ":"")+(back?back+" 🪨 returned":"")+"!";
     genAnimals();
