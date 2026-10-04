@@ -106,3 +106,15 @@
   #stats #energyChip{display:none;}
   #stats #energyChip.low{display:flex;}
 }
+
+/* ---- 4. whatever the numbers, the pill fits ----
+   hudFit() (hud.js) adds these one at a time, only while the row still
+   overflows the room left of the tool column. Energy stays when it is low
+   enough to stop the robot. */
+#topbar #stats.fit-en #energyChip:not(.crit){display:none !important;}
+#topbar #stats.fit-rate #ticker .tk-btn .tk-rate{display:none !important;}
+#topbar #stats.fit-lvl #lvlChip{display:none !important;}
+#topbar #stats.fit-tk #ticker .tk-btn{display:none !important;}
+#topbar #stats.fit-tk .chip{padding-left:6px;padding-right:6px;}
+/* with ⭐ gone, 🪙 is first and has nothing to its left to divide from */
+#topbar #stats.fit-lvl #coinChip::before{display:none;}

@@ -332,6 +332,7 @@ function renderMarket(){
   }
   el._shape=shape;
   el.innerHTML=html;
+  if(typeof hudFit==="function")hudFit(); // a new chip can push the row past the tools
 }
 /* one delegated listener — renderMarket rewrites innerHTML on every tick */
 $("ticker").addEventListener("click",e=>{

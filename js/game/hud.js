@@ -32,6 +32,47 @@ function updateHud(){
   /* .low is still what the 359px-and-under rule keys on, where the row is
      too narrow to carry energy unless it is worth acting on */
   $("energyChip").classList.toggle("low",en<100);
+  $("energyChip").classList.toggle("crit",en<=20||!!r.tired);
+  hudFit();
+}
+/* The row fits by measuring, not by guessing. The width rules in
+   codecraft-v6.css were sums worked out for one set of numbers; a long game
+   brings five-digit coins, a 47/112 bag, a three-digit 🪙/min and an order
+   clock all at once, and the pill ran 85px under the tool column on a 393px
+   phone. So once the row is laid out, if it still overflows, it folds what
+   matters least, one at a time, and stops the moment it fits: energy (unless
+   it is about to stop the robot), then the rate's number, then the level,
+   and last — only a 320px phone with the battery nearly flat gets here —
+   the 📈 handle itself, while the order clock stays.
+   Measured only when the row's text or the screen width changed — it is
+   called from the tick. */
+let hudFitSig="";
+function hudFit(){
+  const st=$("stats");if(!st)return;
+  /* the order clock ticks every second in tabular figures — its width does not */
+  /* the markup, not just the text: a chip can change width by a class alone */
+  const sig=st.innerHTML.replace(/\d+:\d\d/g,"0:00").replace(/width:[^;"]*/g,"")+"|"+innerWidth+"|"+(($("ticker")||{}).style||{}).display;
+  if(sig===hudFitSig)return;
+  hudFitSig=sig;
+  const folds=["fit-en","fit-rate","fit-lvl","fit-tk"];
+  st.classList.remove(...folds);
+  for(const f of folds){
+    if(st.scrollWidth<=st.clientWidth+1)break;
+    st.classList.add(f);
+  }
+}
+addEventListener("resize",()=>{hudFitSig="";hudFit();});
+/* and whenever a chip changes size for any other reason — the game font
+   arriving after the first measure widens every one of them without
+   changing a character. Next frame, so a fold is never measured mid-resize. */
+if(typeof ResizeObserver==="function"){
+  let fitRaf=0;
+  const ro=new ResizeObserver(()=>{
+    if(fitRaf)return;
+    fitRaf=requestAnimationFrame(()=>{fitRaf=0;hudFitSig="";hudFit();});
+  });
+  for(const c of $("stats").children)ro.observe(c);
+  ro.observe($("topbar"));
 }
 function updateFab(){
   const r=R(), f=$("fabRun");
