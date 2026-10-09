@@ -34,3 +34,10 @@ ios/DerivedData/
 *.apk
 *.aab
 *.ipa
+
+# fastlane's own output (docs/ios-release.md); the .ipa lands in build/ios/
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/README.md
+fastlane/test_output/
+*.dSYM.zip

@@ -1,0 +1,4 @@
+# The App Store Connect record this pipeline uploads to. The team comes from
+# the APPLE_TEAM_ID secret, so nothing account-specific is committed.
+app_identifier("io.github.tomeryul.codecraft")
+team_id(ENV["APPLE_TEAM_ID"]) if ENV["APPLE_TEAM_ID"]

@@ -1,0 +1,104 @@
+# Builds, signs and uploads the iOS app. Run by .github/workflows/ios-release.yml
+# on a macOS runner; docs/ios-release.md is the one-time setup.
+#
+#   bundle exec fastlane ios beta     -> a new build on TestFlight
+#   bundle exec fastlane ios release  -> the same, then submitted for App Store review
+#
+# Signing needs no certificate or profile in the repository or in secrets:
+# xcodebuild signs with Apple's cloud-managed distribution certificate,
+# authenticated by the App Store Connect API key (-allowProvisioningUpdates).
+# That key therefore needs the Admin role.
+#
+# Environment (all from GitHub secrets):
+#   ASC_KEY_ID, ASC_ISSUER_ID   the API key's id and its issuer
+#   ASC_KEY_PATH                where the workflow wrote the .p8
+#   APPLE_TEAM_ID               the 10-character team id
+
+default_platform(:ios)
+
+PROJECT = "ios/App/App.xcodeproj"
+SCHEME = "App"
+APP_ID = "io.github.tomeryul.codecraft"
+
+platform :ios do
+  # The API key, for fastlane's own calls (TestFlight, App Store Connect).
+  private_lane :asc_key do
+    app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_filepath: ENV.fetch("ASC_KEY_PATH"),
+      in_house: false
+    )
+  end
+
+  # The same key, for xcodebuild: it is what lets the runner create and use
+  # the distribution certificate and profile in Apple's cloud.
+  private_lane :signing_args do
+    [
+      "-allowProvisioningUpdates",
+      "-authenticationKeyPath #{ENV.fetch('ASC_KEY_PATH')}",
+      "-authenticationKeyID #{ENV.fetch('ASC_KEY_ID')}",
+      "-authenticationKeyIssuerID #{ENV.fetch('ASC_ISSUER_ID')}"
+    ].join(" ")
+  end
+
+  # Build and sign an App Store .ipa. The build number is one past the
+  # highest App Store Connect has seen for this version, so every run uploads
+  # a build Apple accepts, whichever machine or branch ran the last one.
+  private_lane :build_signed do |options|
+    key = options[:key]
+    latest = latest_testflight_build_number(api_key: key, app_identifier: APP_ID, initial_build_number: 0)
+    increment_build_number(xcodeproj: PROJECT, build_number: (latest + 1).to_s)
+
+    team = ENV.fetch("APPLE_TEAM_ID")
+    args = signing_args
+    build_app(
+      project: PROJECT,
+      scheme: SCHEME,
+      configuration: "Release",
+      export_method: "app-store",
+      clean: true,
+      output_directory: "build/ios",
+      output_name: "CodeCraft.ipa",
+      xcargs: "#{args} DEVELOPMENT_TEAM=#{team} CODE_SIGN_STYLE=Automatic",
+      export_xcargs: args,
+      export_team_id: team,
+      export_options: { signingStyle: "automatic", teamID: team }
+    )
+  end
+
+  desc "Build, sign and upload a new build to TestFlight"
+  lane :beta do
+    key = asc_key
+    build_signed(key: key)
+    upload_to_testflight(
+      api_key: key,
+      app_identifier: APP_ID,
+      # processing takes 10-30 minutes; the build shows up in TestFlight by
+      # itself, so the runner does not wait and pay macOS minutes for it
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  desc "Build, sign, upload, and submit it for App Store review"
+  lane :release do
+    key = asc_key
+    build_signed(key: key)
+    # The listing (description, screenshots, age rating, privacy answers) is
+    # kept in App Store Connect, not here: this uploads the binary, picks it
+    # for the version and submits. A person still presses Release after
+    # Apple approves it (automatic_release: false).
+    upload_to_app_store(
+      api_key: key,
+      app_identifier: APP_ID,
+      skip_metadata: true,
+      skip_screenshots: true,
+      submit_for_review: true,
+      automatic_release: false,
+      force: true,
+      precheck_include_in_app_purchases: false,
+      run_precheck_before_submit: false,
+      submission_information: { add_id_info_uses_idfa: false }
+    )
+  end
+end

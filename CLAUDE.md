@@ -191,3 +191,9 @@ screen has painted and `native.js` has a timer in case boot never gets
 there — keep both. And the iPad is portrait-only, which Apple rejects at
 upload (ITMS-90474) unless `UIRequiresFullScreen` is set — it is; do not
 remove it without restoring all four iPad orientations.
+
+Store uploads are `.github/workflows/ios-release.yml` running
+`fastlane/Fastfile` on macOS: a push to `main` goes to TestFlight, a manual
+`release` run submits for review. Signing is cloud-managed through the App
+Store Connect API key (Admin role), so no certificate lives anywhere; the
+one-time setup and its four secrets are `docs/ios-release.md`.

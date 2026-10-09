@@ -1,0 +1,122 @@
+name: iOS release
+
+# Builds, signs and uploads the iOS app with fastlane (fastlane/Fastfile).
+#
+#   push to main         -> a new build on TestFlight
+#   Run workflow (manual) -> TestFlight, or "release" to submit for App Store review
+#
+# Only main uploads: the working branch is pushed many times a day, and a
+# TestFlight build per push would bury the one worth testing, at ten times
+# the runner cost of Linux. One-time setup: docs/ios-release.md.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: "beta = TestFlight, release = submit for App Store review"
+        type: choice
+        options: [beta, release]
+        default: beta
+
+# one upload at a time; a newer push replaces a build still waiting to start
+concurrency:
+  group: ios-release
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # the suites that guard what a store build ships: the game boots, the
+      # age gate and account deletion work (both are App Review checks), and
+      # the native shell is wired
+      - name: Store-critical suites
+        run: |
+          node test/smoke.js
+          node test/age-gate.js
+          node test/delete-account.js
+          node test/privacy.js
+          node test/native.js
+
+  ios:
+    name: Build, sign, upload
+    needs: test
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      # Without the secrets there is nothing to sign with. The job says so and
+      # stops green, so a fork, or the repo before setup, is not a red run.
+      - name: Are the App Store Connect secrets set?
+        id: ready
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          if [ -n "$ASC_KEY_ID" ] && [ -n "$ASC_ISSUER_ID" ] && [ -n "$APPLE_TEAM_ID" ] && [ -n "$ASC_KEY_P8" ]; then
+            echo "ok=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::iOS upload skipped: set ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 and APPLE_TEAM_ID (docs/ios-release.md)"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.ready.outputs.ok == 'yes'
+
+      - uses: actions/setup-node@v4
+        if: steps.ready.outputs.ok == 'yes'
+        with:
+          node-version: 22
+
+      # App Store Connect only accepts builds from a current Xcode
+      - uses: maxim-lobanov/setup-xcode@v1
+        if: steps.ready.outputs.ok == 'yes'
+        with:
+          xcode-version: latest-stable
+
+      - uses: ruby/setup-ruby@v1
+        if: steps.ready.outputs.ok == 'yes'
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Stage the web app into the iOS project
+        if: steps.ready.outputs.ok == 'yes'
+        run: |
+          npm ci
+          npm run sync:ios
+
+      # The key is written for this run only, outside the checkout, and the
+      # runner is destroyed afterwards.
+      - name: Write the App Store Connect API key
+        if: steps.ready.outputs.ok == 'yes'
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          KEY="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          printf '%s\n' "$ASC_KEY_P8" > "$KEY"
+          chmod 600 "$KEY"
+          echo "ASC_KEY_PATH=$KEY" >> "$GITHUB_ENV"
+
+      - name: fastlane ${{ inputs.lane || 'beta' }}
+        if: steps.ready.outputs.ok == 'yes'
+        run: bundle exec fastlane ios ${{ inputs.lane || 'beta' }}
+
+      - uses: actions/upload-artifact@v4
+        if: steps.ready.outputs.ok == 'yes' && always()
+        with:
+          name: codecraft-ios
+          path: |
+            build/ios/*.ipa
+            build/ios/*.dSYM.zip
+          if-no-files-found: ignore
