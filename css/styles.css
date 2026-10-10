@@ -672,6 +672,9 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   background:rgba(36,146,189,.28);box-shadow:0 0 0 1.5px rgba(36,146,189,.5);}
 /* how the cost grows with the input — O(n) vs O(n^2) without the notation */
 #mgCost{margin:8px 0 0;font-size:var(--fs-sm);font-weight:var(--fw-bold);color:var(--ink2);}
+/* a run fills these; empty, their margins were 17px of nothing above the
+   hint, pushing its last line under the edge of the board tab */
+#mgVars:empty,#mgCost:empty{display:none;}
 #mgCost .crow{display:flex;align-items:center;gap:7px;margin:3px 0;}
 #mgCost .clbl{min-width:74px;text-align:right;opacity:.8;}
 #mgCost .cbar{height:9px;border-radius:999px;background:linear-gradient(90deg,#54d66a,#ffb830);min-width:3px;}

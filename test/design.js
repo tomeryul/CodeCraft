@@ -199,6 +199,31 @@ const WEIGHTS = ['400', '600', '700'];
   ck('"New tower level" opens the designer in 3D — not the same page as "Tower Mode"',
     P.newTower && P.newTower.designer3d && !P.newTower.towerPage, P.newTower);
 
+  /* One inset under the header, and nothing under a board cut off. The
+     first thing on a page started anywhere from on the header's line to
+     14px below it; the hint under a level's board lost its last line to
+     the bottom fade because the fit counted 8px of margin for 16. */
+  const G = await pg.evaluate(async () => {
+    const w = ms => new Promise(r => setTimeout(r, ms));
+    const home = () => { if (mgState) mgExit(false); navHome(); };
+    const gap = () => { const top = [...document.querySelectorAll('.sheet.open,#shopWrap.open #shop,#editor.open')].filter(e => e.getBoundingClientRect().height > 50).pop();
+      const head = top.querySelector('.m-head,.v5-head'); const hb = head.getBoundingClientRect().bottom;
+      const firsts = [...top.querySelectorAll('*')].filter(e => { if (head.contains(e) || !e.offsetParent) return false; const r = e.getBoundingClientRect(); if (r.height < 4 || r.top < hb - 1) return false;
+        return e.matches('button,input,canvas') || [...e.childNodes].some(n => n.nodeType === 3 && n.nodeValue.trim()) || (getComputedStyle(e).backgroundColor !== 'rgba(0, 0, 0, 0)' && r.width > 100); });
+      return Math.round(Math.min(...firsts.map(e => e.getBoundingClientRect().top)) - hb); };
+    const out = { gaps: {}, cut: {} };
+    const pages = { hub: () => hubOpen(), academy: () => { hubOpen(); hubPage('academy'); }, account: () => { hubOpen(); hubPage('account'); },
+      shop: () => openShop(), settings: () => openSettings(), orders: () => ordersOpen(), quests: () => { renderQuests(); $('quests').classList.add('open'); },
+      level: () => { packEnter(PUZZLE_PACKS[1], 0); setTab('board'); }, tower: () => t3Enter(TOWER_LEVELS[1]), cyber: () => CC_CYBER.enter(CC_CYBER.levels[0]) };
+    for (const [k, f] of Object.entries(pages)) { home(); f(); await w(700); out.gaps[k] = gap();
+      if (['level', 'tower', 'cyber'].includes(k)) { const bt = $('boardTab'); out.cut[k] = bt.classList.contains('fade-b') ? Math.round(bt.scrollHeight - bt.clientHeight) : 0;
+        if (out.cut[k]) out.cut[k + 'Why'] = [...$('mgRead').children].filter(e => e.offsetParent).map(e => (e.id || e.className) + ':' + Math.round(e.getBoundingClientRect().height)).join(' '); } }
+    home(); return out;
+  });
+  ck('every page starts the same distance under its header (12px)',
+     Object.values(G.gaps).every(g => g === 12), G.gaps);
+  ck("nothing under a level's board is cut off by the fade", Object.values(G.cut).every(c => c === 0), G.cut);
+
   ck('no uncaught exceptions', errs.length === 0, errs.slice(0, 3));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await b.close();

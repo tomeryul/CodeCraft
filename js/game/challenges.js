@@ -899,11 +899,16 @@ function mgFitBoard(aspect){
      scrollport's — the visible part of the board tab */
   const ph=(panel.parentNode&&panel.parentNode.clientHeight)||panel.clientHeight;
   if(ph<40)return;
-  let used=0;
+  /* every row's margins too, and the board's own, and the tab's padding:
+     a flat "-8" stood in for 16px of them, and the strip under the board
+     came out 6-15px past the tab, its last line cut by the fade */
+  const mg=el=>{const c=getComputedStyle(el);return (parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0);};
+  const tab=getComputedStyle(panel.parentNode);
+  let used=mg(cv)+(parseFloat(tab.paddingTop)||0)+(parseFloat(tab.paddingBottom)||0);
   for(const el of panel.children){
     // the rotate buttons beside a Tower board share the board's row
     if(el===cv||el.id==="mgRead"||!el.offsetParent||el.classList.contains("t3side-btn"))continue;
-    used+=el.getBoundingClientRect().height;
+    used+=el.getBoundingClientRect().height+mg(el);
   }
   /* What is left after the fixed rows is shared. The reading area keeps a
      line of itself on screen — but only as much as it actually has to say,
@@ -911,7 +916,7 @@ function mgFitBoard(aspect){
      board's height to an empty panel, and never more than its share, so a
      191px board tab on a small phone does not end up with an 8px scroller
      under a board too tall to fit beside it. */
-  const room=Math.max(60,ph-used-8);
+  const room=Math.max(60,ph-used);
   const bt=$("boardTab"); if(bt&&bt._fade)requestAnimationFrame(bt._fade);
   /* a strip of what is under the board stays in view, so the scroll
      announces itself — but only as much as there is to say, and never more

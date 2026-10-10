@@ -161,10 +161,14 @@ function edgeFade(el,axis){
   if(!el||el._fade)return;
   /* and the top edge too, once something has scrolled up under the header:
      text cut hard against the header's line reads as glued to it */
+  /* only content counts as "more": what is left to scroll inside the
+     scroller's own end padding is empty space, and fading over it dimmed a
+     last line that was fully on screen */
+  const pad=side=>parseFloat(getComputedStyle(el)["padding"+side])||0;
   const f=el._fade=axis==="x"
-    ?()=>{ el.classList.toggle("fade-r",el.scrollWidth-el.clientWidth-el.scrollLeft>4);
+    ?()=>{ el.classList.toggle("fade-r",el.scrollWidth-el.clientWidth-el.scrollLeft-pad("Right")>4);
            el.classList.toggle("fade-l",el.scrollLeft>4); }
-    :()=>{ el.classList.toggle("fade-b",el.scrollHeight-el.clientHeight-el.scrollTop>4);
+    :()=>{ el.classList.toggle("fade-b",el.scrollHeight-el.clientHeight-el.scrollTop-pad("Bottom")>4);
            el.classList.toggle("fade-t",el.scrollTop>4); };
   el.addEventListener("scroll",f,{passive:true});
   try{new ResizeObserver(f).observe(el);}catch(_){}

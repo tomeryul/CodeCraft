@@ -463,3 +463,21 @@ textarea, select{
    under the guide: the same gesture landing somewhere different on every
    page. 20px plus whatever margin the last row carries. */
 #hubBody,#projList,#shopItems,#settingsList,#questList,#guideBody,#funcLibBody,#ordBody,#styleBody{padding-bottom:20px;}
+
+/* One inset under the header. The first thing on a page started anywhere
+   from on the header's line (Account, Settings, every level's goal) to
+   14px below it (Shop, Style, the guide). 12px, on whatever comes first. */
+#hubBody,#projList,#shopItems,#settingsList,#chat,#ordBody{padding-top:12px;}
+#guideBody,#funcLibBody,#styleBody{padding-top:0;}   /* their first row brings its own 12-14px */
+#projects #authBox{padding-top:12px;}
+#projects[data-page="account"] #projList{padding-top:4px;}
+#statsBox{padding-top:12px;}
+#boardTab,#pyTab{padding-top:12px;}
+#blocksTab .v5-edrow{margin-top:8px;}
+
+/* The designer's own lines live in the strip under the board, and leaving
+   the designer left them there: every level played afterwards opened with
+   the designer's status line under its board, and after the Tower designer
+   its edit row, counters and warning too — 112px of somebody else's
+   screen. They show only while designing, whichever way a level opens. */
+body:not(:has(#mgCreatorBar.on)) :is(#mgStatus,#t3EdRow,#t3Warn,#t3Hint){display:none !important;}
