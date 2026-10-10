@@ -183,6 +183,11 @@ function bands(){
 const hubScroll={};
 function hubPage(key,pointSel,restore){
   const p=PAGES[key]; if(!p)return;
+  /* Under the age cutoff the community is not part of the game (its band is
+     never drawn), so its page matched nothing and fell back to the whole
+     catalogue under a "Community" title. The menu hides the row; any other
+     way in lands on the menu too. */
+  if(key==="community"&&typeof ageOk==="function"&&!ageOk()){hubOpen();return;}
   hubClose();
   if(typeof mgState!=="undefined"&&mgState&&has("mgExit"))mgExit(false);
   $("editor").classList.remove("open");
