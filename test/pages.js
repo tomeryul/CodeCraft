@@ -154,6 +154,20 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   ck('a finished journey step says what was done, not what is next (the bar shows that)',
     B.stepToast.trim().length > 0 && !/Next/.test(B.stepToast) && B.bar.length > 0, B);
 
+  /* Every list of levels glows on the next one to play. Puzzles, Builds and
+     the Academy did; Tower and Cyber, which draw their own cards, did not. */
+  const HOT = await pg.evaluate(async () => {
+    const w = ms => new Promise(r => setTimeout(r, ms)); const out = {};
+    for (const p of ['puzzles', 'builds', 'tower', 'cyber']) {
+      navHome(); hubOpen(); hubPage(p); await w(400);
+      const vis = [...document.querySelectorAll('#projList .pcard')].filter(c => c.offsetParent);
+      out[p] = vis.filter(c => c.classList.contains('hot')).length;
+    }
+    navHome(); return out;
+  });
+  ck('every list of levels marks exactly one as the next to play',
+     Object.values(HOT).every(n => n === 1), HOT);
+
   ck('no uncaught exceptions', errs.length === 0, errs.slice(0, 3));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await b.close();

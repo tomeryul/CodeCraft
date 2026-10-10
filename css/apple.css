@@ -457,3 +457,9 @@ textarea, select{
   animation-delay:calc(min(var(--i,0),8) * 35ms);
 }
 @keyframes hubTileIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* One end gap for every list a sheet scrolls. Scrolled to the bottom, the
+   last row sat 8px from the edge under Settings, 13 under Quests and 28
+   under the guide: the same gesture landing somewhere different on every
+   page. 20px plus whatever margin the last row carries. */
+#hubBody,#projList,#shopItems,#settingsList,#questList,#guideBody,#funcLibBody,#ordBody,#styleBody{padding-bottom:20px;}

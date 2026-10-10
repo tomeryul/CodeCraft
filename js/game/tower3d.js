@@ -622,10 +622,13 @@ window.renderProjects=function(){
   /* one row per level, the same row every other list of levels uses
      (ccCard) — they were tiles in a grid, a second way of saying the same
      thing (game-app-design §5; the owner chose rows) */
+  /* the next level to play glows, as it does on every other list of levels */
+  let hot=true;
   for(const lv of TOWER_LEVELS){
     const solved=!!player.projects[lv.id];
+    const isHot=!solved&&hot; if(isHot)hot=false;
     const peak=Math.max.apply(null,(lv.plan||[[0,0,1]]).map(x=>x[2]));
-    ccCard(grid,{em:lv.em,name:'<span class="t3name">'+esc(lv.name)+'</span>',cls:"t3card",done:solved,
+    ccCard(grid,{em:lv.em,name:'<span class="t3name">'+esc(lv.name)+'</span>',cls:"t3card",done:solved,hot:isHot,
       meta:"⭐".repeat(lv.diff)+' · 🧩 '+lv.maxBlocks+' · ⛰ '+peak,
       desc:lv.desc?esc(lv.desc):"", badge:solved?"✓":"▶",
       onTap:()=>{$("projects").classList.remove("open");t3Enter(lv);}});

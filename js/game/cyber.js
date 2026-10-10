@@ -476,6 +476,8 @@ window.renderProjects=function(){
   _renderProjects();
   const el=$("projList"); if(!el)return;
   const done=LEVELS.filter(l=>player.projects[l.id]).length;
+  /* the next level to play glows, as it does on every other list of levels */
+  hotId=(LEVELS.find(l=>!player.projects[l.id]&&unlocked(l))||{}).id;
   const sec=document.createElement("div");sec.className="t3sec cy-sec";
   sec.innerHTML='<div class="t3head"><div class="t3ico cy-ico">🔐</div>'+
     '<div><div class="t3title">Cyber Lab</div>'+
@@ -494,6 +496,7 @@ window.renderProjects=function(){
   }
   el.insertBefore(sec,el.firstChild);
 };
+let hotId=null;
 function card(lv){
   const solved=!!player.projects[lv.id], open=unlocked(lv);
   /* the inputs are part of what a level costs, so the row says so before
@@ -503,7 +506,7 @@ function card(lv){
   const inputs=(lv.cases||[]).length;
   const holder=document.createElement("div");
   const c=ccCard(holder,{em:lv.em,name:'<span class="t3name">'+esc(lv.name)+'</span>',
-    cls:"t3card cy-card"+(open?"":" locked"),done:solved,
+    cls:"t3card cy-card"+(open?"":" locked"),done:solved,hot:lv.id===hotId,
     meta:"⭐".repeat(lv.diff)+' · 🧩 '+lv.maxBlocks+(inputs?' · 🔀 '+inputs:''),
     desc:lv.desc?esc(lv.desc):"", badge:solved?"✓":open?"▶":"🔒",
     onTap:open?()=>{$("projects").classList.remove("open");enter(lv);}
