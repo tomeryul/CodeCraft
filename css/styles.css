@@ -237,6 +237,12 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .pblk{border-radius:var(--r-ctl);padding:7px 11px;font-size:var(--fs-sm);font-weight:var(--fw-bold);color:#fff;display:flex;gap:5px;align-items:center;
   transition:transform .08s;border-bottom:3.5px solid rgba(0,0,0,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.22);}
 .pblk:active{transform:translateY(2px);}
+/* the block is what a child taps more than anything in the app: 38px tall,
+   from 31, and its reach 3px further up and down — 44 — which the 6px
+   between rows leaves room for without one block taking another's tap */
+.pblk{min-height:38px;position:relative;}
+.pblk::after{content:"";position:absolute;inset:-3px 0;}
+#routineTabs .rtab.rlib{min-width:40px;justify-content:center;}
 .pblk.c-basic{background:var(--c-basic);border-bottom-color:var(--c-basic-d);}
 .pblk.c-loops{background:var(--c-loops);border-bottom-color:var(--c-loops-d);}
 .pblk.c-logic{background:var(--c-logic);border-bottom-color:var(--c-logic-d);}
@@ -885,7 +891,7 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .blk{border-bottom-width:2.5px;border-radius:var(--r-ctl);}
 .pblk{border-bottom-width:2.5px;border-radius:var(--r-ctl);box-shadow:inset 0 1px 0 rgba(255,255,255,.16);}
 .pcat h4{font-size:var(--fs-xs);letter-spacing:1.4px;opacity:.8;}
-.pcat .row{gap:5px;}
+.pcat .row{gap:6px;}
 #programWrap{background:rgba(0,0,0,.2);border-radius:var(--r-card);}
 
 /* ---- dialogs & overlays ---- */

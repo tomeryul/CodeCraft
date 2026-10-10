@@ -508,11 +508,13 @@ body.sheets-full #maker.sized,
 #blocksTab .v5-edrow #routineTabs{flex:1;min-width:0;margin:0;flex-wrap:nowrap;
   overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:2px 0;}
 #blocksTab .v5-edrow #routineTabs::-webkit-scrollbar{display:none;}
-#blocksTab .v5-edrow #routineTabs .rtab{flex:0 0 auto;min-height:36px;}
+/* 40, the height of every other control row: at 36 the tabs and undo/redo
+   were the smallest targets on the sheet, and undo touched redo */
+#blocksTab .v5-edrow #routineTabs .rtab{flex:0 0 auto;min-height:40px;}
 #blocksTab .v5-edrow .ed-btns{
-  display:flex;flex:0 0 auto;gap:3px;padding:3px;
+  display:flex;flex:0 0 auto;gap:4px;padding:3px;
   border-radius:var(--r-ctl);background:rgba(0,0,0,.24);border:1px solid var(--hair);}
-#blocksTab .v5-edrow .ed-btns button{width:36px;height:36px;border-radius:9px;}
+#blocksTab .v5-edrow .ed-btns button{width:40px;height:40px;border-radius:9px;}
 /* the run row: 58px of Run inside 23px of padding was a third of the
    program's height. 50 is still the biggest thing on the sheet. */
 #actionBar{padding:7px 12px 9px;gap:8px;}
