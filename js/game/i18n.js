@@ -31,6 +31,9 @@ const SKIP=new Set(["SCRIPT","STYLE","CANVAS","TEXTAREA","INPUT","PRE","CODE"]);
 const SKIP_IN="#pyTab,#pyCode,.mono";
 
 const HE={
+/* QA: the object menu's titles, whole (see "{s} — what to do?" in HE_T) */
+"📦 Chest — what to do?":"📦 תיבה — מה לעשות?",
+"🌉 Bridge — what to do?":"🌉 גשר — מה לעשות?",
 /* ---- splash ---- */
 "CodeCraft — Program Your World":"CodeCraft — תכנת את העולם שלך",
 "A living open world where":"עולם פתוח וחי שבו",
@@ -1141,7 +1144,16 @@ const SCOPED=[
                       "May":"מאי","June":"יוני","July":"יולי","August":"אוגוסט",
                       "September":"ספטמבר","October":"אוקטובר","November":"נובמבר","December":"דצמבר",
                       "Month":"חודש"}],
-  ["#ageYear",       {"Year":"שנה"}]
+  ["#ageYear",       {"Year":"שנה"}],
+  /* Build mode's pieces and shelves. None was on any screen a test opened,
+     and "Tree", "Sign" or "Well" outside this bar could be anything. */
+  ["#buildBar",      {"Nature":"טבע","Decor":"קישוט",
+                      "Wall":"קיר","Roof":"גג","Blue Roof":"גג כחול","Green Roof":"גג ירוק","Purple Roof":"גג סגול",
+                      "Door":"דלת","Window":"חלון","Storefront":"חזית חנות","Awning":"סוכך","Sign":"שלט",
+                      "Well":"באר","Market Stall":"דוכן שוק","Floor":"רצפה","Path":"שביל","Rug":"שטיח",
+                      "Tree":"עץ","Flower":"פרח","Hedge":"גדר חיה","Planter":"עציץ","Fountain":"מזרקה",
+                      "Fence":"גדר","Lamp":"פנס","Bench":"ספסל","Table":"שולחן","Crate":"ארגז",
+                      "Barrel":"חבית","Gem":"אבן חן","Mailbox":"תיבת דואר","Statue":"פסל","Campfire":"מדורה"}]
 ];
 
 /* Entries whose emoji sit INSIDE the sentence, not at its edges. The
@@ -1863,6 +1875,9 @@ const HE_T={
   "הדגל לא יכול לשבת בתוך {1} — אף אחד לא היה יכול לעמוד עליו.",
 /* ---- world, moderation, tower 3D, orders, shop ---- */
 "{s} — what to do?":"{1} — מה לעשות?",
+/* the object menu's own names: the template above keeps what fills {s} as
+   it came, which is right for a robot's name and wrong for "Chest" */
+"{s} build — what to do?":"מבנה {1} — מה לעשות?",
 "🤖 Selected {s}":"🤖 נבחר {1}",
 "Hide everything by “{s}”?\n\nYou won't see their challenges any more. You can undo this in the 🛒 shop.":
   "להסתיר את כל מה שנוצר על ידי „{1}”?\n\nלא תראה יותר את האתגרים שלהם. אפשר לבטל את זה ב-🛒 חנות.",

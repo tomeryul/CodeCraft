@@ -1111,6 +1111,11 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   border:1px solid rgba(255,214,107,.42);
   box-shadow:0 6px 20px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.10);}
 #journey .j-btn:active{transform:scale(.985);}
+/* The mission card sits where the build bar and an object's menu open, and
+   both are translucent: its words read through the tiles of one and stick
+   out either side of the other. While either is up, the card steps aside —
+   at once, not on renderJourney's next second. */
+body:has(#buildBar.on) #journey,body:has(#objMenu.open) #journey{display:none !important;}
 #journey .j-em{font-size:20px;line-height:1;flex:0 0 auto;}
 #journey .j-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
 #journey .j-tx b{font-size:var(--fs-sm);font-weight:var(--fw-bold);color:var(--ink);
