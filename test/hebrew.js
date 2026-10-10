@@ -197,6 +197,24 @@ async function boot(pg,he){
   ck('a sentence written into an element already on the page is translated',
      HEB.test(inPlace) && !/Walk up|Chop to clear/.test(inPlace), inPlace);
 
+  /* The dictionary is keyed emoji-free, and its Hebrew values used to be
+     stored emoji-free too, so only the two ENDS were put back. Every icon
+     inside a sentence vanished: the journey's first step read "…then press ." */
+  const icons = await pg.evaluate(async () => {
+    const host=document.createElement('div'); host.id='__icons';
+    host.style.position='absolute'; host.style.left='-9999px';
+    document.body.appendChild(host);
+    await new Promise(r=>setTimeout(r,60));
+    host.innerHTML='<small>Open \ud83e\udde9 Code and build: \ud83d\udeb6 Walk To \ud83c\udf33 \u2192 \ud83e\ude93 Chop. Then press \u25b6.</small>';
+    await new Promise(r=>setTimeout(r,300));
+    return { text:host.textContent,
+             icons:[...host.querySelectorAll('.ui-emoji')].map(e=>e.getAttribute('data-e')) };
+  });
+  ck('a sentence with icons in its middle is translated',
+     HEB.test(icons.text) && !/Walk To|Chop/.test(icons.text), icons);
+  ck('and keeps every icon it points at',
+     ['\ud83e\udde9','\ud83d\udeb6','\ud83c\udf33','\ud83e\ude93','\u25b6'].every(e=>icons.icons.includes(e)), icons);
+
   /* A lesson row is "<b>Move</b> — One step forward…", so the sentence
      arrives with a leading em-dash and a <b> beside it. The dash is edge
      decoration; the <b> is real markup and has to survive. */

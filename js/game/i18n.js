@@ -1665,6 +1665,7 @@ const HE_RAW={
   "אתה מתחיל על צוק. ⬇️ רד יורד בדיוק רמה אחת — תוריד את עצמך לקרקע, ואז תבנה את המדרגות המתאימות חזרה למעלה בצד השני. לולאת 🔄 כל עוד יכולה לרדת עד שהקרקע שטוחה.",
 "🌙 Nightfall — everything costs more energy, but 💎 crystal is precious. Watch for 😴 tired!":
   "🌙 יורד לילה — הכול עולה יותר אנרגיה, אבל 💎 גביש יקר. תשים לב ל-😴 עייפות!",
+"🌙 Nightfall":"🌙 לילה",
 "💎 Rich seam — on 📻":"💎 עורק עשיר — ב-📻",
 "📋 The order expired — a new one will come up.":"📋 ההזמנה פגה — תעלה אחת חדשה.",
 "Nothing saved yet. Write something in 🔧 A or 🔧 B, then save it here — it will be waiting in every world and every minigame.":
@@ -2035,9 +2036,15 @@ function trTemplate(core){
   return null;
 }
 
-/* one index, built once, keyed on the emoji-free form both ways */
+/* one index, built once, keyed on the emoji-free form. The VALUE keeps
+   the emoji in its middle: only the two ends are decoration, put back from
+   the live node. Stripping all of them turned "Open 🧩 Code and build: 🚶
+   Walk To 🌳 → 🪓 Chop. Then press ▶." into "…then press ." — 41 sentences,
+   the journey's first instructions among them, lost the icons they were
+   pointing at. */
+const body=s=>s.replace(/\s+/g," ").replace(EDGE,"").trim();
 const IDX={}, IDX_N={}, IDX_RAW={};
-for(const k in HE) IDX[norm(k)]=norm(HE[k]);
+for(const k in HE) IDX[norm(k)]=body(HE[k]);
 for(const k in HE_RAW) IDX_RAW[norm(k)]=HE_RAW[k];
 for(const k in HE_N) IDX_N[norm(k).replace(NUM,"{n}")]=HE_N[k];
 /* Every pattern is filed twice: once as written, emoji and all, and once
@@ -2086,7 +2093,7 @@ function tr(s,el){
     const tmpl=IDX_N[core.replace(NUM,"{n}")];
     if(tmpl){
       let i=0;
-      return lead+norm(tmpl).replace(/\{n\}/g,()=>nums[i++])+tail;
+      return lead+body(tmpl).replace(/\{n\}/g,()=>nums[i++])+tail;
     }
   }
   /* A pattern value carries its own emoji, like HE_RAW, so it is used as
