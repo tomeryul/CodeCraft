@@ -164,6 +164,10 @@ function editor(){
         const full=($("mgTitle")||{}).textContent||"Challenge";
         const m=/^(.*\S)\s+[—–]\s+(\S[^—–]*\d+\s*\/\s*\d+)\s*$/.exec(full);
         ti.textContent=m?m[1]:full;
+        /* a name longer than its row ("One Program, Any Row" beside four
+           buttons) drops one step of the type scale before it is cut */
+        ti.classList.remove("long");
+        if(ti.scrollWidth>ti.clientWidth+1)ti.classList.add("long");
         const c=($("mgCount")||{}).textContent||"";
         const cnt=c?("🧩 "+c.replace(/^🧩\s*/,"")):"";
         su.textContent=m?(m[2]+(cnt?"  ·  "+cnt:"")):cnt;
@@ -182,6 +186,7 @@ function editor(){
   if(mt)mo.observe(mt,{childList:true,characterData:true,subtree:true});
   if(mc)mo.observe(mc,{childList:true,characterData:true,subtree:true});
   window.v5EdSync=sync;
+  addEventListener("resize",sync);
 }
 
 /* ---------- 4. the shop ---------- */

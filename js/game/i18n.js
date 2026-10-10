@@ -496,20 +496,20 @@ const HE={
 "Menu ▸ Shop":"תפריט ▸ חנות",
 "Menu ▸ Market Orders":"תפריט ▸ הזמנות מהשוק",
 "Starter Academy":"אקדמיית הפתיחה",
-"Levels other players published.":"שלבים שחקנים אחרים פרסמו.",
-"A short lesson for every block.":"שיעור קצר לכל בלוק.",
-"One new trick per chapter.":"טריק חדש אחד בכל פרק.",
-"Finish one, it joins your world.":"מה שתסיים יופיע בעולם שלך.",
-"The same board, with height.":"אותו לוח, עם גובה.",
+"Levels by other players.":"שלבים של שחקנים אחרים.",
+"A lesson for every block.":"שיעור קצר לכל בלוק.",
+"One new trick a chapter.":"טריק חדש אחד בכל פרק.",
+"Each joins your world.":"מה שתסיים — בעולם שלך.",
+"The board, with height.":"אותו לוח, עם גובה.",
 "Levels you designed.":"שלבים שעיצבת.",
-"Keep your world on every device.":"העולם שלך, בכל מכשיר.",
+"Your world on any device.":"העולם שלך, בכל מכשיר.",
 "Tower Mode — 3D":"מצב מגדל — 3D",
 
 /* ---- Cyber Lab ----
         The level names and the lessons on the celebration card carry no
         emoji at all, so they live here rather than in HE_RAW. */
 "Cyber Lab":"מעבדת סייבר",
-"Locks, codes and notes that lie.":"מנעולים, קודים ופתקים שמשקרים.",
+"Locks, codes, lying notes.":"מנעולים, קודים ושקרים.",
 "Locks to open, notes that lie — and why a long password is a strong one.":
   "מנעולים לפתוח, פתקים שמשקרים — ולמה סיסמה ארוכה היא סיסמה חזקה.",
 "security":"אבטחה","Cyber":"סייבר","codes tried":"קודים שנוסו",

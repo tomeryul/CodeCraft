@@ -196,6 +196,11 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
    share a touch. */
 .blk .pbtn{position:relative;}
 .blk .pbtn::after{content:"";position:absolute;inset:-9px -3px;}
+/* the same reach for the level's "More" (23px tall) and the lesson card's ✕
+   (25x21): both sit with room around them, so the ring touches nothing */
+#mgMore,.ls-x{position:relative;}
+#mgMore::after{content:"";position:absolute;inset:-9px 0;}
+.ls-x::after{content:"";position:absolute;inset:-10px -10px;}
 .blk .num{min-width:26px;text-align:center;font-weight:var(--fw-bold);color:var(--accent2);}
 .blk.c-basic{background:var(--c-basic);border-bottom-color:var(--c-basic-d);} .blk.c-basic.sel{background:#4d74d4;}
 .blk.c-loops{background:var(--c-loops);border-bottom-color:var(--c-loops-d);} .blk.c-loops.sel{background:#d48c2e;}

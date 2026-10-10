@@ -33,14 +33,14 @@ const num=fn=>{try{const v=fn();return v==null?null:v;}catch(_){return null;}};
    key -> which band of #projList belongs to it, and what to call it.
    The band keys come from bandKey() below. */
 const PAGES={
-  academy  :{em:"🎓",title:"Academy",     sub:"A short lesson for every block.",bands:["academy"]},
-  puzzles  :{em:"🧩",title:"Puzzle Chapters",sub:"One new trick per chapter.",bands:["puzzles"]},
-  builds   :{em:"🏗️",title:"Build Projects",sub:"Finish one, it joins your world.",bands:["builds"]},
-  tower    :{em:"🧊",title:"Tower Mode — 3D",sub:"The same board, with height.",bands:["tower"]},
-  cyber    :{em:"🔐",title:"Cyber Lab",     sub:"Locks, codes and notes that lie.",bands:["cyber"]},
+  academy  :{em:"🎓",title:"Academy",     sub:"A lesson for every block.",bands:["academy"]},
+  puzzles  :{em:"🧩",title:"Puzzle Chapters",sub:"One new trick a chapter.",bands:["puzzles"]},
+  builds   :{em:"🏗️",title:"Build Projects",sub:"Each joins your world.",bands:["builds"]},
+  tower    :{em:"🧊",title:"Tower Mode — 3D",sub:"The board, with height.",bands:["tower"]},
+  cyber    :{em:"🔐",title:"Cyber Lab",     sub:"Locks, codes, lying notes.",bands:["cyber"]},
   mine     :{em:"🛠️",title:"My Challenges",sub:"Levels you designed.",bands:["mine","tower"]},
-  community:{em:"🌍",title:"Community",   sub:"Levels other players published.",bands:["community"]},
-  account  :{em:"👤",title:"Account & save",sub:"Keep your world on every device.",bands:[],auth:true}
+  community:{em:"🌍",title:"Community",   sub:"Levels by other players.",bands:["community"]},
+  account  :{em:"👤",title:"Account & save",sub:"Your world on any device.",bands:[],auth:true}
 };
 
 /* ---------------- the menu ----------------
