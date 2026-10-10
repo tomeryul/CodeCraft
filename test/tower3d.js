@@ -210,6 +210,47 @@ const ck = (n, ok, d) => { ok ? pass++ : fail++;
     await ap.close();
   }
 
+  /* Nothing else ever solved a Tower level: a level whose plan cannot be
+     built inside its block budget would leave a child with no way on. These
+     are the shortest programs a player could find from each level's own
+     description, run through the real engine. */
+  console.log('▶ every Tower level can be solved inside its budget');
+  {
+    const sp = await b.newPage({ viewport: { width: 420, height: 940 } });
+    sp.on('pageerror', e => errs.push(String(e)));
+    await sp.goto('file://' + path.join(ROOT, 'index.html')); await sp.waitForTimeout(1000);
+    await sp.evaluate(() => { ageSet(true); $('agegate').classList.remove('open'); $('playBtn').click(); });
+    await sp.waitForTimeout(1500);
+    const S = await sp.evaluate(async () => {
+      let u = 1; const B = (t, x) => Object.assign({ t, uid: u++ }, x || {});
+      const rep = (n, body) => B('repeat', { n, body });
+      const stair = () => B('countLoop', { name: 'i', to: 3, body: [B('repeat', { n: 1, src: 'i', body: [B('build')] }), B('climb')] });
+      const SOL = {
+        t3_steps: [B('build'), B('climb'), rep(2, [B('build')]), B('climb'), rep(3, [B('build')])],
+        t3_ramp: [stair(), rep(3, [rep(3, [B('build')]), B('move')])],
+        t3_gap: [B('move'), B('move'), B('jump'), B('build'), B('climb'), rep(2, [B('build')])],
+        t3_corner: [stair(), B('turnR'), rep(2, [rep(3, [B('build')]), B('move')])],
+        t3_descend: [rep(3, [B('descend')]), B('build'), B('climb'), rep(2, [B('build')]), B('climb'), rep(3, [B('build')])],
+      };
+      const out = {};
+      for (const lv of TOWER_LEVELS) {
+        document.querySelectorAll('#ccCele').forEach(e => e.remove());
+        t3Enter(lv);
+        applyProg(mgRobot, JSON.parse(JSON.stringify(SOL[lv.id] || [])));
+        const within = progSize(mgRobot) <= mgState.proj.maxBlocks;
+        mgRun(); for (let k = 0; k < 40000 && mgState && mgState.running; k++) mgTick();
+        await new Promise(r => setTimeout(r, 900));
+        out[lv.id] = within && !!document.querySelector('#ccCele');
+        document.querySelectorAll('#ccCele').forEach(e => e.remove());
+        if (mgState) mgExit(false);
+      }
+      return out;
+    });
+    for (const [id, ok] of Object.entries(S)) ck(`${id} is solved within its budget`, ok === true, S);
+    ck('and that is all five', Object.keys(S).length === 5, Object.keys(S));
+    await sp.close();
+  }
+
   ck('no uncaught exceptions', errs.length === 0, errs.slice(0, 3));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await b.close();
