@@ -509,3 +509,18 @@ body:not(:has(#mgCreatorBar.on)) :is(#mgStatus,#t3EdRow,#t3Warn,#t3Hint){display
    tiles'). Tower's lit button was a blue gradient and Cyber's purple. */
 #dsModes .ibtn.on,#mgCreatorBar #dsModes #t3Btn.on{background:rgba(255,184,48,.2);color:var(--accent2);
   border-color:transparent;box-shadow:inset 0 0 0 1.5px rgba(255,214,107,.7);}
+
+/* ---- Style and the maker ---- */
+/* Which robot you are dressing: the same 40px chip as the editor's robot
+   chips (29 here). The poses are a segmented control, 40 like every other
+   one (36 here). */
+#styleBody .rchip{min-height:40px;}
+#styleBody .st-mode{min-height:40px;}
+/* the maker's stage starts 12px under the header, as every page does (6) */
+#maker .mk-stage-fixed{padding-top:12px;}
+/* the breadcrumb is a button in the header, the header's height (32) */
+#maker .mk-crumb-b{min-height:40px;}
+
+/* One side inset for every page's list: 14px. Style's content ran to the
+   sheet's edges (2px), Orders sat at 6, Settings 13, the menu 16. */
+#hubBody,#settingsList,#styleBody,#ordBody{padding-left:14px;padding-right:14px;}

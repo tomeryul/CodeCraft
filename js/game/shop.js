@@ -211,6 +211,7 @@ function renderStyle(){
       crew.appendChild(b);
     });
     body.appendChild(crew);
+    if(typeof edgeFade==="function")edgeFade(crew,"x");
   }
 
   /* live preview */

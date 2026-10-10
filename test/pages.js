@@ -127,12 +127,18 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     out.fits = ti.scrollWidth <= ti.clientWidth + 1;
     $('edMax').click(); await w(600);
     // 4. at half height a cut-off area fades at its edge, and stops fading at the end
+    /* The level's own board and strip fit the tab now (the fit counts every
+       margin), so nothing fades on an untouched level; the fade is checked
+       with something really below the fold. */
     await home(); t3Enter(TOWER_LEVELS[1]); await w(1000);
     const bt = $('boardTab');
+    out.wholeNoFade = !bt.classList.contains('fade-b');
+    const more = document.createElement('div'); more.style.height = '240px'; $('mgRead').appendChild(more); await w(300);
     out.over = bt.scrollHeight > bt.clientHeight + 4;
     out.faded = bt.classList.contains('fade-b');
     bt.scrollTop = bt.scrollHeight; await w(200);
     out.fadedAtEnd = bt.classList.contains('fade-b');
+    more.remove();
     // 5. finishing a journey step says what was done; the bar says what is next
     await home(); $('toasts').innerHTML = '';
     const st = journeyState(), first = JOURNEY.find(j => !st.claimed[j.id]);
@@ -149,6 +155,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   ck('while a reply to the player\'s own tap stays', B.replyAfter === true, B);
   ck('a level\'s name fits its header at full height', B.fits === true && !/Level/.test(B.title), B);
   ck('and the level number sits on the line under it, with the block count', /Level 1\/4/.test(B.sub) && /0\/\d/.test(B.sub), B);
+  ck('a level whose board and strip fit its tab does not fade', B.wholeNoFade === true, B);
   ck('a board tab with more below fades at its edge, not in the middle of a line', B.over && B.faded, B);
   ck('scrolled to the end, the fade goes', B.fadedAtEnd === false, B);
   ck('a finished journey step says what was done, not what is next (the bar shows that)',
