@@ -124,6 +124,21 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const copies = await pg.evaluate(() => [...objects.values()].filter(o => o.type === 'proj' && o.em === PROJECTS[0].em).length);
   ck('a world that already has copies keeps one after a load', copies === 1, copies);
 
+  /* A robot from the shop appeared on the tile under home whatever stood
+     there, and every one after it on the same tile: six robots in one rock. */
+  const bought = await pg.evaluate(() => {
+    document.querySelectorAll('#ccCele').forEach(e => e.remove());
+    coins = 5000; objects.set(key(homePos.x, homePos.y + 1), { type: 'rock', hp: 3 });
+    const first = robots.length;
+    for (let i = 0; i < 6; i++) { renderShop(); document.querySelectorAll('#shopItems button')[0].click();
+      document.querySelectorAll('#ccCele').forEach(e => e.remove()); }
+    const fresh = robots.slice(first);
+    return { n: fresh.length, standable: fresh.every(r => canWalk(r.x, r.y)),
+             own: new Set(robots.map(r => r.x + ',' + r.y)).size === robots.length };
+  });
+  ck('a robot bought with a rock on its spawn tile stands where it can walk', bought.n === 6 && bought.standable, bought);
+  ck('and each one bought gets a tile of its own', bought.own, bought);
+
   ck('no uncaught exceptions', errs.length === 0, errs.slice(0, 3));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await b.close();

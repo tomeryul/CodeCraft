@@ -10,25 +10,41 @@ function checkUnlocks(){
 }
 
 /* ---------------- shop ---------------- */
+/* Every robot bought used to appear on the tile under home, whatever was
+   there: on a rock, in a building, on top of the last robot bought. The
+   nearest tile a robot could walk onto and nobody stands on, the old spot
+   first. */
+function robotSpot(){
+  const hx=homePos.x, hy=homePos.y;
+  const free=(x,y)=>canWalk(x,y)&&!robots.some(r=>r.x===x&&r.y===y);
+  if(free(hx,hy+1))return {x:hx,y:hy+1};
+  for(let d=1;d<12;d++)
+    for(let dy=-d;dy<=d;dy++)for(let dx=-d;dx<=d;dx++){
+      if(Math.max(Math.abs(dx),Math.abs(dy))!==d)continue;
+      if(free(hx+dx,hy+dy))return {x:hx+dx,y:hy+dy};
+    }
+  return {x:hx,y:hy+1};
+}
 function openShop(){renderShop();$("shopWrap").classList.add("open");}
 function renderShop(){
   const r=R(), el=$("shopItems");
   const stashSum=Object.keys(stash).reduce((s,k2)=>s+stash[k2]*RES[k2].price,0);
   const items=[
     {em:"🤖",b:"New Robot — 100 🪙",s:"More robots = more automation! It spawns at your home base.",
-     can:coins>=100,fn(){coins-=100;const nr=makeRobot(homePos.x,homePos.y+1);robots.push(nr);selRobot=robots.length-1;toast("🤖 "+nr.name+" joined your team!");checkUnlocks();}},
+     can:coins>=100,fn(){coins-=100;const p=robotSpot(),nr=makeRobot(p.x,p.y);robots.push(nr);selRobot=robots.length-1;toast("🤖 "+nr.name+" joined your team!");checkUnlocks();}},
     {em:"🎒",b:"Bigger Bag +4 — 60 🪙",s:esc(r.name)+" carries "+r.cap+" now. Fewer trips home!",
      can:coins>=60,fn(){coins-=60;r.cap+=4;toast("🎒 "+r.name+" bag upgraded to "+r.cap+"!");}},
     {em:"⚡",b:"Speed Boost — 80 🪙",s:esc(r.name)+" runs code 25% faster. (x"+r.speed.toFixed(2)+" now, max x2)",
      can:coins>=80&&r.speed<2,fn(){coins-=80;r.speed=Math.min(2,r.speed*1.25);toast("⚡ "+r.name+" is faster!");}},
-    {em:"🏦",b:"Sell the Bank — +"+stashSum+" 🪙",s:"Bank: "+RES.wood.em+stash.wood+" "+RES.stone.em+stash.stone+" "+RES.iron.em+stash.iron+" "+RES.crystal.em+stash.crystal+(stash.water?" "+RES.water.em+stash.water:"")+" — or keep it and let robots 🔨 Build from it!",
+    {em:"🏦",b:"Sell the Bank — +"+stashSum+" 🪙",go:"Sell",s:"Bank: "+RES.wood.em+stash.wood+" "+RES.stone.em+stash.stone+" "+RES.iron.em+stash.iron+" "+RES.crystal.em+stash.crystal+(stash.water?" "+RES.water.em+stash.water:"")+" — or keep it and let robots 🔨 Build from it!",
      can:stashSum>0,fn(){coins+=stashSum;totals.earned+=stashSum;stash={wood:0,stone:0,iron:0,crystal:0,water:0};toast("💰 Bank sold for "+stashSum+" 🪙");sfx(880,.1);checkUnlocks();}},
   ];
   el.innerHTML="";
   for(const it of items){
     const d=document.createElement("div");d.className="shopitem";
     d.innerHTML='<div class="em">'+it.em+'</div><div class="tx"><b>'+it.b+'</b><small>'+it.s+'</small></div>';
-    const btn=document.createElement("button");btn.textContent="Get";btn.disabled=!it.can;
+    /* the bank row sells: a "Get" on it read as buying the bank */
+    const btn=document.createElement("button");btn.textContent=it.go||"Get";btn.disabled=!it.can;
     btn.addEventListener("click",()=>{it.fn();updateHud();updateChips();renderShop();saveSoon();});
     d.appendChild(btn);el.appendChild(d);
   }

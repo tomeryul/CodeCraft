@@ -583,9 +583,14 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
    between the screen's left edge and the tool column: the lane moves there
    and narrows to it. A full sheet has no band above it: there the lane
    stays at 128px, over the sheet's content and clear of its header — which
-   is also where it is on any phone with the sheet at full. */
+   is also where it is on any phone with the sheet at full.
+   Every sheet opens at the same --sheet-half, so this is not the editor's
+   problem alone: "🤖 Robo-2 joined your team!" landed on the shop's title,
+   and a quest done with Quests open on its header. The maker is always
+   full height, so it keeps the 128px lane. */
 @media (max-width:600px) and (min-height:621px) and (max-height:760px){
-  body:has(#editor.open:not(.max)) #toasts{top:calc(var(--sat) + 60px);padding:0 66px;}
+  body:not(.sheets-full):has(#editor.open,.sized.open:not(#maker),#shopWrap.open) #toasts{
+    top:calc(var(--sat) + 60px);padding:0 66px;}
 }
   .ed-btns{gap:5px;}
   .ed-btns button{width:33px;height:33px;font-size:var(--fs-md);border-radius:var(--r-ctl);}

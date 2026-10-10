@@ -1917,8 +1917,10 @@ const HE_T={
 "🪙 {s} on delivery":"🪙 {1} במסירה",
 "Sell the Bank — +{s} 🪙":"מכור את הבנק — +{1} 🪙",
 "{s} carries {s} now. Fewer trips home!":"{1} נושא עכשיו {2}. פחות נסיעות הביתה!",
+/* no brackets: "(x1.00" between Hebrew and a Latin x is three bidi
+   neutrals in a row, and the bracket landed on the wrong side of the number */
 "{s} runs code 25% faster. (x{n} now, max x2)":
-  "{1} מריץ קוד מהר ב-25%. (x{2} עכשיו, מקסימום x2)",
+  "{1} מריץ קוד מהר ב-25%. עכשיו פי {2}, מקסימום פי 2.",
 "⚡ {s} is faster!":"⚡ {1} מהיר יותר!",
 "🎒 {s} bag upgraded to {s}!":"🎒 התיק של {1} שודרג ל-{2}!",
 "💰 Bank sold for {s} 🪙":"💰 הבנק נמכר ב-{1} 🪙",
