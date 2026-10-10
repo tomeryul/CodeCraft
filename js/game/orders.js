@@ -56,7 +56,7 @@ function renderOrders(){
     h+='<div class="ord-card">'+
        '<div class="ord-top"><span class="ord-shape">'+(o.shape==="bulk"?"⛓ Bulk":"⇉ Spread")+'</span>'+
        '<span class="spacer"></span>'+
-       '<span class="ord-clk'+(late?" late":"")+'">⏱ '+mktClock(o.until)+'</span></div>';
+       '<span class="ord-clk'+(late?" late":"")+'">⏱ <span class="ord-t">'+mktClock(o.until)+'</span></span></div>';
     for(const k in o.need){
       const got=o.got[k]||0, need=o.need[k], done=got>=need;
       h+='<div class="ord-row'+(done?" done":"")+'">'+
@@ -65,7 +65,9 @@ function renderOrders(){
          '<span class="ord-n">'+got+'/'+need+(done?" ✅":"")+'</span></div>';
     }
     h+='<div class="ord-pay">🪙 '+o.reward+' on delivery</div>';
-    h+='<div class="ord-how">Deliver by <b>selling</b> at the 🏪 market — whatever you sell counts towards the order automatically.</div>';
+    /* one sentence, no <b> in it: the bold word cut it into three pieces,
+       and "Deliver by" alone was translated as a deadline */
+    h+='<div class="ord-how">Deliver by selling at the 🏪 market — whatever you sell counts towards the order automatically.</div>';
     h+='<div class="ord-tip">'+ordAdvice(o)+'</div>';
     h+='<button class="ord-go" id="ordCode">🧩 Open the code editor</button>';
     h+='</div>';
@@ -75,6 +77,18 @@ function renderOrders(){
   h+='<div class="ord-stats"><div><b>'+filled+'</b><span>Orders filled</span></div>'+
      (best?'<div><b>'+Math.floor(best/60)+":"+("0"+(best%60)).slice(-2)+'</b><span>Best time</span></div>':'')+
      '</div>';
+  /* This runs every second while the sheet is open. Rewriting it every
+     time replaced the buttons under the finger: a press that began on one
+     button and ended on its replacement was no click at all — half of all
+     600ms presses on "Open the code editor" did nothing. Rewrite when
+     something other than the clock changed; tick the clock in place. */
+  const t=o?mktClock(o.until):"";
+  const shape=t?h.split('"ord-t">'+t+"<").join('"ord-t"><'):h;
+  if(el._shape===shape){
+    const c=el.querySelector(".ord-t"); if(c&&c.textContent!==t)c.textContent=t;
+    return;
+  }
+  el._shape=shape;
   el.innerHTML=h;
   /* an empty board points at the one thing that fills it */
   const ga=$("ordToAcad");

@@ -142,6 +142,22 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   });
   ck('opening the designer: no layout shift once the tap is answered', C.late < 0.02, C);
 
+  /* The Orders sheet was rewritten every second while open, which replaced
+     its buttons under the finger: a press held across a rewrite ended on a
+     different element and was no click at all. The clock ticks in place. */
+  const O = await pg.evaluate(async () => {
+    if (mgState) mgExit(false); navHome();
+    marketReady(); market.order = { need: { wood: 12 }, got: {}, until: now + 300000, reward: 99, shape: 'spread', at: now };
+    ordersOpen();
+    const clk = () => (document.querySelector('#ordBody .ord-clk') || {}).textContent;
+    const btn = $('ordCode'), t0 = clk();
+    await new Promise(r => setTimeout(r, 2300));
+    const out = { sameButton: $('ordCode') === btn, t0, t1: clk() };
+    ordersClose(); market.order = null;
+    return out;
+  });
+  ck('the Orders sheet keeps its buttons while its clock ticks', O.sameButton === true && O.t0 !== O.t1, O);
+
   ck('no uncaught exceptions', errs.length === 0, errs.slice(0, 3));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await b.close();

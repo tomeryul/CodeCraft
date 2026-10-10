@@ -953,11 +953,10 @@ const HE={
 "ORDER FILLED!":"ההזמנה מולאה!",
 "Delivered before the clock ran out — that is what a fast program buys you.":
   "נמסר לפני שנגמר הזמן — זה מה שתוכנית מהירה נותנת לך.",
-"Deliver by":"למסור עד",
 "A new order goes up every few seconds — keep gathering in the meantime.":
   "הזמנה חדשה עולה כל כמה שניות — תמשיך לאסוף בינתיים.",
-"at the 🏪 market — whatever you sell counts towards the order automatically.":
-  "ב-🏪 שוק — כל מה שאתה מוכר נספר להזמנה אוטומטית.",
+"Deliver by selling at the 🏪 market — whatever you sell counts towards the order automatically.":
+  "מוסרים בעזרת מכירה ב-🏪 שוק — כל מה שתמכור נספר להזמנה אוטומטית.",
 "asks for a little of two or three different things, and they sit in different places. The quick answer is":
   "מבקשת קצת משניים או שלושה דברים שונים, והם נמצאים במקומות שונים. התשובה המהירה היא",
 "asks for one resource in volume — far more than a bag holds, so most of the work is the walking. The quick answer is a":
@@ -1123,7 +1122,7 @@ const SCOPED=[
      "one", "check" or "Building" elsewhere could be anyone's name */
   ["#guideBody",     {"one idea":"רעיון אחד","one thing":"דבר אחד","one program":"תוכנית אחת","every input":"כל קלט",
                       "check":"לבדוק","A path":"מסלול","An algorithm":"אלגוריתם","Write":"תכתוב","secret":"סודי"}],
-  ["#orders",        {"selling":"מכירה","pipeline":"פס ייצור","parallel":"במקביל"}],
+  ["#orders",        {"pipeline":"פס ייצור","parallel":"במקביל"}],
   [".sk-nm",         {"Woodcutting":"כריתת עצים","Mining":"כרייה","Agility":"זריזות","Building":"בנייה","Trading":"מסחר"}],
   ["#statsBox",      {"Collected":"נאספו","Earned":"הרווחת"}],
   ["#playBtn",       {"Play":"שחק","Play offline":"שחק במצב לא מקוון"}],
@@ -1384,7 +1383,7 @@ const HE_RAW={
 "A door AND a gate. Take the block with you from the very start — you'll need it on the plate later.":
   "גם דלת וגם שער. קח איתך את הבלוק כבר מההתחלה — תצטרך אותו על הלחצן אחר כך.",
 "A hole in the ground! ✊ Lift the block, face the hole and ⤵️ Drop it IN — now you can walk over it.":
-  "חור באדמה! ✊ הרם את הבלוק, תפנה אל החור ו-⤵️ הפל אותו פנימה — עכשיו אפשר לעבור מעליו.",
+  "חור באדמה! ✊ הרם את הבלוק, תפנה אל החור ו-⤵️ הנח אותו פנימה — עכשיו אפשר לעבור מעליו.",
 "A long wall — but only 6 blocks. Put ⬆️ Move inside a 🔁 Repeat and let the loop do the walking.":
   "קיר ארוך — אבל רק 6 בלוקים. שים את ⬆️ זוז בתוך 🔁 חזור ותן ללולאה ללכת במקומך.",
 "A wall with no way round it — but two 🌀 portals of the same colour are a pair. Step on one, come out the other.":
@@ -1497,7 +1496,7 @@ const HE_RAW={
 "🏦 The Bank is your shared storage — it never gets sold unless YOU sell it (🛒 shop).\n\n• 🏦 Bank All block stores a robot's whole bag\n• Dropping into a chest 📦 also banks it\n• Any robot can 🔨 Build using bank materials when its own bag runs short — so stockpile wood, then send a builder to raise saplings, bridges and chests from the reserve!":
   "🏦 הבנק הוא האחסון המשותף שלך — הוא לא נמכר לעולם אלא אם אתה מוכר אותו (🛒 חנות).\n\n• בלוק 🏦 הפקד הכול מאחסן את כל התיק של רובוט\n• הפלה לתוך תיבה 📦 גם מפקידה\n• כל רובוט יכול 🔨 לבנות מחומרי הבנק כשהתיק שלו מתרוקן — אז תצבור עץ, ואז תשלח בנאי להקים שתילים, גשרים ותיבות מהמאגר!",
 "💰 Earning coins:\n1️⃣ Collect resources (wood 2🪙, stone 3🪙, iron 6🪙, crystal 15🪙)\n2️⃣ Walk your robot next to the market 🏪 (near your home)\n3️⃣ Face it and use ⤵️ Drop — or the 💰 Sell All smart block\n\nSpend coins in the 🛒 shop on robots and upgrades!":
-  "💰 להרוויח מטבעות:\n1️⃣ תאסוף חומרים (עץ 2🪙, אבן 3🪙, ברזל 6🪙, גביש 15🪙)\n2️⃣ תוביל את הרובוט שלך ליד השוק 🏪 (קרוב לבית שלך)\n3️⃣ תפנה אליו ותשתמש ב-⤵️ הפל — או בבלוק החכם 💰 מכור הכול\n\nתוציא מטבעות ב-🛒 חנות על רובוטים ושדרוגים!",
+  "💰 להרוויח מטבעות:\n1️⃣ תאסוף חומרים (עץ 2🪙, אבן 3🪙, ברזל 6🪙, גביש 15🪙)\n2️⃣ תוביל את הרובוט שלך ליד השוק 🏪 (קרוב לבית שלך)\n3️⃣ תפנה אליו ותשתמש ב-⤵️ הנח — או בבלוק החכם 💰 מכור הכול\n\nתוציא מטבעות ב-🛒 חנות על רובוטים ושדרוגים!",
 "🔓 You unlock powers by PLAYING:\n• 🔁 Loops — collect 5 resources\n• ❓ Logic — sell anything at the market\n• 🧭 Smart blocks — earn 150 🪙 total or own 2 robots\n\nNo lessons, no levels — just build stuff!":
   "🔓 אתה פותח כוחות על ידי משחק:\n• 🔁 לולאות — תאסוף 5 חומרים\n• ❓ לוגיקה — תמכור משהו בשוק\n• 🧭 בלוקים חכמים — תרוויח 150 🪙 בסך הכול או שיהיו לך 2 רובוטים\n\nבלי שיעורים, בלי שלבים — פשוט תבנה דברים!",
 "🔨 Build creates things on the tile ahead:\n• 🌱 Sapling (1 wood) — grows into a tree. Renewable farming!\n• 🌉 Bridge (2 stone) — cross water into new lands!\n• 📦 Chest (5 wood) — Drop while facing a chest to store items, then sell storage in the shop.":
@@ -1707,7 +1706,7 @@ const HE_RAW={
 "⚠️ The levels didn't load.":"⚠️ השלבים לא נטענו.",
 "Tap ↻ to try again.":"לחצו על ↻ כדי לנסות שוב.",
 "🚶 Walk To the resource → gather → 🚶 Walk To 🏪 → ⤵️ Drop.":
-  "🚶 לך אל החומר ← תאסוף ← 🚶 לך אל 🏪 ← ⤵️ הפל.",
+  "🚶 לך אל החומר ← תאסוף ← 🚶 לך אל 🏪 ← ⤵️ הנח.",
 "🧩 Open the code editor":"🧩 פתח את עורך הקוד",
 "🤝 TEAMWORK UNLOCKED! 🚶 Walk To already keeps your robots off each other's trees — now use 📡 Tell Team and 📻 Go To Call to send one scout ahead for the whole fleet.":
   "🤝 עבודת צוות נפתחה! 🚶 לך אל כבר שומר שהרובוטים שלך לא ידרכו זה על העצים של זה — עכשיו השתמש ב-📡 ספר לצוות וב-📻 לך לקריאה כדי לשלוח סייר אחד קדימה בשביל כל הצי.",
@@ -1728,7 +1727,7 @@ const HE_RAW={
 "🧪 First prove this level is solvable — build a program and press ▶! (or ➕ Add it)":
   "🧪 קודם תוכיח שאפשר לפתור את השלב — תבנה תוכנית ותלחץ ▶! (או ➕ תוסיף אותו)",
 "Add 🚶 Walk To 🏪 then ⤵️ Drop at the end of your program.":
-  "תוסיף 🚶 לך אל 🏪 ואז ⤵️ הפל בסוף התוכנית שלך.",
+  "תוסיף 🚶 לך אל 🏪 ואז ⤵️ הנח בסוף התוכנית שלך.",
 "Tap 🔁 Repeat, then tap the blocks that go inside it.":
   "לחץ על 🔁 חזור, ואז לחץ על הבלוקים שנכנסים לתוכו.",
 "🚶 Walk To 🌳, then 🪓 Chop, then ▶ Run.":"🚶 לך אל 🌳, ואז 🪓 כרות, ואז ▶ הרץ.",
