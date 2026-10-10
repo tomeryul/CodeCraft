@@ -235,6 +235,31 @@ async function boot(pg,he){
   ck('a name in quotes is carried into the Hebrew sentence',
      dlg[2] && HEB.test(dlg[2].m) && dlg[2].m.includes('walk(n)'), dlg[2]);
 
+  /* Byte only knew English keywords: a question typed in Hebrew — even
+     the words of its own chip — got the "interesting question!" fallback. */
+  const byte = await pg.evaluate(() => {
+    const fallback = mentorAnswer('zzz');
+    const qs = ['למה הרובוט שלי לא זז?', 'תסביר לי לולאות', 'איך מרוויחים מטבעות?', 'מה זה פייתון?', 'איך בונים גשר?'];
+    return { missed: qs.filter(q => mentorAnswer(q) === fallback), why: mentorAnswer(qs[0]).slice(0, 2) };
+  });
+  ck('Byte answers a question typed in Hebrew', byte.missed.length === 0, byte);
+  ck('and "why isn\'t it moving" in Hebrew gets the check on the robot', byte.why === '🔍', byte);
+
+  /* A HE_RAW or pattern value is used as written, and that dropped the
+     space at the node's edge: "<b>A path</b> is directions…" came out as
+     "מסלולהוא" — the Hebrew glued to the bold word beside it. */
+  const glue = await pg.evaluate(async () => {
+    const host = document.createElement('div'); host.style.position = 'absolute'; host.style.left = '-9999px';
+    document.body.appendChild(host);
+    await new Promise(r => setTimeout(r, 60));
+    host.innerHTML = '<p><b>A path</b> is directions you memorised.</p>';
+    await new Promise(r => setTimeout(r, 300));
+    const p = host.querySelector('p'); const t = p.textContent; host.remove();
+    return { t, after: p.lastChild.nodeValue };
+  });
+  ck('a translated piece keeps the space beside a bold word',
+     HEB.test(glue.after) && /^\s/.test(glue.after), glue);
+
   /* A lesson row is "<b>Move</b> — One step forward…", so the sentence
      arrives with a leading em-dash and a <b> beside it. The dash is edge
      decoration; the <b> is real markup and has to survive. */

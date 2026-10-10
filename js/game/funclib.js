@@ -68,7 +68,7 @@ function renderFuncLib(){
     const b=document.createElement("button");
     b.className="rowbtn";
     b.innerHTML='💾 <span class="lb">Save 🔧 '+id+" ("+countBlocks(f.body)+" blocks"+
-      ((f.params||[]).length?", takes "+f.params.join(", "):"")+")</span>";
+      ((f.params||[]).length?", takes "+esc(f.params.join(", ")):"")+")</span>";
     b.addEventListener("click",()=>saveFuncToLib(id));
     row.appendChild(b);
   }

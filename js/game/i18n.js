@@ -1505,6 +1505,18 @@ const HE_RAW={
   "😴 עבודה צורכת אנרגיה (תראה את מד ה-⚡ למעלה). כשלרובוט נגמרת האנרגיה הוא עייף מדי לכרות, לכרות או לבנות!\n\nתוסיף בלוק 😴 מנוחה כדי להתאושש — הטריק החכם הוא לשים מנוחה בתוך הלולאה, או להשתמש ב-❓ אם עייף ← נוח, כך שהרובוט שלך מווסת את עצמו ולא נופל. ⚡",
 "🤖 Buy extra robots in the 🛒 shop (100 🪙). Each robot has its OWN program and runs at the same time.\n\nPro move: give each robot one job — one harvests, one hauls, one sells. That's called division of labor, and it's how real factories (and real software!) work.":
   "🤖 תקנה רובוטים נוספים ב-🛒 חנות (100 🪙). לכל רובוט יש תוכנית משלו והם רצים בו זמנית.\n\nמהלך של מקצוענים: תן לכל רובוט עבודה אחת — אחד קוצר, אחד מוביל, אחד מוכר. זה נקרא חלוקת עבודה, וככה מפעלים אמיתיים (ותוכנה אמיתית!) עובדים.",
+/* ---- Byte's answers that had no Hebrew: once Byte could understand a
+   question typed in Hebrew, these five answered it in English ---- */
+"In the world you don't count steps — you name a destination. Add 🚶 Walk To and pick what to walk to (🌳 tree, 🪨 rock, 🏪 market…). Your robot finds its own way around whatever is in between, and arrives FACING it, so a ✋ Collect or 🪓 Chop right after just works.\n\nIf it's not moving, check:\n1️⃣ Did you press ▶ Run?\n2️⃣ Is there any of that thing left on the map?\n3️⃣ Does the program have blocks in it?":
+  "בעולם לא סופרים צעדים — אומרים לאן ללכת. תוסיף 🚶 לך אל ותבחר אל מה (🌳 עץ, 🪨 סלע, 🏪 שוק…). הרובוט מוצא לבד את הדרך מסביב לכל מה שבאמצע, ומגיע כשהוא כבר מסתכל על זה — אז ✋ אסוף או 🪓 כרות מיד אחרי פשוט עובדים.\n\nאם הוא לא זז, תבדוק:\n1️⃣ לחצת ▶ הרצה?\n2️⃣ נשאר מהדבר הזה משהו על המפה?\n3️⃣ יש בתוכנית בלוקים?",
+"🐍 Tap the Python tab in the editor! Every block you place is shown as real Python code — the same language used at NASA, Google and in AI.\n\nrobot.move() is a function call, for i in range(3): is a loop… you're already writing it!":
+  "🐍 תלחץ על הלשונית פייתון בעורך! כל בלוק שאתה מניח מופיע כקוד פייתון אמיתי — אותה שפה שמשתמשים בה בנאס״א, בגוגל ובבינה מלאכותית.\n\nrobot.move() זו קריאה לפונקציה, for i in range(3): זו לולאה… אתה כבר כותב את זה!",
+"Great question! In this world:\n• A robot's program is like a function — a reusable recipe\n• 📦 Memory blocks ARE variables — real ones\n• Your robot team is like an array of workers\n\nSwitch to the 🐍 Python tab to see the real syntax. When you're ready, try Python on a computer — you already know the ideas!":
+  "שאלה מצוינת! בעולם הזה:\n• התוכנית של רובוט היא כמו פונקציה — מתכון שאפשר להשתמש בו שוב ושוב\n• 📦 בלוקי זיכרון הם משתנים — אמיתיים\n• צוות הרובוטים שלך הוא כמו מערך של עובדים\n\nתעבור ללשונית 🐍 פייתון כדי לראות איך זה נכתב באמת. כשתרגיש מוכן, תנסה פייתון במחשב — את הרעיונות אתה כבר מכיר!",
+"🏗️ Build Projects (📜 → Build Projects) are coding challenges a few levels above normal play!\n\nYou get a blueprint and a tiny block budget — the only way to fit is smart loops (even loops inside loops!). Finished builds appear near home (tap one to 🚚 Move or 🗑 Delete it).\n\n✏️ Make your OWN: paint a blueprint, set the map size 📐 and budget, use ANY blocks (loops, variables, conditions!), solve it, and 🌍 Publish it for other players to try!":
+  "🏗️ פרויקטי בנייה (📜 ← פרויקטי בנייה) הם אתגרי קוד כמה רמות מעל המשחק הרגיל!\n\nמקבלים תוכנית בנייה ותקציב בלוקים קטנטן — הדרך היחידה להיכנס בו היא לולאות חכמות (אפילו לולאות בתוך לולאות!). מבנים שגמרת מופיעים ליד הבית (לחץ על אחד כדי 🚚 להזיז או 🗑 למחוק אותו).\n\n✏️ תכין משלך: תצייר תוכנית בנייה, תקבע את גודל המפה 📐 ואת התקציב, תשתמש בכל בלוק (לולאות, משתנים, תנאים!), תפתור, ו-🌍 תפרסם לשחקנים אחרים!",
+"🧭 Smart blocks (unlock by earning 150 🪙 or owning 2 robots):\n• Face Nearest — auto-aims at the closest tree/rock/iron/crystal\n• Go Home — pathfinds back to base, walking around obstacles\n• Sell All — sells your bag when near the market\n• 🏦 Bank All — stores your whole bag in the Bank\n\nThe ultimate combo: Forever → Face Nearest tree → If tree ahead: Collect, else Move → If bag full: Go Home + Sell All.":
+  "🧭 בלוקים חכמים (נפתחים כשמרוויחים 150 🪙 או כשיש 2 רובוטים):\n• פנה לקרוב — מכוון לבד אל העץ, הסלע, הברזל או הגביש הכי קרוב\n• חזור הביתה — מוצא את הדרך חזרה לבסיס ועוקף מכשולים\n• מכור הכול — מוכר את התיק כשאתה ליד השוק\n• 🏦 הפקד הכול — שומר את כל התיק בבנק\n\nהשילוב המנצח: לתמיד ← פנה לעץ הקרוב ← אם עץ לפנים: אסוף, אחרת זוז ← אם התיק מלא: חזור הביתה + מכור הכול.",
 "🧠 Memory blocks (unlock by earning 250 🪙):\n• 📦 Set x = 5 — store a number or text\n• ➕ Change x by 1 — count things!\n• 🔢 Count i from 1 to N — a loop where i goes UP each time\n• 💬 Say — your robot shows the value in a speech bubble\n\nTry: Set c = 0 → Forever → Collect → Change c by 1 → Say c. A robot that counts its harvest!\n\nIn Python: for i in range(1, 6): — you're writing real code!":
   "🧠 בלוקי זיכרון (נפתחים בהרווחת 250 🪙):\n• 📦 קבע x = 5 — לאחסן מספר או טקסט\n• ➕ שנה את x ב-1 — לספור דברים!\n• 🔢 ספור i מ-1 עד N — לולאה שבה i עולה בכל פעם\n• 💬 אמור — הרובוט שלך מציג את הערך בבועת דיבור\n\nתנסה: קבע c = 0 ← לתמיד ← אסוף ← שנה את c ב-1 ← אמור c. רובוט שסופר את היבול שלו!\n\nבפייתון: for i in range(1, 6): — אתה כותב קוד אמיתי!",
 "🪓 Different jobs, different tools!\n• 🪓 Chop — trees (into wood)\n• ⛏️ Mine — rocks, iron & crystal\n• 🪣 Scoop — water from a river\n• ✋ Collect — does the right thing to whatever is in front (and picks up dropped items)\n\nBig things take SEVERAL hits — a tree needs a few chops — so put the action in a 🔁 loop!":
@@ -1904,6 +1916,10 @@ const HE_T={
 "📣 {s} RUSH! Prices spiked to {s} 🪙 for a minute — send everyone!":
   "📣 בהלת {1}! המחירים זינקו ל-{2} 🪙 לדקה — תשלח את כולם!",
 ", takes {s}":", מקבל {1}",
+/* the save row of a function that takes something. The whole button
+   first: the general pattern below would swallow "Save 🔧" into its slot */
+"Save 🔧 {s} ({n} blocks, takes {s})":"לשמור 🔧 {1} ({2} בלוקים, מקבל {3})",
+"{s} ({n} blocks, takes {s})":"{1} ({2} בלוקים, מקבל {3})",
 "· takes {s}":"· מקבל {1}",
 /* {s}, not {n}: what goes in the quotes is a function's signature,
    "walk(n)", and a number slot never matched one */
@@ -2084,6 +2100,15 @@ function rtlLead(s){
 }
 
 /* ---------- the swap ---------- */
+/* HE_RAW and pattern values are used as written, emoji and all, but the
+   SPACES at the node's two ends belong to the sentence around it. "<b>A
+   path</b> is directions you memorised" reaches us as " is directions…",
+   and dropping that space glued the Hebrew to the bold word: "מסלולהוא",
+   "עםאותה תוכנית", nine of them in the design guide alone. */
+function keepWs(s,out){
+  const a=/^\s/.test(out)?"":s.match(/^\s*/)[0], z=/\s$/.test(out)?"":s.match(/\s*$/)[0];
+  return a+out+z;
+}
 function tr(s,el){
   const core=norm(s);
   if(!core)return null;
@@ -2095,7 +2120,7 @@ function tr(s,el){
   const edges=ends(s);
   const lead=edges[0], tail=edges[1];
   const raw=IDX_RAW[core];
-  if(raw)return raw;
+  if(raw)return keepWs(s,raw);
   const hit=IDX[core];
   if(hit)return lead+hit+tail;
   const nums=core.match(NUM);
@@ -2110,7 +2135,7 @@ function tr(s,el){
      written rather than wrapped in the node's own leading/trailing ones. */
   const whole=collapse(s);
   const pat=trTemplate(whole)||(whole===core?null:trTemplate(core));
-  if(pat!==null&&pat!==undefined)return pat;
+  if(pat!==null&&pat!==undefined)return keepWs(s,pat);
   return null;
 }
 /* ui-icons.js lifts every emoji out of the text into its own span, so
