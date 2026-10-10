@@ -535,3 +535,9 @@ body:not(:has(#mgCreatorBar.on)) :is(#mgStatus,#t3EdRow,#t3Warn,#t3Hint){display
 /* Report and Delete account ran edge to edge (2px): the same 14px inset */
 #report .rep-note,#delacc .del-note{margin-left:14px;margin-right:14px;}
 #repBody,#delList,#delacc .del-actions,#delMsg{padding-left:14px;padding-right:14px;}
+/* Width and height side by side need about 170px each with the English
+   labels; at 375 they had 159 and squeezed their − and + to 31px. They
+   stack below 400px, in both languages, so the layout does not depend on
+   the language. */
+@media (max-width:399px){ #mgCreatorBar .stprow{grid-template-columns:1fr;} }
+#mgCreatorBar .stp button{flex:0 0 auto;}
