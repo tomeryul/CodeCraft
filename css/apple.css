@@ -524,3 +524,14 @@ body:not(:has(#mgCreatorBar.on)) :is(#mgStatus,#t3EdRow,#t3Warn,#t3Hint){display
 /* One side inset for every page's list: 14px. Style's content ran to the
    sheet's edges (2px), Orders sat at 6, Settings 13, the menu 16. */
 #hubBody,#settingsList,#styleBody,#ordBody{padding-left:14px;padding-right:14px;}
+
+/* ---- the rest of the sheets ---- */
+/* a card's side buttons (load into A or B, delete; edit, delete): 36px from
+   32, and their reach 44 wide and 42 tall, all the 6px between them allows */
+.pcard .pside{width:36px;height:36px;position:relative;}
+.pcard .pside::after{content:"";position:absolute;inset:-3px -4px;}
+/* Byte's question chips: 40px, the height of a control row (33) */
+#chips button{min-height:40px;}
+/* Report and Delete account ran edge to edge (2px): the same 14px inset */
+#report .rep-note,#delacc .del-note{margin-left:14px;margin-right:14px;}
+#repBody,#delList,#delacc .del-actions,#delMsg{padding-left:14px;padding-right:14px;}

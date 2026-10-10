@@ -242,6 +242,24 @@ const WEIGHTS = ['400', '600', '700'];
      KM.flat.lit.join() === 'flatBtn' && KM.tower.lit.join() === 't3Btn' && KM.cyber.lit.join() === 'cyBtn' &&
      KM.back.lit.join() === 'flatBtn' && /3D/.test(KM.towerLabel), KM);
 
+  /* One side inset: a page's list is 14px from the sheet's sides. Style,
+     Report and Delete account ran edge to edge, Orders sat at 6. */
+  const IN = await pg.evaluate(async () => {
+    const w = ms => new Promise(r => setTimeout(r, ms));
+    const home = () => { if (mgState) mgExit(false); navHome(); sbUser = null; };
+    const inset = () => { const top = [...document.querySelectorAll('.sheet.open,#shopWrap.open #shop')].filter(e => e.getBoundingClientRect().height > 50).pop();
+      const head = top.querySelector('.m-head'); const sr = top.getBoundingClientRect();
+      const els = [...top.querySelectorAll('*')].filter(e => { if (head && head.contains(e) || !e.offsetParent) return false; const r = e.getBoundingClientRect(); if (r.width < 8 || r.height < 8 || r.top > innerHeight) return false;
+        const cs = getComputedStyle(e); return ((cs.backgroundColor !== 'rgba(0, 0, 0, 0)' || parseFloat(cs.borderLeftWidth) > 0) && r.width < sr.width - 4) || e.matches('button') || [...e.childNodes].some(n => n.nodeType === 3 && n.nodeValue.trim()); });
+      return Math.round(Math.min(...els.map(e => e.getBoundingClientRect().left)) - sr.left); };
+    const pages = { hub: () => hubOpen(), shop: () => openShop(), style: () => styleOpen(), settings: () => openSettings(), orders: () => ordersOpen(),
+      report: () => { sbUser = { uid: 'u1', email: 'k@e.com' }; reportChallenge({ id: 'x', name: 'Sample', author: 'a', author_name: 's' }); },
+      delacc: () => { sbUser = { uid: 'u1', email: 'k@e.com' }; openDeleteAccount(); } };
+    const out = {}; for (const [k, f] of Object.entries(pages)) { home(); f(); await w(600); out[k] = inset(); }
+    home(); return out;
+  });
+  ck("every page's list sits 14px from the sheet's sides", Object.values(IN).every(x => x === 14), IN);
+
   ck('no uncaught exceptions', errs.length === 0, errs.slice(0, 3));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await b.close();
