@@ -1189,15 +1189,20 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #agegate h2{font-size:var(--fs-xl);margin:2px 0 8px;color:#fff;}
 .age-sub{font-size:var(--fs-sm);line-height:1.55;color:#cfc4f5;margin:0 0 18px;}
 #ageSelects{display:flex;gap:8px;margin-bottom:16px;}
+/* The page keeps its layout in Hebrew (i18n.js on()), but month-then-year is
+   read, not reached for: a right-to-left reader meets the month first. */
+:root[lang="he"] #ageSelects{flex-direction:row-reverse;}
 #ageSelects select{flex:1;min-width:0;padding:13px 10px;border-radius:var(--r-card);font-size:var(--fs-md);font-weight:var(--fw-bold);
   color:var(--ink);background:rgba(0,0,0,.28);border:1px solid var(--hair);appearance:none;
   text-align:center;text-align-last:center;}
 #ageGo{width:100%;padding:14px;font-size:var(--fs-md);}
 #ageGo:disabled{opacity:.45;}
-.age-priv{display:inline-block;margin-top:16px;color:#b9a9ec;font-size:var(--fs-sm);
+/* a link a finger has to hit: 44px tall, the padding taken out of the margin
+   so nothing around it moves */
+.age-priv{display:inline-block;margin-top:4px;padding:12px 14px;color:#b9a9ec;font-size:var(--fs-sm);
   font-weight:var(--fw-medium);text-decoration:underline;text-underline-offset:3px;}
-.sp-priv{margin-top:10px;text-align:center;}
-.sp-priv a{color:#b9a9ec;font-size:var(--fs-sm);font-weight:var(--fw-medium);
+.sp-priv{margin-top:0;text-align:center;}
+.sp-priv a{display:inline-block;padding:12px 14px;color:#b9a9ec;font-size:var(--fs-sm);font-weight:var(--fw-medium);
   text-decoration:underline;text-underline-offset:3px;}
 .agenote{font-size:var(--fs-sm);font-weight:var(--fw-medium);line-height:1.55;color:#cfc4f5;
   padding:11px 13px;border-radius:var(--r-card);background:rgba(255,255,255,.07);

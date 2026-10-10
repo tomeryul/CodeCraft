@@ -1133,7 +1133,15 @@ const SCOPED=[
      poses wants a noun beside standing and walking, so these three are read
      inside their own row and nowhere else. */
   [".mk-poses,#styleBody .st-modes",
-                     {"Idle":"עמידה","Walk":"הליכה","Chop":"חציבה"}]
+                     {"Idle":"עמידה","Walk":"הליכה","Chop":"חציבה"}],
+  /* The age gate's months. A closed <select> shows only its first option, so
+     no screen test ever saw these — but the picker wheel a phone opens shows
+     all twelve. Scoped because "May" is a name too. */
+  ["#ageMonth",      {"January":"ינואר","February":"פברואר","March":"מרץ","April":"אפריל",
+                      "May":"מאי","June":"יוני","July":"יולי","August":"אוגוסט",
+                      "September":"ספטמבר","October":"אוקטובר","November":"נובמבר","December":"דצמבר",
+                      "Month":"חודש"}],
+  ["#ageYear",       {"Year":"שנה"}]
 ];
 
 /* Entries whose emoji sit INSIDE the sentence, not at its edges. The
