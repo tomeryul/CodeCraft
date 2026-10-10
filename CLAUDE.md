@@ -162,6 +162,21 @@ chapter. The author also picks its destinations (`proj.goTargets`). A
 single level's row has no column for either, so a level that hands it
 out publishes as a one-level pack. `test/walk-to.js`.
 
+## The robot
+
+`js/game/robot-rig.js` draws every robot in the game — the world, the
+challenge boards, Style, the wear maker and the 3D board's billboard —
+from one rig, `CC_RIG`. A pose is a flat object of numbers; an animation
+is a function of time that writes one (`CC_RIG.anim`). `render.js` picks
+the clip from `r.anim` (set by `doAction`) and from how the robot is
+moving. Boards and previews use `drawStill`, which keeps no state, so the
+same inputs give the same pixels — the smoke tests compare pixels and
+rely on that. Hats, outfits, capes and shoes were drawn on the old
+34.56px body square; the rig maps that square onto the head, the torso
+and the feet (`WEAR_S`), so a new piece is still drawn on the square.
+The look is option א ("soft") of `design/robot-options.html`: no
+outlines, because the map has none.
+
 ## The 3D board
 
 `js/game/tower3d.js` is a painter, not a z-buffer, so order is

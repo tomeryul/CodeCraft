@@ -2406,8 +2406,12 @@ async function ev(expr) {
   const CC_FIELD_HI = 160;  // js/game/wear-code.js FIELD.w.hi
   const CC_PAD_TIP = "Space INSIDE, between its border and whatever it is holding."; // js/game/wear-code.js FIELD.pad.tip
   const RENDER_SRC = fs.readFileSync(path.resolve(__dirname, "..", "js", "game", "render.js"), "utf8");
+  const RIG_SRC = fs.readFileSync(path.resolve(__dirname, "..", "js", "game", "robot-rig.js"), "utf8");
+  /* the robot is drawn by robot-rig.js now: the hat is painted inside the
+     head's own save/restore, so it inherits the nod, tilt, lean and squash */
+  const HEAD_SRC = (RIG_SRC.match(/\n  head\(g,ah,P\)\{[\s\S]*?\n  \}\n/) || [''])[0];
   check("the hat is drawn inside the robot's transform tree",
-    /if\(r\.hat[\s\S]{0,80}?\)\{[\s\S]{0,220}?ctx\.restore\(\);/.test(RENDER_SRC) &&
+    /if\(W\.hat\)\{[\s\S]{0,400}?g\.restore\(\);\s*\}\s*g\.restore\(\);/.test(HEAD_SRC) &&
     !/ctx\.translate\(cx\+2,cy\+bobY/.test(RENDER_SRC));
   /* the pieces reach the canvas: a dressed robot must not paint the same
      pixels as a bare one */
@@ -3204,9 +3208,9 @@ async function ev(expr) {
     return JSON.stringify({
       three:idle!==walk&&walk!==work&&idle!==work,
       posedDiffers:idle!==bare, moves:moves,
-      workLeans:Math.abs(P.rot)>1, workHasTool:!!P.TL,
-      /* the pose driver reads the same tables the world robot animates on */
-      sameTables:P.TL===ACT_TL.chop
+      workLeans:Math.abs(P.lean)>.05, workHasTool:P.tool==='axe',
+      /* the pose driver plays the same clip the world robot plays */
+      sameTables:JSON.stringify(P)===JSON.stringify(CC_RIG.pose('chop',((500/CC_RIG.anim.chop.dur)%1+1)%1,500,{fs:1}))
     });
   })()`));
   check("the preview strikes three different poses",

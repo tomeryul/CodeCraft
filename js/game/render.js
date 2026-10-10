@@ -174,263 +174,62 @@ function draw(t){
   robots.forEach((r,i)=>{
     r.rx=lerp(r.rx,r.x,.22);r.ry=lerp(r.ry,r.y,.22);
     const cx=(r.rx+.5)*TILE, cy=(r.ry+.5)*TILE, s2=TILE*.72;
+    /* the robot stands on its tile where it always has, its feet at gy,
+       a little shorter than the old one: rs is one rig unit in world px,
+       hy is just above the antenna (or the hat) */
+    const rs=s2/76.9, gy=cy+s2*.66, hy=gy-(r.hat?122:114)*rs;
     if(i===selRobot){
       ctx.save();
-      ctx.beginPath();ctx.arc(cx,cy,s2*.78+Math.sin(t/250)*2,0,7);
+      const k=Math.sin(t/250);
+      ctx.beginPath();ctx.ellipse(cx,gy,TILE*.46+k*1.5,TILE*.2+k*.6,0,0,7);
       ctx.strokeStyle="rgba(255,214,107,.9)";ctx.lineWidth=3;
       ctx.setLineDash([10,7]);ctx.lineDashOffset=-t/30;ctx.stroke();ctx.setLineDash([]);
       ctx.restore();
     }
-    ctx.save();ctx.translate(cx,cy);
-    // motion state (needed early for the walk cycle)
     const moving=Math.abs(r.rx-r.x)+Math.abs(r.ry-r.y)>.04;
-    // springy antenna: tip lags behind motion
-    const vx=(r.rx-(r._prx==null?r.rx:r._prx))*TILE, vy=(r.ry-(r._pry==null?r.ry:r._pry))*TILE;
-    r._prx=r.rx;r._pry=r.ry;
-    r._asw=(r._asw||0)+(( -vx*.9)-(r._asw||0))*.25;
-    const asw=Math.max(-6,Math.min(6,r._asw))+Math.sin(t/900+i)*0.6;
-    /* ================= animation driver =================
-       Every pose below is sampled DIRECTLY from the approved
-       robot-animated.svg keyframe tables (GAIT walk/run, IDLE, REST, and the
-       ACT_TL tool timelines) using the SAME transform tree as that asset, so
-       the in-game robot matches the reference frame-for-frame. The only
-       game-side additions are: a distance-driven gait phase (feet never slide,
-       cadence scales with speed upgrades) and smooth blends between states. */
-    const D2R=Math.PI/180;
-    const spd=Math.hypot(vx,vy);
-    const tps=spd/Math.max(.0001,lastDtSec)/TILE;
-    r._runk=(r._runk||0)+(Math.max(0,Math.min(1,(tps-3.5)/3.5))-(r._runk||0))*Math.min(1,lastDtSec*6);
-    const runk=r._runk;
-    r._wb=(r._wb||0)+((moving?1:0)-(r._wb||0))*Math.min(1,lastDtSec*8);
-    const wb=r._wb<.01?0:r._wb;
-    // distance-driven gait phase: one full SVG cycle ≈ 1.3 tiles of travel
-    if(spd>.001)r._gp=(((r._gp||i*.37)+spd/(TILE*1.3))%1+1)%1;
-    const gp=(((r._gp||i*.37)%1)+1)%1;
     // per-action tell (r.anim set by the interpreter)
     const A=r.anim; let ap=1, atype=null;
     if(A){
-      const AD={move:220,turnL:190,turnR:190,drop:260,build:300,rest:1400,wait:420};
-      let dur=AD[A.type]||260;
-      if(ACT_TL[A.type]){ // tool swings stretch to fill the gap until the next sim step
-        const stepMs=340/(r.speed||1)/(1+(typeof skills!=="undefined"?skills.agility.lvl*.015:0));
-        dur=Math.max(320,Math.min(1250,stepMs*.95));
-      }
-      ap=(t-A.t0)/dur;
-      if(ap>=1||ap<0){r.anim=null;ap=1;}else atype=A.type;
+      /* a tool swing stretches to fill the gap until the next sim step, so
+         a faster robot swings faster; a turn is quick, a rest is long */
+      const stepMs=340/(r.speed||1)/(1+(typeof skills!=="undefined"?skills.agility.lvl*.015:0));
+      const dur=A.type==="rest"?1400:A.type==="wait"?420:A.type==="move"?220:
+        (A.type==="turnL"||A.type==="turnR")?Math.max(220,Math.min(560,stepMs*.9)):Math.max(320,Math.min(1250,stepMs*.95));
+      /* an action is stamped with performance.now() during the frame, and the
+         frame is drawn with the time it STARTED, a moment earlier — so the
+         first frame of a clip reads a little below zero. That is the clip
+         starting, not a stale one; clearing it there is what used to make
+         every action vanish before it was ever drawn. */
+      ap=Math.max(0,(t-A.t0)/dur);
+      if(ap>=1){r.anim=null;ap=1;}else atype=A.type;
     }
-    const TL=atype?ACT_TL[atype]:null;
-    const resting=atype==="rest"||(r.tired&&!moving&&!TL);
-    const aw=atype&&!TL&&!resting?Math.sin(Math.PI*ap):0; // out-and-back wave
-    const ao=atype?(1-ap)*(1-ap):0;                        // ease-out decay
-    // ---- sample the current state's body transform ----
-    // gait sampler blends walk↔run by runk (all values are the exact SVG keyframes)
-    const G=(k)=>{const a=kf(GAIT.walk[k],KT9,gp);return a+(kf(GAIT.run[k],KT9,gp)-a)*runk;};
-    let bobY=0,swayDeg=0,sqx=1,sqy=1;
-    let legLd=0,legRd=0,lenL=5.53,lenR=5.53,footLd=0,footRd=0,armLd=10,armRd=-10,antD=0;
-    const ip=(((t/2600+i*.3)%1)+1)%1;
-    const iBob=kf([0,-1.6,0],KT3,ip),iSway=kf([-3,3,-3],KT3,ip),iSx=kf([1,.99,1],KT3,ip),iSy=kf([1,1.01,1],KT3,ip),iArmL=kf([10,16,10],KT3,ip),iArmR=kf([-10,-16,-10],KT3,ip);
-    if(resting){
-      const rp=(((t/3400+i*.3)%1)+1)%1;
-      bobY=kf([.8,1.6,.8],KT3,rp);swayDeg=kf([7,11,7],KT3,rp);
-      sqx=kf([1.01,1.04,1.01],KT3,rp);sqy=kf([.99,.96,.99],KT3,rp);
-      armLd=kf([6,10,6],KT3,rp);armRd=kf([-6,-10,-6],KT3,rp);
-    }else if(TL){
-      bobY=kf(TL.ty,TL.t,ap);const kx=kf(TL.sx,TL.t,ap);sqx=kx;sqy=2-kx;
-    }else{ // idle (wb=0) → gait (wb=1)
-      bobY=iBob*(1-wb)+G("bob")*wb;
-      swayDeg=iSway*(1-wb)+G("sway")*wb;
-      sqx=iSx*(1-wb)+G("sx")*wb;
-      sqy=iSy*(1-wb)+G("sy")*wb;
-      legLd=G("legL")*wb;legRd=G("legR")*wb;
-      lenL=5.53+(G("lenL")-5.53)*wb;lenR=5.53+(G("lenR")-5.53)*wb;
-      footLd=G("footL")*wb;footRd=G("footR")*wb;
-      armLd=iArmL*(1-wb)+G("armL")*wb;armRd=iArmR*(1-wb)+G("armR")*wb;
-      antD=G("ant")*wb;
-    }
-    // shadow on the ground (rx shrinks a touch when the body lifts)
-    const shS=1+bobY*.012;
-    ctx.fillStyle="rgba(0,0,0,.2)";
-    ctx.beginPath();ctx.ellipse(0,s2*.52,s2*.42*shS,s2*.16*shS,0,0,7);ctx.fill();
-    // --- apply the SVG transform tree ---
-    ctx.translate(0,bobY);                                  // 1. body bob
-    if(TL)ctx.rotate(kf(TL.rot,TL.t,ap)*D2R*(DX[r.dir]<0?-1:1)); // tool: lean toward target (mirror when facing left)
-    else{ctx.translate(0,10);ctx.rotate(swayDeg*D2R);ctx.translate(0,-10);} // 2. body sway (pivot near hips)
-    // action-specific extra motion
-    if(atype==="move"){
-      ctx.translate(DX[r.dir]*2.0*aw,DY[r.dir]*2.0*aw-.7*aw);
-      if(DX[r.dir])ctx.rotate(DX[r.dir]*0.06*aw);
-      if(!A.dust&&typeof parts!=="undefined"){A.dust=1;
-        for(let d=0;d<2;d++)parts.push({x:cx-DX[r.dir]*s2*.45+(Math.random()*8-4),y:cy+s2*.34,
-          vx:-DX[r.dir]*22+(Math.random()*14-7),vy:-14-Math.random()*10,g:60,s:2.2+Math.random()*1.4,c:"#e4dcbe",t:0,life:.4});}
-    }
-    else if(atype==="turnL")ctx.rotate(0.42*ao);
-    else if(atype==="turnR")ctx.rotate(-0.42*ao);
-    else if(atype==="drop"||atype==="build")ctx.translate(0,3.2*aw);
-    // 3. squash & stretch about the ground pivot (y≈18)
-    r.pop=Math.max(0,(r.pop||0)-lastDtSec*3);
-    const pk=1+r.pop*.22;
-    ctx.translate(0,18);ctx.scale(sqx*pk,sqy*pk);ctx.translate(0,-18);
-    const limbDk=(function(hex){try{const n=parseInt(hex.slice(1),16);const f=c=>Math.max(0,Math.round(c*.72));return "rgb("+f(n>>16&255)+","+f(n>>8&255)+","+f(n&255)+")";}catch(e){return hex;}})(r.color);
-    // ---- back piece (capes) — before the legs, so it reads as behind the
-    // robot, and inside the tree, so it leans and trails with the gait
-    if(window.CC_WEAR&&r.outfit&&CC_WEAR.back[r.outfit])CC_WEAR.back(ctx,r.outfit,swayDeg,gp);
-    // ---- legs (drawn behind body) — hips at (±5.53,13.28); thigh rotates at
-    // the hip, foot rounded-rect at the leg end counter-rotates to stay flat.
-    // Planted straight during tool actions (SVG tool groups don't animate legs).
-    (function(){
-      const draw=(hx,rotDeg,len,footDeg)=>{
-        ctx.save();ctx.translate(hx,13.28);ctx.rotate(rotDeg*D2R);
-        ctx.strokeStyle=limbDk;ctx.lineWidth=5;ctx.lineCap="round";
-        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,len);ctx.stroke();
-        ctx.translate(0,len);ctx.rotate(footDeg*D2R);
-        // the foot anchor: a shoe drawn here inherits the thigh swing, the leg
-        // shortening and the foot's counter-rotation, which is the same reason
-        // the plain foot below never slides
-        if(window.CC_WEAR&&r.shoes)CC_WEAR.shoe(ctx,r.shoes,limbDk,moving,t);
-        else{ctx.fillStyle=limbDk;rr(ctx,-3.5,-1,7,4.5,2.2);ctx.fill();}
-        ctx.restore();
-      };
-      if(TL){draw(-5.53,0,5.53,0);draw(5.53,0,5.53,0);}
-      else{draw(-5.53,legLd,lenL,footLd);draw(5.53,legRd,lenR,footRd);}
-    })();
-    // body — toy bevel
-    const grd=ctx.createLinearGradient(0,-s2/2,0,s2/2);
-    /* the colour reaches the canvas as well as the DOM, and an unparseable
-       one throws inside the draw loop */
-    const rc=safeColor(r.color);
-    grd.addColorStop(0,window.CC_EXTRAS?CC_EXTRAS.lighten(rc,.3):rc);grd.addColorStop(1,rc);
-    ctx.fillStyle=grd;rr(ctx,-s2/2,-s2/2,s2,s2,11);ctx.fill();
-    ctx.save();rr(ctx,-s2/2,-s2/2,s2,s2,11);ctx.clip();
-    // the torso anchor: painted inside the body's own clip, so an outfit
-    // squashes with the body and the bevel paints over it
-    if(window.CC_WEAR&&r.outfit)CC_WEAR.outfit(ctx,r.outfit,rc);
-    ctx.fillStyle="rgba(0,0,0,.25)";ctx.fillRect(-s2/2,s2/2-6,s2,6);
-    ctx.fillStyle="rgba(255,255,255,.35)";rr(ctx,-s2/2+4,-s2/2+3,s2-8,4.5,2.5);ctx.fill();
-    ctx.restore();
-    // working arm — two-segment jointed arm (shoulder → elbow → hand) plus a
-    // support arm and tool, geometry & keyframes ported 1:1 from the approved
-    // robot-animated.svg: right shoulder (16.6,5.2), upper len 4.6, forearm
-    // len 5, tool at the hand. Mirrors horizontally when the robot faces left.
-    if(TL){
-      const mir=DX[r.dir]<0?-1:1;
-      ctx.save();if(mir<0)ctx.scale(-1,1);
-      ctx.lineCap="round";ctx.strokeStyle=limbDk;ctx.fillStyle=limbDk;
-      // support (left) arm — single segment
-      ctx.save();
-      ctx.translate(-16.6,5.2);ctx.rotate(kf(TL.larm,TL.t,ap)*D2R);
-      ctx.lineWidth=3.8;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,5.6);ctx.stroke();
-      ctx.beginPath();ctx.arc(0,5.6,2.5,0,7);ctx.fill();
-      ctx.restore();
-      ctx.beginPath();ctx.arc(-16.6,5.2,2.3,0,7);ctx.fill(); // shoulder cap
-      // working (right) arm — upper segment
-      ctx.save();
-      ctx.translate(16.6,5.2);ctx.rotate(kf(TL.upper,TL.t,ap)*D2R);
-      ctx.lineWidth=3.8;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,4.6);ctx.stroke();
-      ctx.beginPath();ctx.arc(0,4.6,2.5,0,7);ctx.fill();
-      // forearm segment (pivots at the elbow)
-      ctx.translate(0,4.6);ctx.rotate(kf(TL.fore,TL.t,ap)*D2R);
-      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,5);ctx.stroke();
-      ctx.beginPath();ctx.arc(0,5,2.5,0,7);ctx.fill();
-      // tool held at the hand (SVG holds it at rotate(90) off the forearm axis)
-      ctx.translate(0,5);ctx.rotate((90+(TL.toolrot?kf(TL.toolrot,TL.t,ap):0))*D2R);
-      if(atype==="chop"){ // toy axe
-        ctx.strokeStyle="#8a5a2c";ctx.lineWidth=4.5;
-        ctx.beginPath();ctx.moveTo(-3,0);ctx.lineTo(16,0);ctx.stroke();
-        ctx.fillStyle="#cfd4e0";
-        ctx.beginPath();ctx.moveTo(15,-9);ctx.quadraticCurveTo(24,0,15,9);ctx.lineTo(12,5);ctx.lineTo(12,-5);ctx.closePath();ctx.fill();
-        ctx.strokeStyle="rgba(28,22,56,.45)";ctx.lineWidth=1.6;ctx.stroke();
-        ctx.fillStyle="rgba(255,255,255,.4)";ctx.beginPath();ctx.arc(16,-4,1.6,0,7);ctx.fill();
-      }else if(atype==="mine"){ // toy pickaxe
-        ctx.strokeStyle="#8a5a2c";ctx.lineWidth=4.5;
-        ctx.beginPath();ctx.moveTo(-3,0);ctx.lineTo(15,0);ctx.stroke();
-        ctx.fillStyle="#cfd4e0";
-        ctx.beginPath();ctx.moveTo(13,-11);ctx.quadraticCurveTo(28,0,13,11);ctx.quadraticCurveTo(19.5,0,13,-11);ctx.closePath();ctx.fill();
-        ctx.strokeStyle="rgba(28,22,56,.45)";ctx.lineWidth=1.6;ctx.stroke();
-        ctx.fillStyle="rgba(255,255,255,.4)";ctx.beginPath();ctx.arc(16.5,-4.5,1.4,0,7);ctx.fill();
-      }else if(atype==="scoop"){ // little bucket, dips & tips
-        ctx.fillStyle="#8fa3b8";
-        ctx.beginPath();ctx.moveTo(-4.2,-3.5);ctx.lineTo(4.2,-3.5);ctx.lineTo(3.2,4);ctx.lineTo(-3.2,4);ctx.closePath();ctx.fill();
-        ctx.strokeStyle="rgba(28,22,56,.45)";ctx.lineWidth=1.3;ctx.stroke();
-        ctx.strokeStyle="#6b7f94";ctx.lineWidth=1.4;
-        ctx.beginPath();ctx.moveTo(-4.2,-3.5);ctx.quadraticCurveTo(0,-8.5,4.2,-3.5);ctx.stroke();
-        if(ap>.4&&ap<.82){ctx.fillStyle="#5db8e8";ctx.beginPath();ctx.moveTo(-3.6,-2.6);ctx.lineTo(3.6,-2.6);ctx.lineTo(3.3,-.4);ctx.lineTo(-3.3,-.4);ctx.closePath();ctx.fill();}
-      }
-      // collect: open hand, no tool
-      ctx.restore();
-      ctx.restore();
-    }else{
-      // idle / walk / run / rest arms — single segment at shoulders (±16.6,5.2),
-      // rotation sampled from the SVG keyframes (armL/armR). Drawn in front of
-      // the body, exactly as in robot-animated.svg.
-      const arm=(sx,rotDeg)=>{
-        ctx.save();ctx.translate(sx,5.2);ctx.rotate(rotDeg*D2R);
-        ctx.strokeStyle=limbDk;ctx.lineWidth=4.5;ctx.lineCap="round";
-        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,6.2);ctx.stroke();
-        ctx.fillStyle=limbDk;ctx.beginPath();ctx.arc(0,6.2,3,0,7);ctx.fill();
-        ctx.restore();
-      };
-      arm(-16.6,armLd);arm(16.6,armRd);
-    }
-    // antenna — during tool actions it sways on the SVG antenna keyframes; while
-    // walking/running it uses the gait antenna keyframes; idle keeps a springy
-    // tip that lags behind movement for a bit of life
-    const antR=TL?kf(TL.ant,TL.t,ap)*(Math.PI/180)*(DX[r.dir]<0?-1:1):antD*D2R;
-    ctx.save();ctx.translate(0,-s2/2);ctx.rotate(antR);
-    ctx.strokeStyle="#8a6210";ctx.lineWidth=2.5;
-    ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(asw*.4,-4,asw,-7);ctx.stroke();
-    if(r.running){ctx.fillStyle="#54d66a";ctx.shadowColor="#54d66a";ctx.shadowBlur=4+5*Math.abs(Math.sin(t/160));}
-    else ctx.fillStyle="#ffd66b";
-    ctx.beginPath();ctx.arc(asw,-9,3.5,0,7);ctx.fill();ctx.shadowBlur=0;
-    ctx.restore();
-    // eyes look toward dir (closed while resting; occasional idle blink;
-    // curious glance around when idle)
-    let ex=DX[r.dir]*2.5, ey=DY[r.dir]*2.5;
-    if(!r.running&&!moving){const gl=Math.sin(t/1400+i*3.1);if(gl>.6)ex=2.5;else if(gl<-.6)ex=-2.5;}
-    const shut=atype==="rest"||r.tired||((!r.running||atype==="wait")&&((t+i*913)%3400)<110);
-    ctx.fillStyle="#fff";
-    ctx.beginPath();ctx.arc(-6.5,-3,5,0,7);ctx.moveTo(11.5,-3);ctx.arc(6.5,-3,5,0,7);ctx.fill();
-    if(shut){
-      ctx.strokeStyle="#241b45";ctx.lineWidth=2;ctx.lineCap="round";
-      ctx.beginPath();ctx.moveTo(-9,-2.5);ctx.lineTo(-4,-2.5);ctx.moveTo(4,-2.5);ctx.lineTo(9,-2.5);ctx.stroke();
-    }else{
-      ctx.fillStyle="#241b45";
-      ctx.beginPath();ctx.arc(-6.5+ex,-2.5+ey,2.5,0,7);ctx.moveTo(9+ex,-2.5+ey);ctx.arc(6.5+ex,-2.5+ey,2.5,0,7);ctx.fill();
-    }
-    // smile
-    ctx.strokeStyle="#1c1638";ctx.lineWidth=2;ctx.beginPath();ctx.arc(ex*.5,4+ey*.5,5,.2*Math.PI,.8*Math.PI);ctx.stroke();
-    /* the head anchor. The hat used to be drawn AFTER ctx.restore(), in world
-       space, hand-fed two of the seven values the body uses — so it missed the
-       sway pivot, the squash, the pop, the move lunge, the turn and, during
-       every tool action, the body lean entirely. Drawn here it inherits all of
-       them. 4.75 is where the sprite grid's brim line (y≈34 of 48, at the
-       TILE*.5 the hat is drawn at) lands on the body top, a quarter-pixel into
-       the bevel so it reads as resting on it. */
-    if(r.hat&&!(window.CC_WEAR&&CC_WEAR.hat(ctx,r.hat))){
-      const hp=sprite(r.hat,TILE*.5);
-      ctx.drawImage(hp,-hp.lw/2,-s2/2-4.75-hp.lw/2,hp.lw,hp.lw);
-    }
-    ctx.restore();
+    const B=CC_RIG.botFor(r);
+    B.color=safeColor(r.color);B.face(r.dir);
+    const P=robotPose(r,B,atype,ap,moving,t,i);
+    B.update(lastDtSec*1000,P);
+    B.draw(ctx,P,cx,gy,rs,{t,glow:false,wear:{hat:r.hat,outfit:r.outfit,shoes:r.shoes}});
+    robotFx(r,B,atype,ap);
     // sleepy Zzz while resting
     if(atype==="rest"){
       ctx.font='bold 11px "Fredoka",sans-serif';ctx.textAlign="center";ctx.fillStyle="#e6ecff";
       const zp=(t/450)%1, zp2=(zp+.5)%1;
-      ctx.globalAlpha=.8*(1-zp);ctx.fillText("z",cx+s2*.42,cy-s2*.6-zp*11);
-      ctx.globalAlpha=.6*(1-zp2);ctx.fillText("z",cx+s2*.56,cy-s2*.74-zp2*11);
+      ctx.globalAlpha=.8*(1-zp);ctx.fillText("z",cx+s2*.42,hy+10-zp*11);
+      ctx.globalAlpha=.6*(1-zp2);ctx.fillText("z",cx+s2*.56,hy+4-zp2*11);
       ctx.globalAlpha=1;
     }
     // name
     ctx.fillStyle="rgba(20,14,45,.75)";
     const nm=r.name;ctx.font='bold 11px "Fredoka",sans-serif';ctx.textAlign="center";
     const tw=ctx.measureText(nm).width;
-    rr(ctx,cx-tw/2-5,cy-s2*.95-14,tw+10,15,7);ctx.fill();
-    ctx.fillStyle="#fff";ctx.fillText(nm,cx,cy-s2*.95-2.5);
+    rr(ctx,cx-tw/2-5,hy-14,tw+10,15,7);ctx.fill();
+    ctx.fillStyle="#fff";ctx.fillText(nm,cx,hy-2.5);
     // speech bubble
     if(r.say){
       if(now>r.say.until)r.say=null;
       else{
         ctx.font='bold 12px "Fredoka",sans-serif';
         const sw2=ctx.measureText(r.say.txt).width;
-        const bx=cx-sw2/2-8, by=cy-s2*.95-38;
+        const bx=cx-sw2/2-8, by=hy-38;
         ctx.fillStyle="#fff";
         rr(ctx,bx,by,sw2+16,20,9);ctx.fill();
         ctx.beginPath();ctx.moveTo(cx-4,by+19);ctx.lineTo(cx+5,by+19);ctx.lineTo(cx,by+26);ctx.closePath();ctx.fill();
@@ -438,7 +237,7 @@ function draw(t){
       }
     }
     if(r.blocked){
-      const sp=sprite(r.tired?"😴":"💢",r.tired?16:14);ctx.drawImage(sp,cx+s2*.35,cy-s2*.85,sp.lw,sp.lw);
+      const sp=sprite(r.tired?"😴":"💢",r.tired?16:14);ctx.drawImage(sp,cx+s2*.42,hy+12,sp.lw,sp.lw);
     }
     /* v5: the action badge — what the robot is doing, and what it is
        doing it TO, drawn from the same SVG art as the UI (CC_SPRITES)
@@ -455,7 +254,7 @@ function draw(t){
           else if(terrain[key(tx,ty)]===T_WATER)te="💧";
         }catch(_){}
         const ic=16, pad=5, gap=te?4:0, w=pad*2+ic+(te?ic+gap:0), h=ic+pad*2;
-        const bx=cx-w/2, by=cy-s2*.95-38;
+        const bx=cx-w/2, by=hy-38;
         ctx.fillStyle="rgba(23,17,48,.86)";rr(ctx,bx,by,w,h,h/2);ctx.fill();
         ctx.strokeStyle="rgba(255,255,255,.14)";ctx.lineWidth=1.5;
         rr(ctx,bx,by,w,h,h/2);ctx.stroke();
@@ -470,7 +269,7 @@ function draw(t){
     // energy bar under the robot when not full
     const en=r.energy==null?100:r.energy;
     if(en<100){
-      const bw=s2*.9, bx=cx-bw/2, by=cy+s2*.52;
+      const bw=s2*.9, bx=cx-bw/2, by=gy+3;
       ctx.fillStyle="rgba(0,0,0,.4)";rr(ctx,bx,by,bw,4,2);ctx.fill();
       ctx.fillStyle=en<25?"#ff5d73":en<55?"#ffb830":"#54d66a";
       rr(ctx,bx,by,Math.max(2,bw*en/100),4,2);ctx.fill();
@@ -551,46 +350,67 @@ function draw(t){
     ctx.restore();
   }
 }
-/* keyframe sampler + tool-action timelines ported 1:1 from the approved SMIL
-   SVG action set (robot-animated.svg): keyTimes/values pairs, ease-in-out
-   between keys (≈ spline .4 0 .6 1). rot in degrees, ty in px, sx = width
-   squash (height gets the inverse), arm: 0 = overhead → 1 = full strike. */
-function kf(vals,times,p){
-  p=p<0?0:p>1?1:p;
-  let j=1;while(j<times.length-1&&times[j]<p)j++;
-  const a=times[j-1],b=times[j],u=b>a?(p-a)/(b-a):1;
-  const e=u<.5?2*u*u:1-2*(1-u)*(1-u);
-  return vals[j-1]+(vals[j]-vals[j-1])*e;
+/* What a world robot is doing this frame, as one pose of the rig
+   (robot-rig.js): the clip of the block it is running, else its walk, else
+   waiting, tired or idle. The walk is driven by distance, not the clock,
+   so the feet keep pace with the tile and a speed upgrade lengthens the
+   stride into a run. */
+const RIG_OF={turnL:"turn",turnR:"turn",collect:"collect",chop:"chop",mine:"mine",scoop:"scoop",
+  drop:"drop",build:"build",rest:"rest",wait:"wait",pickUp:"lift"};
+function robotPose(r,B,atype,ap,moving,t,i){
+  const S=B.st||(B.st={gp:(i*.37)%1,runk:0,wb:0,px:r.rx,py:r.ry,anim:null,ap:0});
+  const dt=lastDtSec, c={fs:DX[r.dir]||0,dir:r.dir,turn:atype==="turnR"?-1:1};
+  const spd=Math.hypot(r.rx-S.px,r.ry-S.py);S.px=r.rx;S.py=r.ry;
+  const tps=spd/Math.max(.0001,dt);
+  S.runk+=(Math.max(0,Math.min(1,(tps-3.5)/3.5))-S.runk)*Math.min(1,dt*6);
+  if(spd>.0005)S.gp=(S.gp+spd/1.15)%1;   // one stride cycle per ~1.15 tiles
+  S.wb+=((moving?1:0)-S.wb)*Math.min(1,dt*8);
+  const ms=t+i*700, clip=atype&&RIG_OF[atype];
+  let P,key;
+  if(clip){P=CC_RIG.pose(clip,ap,t-r.anim.t0,c);key=clip;}
+  else if(S.wb>.02){
+    let w=CC_RIG.pose("walk",0,S.gp*620,c);
+    if(S.runk>.02)w=CC_RIG.mix(w,CC_RIG.pose("run",0,S.gp*420,c),S.runk);
+    P=S.wb<.98?CC_RIG.mix(CC_RIG.pose("idle",0,ms,c),w,S.wb):w;key="walk";
+  }
+  else if(r.wait>0){P=CC_RIG.pose("wait",0,ms,c);key="wait";}
+  else if(r.tired){P=CC_RIG.pose("tired",0,ms,c);key="tired";}
+  else{P=CC_RIG.pose("idle",0,ms,c);key="idle";}
+  /* the bulb is the program: green while it runs, gold while it waits,
+     red when the robot is stuck */
+  if(key==="idle"||key==="walk"||key==="wait")P.bulb=r.running?"run":"idle";
+  if(r.blocked)P.bulb="error";
+  P.energy=(r.energy==null?100:r.energy)/100;
+  const n=typeof bagCount==="function"?bagCount(r):0, cap=r.cap||1;
+  P.packFill=Math.min(1,n/cap);
+  if(n>0&&n>=cap){P.packFull=true;P.packScale=1.16;}
+  if(r.say&&now<r.say.until){P.expr="talk";P.talk=r.say.until-now>900?1:0;}
+  // the pop a sale gives
+  r.pop=Math.max(0,(r.pop||0)-dt*3);
+  if(r.pop){const k=1+r.pop*.22;P.sx*=k;P.sy*=k;}
+  return B.blend(P,key,dt*1000);
 }
-const KT9=[0,.125,.25,.375,.5,.625,.75,.875,1];
-const KT3=[0,.5,1];
-/* Walk & run gaits — exact keyTimes/values lifted from robot-animated.svg
-   (idle & rest are inline 3-point loops in the driver). legL/legR = thigh
-   rotation; lenL/lenR = leg length (foot lifts as the leg shortens); footL/R =
-   foot counter-rotation; armL/R = arm swing; ant = antenna; bob/sway/sx/sy =
-   body bob, tilt & squash. */
-const GAIT={
-  walk:{bob:[0,-1.9,-2.7,-1.9,0,-1.9,-2.7,-1.9,0], sway:[2.3,1.63,0,-1.63,-2.3,-1.63,0,1.63,2.3],
-    sx:[1.05,1.04,1.01,.99,.97,.99,1.01,1.04,1.05], sy:[.96,.98,1,1.03,1.04,1.03,1,.98,.96],
-    legL:[-20.6,-14.63,0,14.63,20.6,14.63,0,-14.63,-20.6], lenL:[5.53,4.4,3.87,4.4,5.53,5.53,5.53,5.53,5.53], footL:[20.6,14.63,0,-14.63,-20.6,-14.63,0,14.63,20.6],
-    legR:[20.6,14.63,0,-14.63,-20.6,-14.63,0,14.63,20.6], lenR:[5.53,5.53,5.53,5.53,5.53,4.4,3.87,4.4,5.53], footR:[-20.6,-14.63,0,14.63,20.6,14.63,0,-14.63,-20.6],
-    ant:[-4,-2.84,0,2.84,4,2.84,0,-2.84,-4], armL:[10,12.03,17,21.97,24,21.97,17,12.03,10], armR:[-10,-12.03,-17,-21.97,-24,-21.97,-17,-12.03,-10]},
-  run:{bob:[0,-2.4,-3.4,-2.4,0,-2.4,-3.4,-2.4,0], sway:[3.2,2.27,0,-2.27,-3.2,-2.27,0,2.27,3.2],
-    sx:[1.08,1.06,1.02,.98,.96,.98,1.02,1.06,1.08], sy:[.95,.97,1,1.04,1.05,1.04,1,.97,.95],
-    legL:[-32,-22.72,0,22.72,32,22.72,0,-22.72,-32], lenL:[5.53,4.1,3.3,4.1,5.53,5.53,5.53,5.53,5.53], footL:[32,22.72,0,-22.72,-32,-22.72,0,22.72,32],
-    legR:[32,22.72,0,-22.72,-32,-22.72,0,22.72,32], lenR:[5.53,5.53,5.53,5.53,5.53,4.1,3.3,4.1,5.53], footR:[-32,-22.72,0,22.72,32,22.72,0,-22.72,-32],
-    ant:[-8,-5.68,0,5.68,8,5.68,0,-5.68,-8], armL:[12,14.61,21,27.39,30,27.39,21,14.61,12], armR:[-12,-14.61,-21,-27.39,-30,-27.39,-21,-14.61,-12]}
-};
-const ACT_TL={
-  chop:   {t:[0,.1,.36,.46,.53,.6,.68,1], rot:[0,-1,-6,-6,7,6,7,0], ty:[0,0,-1.5,-1.5,1.4,1.2,1.4,0], sx:[1,1,.97,.97,1.07,1.05,1.07,1],
-           ant:[0,-2,6,6,-6,-5,-6,0], larm:[10,12,26,26,2,4,2,10], upper:[-15,-5,-150,-150,-62,-57,-62,-15], fore:[-5,0,-40,-40,12,7,12,-5]},
-  mine:   {t:[0,.1,.36,.46,.53,.6,.68,1], rot:[0,-1,-7,-7,9,8,9,0], ty:[0,0,-1.8,-1.8,2,1.7,2,0], sx:[1,1,.96,.96,1.09,1.07,1.09,1],
-           ant:[0,-2,7,7,-7,-6,-7,0], larm:[10,12,26,26,2,4,2,10], upper:[-15,-5,-140,-140,-12,-8,-12,-15], fore:[-5,2,-45,-45,-2,-6,-2,-5]},
-  collect:{t:[0,.1,.28,.4,.56,.75,1], rot:[0,-2,8,8,-3,-3,0], ty:[0,0,2,2,-1,-1,0], sx:[1,1,1.05,1.05,.98,.98,1],
-           ant:[0,-3,6,6,-4,-4,0], larm:[10,11,20,20,6,6,10], upper:[-15,-8,-42,-42,-80,-80,-15], fore:[-5,-2,-30,-30,-28,-28,-5]},
-  scoop:  {t:[0,.12,.3,.42,.6,.78,1], rot:[0,-2,9,10,-4,-1,0], ty:[0,0,2.2,2.6,-1.2,0,0], sx:[1,1,1.05,1.06,.98,1,1],
-           ant:[0,-3,7,7,-4,-2,0], larm:[10,12,22,22,4,8,10], upper:[-15,-10,-55,-70,-100,-30,-15], fore:[-5,-4,-35,-28,-20,-15,-5], toolrot:[0,0,35,35,-8,0,0]}
-};
+/* the moments a clip crosses become a few of the world's own particles,
+   thrown from where the tool or the hand actually is */
+function robotFx(r,B,atype,ap){
+  const S=B.st, clip=atype&&RIG_OF[atype];
+  if(r.anim!==S.anim){S.anim=r.anim;S.ap=0;}
+  const evs=clip?CC_RIG.events(clip,S.ap,ap):[];
+  S.ap=ap;
+  const a=B.anchors;if(!evs.length||!a.valid)return;
+  const spray=(p,cols,n,sp)=>{if(!p)return;
+    for(let k=0;k<n;k++)parts.push({x:p.x,y:p.y,vx:(Math.random()-.5)*sp*2,vy:-20-Math.random()*sp,g:380,
+      s:1.3+Math.random()*1.5,c:cols[k%cols.length],t:0,life:.4+Math.random()*.3});
+    if(parts.length>280)parts.splice(0,parts.length-280);};
+  const tp=a.tool||a.handR;
+  for(const k of evs){
+    if(k==="hit"&&clip==="chop")spray(tp,["#c98a4b","#ecc08b","#8a5a2c"],5,90);
+    else if(k==="hit"&&clip==="mine")spray(tp,["#ffe27a","#ffffff","#9aa3b8","#c3cad9"],7,130);
+    else if(k==="hit"||k==="tap")spray(tp,["#e4dcbe","#cfc3a0"],k==="hit"?4:2,50);
+    else if(k==="splash")spray(tp,["#6fd3ff","#bff0ff"],6,80);
+    else if(k==="toss")spray(a.packTop||tp,["#fff6c9","#ffe27a"],3,40);
+  }
+}
 function rr(c,x,y,w2,h2,r2){
   c.beginPath();
   if(c.roundRect){c.roundRect(x,y,w2,h2,r2);return;}
@@ -645,149 +465,22 @@ function drawTeamLayer(t,x0,y0,x1,y1){
     ctx.restore();
   }
 }
-/* The three poses a preview can strike, sampled from the same tables the
-   world robot animates on — GAIT for the walk, the idle keyframes for
-   standing, ACT_TL.chop for the swing. It is one object of numbers, so the
-   preview and the world cannot drift into two different-looking robots. */
-function boardPose(pose,t){
-  const P={bob:0,sway:0,sqx:1,sqy:1,legL:0,legR:0,lenL:5.53,lenR:5.53,
-           footL:0,footR:0,armL:10,armR:-10,ant:0,rot:0,TL:null,ap:0};
-  if(pose==="work"){
-    const TL=ACT_TL.chop, ap=((t/900)%1+1)%1;
-    P.TL=TL; P.ap=ap;
-    P.bob=kf(TL.ty,TL.t,ap);
-    const kx=kf(TL.sx,TL.t,ap); P.sqx=kx; P.sqy=2-kx;
-    P.ant=kf(TL.ant,TL.t,ap); P.rot=kf(TL.rot,TL.t,ap);
-    return P;
-  }
-  if(pose==="walk"){
-    const gp=((t/760)%1+1)%1, G=k=>kf(GAIT.walk[k],KT9,gp);
-    P.bob=G("bob");P.sway=G("sway");P.sqx=G("sx");P.sqy=G("sy");
-    P.legL=G("legL");P.legR=G("legR");P.lenL=G("lenL");P.lenR=G("lenR");
-    P.footL=G("footL");P.footR=G("footR");
-    P.armL=G("armL");P.armR=G("armR");P.ant=G("ant");
-    return P;
-  }
-  const ip=((t/2600)%1+1)%1;
-  P.bob=kf([0,-1.6,0],KT3,ip);P.sway=kf([-3,3,-3],KT3,ip);
-  P.sqx=kf([1,.99,1],KT3,ip);P.sqy=kf([1,1.01,1],KT3,ip);
-  P.armL=kf([10,16,10],KT3,ip);P.armR=kf([-10,-16,-10],KT3,ip);
-  return P;
-}
-
-/* `wear` is optional: {hat,outfit,shoes}, the same three fields a robot
-   carries. `pose` is optional too, and it is what turns this from a board
-   token into a real preview: without it the robot stands still with a
-   simple bob and no legs, exactly as the Academy board has always drawn it;
-   with it, it walks or chops on the world robot's own transform tree. */
+/* The board robot is the world robot, standing still: the same rig, the
+   same clips, the same wearables (robot-rig.js). (cx,cy) and s2 are the
+   centre and size of the old square body, so every caller keeps its
+   layout: the feet land where they always did. `wear` is optional: {hat,outfit,shoes}. `pose` is
+   optional too: without it the robot is a token with no breath and no
+   glance, exactly what the Academy board wants; with it, it plays the
+   world robot's own idle, walk or chop. A board has no memory, so the
+   robot it draws has none either: the same inputs give the same pixels. */
+function boardPose(pose,t){return CC_RIG.boardPose(pose,t);}
 function drawBoardRobot(g,cx,cy,s2,dir,color,running,t,wear,pose){
-  const RS=TILE*0.72, k=s2/RS, D2R=Math.PI/180;
-  g.save();g.translate(cx,cy);g.scale(k,k);
-  const S=RS, W=wear||{};
-  const P=pose?boardPose(pose,t):null;
-  const limbDk=(function(hex){try{const n=parseInt(String(hex).slice(1),16);const f=c=>Math.max(0,Math.round(c*.72));return "rgb("+f(n>>16&255)+","+f(n>>8&255)+","+f(n&255)+")";}catch(e){return hex;}})(color);
-  const shS=P?1+P.bob*.012:1;
-  g.fillStyle="rgba(0,0,0,.22)";g.beginPath();g.ellipse(0,S*.42,S*.42*shS,S*.16*shS,0,0,7);g.fill();
-  if(P){
-    /* the same seven-step tree the world robot uses, in the same order */
-    g.translate(0,P.bob);
-    if(P.TL)g.rotate(P.rot*D2R);
-    else{g.translate(0,10);g.rotate(P.sway*D2R);g.translate(0,-10);}
-    g.translate(0,18);g.scale(P.sqx,P.sqy);g.translate(0,-18);
-  }else{
-    const bob=running?Math.sin(t/120)*1.6:0; g.translate(0,bob);
-  }
-  // back piece, then legs + shoes — same anchors as the world robot
-  if(window.CC_WEAR&&W.outfit&&CC_WEAR.back[W.outfit])CC_WEAR.back(g,W.outfit,P?P.sway:0,P&&pose==="walk"?((t/760)%1+1)%1:0);
-  if(P){
-    const leg=(hx,rot,len,fd)=>{
-      g.save();g.translate(hx,13.28);g.rotate(rot*D2R);
-      g.strokeStyle=limbDk;g.lineWidth=5;g.lineCap="round";
-      g.beginPath();g.moveTo(0,0);g.lineTo(0,len);g.stroke();
-      g.translate(0,len);g.rotate(fd*D2R);
-      if(window.CC_WEAR&&W.shoes)CC_WEAR.shoe(g,W.shoes,limbDk,pose==="walk",t);
-      else{g.fillStyle=limbDk;rr(g,-3.5,-1,7,4.5,2.2);g.fill();}
-      g.restore();
-    };
-    /* legs stay planted through a tool swing, as they do in the world */
-    if(P.TL){leg(-5.53,0,5.53,0);leg(5.53,0,5.53,0);}
-    else{leg(-5.53,P.legL,P.lenL,P.footL);leg(5.53,P.legR,P.lenR,P.footR);}
-  }
-  else if(window.CC_WEAR&&W.shoes){
-    [-5.53,5.53].forEach(hx=>{
-      g.save();g.translate(hx,13.28);
-      g.strokeStyle=limbDk;g.lineWidth=5;g.lineCap="round";
-      g.beginPath();g.moveTo(0,0);g.lineTo(0,5.53);g.stroke();
-      g.translate(0,5.53);
-      CC_WEAR.shoe(g,W.shoes,limbDk,false,t);
-      g.restore();
-    });
-  }
-  // body — toy bevel
-  const grd=g.createLinearGradient(0,-S/2,0,S/2);
-  grd.addColorStop(0,window.CC_EXTRAS?CC_EXTRAS.lighten(color,.3):color);grd.addColorStop(1,color);
-  g.fillStyle=grd;rr(g,-S/2,-S/2,S,S,11);g.fill();
-  g.save();rr(g,-S/2,-S/2,S,S,11);g.clip();
-  if(window.CC_WEAR&&W.outfit)CC_WEAR.outfit(g,W.outfit,color);
-  g.fillStyle="rgba(0,0,0,.25)";g.fillRect(-S/2,S/2-6,S,6);
-  g.fillStyle="rgba(255,255,255,.35)";rr(g,-S/2+4,-S/2+3,S-8,4.5,2.5);g.fill();
-  g.restore();
-  // arms — the swing while walking or standing, the jointed tool arm on a chop
-  if(P&&P.TL){
-    const TL=P.TL, ap=P.ap;
-    g.lineCap="round";g.strokeStyle=limbDk;g.fillStyle=limbDk;
-    g.save();g.translate(-16.6,5.2);g.rotate(kf(TL.larm,TL.t,ap)*D2R);
-    g.lineWidth=3.8;g.beginPath();g.moveTo(0,0);g.lineTo(0,5.6);g.stroke();
-    g.beginPath();g.arc(0,5.6,2.5,0,7);g.fill();g.restore();
-    g.beginPath();g.arc(-16.6,5.2,2.3,0,7);g.fill();
-    g.save();g.translate(16.6,5.2);g.rotate(kf(TL.upper,TL.t,ap)*D2R);
-    g.lineWidth=3.8;g.beginPath();g.moveTo(0,0);g.lineTo(0,4.6);g.stroke();
-    g.beginPath();g.arc(0,4.6,2.5,0,7);g.fill();
-    g.translate(0,4.6);g.rotate(kf(TL.fore,TL.t,ap)*D2R);
-    g.beginPath();g.moveTo(0,0);g.lineTo(0,5);g.stroke();
-    g.beginPath();g.arc(0,5,2.5,0,7);g.fill();
-    g.translate(0,5);g.rotate(90*D2R);
-    g.strokeStyle="#8a5a2c";g.lineWidth=4.5;
-    g.beginPath();g.moveTo(-3,0);g.lineTo(16,0);g.stroke();
-    g.fillStyle="#cfd4e0";
-    g.beginPath();g.moveTo(15,-9);g.quadraticCurveTo(24,0,15,9);g.lineTo(12,5);g.lineTo(12,-5);g.closePath();g.fill();
-    g.strokeStyle="rgba(28,22,56,.45)";g.lineWidth=1.6;g.stroke();
-    g.restore();
-  }else if(P){
-    const arm=(sx,rot)=>{
-      g.save();g.translate(sx,5.2);g.rotate(rot*D2R);
-      g.strokeStyle=limbDk;g.lineWidth=4.5;g.lineCap="round";
-      g.beginPath();g.moveTo(0,0);g.lineTo(0,6.2);g.stroke();
-      g.fillStyle=limbDk;g.beginPath();g.arc(0,6.2,3,0,7);g.fill();g.restore();
-    };
-    arm(-16.6,P.armL);arm(16.6,P.armR);
-  }
-  // antenna + status light (green glow while running, gold when idle)
-  g.save();g.translate(0,-S/2);if(P)g.rotate(P.ant*D2R);
-  g.strokeStyle="#8a6210";g.lineWidth=2.5;g.beginPath();g.moveTo(0,0);g.lineTo(0,-7);g.stroke();
-  if(running){g.fillStyle="#54d66a";g.shadowColor="#54d66a";g.shadowBlur=4+5*Math.abs(Math.sin(t/160));}
-  else g.fillStyle="#ffd66b";
-  g.beginPath();g.arc(0,-9,3.5,0,7);g.fill();g.shadowBlur=0;g.restore();
-  // eyes look toward the facing direction (occasional idle blink when stopped)
-  const ex=DX[dir]*2.5, ey=DY[dir]*2.5;
-  const shut=!running&&!P&&((t+cx*7)%3400)<110;
-  g.fillStyle="#fff";
-  g.beginPath();g.arc(-6.5,-3,5,0,7);g.moveTo(11.5,-3);g.arc(6.5,-3,5,0,7);g.fill();
-  if(shut){
-    g.strokeStyle="#241b45";g.lineWidth=2;g.lineCap="round";
-    g.beginPath();g.moveTo(-9,-2.5);g.lineTo(-4,-2.5);g.moveTo(4,-2.5);g.lineTo(9,-2.5);g.stroke();
-  }else{
-    g.fillStyle="#241b45";
-    g.beginPath();g.arc(-6.5+ex,-2.5+ey,2.5,0,7);g.moveTo(9+ex,-2.5+ey);g.arc(6.5+ex,-2.5+ey,2.5,0,7);g.fill();
-  }
-  // smile
-  g.strokeStyle="#1c1638";g.lineWidth=2;g.beginPath();g.arc(ex*.5,4+ey*.5,5,.2*Math.PI,.8*Math.PI);g.stroke();
-  // head anchor — inside the transform, exactly as in the world
-  if(W.hat&&!(window.CC_WEAR&&CC_WEAR.hat(g,W.hat))){
-    const hp=sprite(W.hat,TILE*.5);
-    g.drawImage(hp,-hp.lw/2,-S/2-4.75-hp.lw/2,hp.lw,hp.lw);
-  }
-  g.restore();
+  if(!window.CC_RIG)return;
+  const P=pose?CC_RIG.boardPose(pose,t):CC_RIG.P0();
+  if(!pose)P.blink=(!running&&((t+cx*7)%3400)<110)?1:0;
+  if(P.bulb==="idle"||P.bulb==="run")P.bulb=running?"run":"idle";
+  const yaw=typeof dir==="number"?CC_RIG.DIRYAW[dir&3]:.45;
+  CC_RIG.drawStill(g,cx,cy+s2*.66,s2/76.9,yaw,color,P,{t,wear:wear||{}});
 }
 function drawBoardBrick(g,px,py,cell,onPlan,no){
   const m=Math.max(3,cell*0.08), x=px+m, y=py+m, s=cell-2*m;
