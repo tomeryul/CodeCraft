@@ -721,6 +721,9 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #authBox .authform{display:none;margin-top:8px;}
 #authBox.open .authform{display:flex;}
 #authBox .authbtn.out{flex:0 0 auto;}
+/* an email is one unbreakable word: a long one pushed Log out off a 375px
+   phone. It gives way instead, and the full address is its title */
+#authBox .authrow b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 /* --- run/creator bars: square icon buttons, setup folded behind ⚙ --- */
 /* the bar no longer carries .mg-top, so it needs its own button baseline */

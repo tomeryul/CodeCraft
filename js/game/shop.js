@@ -63,7 +63,15 @@ $("importFile").addEventListener("change",e=>{
       const d=JSON.parse(rd.result,(k,v)=>
         (k==="__proto__"||k==="constructor"||k==="prototype")?undefined:v);
       if(d.v!==1&&d.v!==2)throw 0;
+      /* The reload below fires visibilitychange, whose saveNow wrote the
+         world still in memory straight back over the file just imported —
+         so an import never took. saveOff is the switch account deletion
+         uses for the same race. And a signed-in player's next start loads
+         the CLOUD world, which would undo the import a second way: the
+         flag tells that start to keep this one and send it up instead. */
+      saveOff=true; clearTimeout(saveT);
       localStorage.setItem(SAVE_KEY,JSON.stringify(d));
+      try{ sessionStorage.setItem("cc_imported","1"); }catch(_){}
       location.reload();
     }catch(_){toast("⚠️ That file isn't a CodeCraft world.");}
   };

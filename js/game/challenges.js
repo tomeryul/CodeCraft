@@ -113,7 +113,7 @@ function renderAuthBox(){
   if(!sbReady()){box.innerHTML='<div class="authnote">🔌 Online accounts & shared challenges are coming online soon — everything else works offline!</div>';return;}
   if(!ageOk()){box.innerHTML='<div class="agenote">'+AGE_NOTE+'</div>';return;}
   if(sbUser){
-    box.innerHTML='<div class="authrow">🟢 <b>'+esc(sbUser.email)+'</b><span class="spacer"></span></div>';
+    box.innerHTML='<div class="authrow">🟢 <b title="'+esc(sbUser.email).replace(/"/g,"&quot;")+'">'+esc(sbUser.email)+'</b><span class="spacer"></span></div>';
     const out=document.createElement("button");out.className="authbtn out";out.textContent="Log out";
     out.addEventListener("click",sbLogout);
     box.firstChild.appendChild(out);
