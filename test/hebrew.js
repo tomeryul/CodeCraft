@@ -215,6 +215,26 @@ async function boot(pg,he){
   ck('and keeps every icon it points at',
      ['\ud83e\udde9','\ud83d\udeb6','\ud83c\udf33','\ud83e\ude93','\u25b6'].every(e=>icons.icons.includes(e)), icons);
 
+  /* confirm() and prompt() draw outside the page, so the observer never
+     saw them: every dialog came up in English, the warning about the name
+     you sign your challenges with among them. A prompt's default value is
+     the player's own text and must come through untouched. */
+  const dlg = [];
+  const onDlg = async d => { dlg.push({ m: d.message(), v: d.defaultValue() }); await d.dismiss(); };
+  pg.on('dialog', onDlg);
+  await pg.evaluate(() => {
+    confirm('Really erase your world, robots and coins?');
+    prompt('Pick a name to sign your challenges with.\n\nOther players will see this \u2014 don\'t use your real name, your school or anything private.', 'Robo Sam');
+    confirm('Delete \u201cwalk(n)\u201d from your library?');
+  });
+  await pg.waitForTimeout(200);
+  pg.off('dialog', onDlg);
+  ck('a confirm() dialog is Hebrew', dlg[0] && HEB.test(dlg[0].m) && !/erase/.test(dlg[0].m), dlg[0]);
+  ck('a prompt() keeps its line breaks in Hebrew, and its default value as typed',
+     dlg[1] && HEB.test(dlg[1].m) && /\n\n/.test(dlg[1].m) && dlg[1].v === 'Robo Sam', dlg[1]);
+  ck('a name in quotes is carried into the Hebrew sentence',
+     dlg[2] && HEB.test(dlg[2].m) && dlg[2].m.includes('walk(n)'), dlg[2]);
+
   /* A lesson row is "<b>Move</b> — One step forward…", so the sentence
      arrives with a leading em-dash and a <b> beside it. The dash is edge
      decoration; the <b> is real markup and has to survive. */

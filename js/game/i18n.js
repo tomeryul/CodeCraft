@@ -79,7 +79,7 @@ const HE={
 "Six rules and five starters.":"שישה כללים וחמישה לוחות פתיחה.",
 "Save once, use it everywhere.":"שמור פעם אחת, השתמש בכל מקום.",
 "Deliver before time runs out.":"לספק לפני שהזמן נגמר.",
-"New pieces unlock as you level up.":"חלקים חדשים נפתחים כשאתה עולה רמה.",
+"New pieces unlock as you level up.":"כל רמה פותחת חלקים חדשים.",
 "Dress your robots. New pieces unlock as you level up.":
   "תלביש את הרובוטים שלך. פריטים חדשים נפתחים כשאתה עולה רמה.",
 /* the Style sheet: slot labels, the two preview poses, and the pieces */
@@ -1906,7 +1906,16 @@ const HE_T={
   "📣 בהלת {1}! המחירים זינקו ל-{2} 🪙 לדקה — תשלח את כולם!",
 ", takes {s}":", מקבל {1}",
 "· takes {s}":"· מקבל {1}",
-"Delete “{n}” from your library?":"למחוק את „{1}” מהספרייה שלך?",
+/* {s}, not {n}: what goes in the quotes is a function's signature,
+   "walk(n)", and a number slot never matched one */
+"Delete “{s}” from your library?":"למחוק את „{1}” מהספרייה שלך?",
+/* ---- dialogs: confirm() and prompt() reach the dictionary through
+   trDialog, so these were finally worth writing ---- */
+"Start a new board?\n\n“{s}” is not saved — it will be gone.":
+  "להתחיל לוח חדש?\n\n„{1}” לא נשמר — הוא ייעלם.",
+"What does function {s} take in?\nComma-separated names, or leave empty for none:":
+  "מה הפונקציה {1} מקבלת?\nשמות מופרדים בפסיקים, או ריק אם כלום:",
+"Save function {s} as:":"לשמור את הפונקציה {1} בשם:",
 "Save 🔧 {s} ({n} blocks{n})":"שמור 🔧 {1} ({2} בלוקים{3})",
 "📚 Saved {s} — use it in any world or minigame.":
   "📚 {1} נשמר — אפשר להשתמש בו בכל עולם ובכל משחקון.",
@@ -2223,6 +2232,27 @@ function off(){
   if(mo){mo.disconnect();mo=null;}
 }
 function i18nApply(){ (typeof lang!=="undefined"&&lang==="he")?on():off(); }
+
+/* confirm(), prompt() and alert() draw outside the page, where the
+   observer never looks. Their Hebrew was written — "Delete “{s}”?", the
+   warning about the name you sign challenges with — and every one of them
+   still came up in English. The message goes through the same dictionary
+   on its way out: the exact entry first, because a dialog's own line
+   breaks are in it, then the sentence, then line by line. A prompt's
+   default value is the player's text and is left alone. */
+function trDialog(m){
+  if(typeof m!=="string"||!document.documentElement.classList.contains("he"))return m;
+  const exact=HE[m]||HE_RAW[m]; if(exact)return rtlLead(exact);
+  const whole=tr(m,null); if(whole!==null)return rtlLead(whole);
+  if(m.indexOf("\n")<0)return m;
+  return m.split("\n").map(l=>{ if(!l.trim())return l;
+    const o=tr(l,null); return o!==null?rtlLead(o):l; }).join("\n");
+}
+const nConfirm=window.confirm.bind(window), nPrompt=window.prompt.bind(window),
+      nAlert=window.alert.bind(window);
+window.confirm=m=>nConfirm(trDialog(m));
+window.prompt=(m,d)=>d===undefined?nPrompt(trDialog(m)):nPrompt(trDialog(m),d);
+window.alert=m=>nAlert(trDialog(m));
 
 window.i18nApply=i18nApply;
 window.i18nOn=on; window.i18nOff=off;
