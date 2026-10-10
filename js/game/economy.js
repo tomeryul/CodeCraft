@@ -279,6 +279,7 @@ function renderMarket(){
   el.style.display=showing?"":"none";
   if(!showing)return;
   const ev=m.event&&now<m.event.until?m.event:null;
+  const evclk=ev?"⏱ "+mktClock(ev.until):"";
   const open=el.classList.contains("open");
   const cpm=coinsPerMin();
   /* the handle: rate, the order clock, and a dot when the world is doing something */
@@ -304,7 +305,9 @@ function renderMarket(){
     html+='<div class="tk-panel">';
     if(ev){
       const txt=ev.kind==="rush"?"📣 "+RES[ev.res].em+" RUSH":ev.kind==="night"?"🌙 Nightfall":"💎 Rich seam — on 📻";
-      html+='<div class="tk-ev '+ev.kind+'">'+txt+' · '+Math.max(0,Math.ceil((ev.until-now)/1000))+'s</div>';
+      /* the name and its clock are two elements: "📣 🪵 RUSH · 42s" was one
+         text node, which no Hebrew entry can match, so it stayed English */
+      html+='<div class="tk-ev '+ev.kind+'"><span>'+txt+'</span> <span class="tk-evclk">'+evclk+'</span></div>';
     }
     html+='<div class="tk-grid">';
     for(const k of MKT_RES){
@@ -325,9 +328,11 @@ function renderMarket(){
      that ticks is one text node set in place. Every rewrite wakes the
      Hebrew and icon observers, and this runs every second. */
   const clk=m.order?"⏱ "+mktClock(m.order.until):"";
-  const shape=clk?html.split(clk).join("\u0000"):html;
+  let shape=clk?html.split(clk).join("\u0000"):html;
+  if(evclk)shape=shape.split('"tk-evclk">'+evclk).join('"tk-evclk">\u0001');
   if(el._shape===shape){
     el.querySelectorAll(".tk-clk").forEach(c=>{if(c.textContent!==clk)c.textContent=clk;});
+    el.querySelectorAll(".tk-evclk").forEach(c=>{if(c.textContent!==evclk)c.textContent=evclk;});
     return;
   }
   el._shape=shape;
