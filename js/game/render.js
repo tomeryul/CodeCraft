@@ -172,7 +172,10 @@ function draw(t){
   }
   // robots
   robots.forEach((r,i)=>{
-    r.rx=lerp(r.rx,r.x,.22);r.ry=lerp(r.ry,r.y,.22);
+    /* a step is walked at an even pace that fills the tick, so a run of
+       steps is one unbroken walk rather than a dart and a wait */
+    const stepMs=robotStepMs(r), v=lastDtSec*1000/(stepMs*.96);
+    r.rx=glide(r.rx,r.x,v);r.ry=glide(r.ry,r.y,v);
     const cx=(r.rx+.5)*TILE, cy=(r.ry+.5)*TILE, s2=TILE*.72;
     /* the robot stands on its tile where it always has, its feet at gy,
        a little shorter than the old one: rs is one rig unit in world px,
@@ -186,15 +189,15 @@ function draw(t){
       ctx.setLineDash([10,7]);ctx.lineDashOffset=-t/30;ctx.stroke();ctx.setLineDash([]);
       ctx.restore();
     }
-    const moving=Math.abs(r.rx-r.x)+Math.abs(r.ry-r.y)>.04;
+    const moving=Math.abs(r.rx-r.x)+Math.abs(r.ry-r.y)>.001;
     // per-action tell (r.anim set by the interpreter)
     const A=r.anim; let ap=1, atype=null;
     if(A){
       /* a tool swing stretches to fill the gap until the next sim step, so
          a faster robot swings faster; a turn is quick, a rest is long */
-      const stepMs=340/(r.speed||1)/(1+(typeof skills!=="undefined"?skills.agility.lvl*.015:0));
-      const dur=A.type==="rest"?1400:A.type==="wait"?420:A.type==="move"?220:
-        (A.type==="turnL"||A.type==="turnR")?Math.max(220,Math.min(560,stepMs*.9)):Math.max(320,Math.min(1250,stepMs*.95));
+      const dur=A.type==="rest"?1400:A.type==="wait"?stepMs:A.type==="move"?(r.blocked?Math.max(420,Math.min(700,stepMs*.95)):220):
+        (A.type==="turnL"||A.type==="turnR")?Math.max(220,Math.min(560,stepMs*.9)):
+        Math.max(320,Math.min(1250,stepMs*(WORK_ACTS[A.type]?WORK_TICKS:1)*.95));
       /* an action is stamped with performance.now() during the frame, and the
          frame is drawn with the time it STARTED, a moment earlier — so the
          first frame of a clip reads a little below zero. That is the clip
@@ -207,7 +210,7 @@ function draw(t){
     B.color=safeColor(r.color);B.face(r.dir);
     const P=robotPose(r,B,atype,ap,moving,t,i);
     B.update(lastDtSec*1000,P);
-    B.draw(ctx,P,cx,gy,rs,{t,glow:false,wear:{hat:r.hat,outfit:r.outfit,shoes:r.shoes}});
+    B.draw(ctx,P,cx+B.st.nx,gy+B.st.ny,rs,{t,glow:false,wear:{hat:r.hat,outfit:r.outfit,shoes:r.shoes}});
     robotFx(r,B,atype,ap);
     // sleepy Zzz while resting
     if(atype==="rest"){
@@ -360,14 +363,18 @@ const RIG_OF={turnL:"turn",turnR:"turn",collect:"collect",chop:"chop",mine:"mine
 function robotPose(r,B,atype,ap,moving,t,i){
   const S=B.st||(B.st={gp:(i*.37)%1,runk:0,wb:0,px:r.rx,py:r.ry,anim:null,ap:0});
   const dt=lastDtSec, c={fs:DX[r.dir]||0,dir:r.dir,turn:atype==="turnR"?-1:1};
-  const spd=Math.hypot(r.rx-S.px,r.ry-S.py);S.px=r.rx;S.py=r.ry;
+  const spd=Math.hypot(r.rx-S.px,r.ry-S.py);S.px=r.rx;S.py=r.ry;S.nx=S.ny=0;
   const tps=spd/Math.max(.0001,dt);
   S.runk+=(Math.max(0,Math.min(1,(tps-3.5)/3.5))-S.runk)*Math.min(1,dt*6);
   if(spd>.0005)S.gp=(S.gp+spd/1.15)%1;   // one stride cycle per ~1.15 tiles
-  S.wb+=((moving?1:0)-S.wb)*Math.min(1,dt*8);
-  const ms=t+i*700, clip=atype&&RIG_OF[atype];
+  /* one step ends a frame or two before the next begins; the walk does
+     not stop for that */
+  if(moving)S.mt=t;
+  S.wb+=((t-(S.mt==null?-1e9:S.mt)<160?1:0)-S.wb)*Math.min(1,dt*8);
+  const ms=t+i*700, clip=atype==="move"&&r.blocked?"bump":atype&&RIG_OF[atype];
   let P,key;
-  if(clip){P=CC_RIG.pose(clip,ap,t-r.anim.t0,c);key=clip;}
+  if(clip){P=CC_RIG.pose(clip,ap,t-r.anim.t0,c);key=clip;
+    if(clip==="bump"){const n=CC_RIG.nudge(ap)*TILE;S.nx=DX[r.dir]*n;S.ny=DY[r.dir]*n;}}
   else if(S.wb>.02){
     let w=CC_RIG.pose("walk",0,S.gp*620,c);
     if(S.runk>.02)w=CC_RIG.mix(w,CC_RIG.pose("run",0,S.gp*420,c),S.runk);

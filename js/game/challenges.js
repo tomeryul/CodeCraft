@@ -2053,9 +2053,13 @@ function mgStartCase(fast){
   st.running=true;mgRobot.running=true;
   clearInterval(st.timer);st.timer=null;
   // ⏭ Step mode drives mgTick by hand, so no timer at all
+  /* 1× is a step a third of a second: slow enough to see the robot walk
+     and swing. A later input re-runs quick (fast) — it has been seen. */
+  st.hold=0;st.fast=!!fast;st.tickMs=0;
   if(!st.stepping){
-    const base=fast?60:170;
-    st.timer=setInterval(mgTick,Math.max(25,Math.round(base/(player.mgSpeed||1))));
+    const base=fast?60:340;
+    st.tickMs=Math.max(25,Math.round(base/(player.mgSpeed||1)));
+    st.timer=setInterval(mgRunTick,st.tickMs);
   }
   mgCaseStrip();mgVarsUI();
 }
@@ -2163,6 +2167,15 @@ function mgStop(){
   if(mgRobot){mgRobot.running=false;mgRobot.curUid=null;}
   updateChips();updateFab();
 }
+/* ▶ Run's timer. A swing — a block set down, a tree felled — holds the
+   board for a tick more than a step does (mgLookAct says how long), so it
+   can be seen. Only the timer waits: ⏭ Step, and anything that calls
+   mgTick itself, gets one action per call exactly as before. */
+function mgRunTick(){
+  const st=mgState;
+  if(st&&st.running&&st.hold>0){st.hold--;return;}
+  mgTick();
+}
 function mgTick(){
   const st=mgState;
   if(!st||!st.running)return;
@@ -2257,6 +2270,8 @@ function mgTick(){
     }
     mgRobot.curUid=b.uid;
     const rb=st.robot;
+    // what the board was, so the look can tell a step from a bump
+    const was={x:rb.x,y:rb.y,z:rb.z||0,held:rb.held,items:rb.items?rb.items.size:0};
     // 3D levels handle their own actions before anything falls through
     // to the flat-board rules. Answers false off 3D levels, and no-ops when the
     // file isn't loaded.
@@ -2266,7 +2281,7 @@ function mgTick(){
     else if(b.t==="move")mgMoveAhead(st,rb);
     // 🚶 Walk To takes one tile a tick, so the same block stays current
     // until it arrives
-    else if(b.t==="goNear"&&mgWalkTick(st,b,fr)){mgDraw();mgVarsUI();return;}
+    else if(b.t==="goNear"&&mgWalkTick(st,b,fr)){mgLookAct(st,b.t,was);mgDraw();mgVarsUI();return;}
     else if(b.t==="turnL")rb.dir=(rb.dir+3)%4;
     else if(b.t==="turnR")rb.dir=(rb.dir+1)%4;
     else if(b.t==="build"){const kk=rb.x+"_"+rb.y;if(!rb.bricks.has(kk)){rb.bricks.add(kk);rb.brickNo[kk]=rb.nextNo++;}sfx(430,.03);}
@@ -2295,6 +2310,7 @@ function mgTick(){
     else if(b.t==="wait")st.wait=Math.max(0,(b.n|0)-1); // this tick counts as the first
     // any remaining world-only action is a harmless no-op on the challenge grid
     fr.i++;
+    mgLookAct(st,b.t,was);
     mgDraw();mgVarsUI();
     // A ♾️ Forever program never runs out of blocks, so the goal can't be checked
     // when the stack empties — check it after every action instead. This is also
@@ -2452,6 +2468,7 @@ function mgFinish(){
   mgCostUI(); // every input has run — show what each one cost
   mgRestoreDraft(); // give the author their working board back (see mgRun)
   const total=st.cases.length, passed=st.results.filter(Boolean).length;
+  mgLookEnd(passed===total);
   if(passed===total){mgSuccess();return;}
   if(total>1){
     const c=st.cases[st.failAt];
@@ -2556,6 +2573,152 @@ function mgCanvasSize(cv,W,H,dpr){
   g.setTransform(dpr,0,0,dpr,0,0);
   return g;
 }
+/* ---------------- the board robot, alive ----------------
+   The rules move the robot a whole cell at a time, and that is all a
+   program or the checker ever sees. What the player sees is this: a robot
+   that walks from cell to cell across the tick, turns on the spot, swings
+   its hammer, lifts the block, bumps into the wall and jumps when the
+   level is solved — the world robot's own rig and clips (robot-rig.js).
+   It lives beside the board, never in it, so nothing here can change what
+   a program does or how a level is judged. The Tower draws it too
+   (mgLookPos). */
+const MG_CLIP={turnL:"turn",turnR:"turn",build:"build",pickUp:"lift",drop:"drop",chop:"chop",collect:"collect",dig:"mine"};
+const MG_HOLD={build:1,pickUp:1,drop:1,chop:1,collect:1,dig:1,say:1};
+const MG_STEPS={move:1,goNear:1,climb:1,descend:1,jump:1};
+let mgLk=null;
+function mgClock(){return typeof now!=="undefined"?now:Date.now();}
+function mgCalm(){try{return matchMedia("(prefers-reduced-motion: reduce)").matches;}catch(_){return false;}}
+// the look for the board as it stands — a reset or a new level starts a new one
+function mgLook(){
+  const st=mgState, rb=st&&st.robot;
+  if(!rb||!window.CC_RIG)return null;
+  if(!mgLk||mgLk.rb!==rb){
+    const B=(mgLk&&mgLk.st===st)?mgLk.B:new CC_RIG.Bot(ROBOT_COLORS[0],rb.dir);
+    B.face(rb.dir,true);
+    const z=rb.z||0;
+    mgLk={st,rb,B,x:rb.x,y:rb.y,z,fx:rb.x,fy:rb.y,fz:z,tx:rb.x,ty:rb.y,tz:z,m0:-1e9,md:1,arc:0,
+      anim:null,gp:0,wb:0,runk:0,mt:-1e9,lt:null,px:rb.x,py:rb.y,waitTo:0,sayAt:-1e9,P:null,ap:0,nx:0,ny:0};
+  }
+  return mgLk;
+}
+/* An action just ran: walk to where it went, or play its clip. Returns
+   nothing; sets how many ticks a ▶ run holds for it (mgRunTick). */
+function mgLookAct(st,t,was){
+  const L=mgLook();if(!L)return;
+  const rb=L.rb, T=mgClock(), ms=st.tickMs||340, quick=st.stepping||st.fast;
+  const z=rb.z||0, d=Math.abs(rb.x-was.x)+Math.abs(rb.y-was.y);
+  if(d>0){
+    // a step, a climb, a jump two cells along the facing: walked. A portal is not.
+    const along=d<=2&&(rb.x-was.x)*DX[rb.dir]+(rb.y-was.y)*DY[rb.dir]===d;
+    if(along){L.fx=L.x;L.fy=L.y;L.fz=L.z;L.m0=T;L.md=ms*.96*(d>1?1.3:1);L.arc=d>1?.9:z!==was.z?.35:0;}
+    else{L.fx=L.x=rb.x;L.fy=L.y=rb.y;L.fz=L.z=z;L.m0=-1e9;}
+  }
+  L.tx=rb.x;L.ty=rb.y;L.tz=z;
+  const bump=MG_STEPS[t]&&t!=="goNear"&&d===0;
+  const clip=bump?"bump":MG_CLIP[t];
+  const hold=quick?0:(bump||MG_HOLD[t])?1:0;
+  if(clip){
+    const dur=clip==="turn"?Math.max(220,Math.min(560,ms*.9)):
+      Math.max(320,Math.min(1250,ms*(1+hold)*.95));
+    /* a reach that comes back with nothing shows nothing in the hands */
+    const empty=t==="pickUp"?rb.held==null:t==="drop"?(was.held==null||rb.held!=null):
+      t==="collect"?!(rb.items&&rb.items.size<was.items):false;
+    L.anim={clip,t0:T,dur,turn:t==="turnR"?-1:1,empty};
+  }
+  if(t==="say")L.sayAt=T;
+  if(t==="wait")L.waitTo=T+ms*((st.wait|0)+1);
+  st.hold=hold;
+}
+// the run is over: a jump for joy, or a shrug
+function mgLookEnd(won){
+  const L=mgLook();if(!L)return;
+  L.anim={clip:won?"celebrate":"oops",t0:mgClock(),dur:won?2000:1600,turn:1};
+}
+/* advance the look to time T, once per T however many times it is asked */
+function mgLookStep(T){
+  const L=mgLook();if(!L)return null;
+  const st=L.st, rb=L.rb, B=L.B;
+  if(L.lt===T&&L.P)return L;
+  // moved by something that is not an action (a designer drag): just be there
+  const z=rb.z||0;
+  if(L.tx!==rb.x||L.ty!==rb.y||L.tz!==z){L.fx=L.x=L.tx=rb.x;L.fy=L.y=L.ty=rb.y;L.fz=L.z=L.tz=z;L.m0=-1e9;B.face(rb.dir,true);}
+  const dt=L.lt==null?16:Math.max(0,Math.min(60,T-L.lt)), ds=dt/1000;L.lt=T;
+  const k=Math.max(0,Math.min(1,(T-L.m0)/L.md));
+  L.x=L.fx+(L.tx-L.fx)*k;L.y=L.fy+(L.ty-L.fy)*k;
+  L.z=L.fz+(L.tz-L.fz)*k+L.arc*Math.sin(Math.PI*k);
+  // the walk is driven by the distance covered, so the feet keep pace with the cell
+  const spd=Math.hypot(L.x-L.px,L.y-L.py);L.px=L.x;L.py=L.y;
+  if(spd>.0005){L.gp=(L.gp+spd/1.3)%1;L.mt=T;}
+  if(ds>0){
+    L.runk+=(Math.max(0,Math.min(1,(spd/ds-3.5)/3.5))-L.runk)*Math.min(1,ds*6);
+    L.wb+=((T-L.mt<160?1:0)-L.wb)*Math.min(1,ds*8);
+  }
+  const c={fs:DX[rb.dir]||0,dir:rb.dir,turn:1};
+  let A=L.anim, ap=0, P, key;
+  if(A){ap=Math.max(0,(T-A.t0)/A.dur);if(ap>=1){L.anim=A=null;}else c.turn=A.turn;}
+  if(A){
+    P=CC_RIG.pose(A.clip,ap,T-A.t0,c);key=A.clip;
+    if(A.empty)P.carry=null;
+    else if(P.carry==="crate")P.carry="brick";      // what a board sets down is a block
+    if(A.clip==="lift"&&ap>.72)P.carry=null;          // and up it goes, overhead (below)
+    // reduced motion: the joy without the spin and the leap
+    if(A.clip==="celebrate"&&mgCalm()){P.yawAdd=0;P.lift*=.25;}
+  }
+  else if(L.wb>.02){
+    let w=CC_RIG.pose("walk",0,L.gp*620,c);
+    if(L.runk>.02)w=CC_RIG.mix(w,CC_RIG.pose("run",0,L.gp*420,c),L.runk);
+    P=L.wb<.98?CC_RIG.mix(CC_RIG.pose("idle",0,T,c),w,L.wb):w;key="walk";
+  }
+  else if(T<L.waitTo&&st.running){P=CC_RIG.pose("wait",0,T,c);key="wait";}
+  else{P=CC_RIG.pose("idle",0,T,c);key="idle";}
+  if(key==="idle"||key==="walk"||key==="wait")P.bulb=st.running?"run":"idle";
+  if(T-L.sayAt<1000&&key!=="celebrate"&&key!=="oops"){P.expr="talk";P.talk=1;}
+  const n=A&&A.clip==="bump"?CC_RIG.nudge(ap):0;L.nx=DX[rb.dir]*n;L.ny=DY[rb.dir]*n;
+  B.color=ROBOT_COLORS[0];B.face(rb.dir);
+  L.P=B.blend(P,key,dt);L.ap=ap;
+  B.update(dt,L.P);
+  return L;
+}
+// where the Tower should stand it this frame (null: not the board's robot)
+function mgLookPos(r){
+  if(!mgState||mgState.robot!==r)return null;
+  return mgLookStep(mgClock());
+}
+/* the flat board's robot, the block it holds overhead and what it said.
+   Answers false when there is no rig, and the caller draws the token. */
+function mgLookDraw(g,cell,T,wear,CW){
+  const L=mgLookStep(T);if(!L)return false;
+  const rb=L.rb, s2=cell*.72, rs=s2/76.9;
+  const cx=(L.x+L.nx+.5)*cell, gy=(L.y+L.ny+.5)*cell+s2*.66;
+  L.B.draw(g,L.P,cx,gy,rs,{t:T,glow:false,wear:wear||{}});
+  let top=gy-(wear&&wear.hat?122:114)*rs;
+  // the block being carried rides above the head; a fresh one rises up from the hands
+  if(rb.held!=null){
+    const A=L.anim, lifting=A&&A.clip==="lift"&&!A.empty;
+    if(!lifting||L.ap>.72){
+      const hs=cell*.52, up=lifting?(L.ap-.72)/.28:1, e=1-Math.pow(1-up,3);
+      const hy=top-hs*.2-hs+Math.sin(T/260)*2;
+      const y=lifting?gy-44*rs-hs/2+(hy-(gy-44*rs-hs/2))*e:hy;
+      const sz=hs*(lifting?.6+.4*e:1);
+      drawBoardBrick(g,cx-sz/2,y+(hs-sz)/2,sz,true,rb.held);
+      top=Math.min(top,hy);
+    }
+  }
+  // 💬 what it said, the way the world robot says it
+  const said=mgRobot&&mgRobot.say;
+  if(said&&said.txt!==""){
+    const fs=Math.max(10,Math.round(cell*.22));
+    g.font="bold "+fs+'px "Fredoka",sans-serif';g.textAlign="center";g.textBaseline="middle";
+    const tw=g.measureText(said.txt).width, bw=tw+fs, bh=fs*1.6;
+    const bx=Math.max(2,Math.min((CW||cx*2)-bw-2,cx-bw/2)), by=Math.max(2,top-bh-fs*.5);
+    g.fillStyle="#fff";rr(g,bx,by,bw,bh,bh/2);g.fill();
+    const tx=Math.max(bx+bh/2,Math.min(bx+bw-bh/2,cx));
+    g.beginPath();g.moveTo(tx-4,by+bh-1);g.lineTo(tx+4,by+bh-1);g.lineTo(tx,by+bh+5);g.closePath();g.fill();
+    g.fillStyle="#241b45";g.fillText(said.txt,bx+bw/2,by+bh/2+1);
+    g.textBaseline="alphabetic";
+  }
+  return true;
+}
 function mgDraw(){
   if(!mgState)return;
   if($("boardTab").style.display==="none")return; // board hidden — nothing to draw
@@ -2634,12 +2797,13 @@ function mgDraw(){
      just unlocked shows up in the Academy too. Not mgRobot: that is a scratch
      robot made for this board and never wears anything. */
   const rw=(typeof robots!=="undefined"&&robots[selRobot])||null;
-  drawBoardRobot(g,rb.x*cell+cell/2,rb.y*cell+cell/2,cell*.72,rb.dir,ROBOT_COLORS[0],!!mgState.running,T,
-    rw?{hat:rw.hat,outfit:rw.outfit,shoes:rw.shoes}:null);
-  // brick being carried, floating above the robot's head
-  if(rb.held!=null){
-    const hs=cell*0.52, cxp=rb.x*cell+cell/2, hy=rb.y*cell+cell/2-cell*.55-hs+Math.sin(T/260)*2;
-    drawBoardBrick(g,cxp-hs/2,hy,hs,true,rb.held);
+  const wear=rw?{hat:rw.hat,outfit:rw.outfit,shoes:rw.shoes}:null;
+  if(!mgLookDraw(g,cell,T,wear,CW)){
+    drawBoardRobot(g,rb.x*cell+cell/2,rb.y*cell+cell/2,cell*.72,rb.dir,ROBOT_COLORS[0],!!mgState.running,T,wear);
+    if(rb.held!=null){
+      const hs=cell*0.52, cxp=rb.x*cell+cell/2, hy=rb.y*cell+cell/2-cell*.55-hs+Math.sin(T/260)*2;
+      drawBoardBrick(g,cxp-hs/2,hy,hs,true,rb.held);
+    }
   }
 }
 function renderProjects(){

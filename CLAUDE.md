@@ -169,9 +169,21 @@ challenge boards, Style, the wear maker and the 3D board's billboard —
 from one rig, `CC_RIG`. A pose is a flat object of numbers; an animation
 is a function of time that writes one (`CC_RIG.anim`). `render.js` picks
 the clip from `r.anim` (set by `doAction`) and from how the robot is
-moving. Boards and previews use `drawStill`, which keeps no state, so the
-same inputs give the same pixels — the smoke tests compare pixels and
-rely on that. Hats, outfits, capes and shoes were drawn on the old
+moving. Previews (Style, the shop, the wear maker) use `drawStill`,
+which keeps no state, so the same inputs give the same pixels — the
+smoke tests compare pixels and rely on that. A board being PLAYED is
+not a preview: `mgLookAct` / `mgLookStep` in `challenges.js` keep a
+`Bot` beside it that walks between cells, plays a clip per action and
+celebrates or shrugs at the end, and the Tower draws the same one
+(`mgLookPos`). That look never feeds back into the rules.
+
+Pace is what makes any of it visible. A world tick is `ROBOT_STEP_MS`
+(`constants.js`) and a work action takes `WORK_TICKS` of them; a ▶ run
+on a board is 340ms a step at 1×, and a swing holds it one tick more —
+only through `mgRunTick`, the timer, so ⏭ Step and every test that
+calls `mgTick` itself still get one action per call. A clip is timed to
+the tick it plays in; squeeze the tick and the clip turns into a blink.
+Hats, outfits, capes and shoes were drawn on the old
 34.56px body square; the rig maps that square onto the head, the torso
 and the feet (`WEAR_S`), so a new piece is still drawn on the square.
 The look is option א ("soft") of `design/robot-options.html`: no

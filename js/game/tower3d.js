@@ -175,7 +175,10 @@ function rr(g,x,y,w,h,r){
   g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();
 }
 function robot(g,P,r,t){
-  const x=r.x+.5, y=r.y+.5, z=r.z;
+  /* on a level being played, the robot walks between cells and plays its
+     clips (mgLookPos in challenges.js); anywhere else it stands on its cell */
+  const L=(typeof window!=="undefined"&&window.mgLookPos)?window.mgLookPos(r):null;
+  const x=(L?L.x+L.nx:r.x)+.5, y=(L?L.y+L.ny:r.y)+.5, z=L?L.z:r.z;
   const tile=unit(P,x,y,z);
   const foot=P(x,y,z);
 
@@ -200,6 +203,16 @@ function robot(g,P,r,t){
      screen — so the face, the arms and the backpack follow the facing
      through every camera rotation. The square toy below is the fallback for
      a page that does not load robot-rig.js. */
+  if(L&&L.P){
+    /* the rig turns in the board's own frame; on screen that is wherever
+       its facing projects to, for the body and the head each */
+    const B=L.B, sy=B.yaw, sh=B.hyaw;
+    const scr=a=>{const q=P(x+Math.sin(a),y+Math.cos(a),z);return Math.atan2(q.x-foot.x,q.y-foot.y);};
+    B.yaw=scr(sy);B.hyaw=B.yaw+(sh-sy);
+    B.draw(g,L.P,foot.x,foot.y,tile*.72/76.9,{t});
+    B.yaw=sy;B.hyaw=sh;
+    return;
+  }
   if(typeof window!=="undefined"&&window.CC_RIG){
     const RP=window.CC_RIG.pose("idle",0,t,{fs:0});
     window.CC_RIG.drawStill(g,foot.x,foot.y,tile*.72/76.9,Math.atan2(dx,dy),r.color||BOT,RP,{t});
@@ -326,7 +339,11 @@ T3.render=function(g,W,H,sc,cam){
     if(want!=null)for(let z=Math.max(0,h);z<want;z++)
       items.push({t:"g",x:x,y:y,z:z,r:eye(x,y,z)});
   }
-  if(sc.robot)items.push({t:"r",r:eye(sc.robot.x,sc.robot.y,sc.robot.z)});
+  if(sc.robot){
+    // sorted where it is drawn: mid-step, that is between two cells
+    const L=(typeof window!=="undefined"&&window.mgLookPos)?window.mgLookPos(sc.robot):null;
+    items.push({t:"r",r:L?eye(L.x,L.y,L.z):eye(sc.robot.x,sc.robot.y,sc.robot.z)});
+  }
   items.sort((a,b)=>b.r-a.r);
   for(const it of items){
     if(it.t==="rock")cube(g,P,it.x,it.y,it.z,"#a89b86",{stud:false,line:"rgba(60,50,40,.35)"});

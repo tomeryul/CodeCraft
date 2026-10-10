@@ -1,5 +1,9 @@
 "use strict";
 /* ---------------- simulation loop ---------------- */
+// one tick of this robot, in ms: its speed upgrade and the agility perk
+function robotStepMs(r){
+  return ROBOT_STEP_MS/(r.speed||1)/(1+(typeof skills!=="undefined"?skills.agility.lvl*.015:0));
+}
 let last=0, slowAcc=0, started=false, simTime=0;
 function loop(t){
   requestAnimationFrame(loop);
@@ -9,8 +13,13 @@ function loop(t){
   simTime+=dt;now=simTime;lastDtSec=dt/1000;
   for(const r of robots){
     if(!r.nextAct)r.nextAct=simTime;
-    const step=340/r.speed/(1+skills.agility.lvl*.015); // agility skill perk
-    while(simTime>=r.nextAct){r.nextAct+=step;tickRobot(r);}
+    const step=robotStepMs(r);
+    while(simTime>=r.nextAct){
+      r.nextAct+=step;
+      const a0=r.anim;tickRobot(r);
+      // a swing takes longer than a step (WORK_TICKS)
+      if(r.anim!==a0&&r.anim&&WORK_ACTS[r.anim.type])r.nextAct+=step*(WORK_TICKS-1);
+    }
   }
   // slow world tick (1s): growth, respawns, animals hud
   slowAcc+=dt;

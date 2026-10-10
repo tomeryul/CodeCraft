@@ -733,6 +733,27 @@ def({id:'celebrate',dur:2000,ev:[[.2,'burst'],[.66,'land']],
     P.lP=P.rP=K(t,[[0,.06],[.12,-.6],[.24,.06]]);P.lG=P.rG=t>.2&&t<.92?1:0;
     P.fLy=P.fRy=K(t,[[.2,0],[.3,6],[.55,6],[.64,0]]);
     P.expr=t<.2?'determined':t<.88?'love':'happy';P.bulb='party';P.glow=1;}});
+/* walked into something: a lean into it, a recoil, a dizzy second. The
+   shove toward the wall is the host's, as a fraction of a tile: nudge(t) */
+def({id:'bump',dur:700,
+  pose(P,t,ms){
+    P.lean=K(t,[[0,0],[.2,.24,E.i2],[.32,-.2,E.o3],[.55,.05],[.8,0]]);
+    P.sy=K(t,[[0,1],[.2,1.03],[.3,.9,E.o3],[.45,1.04],[.62,.99],[.75,1]]);P.sx=1+(1-P.sy)*.9;
+    P.crouch=K(t,[[0,0],[.3,2.5],[.55,0]]);
+    P.lP=P.rP=K(t,[[0,.06],[.2,.75],[.32,-.25],[.6,.06]]);P.lE=P.rE=K(t,[[0,.28],[.2,.9],[.4,.4],[.7,.28]]);
+    P.headNod=K(t,[[0,0],[.2,.14],[.32,-.22],[.55,.05],[.8,0]]);P.ant=K(t,[[0,0],[.3,.55],[.5,-.3],[.75,0]]);
+    P.headTilt=.08*Math.sin(ms/70)*sm(.3,.4,t)*(1-sm(.7,.95,t));
+    P.expr=t<.22?'determined':t<.88?'dizzy':'neutral';P.bulb='error';}});
+/* the run did not solve it: a shrug and a little head shake, never a sulk */
+def({id:'oops',dur:1600,
+  pose(P,t,ms){
+    breathe(P,ms,.6);
+    const on=sm(.06,.2,t)*(1-sm(.78,.96,t));
+    P.headYaw=.3*Math.sin(t*TAU*2.5)*sm(.12,.25,t)*(1-sm(.6,.75,t));
+    P.lR=P.rR=lerp(.13,.62,on);P.lE=P.rE=lerp(.28,1.25,on);P.lX=P.rX=lerp(-.06,.45,on);P.lP=P.rP=lerp(.06,-.12,on);
+    P.lift=K(t,[[0,0],[.08,0],[.16,2.5,E.o2],[.26,0,E.i2],[1,0]]);
+    P.crouch=1.5*on;P.headNod=.1*on;P.headTilt=.07*on;
+    P.expr=t<.12?'surprised':'sad';P.bulb='error';}});
 def({id:'tired',dur:3000,loop:true,
   pose(P,t,ms,c){
     breathe(P,ms,1.5,3000);P.energy=.08;P.lean=.15;P.crouch=2.5;P.headNod=.28+.04*Math.sin(ms/1500*PI);
@@ -780,9 +801,12 @@ function boardPose(kind,t){
   return pose('idle',0,t,{fs:0});
 }
 
+/* how far a bump carries the robot toward what it hit, in tiles */
+function nudge(t){return t<.2?.16*E.i2(t/.2):.16*(1-E.o3(clamp((t-.2)/.3,0,1)));}
+
 const bots=new WeakMap();
 window.CC_RIG={
-  Bot, P0, mix:mixPose, anim:A, pose, events, drawItem, drawStill, boardPose, EXP, DIRYAW,
+  Bot, P0, mix:mixPose, anim:A, pose, events, drawItem, drawStill, boardPose, nudge, EXP, DIRYAW,
   /* one Bot per game robot, held beside it rather than on it, so it never
      reaches a save */
   botFor(r){let b=bots.get(r);if(!b){b=new Bot(r.color||'#ffb830',r.dir==null?2:r.dir);bots.set(r,b);}return b;}

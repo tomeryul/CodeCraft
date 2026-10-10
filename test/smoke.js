@@ -61,6 +61,13 @@ chrome.stderr.on("data", d => { chromeErr += d; if (chromeErr.length > 2000) chr
 chrome.on("error", e => { chromeErr += "\nspawn failed: " + e.message; });
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+/* A ▶ run on a board is paced to be watched (340ms a step, a swing one
+   tick more), so a real-time run is waited for, not timed: poll until
+   `expr` is true, at most `max` ms. */
+async function until(expr, max) {
+  for (let t = 0; t < max; t += 250) { if (await ev(expr) === true) return true; await sleep(250); }
+  return false;
+}
 function get(p) {
   return new Promise((res, rej) => {
     http.get({ host: "127.0.0.1", port: PORT, path: p }, r => {
@@ -304,7 +311,10 @@ async function ev(expr) {
     renderProgram(); mgUpdateCount(); mgRun();
     return 'running';
   })()`);
-  await sleep(7000);
+  /* a ▶ run is paced to be watched (340ms a step, a swing one tick more):
+     the house is ~14s of robot, so wait for it rather than a fixed time */
+  await until("player.projects.house === 1", 30000);
+  await sleep(1500);   // and the card that follows the win
   check("house project completed", await ev("player.projects.house") === 1, await ev("JSON.stringify(player.projects)"));
   check("monument placed in the world", await ev(`[...objects.values()].some(o=>o.type==='proj'&&o.em==='🏡')`) === true);
   /* the level stays on screen under its card until the player moves on
@@ -381,7 +391,7 @@ async function ev(expr) {
     renderProgram();mgRun();
     return 'running';
   })()`);
-  await sleep(2500);
+  await until("!!mgState && mgState.solved === true", 12000);
   check("creator solve marks challenge as proven", await ev("mgState && mgState.solved === true") === true, await ev("mgState&&JSON.stringify({solved:mgState.solved,bricks:[...mgState.robot.bricks]})"));
   check("offline publish is blocked gracefully", await ev(`(()=>{document.getElementById('mgPublish').click();return mgState!==null;})()`) === true);
   await ev(`mgExit(false); document.getElementById('editor').classList.remove('open','max'); 'ok'`);
@@ -2273,7 +2283,7 @@ async function ev(expr) {
     mgRun();
     return 'running';
   })()`);
-  await sleep(2500);
+  await until("!!mgState && mgState.solved === true", 12000);
   check("custom challenge solved via count-loop + if in the challenge VM", await ev("mgState && mgState.solved === true") === true, await ev("mgState && JSON.stringify([...mgState.robot.bricks])"));
   await ev(`mgExit(false); document.getElementById('editor').classList.remove('open','max'); 'ok'`);
 
@@ -3222,11 +3232,50 @@ async function ev(expr) {
     POSE.workLeans === true && POSE.workHasTool === true, JSON.stringify(POSE));
   check("the preview animates on the world robot's own keyframes",
     POSE.sameTables === true, JSON.stringify(POSE));
-  /* the Academy board is the one caller that must NOT get a pose: it draws
-     the same token it always has */
-  check("the Academy board robot is still drawn without a pose",
-    /drawBoardRobot\([^;]*rw\?\{hat:rw\.hat,outfit:rw\.outfit,shoes:rw\.shoes\}:null\);/
-      .test(fs.readFileSync(path.resolve(__dirname, "..", "js", "game", "challenges.js"), "utf8")));
+  /* The board robot is the world robot, alive: it walks from cell to cell
+     across the tick, swings on a build, bumps the edge and jumps when the
+     level is solved. None of it may change what a program does: ⏭ Step
+     and anything calling mgTick itself still get one action per call. */
+  const BLOOK = JSON.parse(await ev(`(()=>{
+    const origSI=window.setInterval; window.setInterval=(fn,ms)=>{window.__lookMs=ms;return 0;};
+    const lvl=()=>({id:'look_'+Math.random(),em:'🧱',name:'L',desc:'',gw:5,gh:3,maxBlocks:9,
+      allowed:CHALLENGE_BLOCKS,coins:0,xp:0,mine:true,start:{x:0,y:1,dir:1},cells:[[2,1]],initial:[],tiles:[]});
+    const o={};
+    player.mgSpeed=1; mgEnter(lvl()); setTab('board');
+    mgRobot.program=[{t:'move',uid:1},{t:'move',uid:2},{t:'build',uid:3}];
+    mgRun(); o.ms=window.__lookMs;
+    const T0=now;
+    mgRunTick();                                   // one step
+    o.ruleX=mgState.robot.x;
+    const mid=mgLookStep(T0+o.ms*.5); o.midX=mid.x; o.walking=mid.wb>0||mid.gp>0;
+    mgRunTick(); mgRunTick();                      // the second step, then the build
+    o.buildClip=mgLk.anim&&mgLk.anim.clip; o.hold=mgState.hold;
+    o.bricks=mgState.robot.bricks.size;
+    mgRunTick(); o.heldBoard=mgState.running&&mgState.hold===0;   // the swing's extra tick
+    mgRunTick();                                   // and it is done
+    o.won=!mgState.running; o.endClip=mgLk.anim&&mgLk.anim.clip;
+    mgExit(false);
+    // a step into the edge is a bump; ⏭ Step never holds the board
+    mgEnter(lvl()); setTab('board');
+    mgRobot.program=[{t:'turnL',uid:1},{t:'move',uid:2},{t:'move',uid:3},{t:'build',uid:4}];
+    mgStep(); o.turnClip=mgLk.anim&&mgLk.anim.clip;
+    mgStep(); mgStep(); o.bumpClip=mgLk.anim&&mgLk.anim.clip; o.stillY=mgState.robot.y;
+    mgStep(); o.stepHold=mgState.hold;
+    mgStop(); mgExit(false);
+    window.setInterval=origSI;
+    return JSON.stringify(o);
+  })()`));
+  check("a ▶ run is slow enough to see: a step is a third of a second",
+    BLOOK.ms === 340, JSON.stringify(BLOOK));
+  check("between two cells the board robot is drawn between them, walking",
+    BLOOK.ruleX === 1 && BLOOK.midX > .2 && BLOOK.midX < .8 && BLOOK.walking === true, JSON.stringify(BLOOK));
+  check("a build swings the hammer and holds the board one tick for it",
+    BLOOK.buildClip === 'build' && BLOOK.hold === 1 && BLOOK.bricks === 1 && BLOOK.heldBoard === true, JSON.stringify(BLOOK));
+  check("a solved level ends in a jump for joy",
+    BLOOK.won === true && BLOOK.endClip === 'celebrate', JSON.stringify(BLOOK));
+  check("a turn turns, and a step into the edge is a bump that goes nowhere",
+    BLOOK.turnClip === 'turn' && BLOOK.bumpClip === 'bump' && BLOOK.stillY === 0, JSON.stringify(BLOOK));
+  check("⏭ Step never holds the board for a swing", BLOOK.stepHold === 0, JSON.stringify(BLOOK));
 
   check("a foreign save's pieces are re-encoded, not trusted",
     Array.isArray(MADE.clean) && MADE.clean.length === 1 &&
