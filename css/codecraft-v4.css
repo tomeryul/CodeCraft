@@ -43,7 +43,10 @@
 #stats .chip{padding:5px 11px;}
 #stats #lvlChip{padding-bottom:11px;}
 #stats #xpBar{left:11px;right:11px;}
-#topbar #tbBtns .iconbtn{width:38px;height:38px;}
+/* 44, the size a finger needs: at 38 the two tools touched in their
+   column, and a child aiming for 🎯 got 💡 */
+#topbar #tbBtns .iconbtn{width:44px;height:44px;}
+#topbar #tbBtns{gap:4px;}
 
 /* ---------------------------------------------------------------------
    C. One bottom action bar, in every mode

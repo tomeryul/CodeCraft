@@ -128,6 +128,10 @@ function openObjMenu(k,o,sx,sy){
   const label={proj:"🏗️ "+((o.em||"")+" build"),chest:"📦 Chest",bridge:"🌉 Bridge"}[o.type]||"Build";
   m.querySelector(".om-title").textContent=label+" — what to do?";
   m.dataset.k=k;
+  /* It sits 90px up, which in build mode is where the build bar is: the
+     menu opened on top of the pieces. It opens above the bar instead. */
+  const bb=$("buildBar");
+  m.style.bottom=(bb&&bb.classList.contains("on"))?(innerHeight-bb.getBoundingClientRect().top+10)+"px":"";
   /* Origin first, then open: the measurement needs the menu at rest, and
      the growth has to know where it is growing from before it starts. */
   objMenuOrigin(m,sx,sy);

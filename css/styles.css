@@ -140,8 +140,7 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #editor.max #edMax .ic-max{display:none;}
 #editor.max #edMax .ic-min{display:block;}
 .ed-head{display:flex;align-items:center;gap:8px;padding:6px 12px 4px;flex:0 0 auto;}
-#robotChips{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;padding:2px 0;scrollbar-width:none;
-  mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent);-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent);}
+#robotChips{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;padding:2px 0;scrollbar-width:none;}
 #robotChips::-webkit-scrollbar{display:none;}
 .rchip{flex:0 0 auto;display:flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px;font-size:var(--fs-sm);font-weight:var(--fw-medium);
   background:var(--panel2);border:2px solid transparent;color:var(--ink);white-space:nowrap;}
@@ -838,7 +837,8 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #buildBar{background:var(--glass);backdrop-filter:blur(18px);border:1px solid var(--hair);
   border-radius:20px;box-shadow:var(--lift);padding:10px;}
 #buildBar .bb-cats{gap:3px;background:rgba(0,0,0,.24);border-radius:var(--r-ctl);padding:3px;}
-#buildBar .bb-cat{background:none;border:none;box-shadow:none;border-radius:var(--r-ctl);padding:8px 4px;}
+/* a segmented control is 40px tall wherever it is (Style's poses too) */
+#buildBar .bb-cat{background:none;border:none;box-shadow:none;border-radius:var(--r-ctl);padding:8px 4px;min-height:40px;}
 #buildBar .bb-cat:active{transform:none;background:var(--glass-hi);}
 #buildBar .bb-cat.sel{background:var(--glass-on);color:var(--ink);border:none;}
 #buildBar .bb-item{background:var(--glass-hi);border:1px solid transparent;border-radius:var(--r-card);}
@@ -992,7 +992,8 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #topbar .tk-panel{position:absolute;top:100%;left:0;margin-top:7px;z-index:2;}
 /* the tray is a 4-wide row above 600px and a narrow column below it, so the space
    the two left-hand rows must keep clear of it differs */
-@media (max-width: 600px){ #topbar{padding-right:52px;} }
+/* the tool column (44px buttons, 3px padding each side) and an 8px gap */
+@media (max-width: 600px){ #topbar{padding-right:60px;} }
 
 /* ---- 📚 My Functions ---- */
 #funcLib{height:82vh;z-index:60;}
@@ -1284,3 +1285,10 @@ body:has(#buildBar.on) #journey,body:has(#objMenu.open) #journey{display:none !i
         mask-image:linear-gradient(to bottom,transparent,#000 22px);}
 .fade-t.fade-b{-webkit-mask-image:linear-gradient(to bottom,transparent,#000 22px,#000 calc(100% - 26px),transparent);
         mask-image:linear-gradient(to bottom,transparent,#000 22px,#000 calc(100% - 26px),transparent);}
+/* the same for a row that scrolls sideways: only the edge with more beyond it */
+.fade-r{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent);
+        mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent);}
+.fade-l{-webkit-mask-image:linear-gradient(to right,transparent,#000 28px);
+        mask-image:linear-gradient(to right,transparent,#000 28px);}
+.fade-l.fade-r{-webkit-mask-image:linear-gradient(to right,transparent,#000 28px,#000 calc(100% - 28px),transparent);
+        mask-image:linear-gradient(to right,transparent,#000 28px,#000 calc(100% - 28px),transparent);}

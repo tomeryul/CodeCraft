@@ -280,6 +280,7 @@ function renderStyle(){
     add.addEventListener("click",()=>makerOpen(kind,null));
     row.appendChild(add);
     wrap.appendChild(row);body.appendChild(wrap);
+    if(typeof edgeFade==="function")edgeFade(row,"x");
     /* The row is wider than the sheet, and the piece you are wearing — or
        have just made, which lands at the far end — is often the one past the
        right edge. A picker that hides your own choice is not a picker. */

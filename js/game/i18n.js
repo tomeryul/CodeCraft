@@ -1123,6 +1123,8 @@ const SCOPED=[
   ["#guideBody",     {"one idea":"רעיון אחד","one thing":"דבר אחד","one program":"תוכנית אחת","every input":"כל קלט",
                       "check":"לבדוק","A path":"מסלול","An algorithm":"אלגוריתם","Write":"תכתוב","secret":"סודי"}],
   ["#orders",        {"pipeline":"פס ייצור","parallel":"במקביל"}],
+  /* 🚚 Move here relocates a piece; the global "Move" is the block, קדימה */
+  ["#objMenu",       {"Move":"הזז"}],
   [".sk-nm",         {"Woodcutting":"כריתת עצים","Mining":"כרייה","Agility":"זריזות","Building":"בנייה","Trading":"מסחר"}],
   ["#statsBox",      {"Collected":"נאספו","Earned":"הרווחת"}],
   ["#playBtn",       {"Play":"שחק","Play offline":"שחק במצב לא מקוון"}],

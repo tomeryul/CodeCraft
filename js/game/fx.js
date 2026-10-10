@@ -152,18 +152,27 @@ else heldWatch();
 /* A scroller cut at an arbitrary height cuts a line of text in half, and
    the half-line reads as broken rather than as "there is more". Where there
    is more below, the bottom edge fades instead (design-audit bug 4). */
-function edgeFade(el){
+/* A row that scrolls sideways says so the same way: the edge with more
+   beyond it fades. Three rows had three versions of this (a fixed fade that
+   dimmed the last chip even when nothing was hidden, a fainter fixed one,
+   and none) and three had nothing at all, so four build pieces that ended
+   exactly at the edge of a 320px phone looked like all there was. */
+function edgeFade(el,axis){
   if(!el||el._fade)return;
   /* and the top edge too, once something has scrolled up under the header:
      text cut hard against the header's line reads as glued to it */
-  const f=el._fade=()=>{ el.classList.toggle("fade-b",el.scrollHeight-el.clientHeight-el.scrollTop>4);
-                         el.classList.toggle("fade-t",el.scrollTop>4); };
+  const f=el._fade=axis==="x"
+    ?()=>{ el.classList.toggle("fade-r",el.scrollWidth-el.clientWidth-el.scrollLeft>4);
+           el.classList.toggle("fade-l",el.scrollLeft>4); }
+    :()=>{ el.classList.toggle("fade-b",el.scrollHeight-el.clientHeight-el.scrollTop>4);
+           el.classList.toggle("fade-t",el.scrollTop>4); };
   el.addEventListener("scroll",f,{passive:true});
   try{new ResizeObserver(f).observe(el);}catch(_){}
   new MutationObserver(()=>requestAnimationFrame(f)).observe(el,{childList:true,subtree:true,characterData:true});
   f();
 }
-function edgeFadeWire(){ ["boardTab","programWrap","palette","designTab","pyTab"].forEach(id=>edgeFade($(id))); }
+function edgeFadeWire(){ ["boardTab","programWrap","palette","designTab","pyTab"].forEach(id=>edgeFade($(id)));
+  ["robotChips","chips","routineTabs"].forEach(id=>edgeFade($(id),"x")); }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",edgeFadeWire);
 else edgeFadeWire();
 

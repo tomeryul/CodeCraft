@@ -72,6 +72,11 @@
   background:rgba(122,77,255,.28);color:var(--ink);
   transition:transform .09s;}
 #stats #ticker .tk-ord:active{transform:scale(.96);}
+/* both chips are 32px tall inside the pill: the reach grows to 44 without
+   the pill growing with it */
+#stats #ticker .tk-btn,#stats #ticker .tk-ord{position:relative;}
+#stats #ticker .tk-btn::after,#stats #ticker .tk-ord::after{content:"";position:absolute;inset:-6px -2px;}
+#stats #ticker .tk-btn::after{inset:-6px -5px;}
 #stats #ticker .tk-ord .tk-clk{color:var(--ink);}
 
 /* ---- 2c. an order on the row costs what energy costs ----

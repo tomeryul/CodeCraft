@@ -178,6 +178,28 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
      Q.sameButton === true && Q.shown[1] === '8/150', Q);
   ck('and a quest that becomes claimable still gets its button', Q.claimable === 2, Q);
 
+  /* Build mode: picking a piece rebuilt the bar and threw the row back to
+     its start; and a placed piece's menu opened on top of the bar. */
+  const BB = await pg.evaluate(async () => {
+    navHome(); $('buildBtn').click(); await new Promise(r => setTimeout(r, 300));
+    const row = () => document.querySelector('#buildBar .bb-items');
+    const fadeAtStart = row().classList.contains('fade-r') && !row().classList.contains('fade-l');
+    row().scrollLeft = 1e4; await new Promise(r => setTimeout(r, 100));
+    const items = [...row().querySelectorAll('.bb-item')]; items[items.length - 1].click();
+    await new Promise(r => setTimeout(r, 150));
+    const sel = row().querySelector('.bb-item.sel').getBoundingClientRect(), rr = row().getBoundingClientRect();
+    const out = { fadeAtStart, kept: sel.left >= rr.left - 1 && sel.right <= rr.right + 1,
+      fadeAtEnd: row().classList.contains('fade-l') && !row().classList.contains('fade-r') };
+    const k = [...objects.keys()].find(k => objects.get(k).type === 'chest');
+    openObjMenu(k, objects.get(k), innerWidth / 2, innerHeight / 2); await new Promise(r => setTimeout(r, 350));
+    out.menuAbove = $('objMenu').getBoundingClientRect().bottom <= $('buildBar').getBoundingClientRect().top + 1;
+    closeObjMenu(); $('buildBtn').click();
+    return out;
+  });
+  ck('a picked build piece stays where the row was scrolled', BB.kept === true, BB);
+  ck('the row fades only on the side with more beyond it', BB.fadeAtStart && BB.fadeAtEnd, BB);
+  ck("a placed piece's menu opens above the build bar, not on it", BB.menuAbove === true, BB);
+
   ck('no uncaught exceptions', errs.length === 0, errs.slice(0, 3));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await b.close();

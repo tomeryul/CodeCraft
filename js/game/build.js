@@ -90,7 +90,13 @@ function renderBuildBar(){
       decorIconHTML(d)+'<span class="bn">'+d.name+'</span><span class="bc">'+costStr(d)+'</span></button>';
   }
   html+='</div>';
+  /* picking a piece rebuilds the bar: keep the row where the player had
+     scrolled it, or the piece just picked jumps out of view */
+  const was=bar.querySelector(".bb-items"), keep=was&&bar.dataset.cat===buildCat?was.scrollLeft:0;
+  bar.dataset.cat=buildCat;
   bar.innerHTML=html;
+  const row=bar.querySelector(".bb-items");
+  if(row){ row.scrollLeft=keep; if(typeof edgeFade==="function")edgeFade(row,"x"); }
   bar.querySelectorAll(".bb-cat").forEach(b=>b.addEventListener("click",()=>{
     buildCat=b.dataset.c;
     const first=DECOR.find(d=>d.cat===buildCat);
