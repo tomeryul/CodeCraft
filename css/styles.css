@@ -306,6 +306,10 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 #splash.hide{opacity:0;pointer-events:none;}
 #splash .bot{font-size:74px;animation:bob 2.6s ease-in-out infinite;filter:drop-shadow(0 12px 22px rgba(0,0,0,.35));}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+/* the antenna light sits 24px above the body and the bob lifts it 10px
+   more: on a 568px phone the content starts at the top edge, and the
+   antenna was cut off by it */
+#splash .mascot{margin-top:34px;}
 #splash h1{font-size:var(--fs-brand);margin:8px 0 2px;background:linear-gradient(90deg,#ffd66b,#ff9d6b);-webkit-background-clip:text;background-clip:text;color:transparent;
   letter-spacing:1px;text-shadow:0 6px 22px rgba(255,180,60,.3);}
 #splash .tag{color:#cfc4f5;font-size:var(--fs-md);max-width:340px;line-height:1.55;margin:8px 0 26px;}
@@ -1246,6 +1250,8 @@ body:has(#buildBar.on) #journey,body:has(#objMenu.open) #journey{display:none !i
 .sp-priv{margin-top:0;text-align:center;}
 .sp-priv a{display:inline-block;padding:12px 14px;color:#b9a9ec;font-size:var(--fs-sm);font-weight:var(--fw-medium);
   text-decoration:underline;text-underline-offset:3px;}
+/* a finger-sized link: 39px tall with its padding, now 44 */
+.age-priv,.sp-priv a{min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center;}
 .agenote{font-size:var(--fs-sm);font-weight:var(--fw-medium);line-height:1.55;color:#cfc4f5;
   padding:11px 13px;border-radius:var(--r-card);background:rgba(255,255,255,.07);
   border:1px solid rgba(255,255,255,.16);}
