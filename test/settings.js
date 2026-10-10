@@ -105,6 +105,31 @@ const titles = sel => `[...document.querySelectorAll('${sel} .shopitem')]
   ck('with nobody hidden, that row offers no dead button',
      dead.n===0 ? dead.disabled : !dead.disabled, dead);
 
+  // ------------------------------------------------ Show all, after a restart
+  /* The players you hid are read into memory when the Community page loads.
+     Straight after a restart Settings counted two, and Show all said "You
+     haven't hidden anyone" and showed nobody. */
+  const unhid = await pg.evaluate(()=>{
+    blockedIds=new Set(); player.blocked=['u1','u2'];   // what a fresh start leaves
+    const c=window.confirm; window.confirm=()=>true;
+    unblockAll(); window.confirm=c;
+    return player.blocked.length;
+  });
+  ck('Show all unhides players hidden before a restart', unhid===0, unhid);
+
+  // ------------------------------------------------ New World is new
+  /* It came back as the old world: the reload's visibilitychange saved the
+     world still in memory over the slot that had just been erased. */
+  await pg.evaluate(()=>{ coins=4321; player.level=9; saveNow(); openSettings(); });
+  await pg.waitForTimeout(300);
+  pg.once('dialog', d=>d.accept());
+  await pg.evaluate(()=>[...document.querySelectorAll('#settingsList button')]
+    .find(x=>x.classList.contains('danger')).click());
+  await pg.waitForTimeout(1500);
+  await pg.click('#playBtn').catch(()=>{}); await pg.waitForTimeout(1500);
+  const fresh = await pg.evaluate(()=>({ coins, level:player.level }));
+  ck('New World really starts a new world', fresh.coins!==4321 && fresh.level===1, fresh);
+
   console.log('  pageerrors:', errs.length?errs.slice(0,3):'none');
   ck('no uncaught exceptions', errs.length===0, errs.slice(0,3));
   console.log(`\n${pass} passed, ${fail} failed`);

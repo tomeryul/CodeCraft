@@ -46,11 +46,11 @@ let entering=false;
 async function enterGame(tryCloud){
   if(started||entering)return;
   entering=true;
-  let imported=false;
-  try{ imported=sessionStorage.getItem("cc_imported")==="1"; sessionStorage.removeItem("cc_imported"); }catch(_){}
-  if(imported&&sbUser&&sbReady()){
-    /* the player just imported a file: that file is the world now, on this
-       device and in their account */
+  let keepLocal=false;
+  try{ keepLocal=sessionStorage.getItem("cc_keep_local")==="1"; sessionStorage.removeItem("cc_keep_local"); }catch(_){}
+  if(keepLocal&&sbUser&&sbReady()){
+    /* the player just imported a file or asked for a New World: what is on
+       this device is the world now, here and in their account */
     try{ saveOwner=sbUser.uid; await cloudSave(buildSave()); }catch(_){}
   }else if(tryCloud&&sbUser&&sbReady()){
     splashMsg("☁️ Loading your world…");

@@ -1884,8 +1884,8 @@ const HE_T={
    it came, which is right for a robot's name and wrong for "Chest" */
 "{s} build — what to do?":"מבנה {1} — מה לעשות?",
 "🤖 Selected {s}":"🤖 נבחר {1}",
-"Hide everything by “{s}”?\n\nYou won't see their challenges any more. You can undo this in the 🛒 shop.":
-  "להסתיר את כל מה שנוצר על ידי „{1}”?\n\nלא תראה יותר את האתגרים שלהם. אפשר לבטל את זה ב-🛒 חנות.",
+"Hide everything by “{s}”?\n\nYou won't see their challenges any more. You can undo this in ⚙️ Settings.":
+  "להסתיר את כל מה שנוצר על ידי „{1}”?\n\nלא תראה יותר את האתגרים שלהם. אפשר לבטל את זה ב-⚙️ הגדרות.",
 "⚠️ Could not send the report: {s}":"⚠️ לא ניתן לשלוח את הדיווח: {1}",
 "✅ You'll sign your challenges as “{n}”.":"✅ תחתום על האתגרים שלך בשם „{1}”.",
 "🚫 Hidden everything by “{s}”.":"🚫 הוסתר כל מה שנוצר על ידי „{1}”.",

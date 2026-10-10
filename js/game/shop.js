@@ -87,7 +87,7 @@ $("importFile").addEventListener("change",e=>{
          flag tells that start to keep this one and send it up instead. */
       saveOff=true; clearTimeout(saveT);
       localStorage.setItem(SAVE_KEY,JSON.stringify(d));
-      try{ sessionStorage.setItem("cc_imported","1"); }catch(_){}
+      try{ sessionStorage.setItem("cc_keep_local","1"); }catch(_){}
       location.reload();
     }catch(_){toast("⚠️ That file isn't a CodeCraft world.");}
   };

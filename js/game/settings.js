@@ -82,7 +82,15 @@ function renderSettings(){
   settingsRow(el,"🌍","New World",
     "Erase everything and generate a fresh world.","Reset",()=>{
       if(confirm("Really erase your world, robots and coins?")){
-        localStorage.removeItem(SAVE_KEY); location.reload();
+        /* The same two traps as importing a file (shop.js). The reload's
+           visibilitychange wrote the world still in memory straight back,
+           so a New World came back as the old one; and a signed-in start
+           loads the cloud copy. Saving stops first, and the flag tells the
+           next start to keep the fresh world and send it up. */
+        saveOff=true; clearTimeout(saveT);
+        localStorage.removeItem(SAVE_KEY);
+        try{ sessionStorage.setItem("cc_keep_local","1"); }catch(_){}
+        location.reload();
       }
     },"danger");
 

@@ -83,7 +83,7 @@ async function loadBlocks(){
 }
 async function blockAuthor(uid,name){
   if(!uid)return;
-  if(!confirm("Hide everything by “"+name+"”?\n\nYou won't see their challenges any more. You can undo this in the 🛒 shop."))return;
+  if(!confirm("Hide everything by “"+name+"”?\n\nYou won't see their challenges any more. You can undo this in ⚙️ Settings."))return;
   blockedIds.add(uid);
   player.blocked=[...blockedIds];saveNow();
   toast("🚫 Hidden everything by “"+name+"”.");
@@ -93,6 +93,10 @@ async function blockAuthor(uid,name){
   await loadCommunity();
 }
 async function unblockAll(){
+  /* blockedIds is filled when the Community page loads. After a restart,
+     Settings said "Hidden players: 2", and Show all answered "You haven't
+     hidden anyone" and showed nobody. The save's own list counts too. */
+  for(const id of player.blocked||[])blockedIds.add(id);
   if(!blockedIds.size){toast("👍 You haven't hidden anyone.");return;}
   if(!confirm("Show challenges from everyone again?"))return;
   const ids=[...blockedIds];
