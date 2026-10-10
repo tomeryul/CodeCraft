@@ -516,7 +516,7 @@ const HE={
 "Try Code":"נסה קוד",
 "Ten Codes":"עשרה קודים","One More Digit":"עוד ספרה אחת",
 "On a Sticky Note":"על פתק דביק","With a Key":"עם מפתח",
-"Never Trust a Note":"אף פעם אל תסמוך על פתק",
+"Never Trust a Note":"לא סומכים על פתק",
 "Three Strikes":"שלוש הזדמנויות","Two Kinds of Proof":"שני סוגי הוכחה",
 "The Open Window":"החלון שנשאר פתוח","Never the Same Twice":"אף פעם לא אותו הדבר",
 "The Lookalike":"הכפיל","Who Went Through":"מי עבר כאן",
