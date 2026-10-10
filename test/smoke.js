@@ -643,6 +643,28 @@ async function ev(expr) {
   const RTS = JSON.parse(rtSort);
   check("saved sort challenge replays with its 3 numbered bricks", RTS.bricks===3 && RTS.nums==='2,3,1', rtSort);
 
+  /* Saving a tweak used to add another copy each time: Save, Save was two
+     levels, and picking the draft back up and saving was a third. */
+  console.log("▶ saving a level again updates it — it does not add a copy");
+  const sv = JSON.parse(await ev(`(()=>{
+    window.confirm=()=>true; player.myChallenges=[];
+    mgEnterCreator(); const p=mgState.proj; p.cells=[[2,1]]; p.start={x:0,y:1,dir:1}; p.name='Twice';
+    mgState.solved=true; saveMyChallenge();
+    mgState.solved=true; saveMyChallenge();
+    const twice=player.myChallenges.length;
+    mgExit(false); mgResumeDraft(); mgState.proj.maxBlocks=5; mgState.solved=true; saveMyChallenge();
+    const resumed=player.myChallenges.map(c=>c.maxBlocks).join(',');
+    mgExit(false); mgNewChallenge(); const q=mgState.proj; q.cells=[[2,1]]; q.start={x:0,y:1,dir:1}; q.name='Other';
+    mgState.solved=true; saveMyChallenge();
+    const fresh=player.myChallenges.map(c=>c.name).join(',');
+    mgExit(false); document.getElementById('editor').classList.remove('open','max');
+    player.myChallenges=[]; player.draft=null;
+    return JSON.stringify({twice,resumed,fresh});
+  })()`));
+  check("Save, Save is still one level", sv.twice===1, sv);
+  check("saving after Continue updates that level", sv.resumed==='5', sv);
+  check("a new board is a new level", sv.fresh==='Twice,Other', sv);
+
   console.log("▶ community row → challenge carries pre-placed bricks");
   const cc = await ev(`(()=>{
     const row={id:'abc',name:'Sortie',author_name:'kid',gw:3,gh:2,start_x:0,start_y:0,start_dir:1,

@@ -836,6 +836,12 @@ body.sheets-full #maker.sized,
 #mgCreatorBar .stprow{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 #mgCreatorBar .stprow .stp:first-child{grid-column:1 / -1;}
 #mgCreatorBar .stprow .stp{min-width:0;}
+/* Under 360px two steppers side by side left Width's and Height's − and +
+   19px wide — narrow pills beside Budget's 30px circles. There each takes
+   the full row, the way Budget already does. */
+@media (max-width:359px){
+  #mgCreatorBar .stprow{grid-template-columns:1fr;}
+}
 #mgCreatorBar .stp .clab{white-space:nowrap;}
 /* designing is not writing: the Blocks hint belongs to playing a level */
 #mgPanel.mk #mgBoardHint{display:none;}

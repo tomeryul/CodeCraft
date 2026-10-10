@@ -1595,7 +1595,13 @@ function saveMyChallenge(){
       entry.id=editId;
       const i=player.myChallenges.findIndex(x=>x.id===editId);
       if(i>=0)player.myChallenges[i]=entry; else player.myChallenges.push(entry);
-    }else player.myChallenges.push(entry);
+    }else{
+      player.myChallenges.push(entry);
+      /* From here on this board IS that saved level: saving again — or after
+         picking the draft back up — updates it. Without this every Save of a
+         tweak added another copy to My Challenges. */
+      mgState.editingId=entry.id;
+    }
     saveNow();
     toast((editId?"✅ Updated ":doneMsg)); sfx(760,.06);
   };
