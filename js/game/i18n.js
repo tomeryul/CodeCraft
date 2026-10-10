@@ -54,7 +54,7 @@ const HE={
 
 /* ---- the menu ---- */
 "Everything in the game":"כל מה שיש במשחק",
-"Pick where to go. Your world keeps running.":"בחר לאן ללכת. העולם שלך ממשיך לרוץ.",
+"Your world keeps running.":"העולם שלך ממשיך לרוץ בינתיים.",
 "Next up":"הבא בתור",
 "Play":"לשחק","Create":"ליצור","Your world":"העולם שלך",
 "Academy":"אקדמיה","lessons":"שיעורים",
