@@ -42,6 +42,11 @@
      and you could see the sheet twitch between them. Whichever is smaller
      wins, everywhere. */
   --sheet-full:min(94vh,calc(100dvh - var(--sat) - 10px));
+  /* Half: 56% of the screen, but never less than leaves ~240px to work in
+     under a sheet's own rows (~280px). On a 932 phone that is the same 56%;
+     on an iPhone SE half used to leave one block of the program and a lesson's
+     board a 40px sliver. Every sheet's half is this one value. */
+  --sheet-half:max(56vh,min(520px,var(--sheet-full)));
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 /* NO height:100%/overflow:hidden here: on iOS standalone (black-translucent)
@@ -185,6 +190,12 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   50%{box-shadow:0 0 0 6px rgba(84,214,106,.15), inset 0 1.5px 0 rgba(255,255,255,.22)}}
 .blk .lbl{flex:1;}
 .blk .pbtn{background:rgba(0,0,0,.24);border-radius:8px;padding:4px 9px;font-size:var(--fs-sm);font-weight:var(--fw-bold);color:var(--ink);}
+/* 23px tall is a lot of block to aim at with a child's finger. The ring
+   below adds the missing reach without making the block one pixel taller;
+   inset stays under the 6px gap between two buttons, so neighbours never
+   share a touch. */
+.blk .pbtn{position:relative;}
+.blk .pbtn::after{content:"";position:absolute;inset:-9px -3px;}
 .blk .num{min-width:26px;text-align:center;font-weight:var(--fw-bold);color:var(--accent2);}
 .blk.c-basic{background:var(--c-basic);border-bottom-color:var(--c-basic-d);} .blk.c-basic.sel{background:#4d74d4;}
 .blk.c-loops{background:var(--c-loops);border-bottom-color:var(--c-loops-d);} .blk.c-loops.sel{background:#d48c2e;}
@@ -558,6 +569,16 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
      (docs/design-audit.md, stage 3) */
   #toasts{top:calc(var(--sat) + 128px);}
   .toast{max-width:66vw;}
+/* With the editor up on a short phone its top edge is near 147px, and a
+   toast at 128px landed on the sheet's header, over the level's title and
+   its back button. Above the sheet the only free band is under the top pill,
+   between the screen's left edge and the tool column: the lane moves there
+   and narrows to it. A full sheet has no band above it: there the lane
+   stays at 128px, over the sheet's content and clear of its header — which
+   is also where it is on any phone with the sheet at full. */
+@media (max-width:600px) and (min-height:621px) and (max-height:760px){
+  body:has(#editor.open:not(.max)) #toasts{top:calc(var(--sat) + 60px);padding:0 66px;}
+}
   .ed-btns{gap:5px;}
   .ed-btns button{width:33px;height:33px;font-size:var(--fs-md);border-radius:var(--r-ctl);}
 }

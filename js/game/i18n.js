@@ -1130,7 +1130,9 @@ const SCOPED=[
   /* Scoped to a block on purpose: "is" is two letters and could be a word in
      anyone's challenge name or robot name. Inside a block it is the is/is-not
      switch and nothing else. */
-  [".blk",           {"is":"כן","is not":"לא"}],
+  [".blk",           {"is":"כן","is not":"לא",
+                      /* Walk To / Face Nearest targets the global table lacked */
+                      "tree":"עץ","rock":"סלע","home":"בית","market":"שוק","chest":"תיבה"}],
   /* The three preview poses. "Chop" is already a block label — the
      imperative "כרות" a child taps to make the robot swing — and a row of
      poses wants a noun beside standing and walking, so these three are read

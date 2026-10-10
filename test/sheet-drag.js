@@ -142,7 +142,11 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 
   console.log('▶ the spring can be caught mid-flight');
   r = await openHub();
-  await drag('hub', 12, 6, 60);              // 72px, slow: short of the half rung, so it springs back
+  /* 48px, slow: short of the half rung, so it springs back. The rung is
+     var(--sheet-half) below full — 232px on this 800 screen now that half
+     never leaves less than ~240px to work in — and a 72px pull's landing
+     reached past halfway to it, which is a resize, not a spring back. */
+  await drag('hub', 8, 6, 60);
   await wait(50);
   const before = await ty('hub');
   await down('hub');                          // catch it in the air

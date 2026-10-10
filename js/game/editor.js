@@ -399,7 +399,7 @@ function renderList(list,parent){
           else if(p==="ainc")av.n=(av.n|0)+1;
         }
         if(p==="vname")b.name=promptName(b.name);
-        if(p==="vkind")b.val=b.val.k==="num"?{k:"str",s:"Hello!"}:b.val.k==="str"?{k:"var",name:"x"}:{k:"num",n:5};
+        if(p==="vkind")b.val=b.val.k==="num"?{k:"str",s:lang==="he"?"שלום!":"Hello!"}:b.val.k==="str"?{k:"var",name:"x"}:{k:"num",n:5};
         if(p==="vdec")b.val.n--;
         if(p==="vinc")b.val.n++;
         if(p==="vtxt"){const s=prompt("Text:",b.val.s);if(s!==null)b.val.s=s.slice(0,30);}

@@ -179,7 +179,9 @@ function newBlock(t){
   if(t==="setVar"){b.name="x";b.val={k:"num",n:5};}
   if(t==="changeVar"){b.name="x";b.n=1;}
   if(t==="countLoop"){b.name="i";b.to=5;b.body=[];}
-  if(t==="say")b.val={k:"str",s:"Hello!"};
+  /* the words are the program's own, so they are not translated on screen —
+     a new one starts in the player's language instead */
+  if(t==="say")b.val={k:"str",s:lang==="he"?"שלום!":"Hello!"};
   if(t==="tryCode")b.val={k:"num",n:1};
   return b;
 }

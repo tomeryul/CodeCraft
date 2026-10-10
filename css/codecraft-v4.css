@@ -90,8 +90,20 @@
    max-height:none); a plain #editor{height} here would land after that rule
    and squash the panel to 56% of the viewport. */
 @media (max-width:919px){
-  #editor{height:56vh;}
+  /* Half is 56% of the screen — but the sheet's own rows (header, routine
+     tabs, Run, the tab bar) take about 280px whatever the screen, so on an
+     iPhone SE (667) half left 93px to work in: one block of the program and
+     a faded strip of palette, and on a 568 screen nothing at all. A lesson's
+     board went the same way, to a 40px sliver with the robot cut off. Half
+     never leaves less than ~240px of work now; a 932 phone is unchanged. */
+  #editor{height:var(--sheet-half);}
   #editor.max{height:var(--sheet-full);max-height:var(--sheet-full);}
+}
+/* and where even that is most of the screen, half is simply full (the
+   token, so every sheet agrees) */
+@media (max-width:919px) and (max-height:620px){
+  :root{--sheet-half:var(--sheet-full);}
+  #editor{max-height:var(--sheet-full);}
 }
 /* .sheet pads itself by var(--sab) and #actionBar pads by calc(12px + sab)
    on top of it, so on a phone with a home indicator the two stacked into

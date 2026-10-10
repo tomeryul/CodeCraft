@@ -233,7 +233,10 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     const sizes2=[mini.onBoard.start,mini.other].sort((a,b)=>a-b);
     ck(`${W}x${H} the shrink control is in the header and works from any tab`,
        mini.onBoard.inHeader && mini.onBoard.shown && mini.shownOnBlocks && mini.size &&
-       sizes2[0]<15 && sizes2[1]>38 && sizes2[1]<55 && mini.back===mini.onBoard.start, mini);
+       /* half is var(--sheet-half): 56% of a tall screen, but never less
+          than leaves ~240px to work in, so on a short one more of it is
+          sheet — the world above it is what gives way, not the lesson */
+       sizes2[0]<15 && sizes2[1]>20 && sizes2[1]<55 && mini.back===mini.onBoard.start, mini);
     await pg.evaluate(()=>{ if(mgState)mgExit(false); });
     await pg.waitForTimeout(400);
 
