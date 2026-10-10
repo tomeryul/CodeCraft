@@ -764,6 +764,8 @@ const HE={
 "Sort the Blocks":"מיין את הבלוקים",
 "PUBLISHED!":"פורסם!",
 "SOLVED!":"נפתר!",
+"SOLVED AGAIN!":"נפתר שוב!",
+"It already stands next to your home base — this run was practice.":"הוא כבר עומד ליד הבית שלך — הפעם זה היה אימון.",
 "UPDATED!":"עודכן!",
 "Log in":"התחבר",
 "Sign up":"הרשמה",

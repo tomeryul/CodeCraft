@@ -2483,8 +2483,19 @@ function mgSuccess(){
     mgWinCard("🌍","CHALLENGE SOLVED!",proj.name,(first?"+"+proj.coins+" 🪙 +"+proj.xp+" ⭐ — ":"")+"You beat a challenge made by another player!","Sweet! 🎉",{onClose:mgLeaveAfter(mgState)});
     return;
   }
+  const first=!player.projects[proj.id];
   player.projects[proj.id]=1;
   player.projPrograms[proj.id]=packProg(mgRobot);
+  /* A build happens once. Solving it again used to pay the reward again AND
+     put another copy of the building beside home — every replay of the Big
+     House added a house — which is a coin farm and one more way the world
+     filled up. A replay is practice now: the card says so, nothing is paid,
+     nothing is placed. (worldTidy heals a world that already has copies.) */
+  if(!first){
+    confetti();saveNow();
+    mgWinCard(proj.em,"SOLVED AGAIN!",proj.name,"It already stands next to your home base — this run was practice.","Nice! 🎉",{onClose:mgLeaveAfter(mgState)});
+    return;
+  }
   // a level opened outside its pack has no reward of its own — never let that
   // turn the player's coin total into NaN
   coins+=(proj.coins|0);addXP(proj.xp|0);qProg("proj");

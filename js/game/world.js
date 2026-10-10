@@ -86,5 +86,12 @@ function worldTidy(){
     if(o.lode||stray(k,o.type)){objects.delete(k);gone++;}
   }
   respawnQ=respawnQ.filter(e=>!stray(key(e.x,e.y),e.type));
+  /* one building per finished build project: replaying one used to add
+     another copy beside home each time (challenges.js mgSuccess) */
+  const seenBuild=new Set();
+  for(const [k,o] of [...objects]){
+    if(o.type!=="proj")continue;
+    if(seenBuild.has(o.em)){objects.delete(k);gone++;}else seenBuild.add(o.em);
+  }
   return gone;
 }

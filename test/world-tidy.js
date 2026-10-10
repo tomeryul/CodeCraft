@@ -92,6 +92,38 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   });
   ck('the robot has somewhere to step', free, free);
 
+  console.log('▶ a build project stands once, however often it is solved');
+  const BUILT = await pg.evaluate(async () => {
+    const sol = [{ t: 'repeat', n: 4, uid: 1, body: [{ t: 'repeat', n: 3, uid: 2, body: [{ t: 'build', uid: 3 }, { t: 'move', uid: 4 }] }, { t: 'turnR', uid: 5 }] }];
+    const houses = () => [...objects.values()].filter(o => o.type === 'proj' && o.em === PROJECTS[0].em).length;
+    delete player.projects[PROJECTS[0].id];
+    const out = [];
+    for (let i = 0; i < 3; i++) {
+      document.querySelectorAll('#ccCele').forEach(e => e.remove());
+      const c0 = coins;
+      mgEnter(JSON.parse(JSON.stringify(PROJECTS[0])));
+      applyProg(mgRobot, JSON.parse(JSON.stringify(sol)));
+      mgRun(); for (let k = 0; k < 20000 && mgState && mgState.running; k++) mgTick();
+      await new Promise(r => setTimeout(r, 800));
+      out.push({ paid: coins - c0, houses: houses() });
+      document.querySelectorAll('#ccCele').forEach(e => e.remove());
+      if (mgState) mgExit(false);
+    }
+    return out;
+  });
+  ck('the first solve pays and places the building', BUILT[0].paid > 0 && BUILT[0].houses === 1, BUILT);
+  ck('solving it again pays nothing and places nothing', BUILT.slice(1).every(r => r.paid === 0 && r.houses === 1), BUILT);
+  await pg.evaluate(() => {
+    let n = 0;
+    for (let r = 2; r <= 7 && n < 3; r++) for (let dx = -r; dx <= r && n < 3; dx++) {
+      const x = homePos.x + dx, y = homePos.y + r;
+      if (inB(x, y) && !objects.has(key(x, y))) { objects.set(key(x, y), { type: 'proj', em: PROJECTS[0].em }); n++; }
+    }
+  });
+  await reload();
+  const copies = await pg.evaluate(() => [...objects.values()].filter(o => o.type === 'proj' && o.em === PROJECTS[0].em).length);
+  ck('a world that already has copies keeps one after a load', copies === 1, copies);
+
   ck('no uncaught exceptions', errs.length === 0, errs.slice(0, 3));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await b.close();
