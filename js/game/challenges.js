@@ -734,9 +734,24 @@ function mgDesignLayout(){
        by id, and an element that is not in the document is not findable */
     bar.appendChild(modes);
   }
+  /* The three kinds of board as one choice, the current one lit. There was
+     no 2D button at all: on a flat board the row offered "3D · Cyber" with
+     nothing lit, and the way back to flat was tapping the lit mode again. */
+  let flat=$("flatBtn");
+  if(!flat){
+    flat=document.createElement("button");flat.id="flatBtn";flat.type="button";flat.className="ibtn wide";
+    flat.textContent="🗺️ 2D";flat.title="A flat 2D board";flat.setAttribute("aria-label","A flat 2D board");
+    /* the lit mode's own button already asks before clearing its board */
+    flat.addEventListener("click",()=>{
+      const t3=typeof on3d==="function"&&on3d(), cy=typeof onCyP==="function"&&onCyP();
+      const b=$(t3?"t3Btn":cy?"cyBtn":""); if(b)b.click();
+    });
+  }
+  if(flat.parentNode!==modes)modes.insertBefore(flat,modes.firstChild);
   for(const id of ["t3Btn","cyBtn"]){
     const b=$(id); if(b&&b.parentNode!==modes)modes.appendChild(b);
   }
+  flat.classList.toggle("on",!(typeof on3d==="function"&&on3d())&&!(typeof onCyP==="function"&&onCyP()));
   const proj=(mgState&&mgState.proj)||{};
   for(const sec of MG_SECTIONS){
     let el=$(sec.id);
@@ -813,6 +828,10 @@ function mgTipUI(em,label,tip,guide){
   el.style.display=(mgState&&mgState.creator)?"":"none";
   const g=$("mgTipGuide"); if(g)g.style.display=guide?"":"none";
   const tx=el.querySelector(".cy-tip-t"); if(!tx)return;
+  /* the box keeps its height so the board never moves, and scrolls when a
+     tool's sentence is longer: its bottom edge fades then, the app's one
+     way of saying "there is more", or the rest was simply never found */
+  if(typeof edgeFade==="function")edgeFade(tx);
   tx.textContent="";
   const b=document.createElement("b");b.textContent=em+" "+label;
   tx.appendChild(b);

@@ -467,7 +467,10 @@ function ui(){
     pn0.classList.remove("t3side"); if(window.mgFitReset)mgFitReset();
   }
   if(!cr)return;
-  btn.textContent=three?"🗺️ 2D":"🧊 3D";
+  /* its own name, lit while it is the mode — as Cyber's button and the
+     2D one beside them do. It used to rename itself "2D" while on, so the
+     lit button named the mode you were NOT in. */
+  btn.textContent="🧊 3D";
   btn.classList.toggle("on",three);
   if(!three){
     // these are always-on in 2D and nothing else restores them

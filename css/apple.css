@@ -481,3 +481,31 @@ textarea, select{
    its edit row, counters and warning too — 112px of somebody else's
    screen. They show only while designing, whichever way a level opens. */
 body:not(:has(#mgCreatorBar.on)) :is(#mgStatus,#t3EdRow,#t3Warn,#t3Hint){display:none !important;}
+
+/* ---- the designer ---- */
+/* A tool's sentence: three lines down to a 621px phone (it was two at 700,
+   which hid one to four lines of most tools on a 667px phone in a box that
+   scrolled by itself), two below that. Its bottom fades when there is more
+   (fx.js edgeFade), over 10px, not the 26 a page uses — the box is two or
+   three lines tall. */
+@media (max-height:620px){ #mgTip .cy-tip-t,.cy-tip .cy-tip-t{height:calc(1.42em * 2);} }
+.cy-tip .cy-tip-t.fade-b{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 10px),transparent);
+        mask-image:linear-gradient(to bottom,#000 calc(100% - 10px),transparent);}
+/* On a short phone the tools are 42px, and a two-word name (Keypad + Key,
+   Sealed note, One-way) was cut under its icon. The icon gives the room. */
+@media (max-height:700px){
+  #mgDock .tool{gap:1px;}
+  #mgDock .tool .tl-em{font-size:14px;}
+  #mgDock .tool .tl-em .ui-emoji{width:15px;height:15px;}
+  #mgDock .tool .tl-lb{line-height:1.1;}
+}
+/* One stepper: 36px (32 in a short phone's dock), and every one reaches 44.
+   The Design tab's were 30, the dock's 36 or 30. */
+#mgCreatorBar .stp button{width:36px;height:36px;}
+#mgCreatorBar .stp button,#mgDock .stp button{position:relative;}
+#mgCreatorBar .stp button::after,#mgDock .stp button::after{content:"";position:absolute;inset:-4px;}
+@media (max-height:700px){ #mgDock .stp button{width:32px;height:32px;} #mgDock .stp button::after{inset:-6px;} }
+/* the kind of board: one look for "this one", the designer's own (the tool
+   tiles'). Tower's lit button was a blue gradient and Cyber's purple. */
+#dsModes .ibtn.on,#mgCreatorBar #dsModes #t3Btn.on{background:rgba(255,184,48,.2);color:var(--accent2);
+  border-color:transparent;box-shadow:inset 0 0 0 1.5px rgba(255,214,107,.7);}

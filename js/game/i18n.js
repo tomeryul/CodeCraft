@@ -388,7 +388,7 @@ const HE={
 "always":"תמיד",
 
 /* ---- the Design tab: its six sections, and what each one is for ---- */
-"Kind of level":"סוג השלב",
+"Kind of level":"סוג השלב","A flat 2D board":"לוח שטוח דו-ממדי",
 "Tap a kind to switch to it. Switching clears the board you built.":
   "תלחץ על סוג כדי לעבור אליו. מעבר מוחק את הלוח שבנית.",
 "The board":"הלוח",
@@ -2107,6 +2107,7 @@ function rtlLead(s){
    path</b> is directions you memorised" reaches us as " is directions…",
    and dropping that space glued the Hebrew to the bold word: "מסלולהוא",
    "עםאותה תוכנית", nine of them in the design guide alone. */
+const HAS_EM=/\p{Extended_Pictographic}/u;
 function keepWs(s,out){
   const a=/^\s/.test(out)?"":s.match(/^\s*/)[0], z=/\s$/.test(out)?"":s.match(/\s*$/)[0];
   return a+out+z;
@@ -2122,7 +2123,12 @@ function tr(s,el){
   const edges=ends(s);
   const lead=edges[0], tail=edges[1];
   const raw=IDX_RAW[core];
-  if(raw)return keepWs(s,raw);
+  /* A raw value is used as written, its emoji included — when the text it
+     replaces has them. Where the live text has none, its emoji are drawn
+     beside it already, and the raw value's end emoji were a second copy:
+     the designer's Flag tile read "🚩 דגל" under its own 🚩. Middle ones
+     stay; they are the sentence's. */
+  if(raw)return keepWs(s,HAS_EM.test(s)?raw:body(raw));
   const hit=IDX[core];
   if(hit)return lead+hit+tail;
   const nums=core.match(NUM);

@@ -224,6 +224,24 @@ const WEIGHTS = ['400', '600', '700'];
      Object.values(G.gaps).every(g => g === 12), G.gaps);
   ck("nothing under a level's board is cut off by the fade", Object.values(G.cut).every(c => c === 0), G.cut);
 
+  /* The kind of board is one choice of three, the current one lit. There
+     was no 2D button, and Tower's renamed itself "2D" while it was on. */
+  const KM = await pg.evaluate(async () => {
+    const w = ms => new Promise(r => setTimeout(r, ms)); const c = window.confirm; window.confirm = () => true;
+    if (mgState) mgExit(false); navHome(); mgEnterCreator(); setTab('design'); await w(500);
+    const row = () => [...document.querySelectorAll('#dsModes button')].filter(b => b.offsetParent);
+    const read = () => ({ names: row().map(b => b.id), lit: row().filter(b => b.classList.contains('on')).map(b => b.id) });
+    const out = { flat: read() }; $('t3Btn').click(); setTab('design'); await w(400); out.tower = read();
+    $('cyBtn').click(); setTab('design'); await w(400); out.cyber = read();
+    ($('flatBtn') || { click() {} }).click(); setTab('design'); await w(400); out.back = read();
+    out.towerLabel = $('t3Btn').textContent.trim();
+    window.confirm = c; mgExit(false); return out;
+  });
+  ck('the kind of board is three fixed choices with only the current one lit',
+     ['flat', 'tower', 'cyber', 'back'].every(k => KM[k].names.join() === 'flatBtn,t3Btn,cyBtn') &&
+     KM.flat.lit.join() === 'flatBtn' && KM.tower.lit.join() === 't3Btn' && KM.cyber.lit.join() === 'cyBtn' &&
+     KM.back.lit.join() === 'flatBtn' && /3D/.test(KM.towerLabel), KM);
+
   ck('no uncaught exceptions', errs.length === 0, errs.slice(0, 3));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await b.close();

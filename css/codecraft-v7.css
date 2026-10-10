@@ -921,7 +921,6 @@ body.sheets-full #maker.sized,
   #mgDock .stp button{width:30px;height:30px;}
   /* two lines' worth of window instead of three, and it still scrolls, so
      the sentence is whole — there is simply less board to give away here */
-  #mgTip .cy-tip-t,.cy-tip .cy-tip-t{height:calc(1.42em * 2);}
   #mgTip,.cy-tip{padding-top:3px;}
 }
 

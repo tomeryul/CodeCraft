@@ -260,6 +260,19 @@ async function boot(pg,he){
   ck('a translated piece keeps the space beside a bold word',
      HEB.test(glue.after) && /^\s/.test(glue.after), glue);
 
+  /* A raw value's emoji are for text that has them. The designer's tool
+     names are bare words beside their own icon, and "Flag" came out
+     "🚩 דגל" under the tile's 🚩. */
+  const tl = await pg.evaluate(async () => {
+    const host = document.createElement('div'); host.style.position = 'absolute'; host.style.left = '-9999px';
+    document.body.appendChild(host); await new Promise(r => setTimeout(r, 60));
+    host.innerHTML = '<span class="a">Wall</span><span class="b">Start</span>';
+    await new Promise(r => setTimeout(r, 300));
+    const out = [...host.children].map(e => ({ t: e.textContent, icons: e.querySelectorAll('.ui-emoji').length })); host.remove(); return out;
+  });
+  ck('a bare word is translated without its emoji from a fuller entry',
+     tl.every(x => HEB.test(x.t) && x.icons === 0), tl);
+
   /* A lesson row is "<b>Move</b> — One step forward…", so the sentence
      arrives with a leading em-dash and a <b> beside it. The dash is edge
      decoration; the <b> is real markup and has to survive. */
