@@ -158,6 +158,26 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   });
   ck('the Orders sheet keeps its buttons while its clock ticks', O.sameButton === true && O.t0 !== O.t1, O);
 
+  /* Quests rebuilt its list on every robot step while a walk quest was on
+     it: with three robots walking, a 600ms press on Claim paid 0 times in
+     5. A step moves the numbers; the list only changes shape when a quest
+     becomes claimable. */
+  const Q = await pg.evaluate(() => {
+    player.quests = [{ id: 'say1', prog: 1, noted: true }, { id: 'walk150', prog: 3, noted: false }, { id: 'wood10', prog: 0, noted: false }];
+    renderQuests(); $('quests').classList.add('open');
+    const btn = document.querySelector('#questList .quest button');
+    for (let i = 0; i < 5; i++) qProg('walk');
+    const out = { sameButton: document.querySelector('#questList .quest button') === btn,
+      shown: [...document.querySelectorAll('#questList .qn')].map(n => n.textContent) };
+    qProg('walk', null, 200);
+    out.claimable = document.querySelectorAll('#questList .quest button').length;
+    $('quests').classList.remove('open');
+    return out;
+  });
+  ck('a robot step moves the quest numbers, not the Claim button under the finger',
+     Q.sameButton === true && Q.shown[1] === '8/150', Q);
+  ck('and a quest that becomes claimable still gets its button', Q.claimable === 2, Q);
+
   ck('no uncaught exceptions', errs.length === 0, errs.slice(0, 3));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await b.close();

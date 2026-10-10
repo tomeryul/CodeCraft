@@ -52,8 +52,41 @@ function qProg(type,extra,n){
   }
   if(changed){
     updateQuestBadge();
-    if($("quests").classList.contains("open"))renderQuests();
+    if($("quests").classList.contains("open"))questsRefresh();
   }
+}
+/* Progress arrives on every robot step ("Walk 150 steps"), and rebuilding
+   the list each time swapped the Claim button out from under the finger:
+   with three robots walking, a 600ms press on Claim paid 0 times in 5. A
+   step only moves numbers, so only the numbers move. The list is rebuilt
+   when its shape changes: a quest turns claimable, a skill levels up. */
+function questShape(){
+  return player.quests.map(q=>{const d=qDef(q);return d?q.id+(q.prog>=d.n?"!":""):"";}).join("|")+
+    "#"+Object.keys(SKILL_DEFS).map(k=>skills[k].lvl).join(",");
+}
+function questsRefresh(){
+  const el=$("questList");
+  if(el._shape!==questShape()){renderQuests();return;}
+  const live=player.quests.filter(q=>qDef(q));
+  el.querySelectorAll(".quest").forEach((row,i)=>{
+    const q=live[i], d=q&&qDef(q); if(!d)return;
+    const n=row.querySelector(".qn"), t=q.prog+"/"+d.n;
+    if(n&&n.textContent!==t)n.textContent=t;
+    const bar=row.querySelector(".qbar i"); if(bar)bar.style.width=Math.round(q.prog/d.n*100)+"%";
+  });
+  const keys=Object.keys(SKILL_DEFS);
+  el.querySelectorAll("#skillGrid .sk-bar i").forEach((bar,i)=>{
+    const s=skills[keys[i]]; if(!s)return;
+    bar.style.width=(s.lvl>=SKILL_MAX?100:Math.round(s.xp/skillNeed(s.lvl)*100))+"%";
+  });
+  questStats();
+}
+function questStats(){
+  const h='<div><b>'+totals.collected+'</b>Collected</div>'+
+    '<div><b>'+totals.earned+' 🪙</b>Earned</div>'+
+    '<div><b>'+(totals.dist||0)+'</b>Steps walked</div>'+
+    '<div><b>'+robots.length+' 🤖</b>Robot team</div>';
+  const box=$("statsBox"); if(box._h!==h){box._h=h;box.innerHTML=h;}
 }
 function updateQuestBadge(){
   const claim=player.quests.some(q=>{const d=qDef(q);return d&&q.prog>=d.n;});
@@ -61,7 +94,7 @@ function updateQuestBadge(){
 }
 function renderQuests(){
   fillQuests();
-  const el=$("questList");el.innerHTML="";
+  const el=$("questList");el.innerHTML="";el._shape=questShape();
   /* no Build Projects banner here any more: it is in the menu, and a second
      door to the same room from inside Quests was one more thing to learn
      (game-app-design §2, one way to each place; design-audit stage 5) */
@@ -85,7 +118,7 @@ function renderQuests(){
   for(const q of player.quests){
     const d=qDef(q);if(!d)continue;
     const div=document.createElement("div");div.className="quest";
-    div.innerHTML='<div class="qt"><span>'+d.txt+'</span><span class="qr">'+q.prog+'/'+d.n+' · +'+d.coins+'🪙 +'+d.xp+'⭐</span></div>'+
+    div.innerHTML='<div class="qt"><span>'+d.txt+'</span><span class="qr"><span class="qn">'+q.prog+'/'+d.n+'</span> · +'+d.coins+'🪙 +'+d.xp+'⭐</span></div>'+
       '<div class="qbar"><i style="width:'+Math.round(q.prog/d.n*100)+'%"></i></div>';
     if(q.prog>=d.n){
       const b=document.createElement("button");b.textContent="🎉 Claim reward";
@@ -102,11 +135,7 @@ function renderQuests(){
   }
   /* four numbers, one strip, above the list: as four tiles pinned to the
      foot they took a quarter of the sheet and read as the point of it */
-  $("statsBox").innerHTML=
-    '<div><b>'+totals.collected+'</b>Collected</div>'+
-    '<div><b>'+totals.earned+' 🪙</b>Earned</div>'+
-    '<div><b>'+(totals.dist||0)+'</b>Steps walked</div>'+
-    '<div><b>'+robots.length+' 🤖</b>Robot team</div>';
+  questStats();
 }
 function dailyGift(){
   const today=new Date().toDateString();
