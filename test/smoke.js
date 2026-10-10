@@ -2459,9 +2459,23 @@ async function ev(expr) {
     makerOpen('outfit',null); mkSave();
     out.emptyRejected = player.myWear.length===1;
     makerExit();
+    /* deleting one asks first, and cancelling keeps it */
+    const conf=window.confirm;
+    window.confirm=()=>false; makerOpen('hat',id); mkDelete();
+    out.keptOnCancel = player.myWear.length===1;
+    makerExit();
     /* deleting one takes it off the robot it was on */
-    makerOpen('hat',id); mkDelete();
+    window.confirm=()=>true; makerOpen('hat',id); mkDelete();
+    window.confirm=conf;
     out.deleted = player.myWear.length===0 && robots[selRobot].hat===null;
+    /* a piece made from Style goes on the robot Style is dressing, which
+       need not be the one selected in the world */
+    const extra=makeRobot(homePos.x+1,homePos.y+1,'Dressee'); robots.push(extra);
+    const sel0=selRobot; styleOpen(); styleSel=robots.length-1; renderStyle();
+    makerOpen('hat',null); const id2=mkId;
+    mkAddPart(); mkSave();
+    out.dressedStyled = extra.hat===id2 && robots[sel0].hat!==id2;
+    styleClose(); robots.pop(); player.myWear=[]; robots[sel0].hat=null;
     /* a save someone else wrote is re-encoded, never trusted */
     const dirty=JSON.parse(JSON.stringify(buildSave()));
     dirty.player.myWear=[
@@ -2479,7 +2493,9 @@ async function ev(expr) {
   check("a built piece reaches the canvas", MADE.paints === true, JSON.stringify(MADE));
   check("a built piece survives buildSave → applySave", MADE.rt === true, JSON.stringify(MADE));
   check("a piece with nothing in it is not saved", MADE.emptyRejected === true, JSON.stringify(MADE));
+  check("deleting a piece asks first, and cancelling keeps it", MADE.keptOnCancel === true, JSON.stringify(MADE));
   check("deleting a piece takes it off the robot wearing it", MADE.deleted === true, JSON.stringify(MADE));
+  check("a piece made from Style goes on the robot Style was dressing", MADE.dressedStyled === true, JSON.stringify(MADE));
   /* the grid is the only thing a made piece can carry: a foreign save gets
      its markup stripped, its unknown slots dropped and its grid re-encoded
      to exactly 144 palette characters */

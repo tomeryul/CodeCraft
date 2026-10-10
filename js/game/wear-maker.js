@@ -417,8 +417,14 @@ function mkSec(title,detail){
   const t=document.createElement("span");t.className="mk-sect";t.textContent=title;
   h.appendChild(t);
   if(detail){
-    const d=document.createElement("span");d.className="mk-secd";d.textContent=detail;
-    h.appendChild(d);
+    /* the dot is its own element: as the first character of a Hebrew
+       sentence it went wherever that sentence starts, which is its far
+       (right) end — away from the title it was meant to separate */
+    const dot=document.createElement("span");dot.className="mk-secd";
+    dot.setAttribute("aria-hidden","true");dot.textContent="·";
+    const d=document.createElement("span");d.className="mk-secd";
+    d.textContent=detail.replace(/^·\s*/,"");
+    h.appendChild(dot);h.appendChild(d);
   }
   return h;
 }
@@ -1349,8 +1355,10 @@ function mkSave(){
   const nm=safeText(mkName,18)||"My piece";
   const piece={id:mkId,slot:mkSlot,name:nm,kind:"parts",parts:mkParts.map(p=>({...p})),root:{...mkRoot}};
   if(at<0)list.push(piece); else list[at]=piece;
-  /* wearing it is the point of making it */
-  const r=robots[selRobot]||robots[0];
+  /* wearing it is the point of making it — on the robot Style was
+     dressing, which is not always the one selected in the world: a hat
+     made for Sparky went onto Robo-1 */
+  const r=(mkFromStyle&&typeof styleRobot==="function"&&styleRobot())||robots[selRobot]||robots[0];
   if(r)r[mkSlot]=mkId;
   saveSoon();
   if(typeof feCheck==="function")feCheck();
@@ -1360,6 +1368,9 @@ function mkSave(){
 }
 function mkDelete(){
   const list=myWear(), at=list.findIndex(p=>p.id===mkId);
+  /* every other delete in the game asks first, and this one erases
+     something a child drew box by box, with no undo */
+  if(at>=0&&!confirm("Delete “"+list[at].name+"”?"))return;
   if(at>=0)list.splice(at,1);
   /* a robot cannot go on wearing something that no longer exists */
   robots.forEach(r=>{ if(r.hat===mkId)r.hat=null;
