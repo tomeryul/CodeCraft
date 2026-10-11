@@ -432,6 +432,60 @@ async function ev(expr) {
   check("a worn-out robot is too tired to work", await ev("R().tired") === true, await ev("JSON.stringify({e:R().energy,tired:R().tired})"));
   check("Rest restores energy", await ev(`(()=>{const r=R();stopRobot(r);r.energy=5;doAction(r,{t:'rest',n:2});return r.energy;})()`) >= 60);
 
+  console.log("▶ robot moments: what an action came to is what the robot plays");
+  /* A step into the edge of the world, into water, into a rock; a bag
+     that will not take one more; an empty battery; a sale; a program that
+     ran out. Each becomes r.anim — a clip render.js plays (RIG_OF) — and a
+     full bag makes the walk home a slog, on the clock as well as on screen. */
+  const MOM = JSON.parse(await ev(`(()=>{
+    const r=R(), o={};
+    stopRobot(r); r.anim=null; r.energy=100; for(const k in r.inv)r.inv[k]=0;
+    const at=(x,y,d)=>{r.x=x;r.y=y;r.rx=x;r.ry=y;r.dir=d;r.blocked=false;r.anim=null;};
+    const clear=(x,y)=>{objects.delete(key(x,y));terrain[key(x,y)]=T_GRASS;};
+    // the edge of the world, on land
+    clear(W-1,10); at(W-1,10,1); doAction(r,{t:'move'}); o.edge=r.anim&&r.anim.type; o.edgeStay=r.x===W-1;
+    // water ahead
+    clear(20,10); terrain[key(21,10)]=T_WATER; objects.delete(key(21,10)); at(20,10,1);
+    doAction(r,{t:'move'}); o.water=r.anim&&r.anim.type; o.waterStay=r.x===20;
+    // a rock ahead
+    clear(20,12); objects.set(key(21,12),{type:'rock'}); terrain[key(21,12)]=T_GRASS; at(20,12,1);
+    doAction(r,{t:'move'}); o.rock=r.anim&&r.anim.type;
+    // a bag that is full, at a tree
+    clear(20,14); objects.set(key(21,14),{type:'tree',stage:2}); at(20,14,1);
+    const step0=robotStepMs(r); r.inv.wood=r.cap; const step1=robotStepMs(r);
+    doAction(r,{t:'chop'}); o.full=r.anim&&r.anim.type; o.slower=step1/step0; o.heavyK=HEAVY_SLOW;
+    r.inv.wood=0;
+    // no battery for it
+    r.energy=1; doAction(r,{t:'chop'}); o.flat=r.anim&&r.anim.type; r.energy=100;
+    // a sale
+    r.inv.wood=3; sellInv(r); o.sale=r.anim&&r.anim.type;
+    // a program that ran to its end
+    at(20,16,2); r.program=[{t:'turnL',uid:1}]; startRobot(r); tickRobot(r); tickRobot(r);
+    o.end=r.anim&&r.anim.type; o.stopped=!r.running;
+    // a wave for the player, only from a robot with nothing to do
+    stopRobot(r); r.anim=null; robotHello(r); o.hello=r.anim&&r.anim.type;
+    // a cheer is not cut short by the next action
+    r.anim=null; r.running=true; robotsCheer(); o.cheer=r.anim&&r.anim.type;
+    doAction(r,{t:'turnR'}); o.kept=r.anim&&r.anim.type; stopRobot(r); r.anim=null;
+    // every moment is a clip the rig has
+    o.missing=Object.keys(RIG_OF).filter(k=>!CC_RIG.anim[RIG_OF[k]]);
+    o.timed=['bump','edge','teeter','stuff','slump','sell','done','hello','cheer'].every(k=>animMs(k,420)>=300);
+    return JSON.stringify(o);
+  })()`));
+  check("a step off the edge of the world is a bump into it, and goes nowhere",
+    MOM.edge === 'edge' && MOM.edgeStay === true, MOM);
+  check("a step into water is a teeter on the edge, not a swim", MOM.water === 'teeter' && MOM.waterStay === true, MOM);
+  check("a step into a rock is a bump", MOM.rock === 'bump', MOM);
+  check("a bag that will not take one more is stuffed, and pops back", MOM.full === 'stuff', MOM);
+  check("a full bag slows the walk home", MOM.heavyK > 1 && Math.abs(MOM.slower - MOM.heavyK) < .001, MOM);
+  check("an empty battery sags instead of swinging", MOM.flat === 'slump', MOM);
+  check("a sale plays the sale", MOM.sale === 'sell', MOM);
+  check("a program that runs out ends in a little hop", MOM.end === 'done' && MOM.stopped === true, MOM);
+  check("an idle robot waves when it is picked", MOM.hello === 'hello', MOM);
+  check("a level up cheers, and the next action does not cut it short",
+    MOM.cheer === 'cheer' && MOM.kept === 'cheer', MOM);
+  check("every moment is a clip the rig has, with a length", MOM.missing.length === 0 && MOM.timed === true, MOM);
+
   console.log("▶ scoop water");
   const water = await ev(`(()=>{
     const r=R(); stopRobot(r); r.energy=100;
@@ -3262,6 +3316,11 @@ async function ev(expr) {
     mgStep(); mgStep(); o.bumpClip=mgLk.anim&&mgLk.anim.clip; o.stillY=mgState.robot.y;
     mgStep(); o.stepHold=mgState.hold;
     mgStop(); mgExit(false);
+    // an open pit ahead: a teeter on its edge, not a bump
+    mgEnter(Object.assign(lvl(),{tiles:[[1,1,'pit']]})); setTab('board');
+    mgRobot.program=[{t:'move',uid:1}];
+    mgStep(); o.pitClip=mgLk.anim&&mgLk.anim.clip; o.pitStay=mgState.robot.x;
+    mgStop(); mgExit(false);
     window.setInterval=origSI;
     return JSON.stringify(o);
   })()`));
@@ -3276,6 +3335,7 @@ async function ev(expr) {
   check("a turn turns, and a step into the edge is a bump that goes nowhere",
     BLOOK.turnClip === 'turn' && BLOOK.bumpClip === 'bump' && BLOOK.stillY === 0, JSON.stringify(BLOOK));
   check("⏭ Step never holds the board for a swing", BLOOK.stepHold === 0, JSON.stringify(BLOOK));
+  check("a step toward an open pit teeters on its edge", BLOOK.pitClip === 'teeter' && BLOOK.pitStay === 0, JSON.stringify(BLOOK));
 
   check("a foreign save's pieces are re-encoded, not trusted",
     Array.isArray(MADE.clean) && MADE.clean.length === 1 &&

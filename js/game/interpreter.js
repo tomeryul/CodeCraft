@@ -89,7 +89,7 @@ function tickRobot(r){
       // finish and the distance stat froze.
       totals.dist=(totals.dist||0)+1;qProg("walk");skillXP("agility",1);
       if(Math.random()<.25)burst(r.x,r.y,"dust");
-    }else{r.path=null;r.blocked=true;}
+    }else{r.path=null;r.blocked=true;robotMoment(r,"bump");}
     // On arrival, turn to FACE what we walked here for. Without this the robot
     // ends up facing the way it last stepped, so the 🪓 Chop right after a
     // 🧭 Go To Nearest would swing at empty grass — the single most confusing
@@ -100,10 +100,10 @@ function tickRobot(r){
   let guard=0;
   while(guard++<80){
     const fr=r.frames&&r.frames[r.frames.length-1];
-    if(!fr){stopRobot(r);return;}
+    if(!fr){stopRobot(r);robotMoment(r,"done");return;}
     if(fr.i>=fr.blocks.length){
       // a 🔄 While frame re-checks its condition here and falls out when it's false
-      if(fr.wc!==undefined&&!evalCond(r,fr.wc)){r.frames.pop();const pw=r.frames[r.frames.length-1];if(pw){pw.i++;continue;}stopRobot(r);return;}
+      if(fr.wc!==undefined&&!evalCond(r,fr.wc)){r.frames.pop();const pw=r.frames[r.frames.length-1];if(pw){pw.i++;continue;}stopRobot(r);robotMoment(r,"done");return;}
       if(fr.reps===Infinity){fr.i=0;if(!fr.blocks.length)return;continue;}
       if(fr.reps>1){
         fr.reps--;fr.i=0;
@@ -115,7 +115,7 @@ function tickRobot(r){
       if(fr.fn)fnExit(r,fr,[]);
       const p=r.frames[r.frames.length-1];
       if(p){p.i++;continue;}
-      stopRobot(r);return;
+      stopRobot(r);robotMoment(r,"done");return;
     }
     const b=fr.blocks[fr.i];
     if(b.t==="repeat"){
@@ -134,7 +134,7 @@ function tickRobot(r){
       const f=routineOf(r,b.fn);
       if(!f.body.length){fr.i++;continue;}
       if(r.frames.length>30){ // recursion with no base case
-        stopRobot(r);toast("🔁 "+r.name+": function "+b.fn+" called itself too many times!");return;}
+        stopRobot(r);robotMoment(r,"oops");toast("🔁 "+r.name+": function "+b.fn+" called itself too many times!");return;}
       const saved=fnEnter(r,f,b);
       r.curUid=b.uid;
       r.frames.push({blocks:f.body,i:0,reps:1,fn:1,outs:callOuts(b),saved});continue;}
@@ -148,7 +148,7 @@ function tickRobot(r){
       }
       const pr=r.frames[r.frames.length-1];
       if(pr&&done){pr.i++;continue;}
-      stopRobot(r);return;}
+      stopRobot(r);robotMoment(r,"done");return;}
     if(b.t==="if"){
       const br=evalCond(r,b.cond)?b.body:(b.els||[]);
       if(br.length){r.curUid=b.uid;r.frames.push({blocks:br,i:0,reps:1});}
@@ -161,7 +161,7 @@ function faceTo(r,x,y){
   if(x>r.x)r.dir=1;else if(x<r.x)r.dir=3;else if(y>r.y)r.dir=2;else if(y<r.y)r.dir=0;
 }
 /* actions that get a draw-time animation (see robot drawing in render.js) */
-const ANIM_ACTS={move:1,turnL:1,turnR:1,collect:1,chop:1,mine:1,scoop:1,drop:1,build:1,rest:1,wait:1};
+const ANIM_ACTS={move:1,turnL:1,turnR:1,collect:1,chop:1,mine:1,scoop:1,drop:1,build:1,rest:1,wait:1,say:1};
 /* Where a 🚶 Walk To / 🧭 Face Nearest is aimed. A fixed pick is `opt`; a
    VARIABLE target is `src`, exactly the shape 🔁 Repeat already uses for its
    count. That is what closes the loop on the 📋 board: 📖 Read hands you what
@@ -176,7 +176,7 @@ function doAction(r,b){
   const a=ahead(r), k=inB(a.x,a.y)?key(a.x,a.y):-1, o=k>=0?objects.get(k):null;
   r.blocked=false;
   // animation hook: render.js reads r.anim to play a short per-action "tell"
-  if(ANIM_ACTS[b.t])r.anim={type:b.t,t0:(typeof performance!=="undefined"?performance.now():Date.now())};
+  if(ANIM_ACTS[b.t])robotMoment(r,b.t);
   switch(b.t){
     case "move":
       if(canWalk(a.x,a.y)){
@@ -184,7 +184,10 @@ function doAction(r,b){
         totals.dist=(totals.dist||0)+1;qProg("walk");skillXP("agility",1);
         if(Math.random()<.4)burst(r.x,r.y,"dust");
       }
-      else{r.blocked=true;sfxIf(r,150,.05);}
+      /* what it walked into decides what it does: the edge of the world is
+         an invisible wall it bonks, water is an edge it nearly falls off */
+      else{r.blocked=true;sfxIf(r,150,.05);
+        robotMoment(r,!inB(a.x,a.y)?"edge":terrain[k]===T_WATER?"teeter":"bump");}
       break;
     case "turnL": r.dir=(r.dir+3)%4; break;
     case "turnR": r.dir=(r.dir+1)%4; break;
@@ -203,7 +206,7 @@ function doAction(r,b){
         coinFlash();qProg("gift");r.pop=1;sfxIf(r,880,.1);updateHud();break;
       }
       if(o&&o.type==="item"){
-        if(bagCount(r)>=r.cap){r.blocked=true;mentorFlag("bagFull");break;}
+        if(bagCount(r)>=r.cap){r.blocked=true;mentorFlag("bagFull");robotMoment(r,"stuff");break;}
         const space=r.cap-bagCount(r), take=Math.min(space,o.n);
         r.inv[o.item]+=take;o.n-=take;if(o.n<=0)objects.delete(k);
         totals.collected+=take;r.pop=1;addPop(a.x,a.y,"+"+take+" "+RES[o.item].em);
@@ -235,7 +238,7 @@ function doAction(r,b){
     case "build":{
       if(!inB(a.x,a.y)||o){r.blocked=true;break;}
       const bcost=Math.max(1,Math.round(4*(1-skills.agility.lvl*0.03)));
-      if((r.energy||0)<bcost){r.blocked=true;r.tired=true;mentorFlag("tired");break;}
+      if((r.energy||0)<bcost){r.blocked=true;r.tired=true;mentorFlag("tired");robotMoment(r,"slump");break;}
       // materials come from the robot's bag first, then the 🏦 Bank
       const need=b.opt==="sapling"?["wood",1]:b.opt==="bridge"?["stone",2]:["wood",5];
       const okTerrain=b.opt==="sapling"?terrain[k]===T_GRASS:b.opt==="bridge"?terrain[k]===T_WATER:terrain[k]!==T_WATER;
@@ -382,7 +385,7 @@ function sellInv(r){
   sum=Math.round(sum*(1+skills.trade.lvl*.02)); // trading skill perk
   if(sum>0){
     skillXP("trade",Math.ceil(sum/4));
-    coins+=sum;totals.earned+=sum;addPop(r.x,r.y,"+"+sum+" 🪙");burst(r.x,r.y,"coin");r.pop=1;
+    coins+=sum;totals.earned+=sum;addPop(r.x,r.y,"+"+sum+" 🪙");burst(r.x,r.y,"coin");r.pop=1;robotMoment(r,"sell");
     if(typeof noteEarning==="function")noteEarning(sum);
     queueSaleToast(sum);coinFlash();addXP(Math.ceil(sum/2));qProg("earn",null,sum);
     sfx(880,.09);sfx(1100,.09,.1);checkUnlocks();updateHud();

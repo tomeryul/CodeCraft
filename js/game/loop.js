@@ -1,8 +1,9 @@
 "use strict";
 /* ---------------- simulation loop ---------------- */
-// one tick of this robot, in ms: its speed upgrade and the agility perk
+// one tick of this robot, in ms: its speed upgrade, the agility perk, and a full bag
 function robotStepMs(r){
-  return ROBOT_STEP_MS/(r.speed||1)/(1+(typeof skills!=="undefined"?skills.agility.lvl*.015:0));
+  const heavy=r.cap>0&&typeof bagCount==="function"&&bagCount(r)>=r.cap;
+  return ROBOT_STEP_MS*(heavy?HEAVY_SLOW:1)/(r.speed||1)/(1+(typeof skills!=="undefined"?skills.agility.lvl*.015:0));
 }
 let last=0, slowAcc=0, started=false, simTime=0;
 function loop(t){
@@ -18,7 +19,7 @@ function loop(t){
       r.nextAct+=step;
       const a0=r.anim;tickRobot(r);
       // a swing takes longer than a step (WORK_TICKS)
-      if(r.anim!==a0&&r.anim&&WORK_ACTS[r.anim.type])r.nextAct+=step*(WORK_TICKS-1);
+      if(r.anim!==a0&&r.anim&&WORK_ACTS[r.anim.type])r.nextAct+=step*(WORK_ACTS[r.anim.type]-1);
     }
   }
   // slow world tick (1s): growth, respawns, animals hud

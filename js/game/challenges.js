@@ -2597,7 +2597,7 @@ function mgLook(){
     B.face(rb.dir,true);
     const z=rb.z||0;
     mgLk={st,rb,B,x:rb.x,y:rb.y,z,fx:rb.x,fy:rb.y,fz:z,tx:rb.x,ty:rb.y,tz:z,m0:-1e9,md:1,arc:0,
-      anim:null,gp:0,wb:0,runk:0,mt:-1e9,lt:null,px:rb.x,py:rb.y,waitTo:0,sayAt:-1e9,P:null,ap:0,nx:0,ny:0};
+      anim:null,gp:0,wb:0,runk:0,mt:-1e9,lt:null,px:rb.x,py:rb.y,waitTo:0,sayAt:-1e9,P:null,ap:0,nx:0,ny:0,starT:null};
   }
   return mgLk;
 }
@@ -2615,10 +2615,15 @@ function mgLookAct(st,t,was){
   }
   L.tx=rb.x;L.ty=rb.y;L.tz=z;
   const bump=MG_STEPS[t]&&t!=="goNear"&&d===0;
-  const clip=bump?"bump":MG_CLIP[t];
+  /* what it walked into: an open pit is an edge it nearly falls into, the
+     rest — a wall, a shut door, the side of the board — it bonks */
+  const ak=(rb.x+DX[rb.dir])+"_"+(rb.y+DY[rb.dir]);
+  const pit=bump&&window.CC_TILES&&CC_TILES.openPit&&CC_TILES.openPit(rb,ak);
+  const clip=bump?(pit?"teeter":"bump"):MG_CLIP[t];
+  if(bump&&!pit)L.starT=T;
   const hold=quick?0:(bump||MG_HOLD[t])?1:0;
   if(clip){
-    const dur=clip==="turn"?Math.max(220,Math.min(560,ms*.9)):
+    const dur=clip==="turn"?Math.max(220,Math.min(560,ms*.9)):clip==="teeter"?Math.max(700,Math.min(1000,ms*2.6)):
       Math.max(320,Math.min(1250,ms*(1+hold)*.95));
     /* a reach that comes back with nothing shows nothing in the hands */
     const empty=t==="pickUp"?rb.held==null:t==="drop"?(was.held==null||rb.held!=null):
@@ -2673,7 +2678,7 @@ function mgLookStep(T){
   else{P=CC_RIG.pose("idle",0,T,c);key="idle";}
   if(key==="idle"||key==="walk"||key==="wait")P.bulb=st.running?"run":"idle";
   if(T-L.sayAt<1000&&key!=="celebrate"&&key!=="oops"){P.expr="talk";P.talk=1;}
-  const n=A&&A.clip==="bump"?CC_RIG.nudge(ap):0;L.nx=DX[rb.dir]*n;L.ny=DY[rb.dir]*n;
+  const n=A&&A.clip==="bump"?CC_RIG.nudge(ap):A&&A.clip==="teeter"?CC_RIG.teeter(ap):0;L.nx=DX[rb.dir]*n;L.ny=DY[rb.dir]*n;
   B.color=ROBOT_COLORS[0];B.face(rb.dir);
   L.P=B.blend(P,key,dt);L.ap=ap;
   B.update(dt,L.P);
@@ -2691,6 +2696,10 @@ function mgLookDraw(g,cell,T,wear,CW){
   const rb=L.rb, s2=cell*.72, rs=s2/76.9;
   const cx=(L.x+L.nx+.5)*cell, gy=(L.y+L.ny+.5)*cell+s2*.66;
   L.B.draw(g,L.P,cx,gy,rs,{t:T,glow:false,wear:wear||{}});
+  // dazed for a second after a bump
+  const an=L.B.anchors;
+  if(L.starT!=null&&T-L.starT<1300&&an.valid&&an.hat)
+    CC_RIG.stars(g,an.hat.x,an.hat.y,rs,T,Math.min(1,(1300-(T-L.starT))/350));
   let top=gy-(wear&&wear.hat?122:114)*rs;
   // the block being carried rides above the head; a fresh one rises up from the hands
   if(rb.held!=null){

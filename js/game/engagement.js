@@ -12,7 +12,8 @@ function addXP(n){
     /* paid now; the fanfare waits for the world (a level-up earned inside
        a level lands after that level's own card, not on top of it) */
     const msg="⭐ LEVEL "+player.level+"! +"+bonus+" 🪙"+(hat?" — new hat "+hat.em+" unlocked! (🛒 → Style)":"");
-    whenCalm("level:"+player.level,()=>{confetti();sfx(660,.1);sfx(880,.1,.12);sfx(1320,.14,.24);bigToast(msg);},Infinity,false,3000);
+    whenCalm("level:"+player.level,()=>{confetti();sfx(660,.1);sfx(880,.1,.12);sfx(1320,.14,.24);bigToast(msg);
+      if(typeof robotsCheer==="function")robotsCheer();},Infinity,false,3000);
   }
   updateHud();
 }

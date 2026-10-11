@@ -238,7 +238,8 @@ function updateChips(){
        here and a crafted colour broke out of the style attribute. */
     c.innerHTML='<span class="dot" style="background:'+safeColor(r.color)+'"></span>'+
       esc(r.name)+(r.running?' <span class="live">●RUN</span>':'');
-    c.addEventListener("click",()=>{selRobot=i;selBlock=null;elseSel=null;renderProgram();renderPy();updateChips();updateHud();updateFab();updateUndoBtns();follow=true;});
+    c.addEventListener("click",()=>{selRobot=i;selBlock=null;elseSel=null;renderProgram();renderPy();updateChips();updateHud();updateFab();updateUndoBtns();follow=true;
+      if(typeof robotHello==="function")robotHello(robots[i]);});
     wrap.appendChild(c);
   });
   const add=document.createElement("button");

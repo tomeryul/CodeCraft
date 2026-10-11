@@ -754,6 +754,74 @@ def({id:'oops',dur:1600,
     P.lift=K(t,[[0,0],[.08,0],[.16,2.5,E.o2],[.26,0,E.i2],[1,0]]);
     P.crouch=1.5*on;P.headNod=.1*on;P.headTilt=.07*on;
     P.expr=t<.12?'surprised':'sad';P.bulb='error';}});
+/* a bag too full to close: the walk turns into a slog. Short, heavy steps,
+   bent under the pack, both hands on the straps */
+def({id:'heavy',dur:760,loop:true,ev:[[0,'step'],[.5,'step']],
+  pose(P,t,ms,c){walkPose(P,t,c,{amp:5,lift:2.6,bob:[2.4,3.6],lean:.24,roll:.07,arm:0,elb:0});
+    P.lP=P.rP=.42;P.lE=P.rE=2.05;P.lR=P.rR=.05;P.lX=P.rX=-.2;P.lG=P.rG=1;
+    P.headNod=.12+.05*Math.abs(Math.sin(t*TAU));P.crouch=2.2;
+    P.packScale=1.22+.04*Math.abs(Math.sin(t*TAU));P.packFull=true;P.packFill=1;
+    P.expr=(Math.floor(ms/1900)%3===2)?'tired':'grit';}});
+/* one step from the water: it tips over the edge, windmills, and just
+   catches itself. The lean toward the water is the host's: teeter(t) */
+def({id:'teeter',dur:1000,ev:[[.3,'splash'],[.55,'splash']],
+  pose(P,t,ms){
+    const w=sm(.15,.25,t)*(1-sm(.62,.75,t));
+    P.lean=K(t,[[0,0],[.18,.42,E.o2],[.62,.36],[.78,-.14,E.o3],[.92,.03],[1,0]])+.07*Math.sin(ms/62)*w;
+    P.crouch=K(t,[[0,0],[.18,3],[.62,2.5],[.78,0]]);
+    P.fRy=K(t,[[0,0],[.15,0],[.25,5],[.62,4],[.75,0]]);P.fRz=K(t,[[0,0],[.25,-3],[.7,-3],[.8,0]]);
+    P.lR=lerp(.13,1.5+1.05*Math.sin(ms/80),w);P.rR=lerp(.13,1.5+1.05*Math.sin(ms/80+PI),w);
+    P.lE=P.rE=lerp(.28,.3,w);P.lX=P.rX=lerp(-.06,.3,w);
+    P.headNod=K(t,[[0,0],[.18,.3],[.62,.25],[.78,-.12],[1,0]]);P.ant=K(t,[[0,0],[.2,.6],[.5,-.5],[.78,.35],[1,0]]);
+    P.expr=t<.12?'neutral':t<.74?'surprised':t<.95?'grit':'happy';}});
+/* a bag that will not take one more: shoved in, it pops back out, and a
+   shrug. The thing that flies out is the host's, at 'pop' */
+def({id:'stuff',dur:1100,ev:[[.52,'pop']],
+  pose(P,t){
+    P.rP=K(t,[[0,.06],[.18,-2.5],[.45,-2.6],[.52,-1.6,E.o3],[.62,.06]]);P.rE=K(t,[[0,.28],[.18,1.5],[.45,1.7],[.62,.28]]);
+    P.lP=K(t,[[0,.06],[.25,-1.4],[.45,-1.5],[.55,.06]]);P.lE=K(t,[[0,.28],[.25,1.2],[.55,.28]]);
+    P.packScale=K(t,[[0,1.1],[.3,1.1],[.46,.9],[.52,1.32,E.o3],[.7,1.16]]);P.packFull=true;P.packFill=1;
+    P.lean=K(t,[[0,0],[.3,-.12],[.46,.16],[.56,-.08],[.7,0]]);
+    P.lift=K(t,[[0,0],[.5,0],[.56,3,E.o2],[.64,0,E.i2],[1,0]]);
+    const sh=sm(.66,.74,t)*(1-sm(.9,1,t));
+    P.lR=lerp(P.lR,.62,sh);P.rR=lerp(P.rR,.62,sh);P.lE=lerp(P.lE,1.25,sh);P.rE=lerp(P.rE,1.25,sh);P.lX=P.rX=lerp(-.06,.45,sh);
+    P.expr=t<.4?'grit':t<.66?'surprised':'sad';}});
+/* nothing left in the battery for that: it tries, and sags */
+def({id:'slump',dur:1000,
+  pose(P,t,ms,c){
+    const s=E.o3(seg(t,.1,.45));
+    P.crouch=5*s;P.lean=.18*s;P.headNod=.4*s;P.energy=.05;P.screen=1-.2*s;
+    P.lP=P.rP=lerp(.06,.02,s);P.lR=P.rR=lerp(.13,.04,s);P.lE=P.rE=lerp(.28,.08,s);
+    P.ant=.75*s*(c.fs||1);P.sy=1-.04*s;P.sx=1+.03*s;
+    P.expr=t<.12?'determined':'tired';P.bulb='sleep';}});
+/* the program ran to its end: a little hop and a fist in the air */
+def({id:'done',dur:900,
+  pose(P,t,ms){
+    P.lift=K(t,[[0,0],[.12,0],[.3,6,E.o2],[.48,0,E.i2],[1,0]]);
+    P.sy=K(t,[[0,1],[.12,.92],[.24,1.06],[.48,.93],[.6,1.02],[.75,1]]);P.sx=1+(1-P.sy)*.8;
+    P.rR=K(t,[[0,.13],[.2,2.3,E.o3],[.7,2.2],[.95,.13]]);P.rE=K(t,[[0,.28],[.2,1.5],[.7,1.4],[.95,.28]]);P.rG=t>.15&&t<.85?1:0;
+    P.headTilt=.06*sm(.1,.3,t)*(1-sm(.7,.95,t));P.expr='happy';P.bulb='party';breathe(P,ms,.4);}});
+/* a level up while it works: arms up, on the move, no leap */
+def({id:'cheer',dur:1600,
+  pose(P,t,ms){
+    const on=sm(0,.12,t)*(1-sm(.82,1,t));
+    P.lR=P.rR=lerp(.13,2.3+.18*Math.sin(ms/95),on);P.lE=P.rE=lerp(.28,.35,on);P.lX=P.rX=lerp(-.06,.3,on);P.lG=P.rG=on>.5?1:0;
+    P.headTilt=-.06*on;P.expr=t<.6?'love':'happy';P.bulb='party';P.glow=on;}});
+/* left alone long enough: a stretch and a yawn */
+def({id:'yawn',dur:1800,
+  pose(P,t,ms){
+    const up=sm(.08,.35,t)*(1-sm(.62,.85,t));
+    P.lR=P.rR=lerp(.13,2.4,up);P.lE=P.rE=lerp(.28,.15,up);P.lX=P.rX=lerp(-.06,.2,up);
+    P.headTilt=-.12*up;P.lift=1.5*up;P.sy=1+.05*up;P.sx=1-.03*up;
+    const y=sm(.28,.36,t)*(1-sm(.62,.7,t));P.talk=y;
+    P.expr=y>.2?'yawn':t>.7?'tired':'neutral';breathe(P,ms,1.2,3000);}});
+/* woken with a start */
+def({id:'startle',dur:600,
+  pose(P,t){
+    P.lift=K(t,[[0,0],[.15,7,E.o2],[.4,0,E.i2],[1,0]]);
+    P.sy=K(t,[[0,.85],[.15,1.1],[.4,.9],[.55,1.03],[.7,1]]);P.sx=1+(1-P.sy)*.8;
+    P.lR=P.rR=K(t,[[0,.13],[.15,.9],[.5,.3],[.8,.13]]);P.ant=K(t,[[0,.6],[.2,-.6],[.45,.3],[.7,0]]);
+    P.expr=t<.5?'surprised':'neutral';}});
 def({id:'tired',dur:3000,loop:true,
   pose(P,t,ms,c){
     breathe(P,ms,1.5,3000);P.energy=.08;P.lean=.15;P.crouch=2.5;P.headNod=.28+.04*Math.sin(ms/1500*PI);
@@ -803,10 +871,29 @@ function boardPose(kind,t){
 
 /* how far a bump carries the robot toward what it hit, in tiles */
 function nudge(t){return t<.2?.16*E.i2(t/.2):.16*(1-E.o3(clamp((t-.2)/.3,0,1)));}
+/* how far a teeter leans it out over the water, in tiles */
+function teeter(t){return K(t,[[0,0],[.18,.2,E.o2],[.62,.18],[.8,-.03,E.o3],[1,0]]);}
+/* three little stars circling a dazed head. (x,y) is the top of the head
+   and s one rig unit, both in the caller's space */
+function stars(g,x,y,s,t,a){
+  if(a<=.01)return;
+  g.save();
+  for(let i=0;i<3;i++){
+    const ang=t/240+i*TAU/3, front=Math.sin(ang)>0;
+    const px=x+Math.cos(ang)*15*s, py=y-3*s+Math.sin(ang)*4.5*s, r=(front?3.6:2.8)*s;
+    g.globalAlpha=a*(front?1:.65);
+    g.beginPath();
+    for(let k=0;k<10;k++){const rr2=k%2?r*.45:r, q=k*PI/5-PI/2+t/300;
+      g.lineTo(px+Math.cos(q)*rr2,py+Math.sin(q)*rr2);}
+    g.closePath();g.fillStyle='#ffe27a';g.fill();
+    g.beginPath();g.arc(px,py,r*.28,0,TAU);g.fillStyle='#fff8d6';g.fill();
+  }
+  g.restore();
+}
 
 const bots=new WeakMap();
 window.CC_RIG={
-  Bot, P0, mix:mixPose, anim:A, pose, events, drawItem, drawStill, boardPose, nudge, EXP, DIRYAW,
+  Bot, P0, mix:mixPose, anim:A, pose, events, drawItem, drawStill, boardPose, nudge, teeter, stars, EXP, DIRYAW,
   /* one Bot per game robot, held beside it rather than on it, so it never
      reaches a save */
   botFor(r){let b=bots.get(r);if(!b){b=new Bot(r.color||'#ffb830',r.dir==null?2:r.dir);bots.set(r,b);}return b;}

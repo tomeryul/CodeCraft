@@ -9,6 +9,29 @@ function makeRobot(x,y,name){
     frames:null,running:false,wait:0,path:null,blocked:false,curUid:null,nextAct:0};
 }
 const bagCount=r=>r.inv.wood+r.inv.stone+r.inv.iron+r.inv.crystal+(r.inv.water||0);
+/* Something the robot lives through — a wall it walked into, a bag that
+   will not close, a sale — becomes r.anim, which render.js plays as one of
+   the rig's clips (RIG_OF there). It replaces the action's own tell, since
+   it is what that action came to. A `keep` moment (a cheer, a wave at the
+   player) is not cut short by the next action; the work carries on under it. */
+function robotMoment(r,type,o){
+  const t=typeof performance!=="undefined"?performance.now():Date.now();
+  if(r.anim&&r.anim.keep&&t<r.anim.until)return;
+  r.anim=Object.assign({type,t0:t},o||{});
+}
+// a moment that is not cut short by the next action: `ms` long
+function robotKeep(r,type,ms){
+  const t=typeof performance!=="undefined"?performance.now():Date.now();
+  robotMoment(r,type,{keep:true,until:t+ms});
+}
+/* tapped by the player: a robot with nothing to do turns and waves. One at
+   work just carries on — the ring says it is chosen */
+function robotHello(r){ if(r&&!r.running)robotKeep(r,"hello",1600); }
+/* a level up: the ones standing about jump for joy, the ones at work throw
+   their arms up and keep walking */
+function robotsCheer(){
+  for(const r of robots)robotKeep(r,r.running?"cheer":"celebrate",r.running?1600:2000);
+}
 const MAX_ENERGY=100;
 // materials: robot bag first, then the shared 🏦 Bank (stash). Returns amount taken from the bank.
 function haveMat(r,res,n){return (r.inv[res]||0)+(stash[res]||0)>=n;}
@@ -22,12 +45,12 @@ function useEnergy(r,cost){
   // 😴 tired grinds to a halt until dawn
   const night=(typeof energyMul==="function")?energyMul():1;
   const c=Math.max(1,Math.round(cost*night*(1-skills.agility.lvl*0.03))); // agility eases fatigue
-  if((r.energy||0)<c){r.blocked=true;r.tired=true;mentorFlag("tired");return false;}
+  if((r.energy||0)<c){r.blocked=true;r.tired=true;mentorFlag("tired");robotMoment(r,"slump");return false;}
   r.energy-=c;r.tired=false;return true;
 }
 // hit a resource node ahead; harvest only when its HP reaches 0 (so gathering needs repetition/loops)
 function hitNode(r,a,k,o){
-  if(bagCount(r)>=r.cap){r.blocked=true;sfxIf(r,150,.05);mentorFlag("bagFull");return;}
+  if(bagCount(r)>=r.cap){r.blocked=true;sfxIf(r,150,.05);mentorFlag("bagFull");robotMoment(r,"stuff");return;}
   if(!useEnergy(r,5))return;
   if(o.hp===undefined)o.hp=NODE_HP[o.type]||1;
   o.hp--;r.pop=1;
@@ -46,7 +69,7 @@ function hitNode(r,a,k,o){
   sfxIf(r,660,.06);checkUnlocks();
 }
 function scoopWater(r,a,k){
-  if(bagCount(r)>=r.cap){r.blocked=true;sfxIf(r,150,.05);mentorFlag("bagFull");return;}
+  if(bagCount(r)>=r.cap){r.blocked=true;sfxIf(r,150,.05);mentorFlag("bagFull");robotMoment(r,"stuff");return;}
   if(!inB(a.x,a.y)||terrain[k]!==T_WATER||(objects.get(k)&&objects.get(k).type==="bridge")){r.blocked=true;return;}
   if(!useEnergy(r,4))return;
   r.inv.water=(r.inv.water||0)+1;totals.collected++;r.pop=1;addPop(a.x,a.y,"+1 💧");burst(a.x,a.y,"sparkle");

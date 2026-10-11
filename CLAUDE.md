@@ -193,6 +193,18 @@ on a board is 340ms a step at 1×, and a swing holds it one tick more —
 only through `mgRunTick`, the timer, so ⏭ Step and every test that
 calls `mgTick` itself still get one action per call. A clip is timed to
 the tick it plays in; squeeze the tick and the clip turns into a blink.
+
+An action can turn into a MOMENT, and the moment is what plays:
+`robotMoment(r,type)` (`robot.js`) replaces `r.anim`, and `RIG_OF` in
+`render.js` maps it to a clip. A step off the map is `edge` (a bump, and
+the edge shows itself), into water `teeter`, into anything else `bump`;
+a full bag at a node is `stuff`, an empty battery `slump`, a sale
+`sell`, a program that runs out `done`. A full bag also walks home
+`HEAVY_SLOW` slower, in a heavier gait — the clock and the picture
+agree. `robotKeep` makes a moment the next action cannot cut short (a
+wave when tapped, a cheer on a level up). Left alone a robot yawns, then
+dozes, and wakes with a start. How long each takes is `WORK_ACTS`
+(ticks) and `animMs`.
 Hats, outfits, capes and shoes were drawn on the old
 34.56px body square; the rig maps that square onto the head, the torso
 and the feet (`WEAR_S`), so a new piece is still drawn on the square.

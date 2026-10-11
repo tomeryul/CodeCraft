@@ -180,7 +180,7 @@ function draw(t){
     /* the robot stands on its tile where it always has, its feet at gy,
        a little shorter than the old one: rs is one rig unit in world px,
        hy is just above the antenna (or the hat) */
-    const rs=s2/76.9, gy=cy+s2*.66, hy=gy-(r.hat?122:114)*rs;
+    const rs=s2/76.9, gy=cy+s2*.66, hy0=gy-(r.hat?122:114)*rs;
     if(i===selRobot){
       ctx.save();
       const k=Math.sin(t/250);
@@ -195,9 +195,7 @@ function draw(t){
     if(A){
       /* a tool swing stretches to fill the gap until the next sim step, so
          a faster robot swings faster; a turn is quick, a rest is long */
-      const dur=A.type==="rest"?1400:A.type==="wait"?stepMs:A.type==="move"?(r.blocked?Math.max(420,Math.min(700,stepMs*.95)):220):
-        (A.type==="turnL"||A.type==="turnR")?Math.max(220,Math.min(560,stepMs*.9)):
-        Math.max(320,Math.min(1250,stepMs*(WORK_ACTS[A.type]?WORK_TICKS:1)*.95));
+      const dur=animMs(A.type,stepMs);
       /* an action is stamped with performance.now() during the frame, and the
          frame is drawn with the time it STARTED, a moment earlier — so the
          first frame of a clip reads a little below zero. That is the clip
@@ -211,9 +209,12 @@ function draw(t){
     const P=robotPose(r,B,atype,ap,moving,t,i);
     B.update(lastDtSec*1000,P);
     B.draw(ctx,P,cx+B.st.nx,gy+B.st.ny,rs,{t,glow:false,wear:{hat:r.hat,outfit:r.outfit,shoes:r.shoes}});
-    robotFx(r,B,atype,ap);
-    // sleepy Zzz while resting
-    if(atype==="rest"){
+    /* what floats over the head — the name, a speech bubble, a badge — rides
+       up with a jump, or the jump hides behind its own name tag */
+    const hy=hy0-Math.max(0,P.lift||0)*rs;
+    robotFx(r,B,atype,ap,cx,gy,t);
+    // sleepy Zzz while resting, or dozing off with nothing to do
+    if(atype==="rest"||B.st.key==="doze"){
       ctx.font='bold 11px "Fredoka",sans-serif';ctx.textAlign="center";ctx.fillStyle="#e6ecff";
       const zp=(t/450)%1, zp2=(zp+.5)%1;
       ctx.globalAlpha=.8*(1-zp);ctx.fillText("z",cx+s2*.42,hy+10-zp*11);
@@ -239,7 +240,9 @@ function draw(t){
         ctx.fillStyle="#241b45";ctx.fillText(r.say.txt,cx,by+14);
       }
     }
-    if(r.blocked){
+    /* 💢 says "stuck" after the fact; while a bump, a teeter or a bag that
+       will not shut is still playing, the robot is already saying it */
+    if(r.blocked&&!(atype&&MOMENT_SAYS[atype])){
       const sp=sprite(r.tired?"😴":"💢",r.tired?16:14);ctx.drawImage(sp,cx+s2*.42,hy+12,sp.lw,sp.lw);
     }
     /* v5: the action badge — what the robot is doing, and what it is
@@ -354,14 +357,34 @@ function draw(t){
   }
 }
 /* What a world robot is doing this frame, as one pose of the rig
-   (robot-rig.js): the clip of the block it is running, else its walk, else
-   waiting, tired or idle. The walk is driven by distance, not the clock,
-   so the feet keep pace with the tile and a speed upgrade lengthens the
-   stride into a run. */
+   (robot-rig.js): the clip of the block it is running, or of what that
+   block came to (robotMoment: a bump, a bag that will not shut, a sale),
+   else its walk, else waiting, tired or idle. The walk is driven by
+   distance, not the clock, so the feet keep pace with the tile and a speed
+   upgrade lengthens the stride into a run; a full bag turns it into a slog
+   and an empty battery into a shuffle. */
 const RIG_OF={turnL:"turn",turnR:"turn",collect:"collect",chop:"chop",mine:"mine",scoop:"scoop",
-  drop:"drop",build:"build",rest:"rest",wait:"wait",pickUp:"lift"};
+  drop:"drop",build:"build",rest:"rest",wait:"wait",pickUp:"lift",say:"say",
+  bump:"bump",edge:"bump",teeter:"teeter",stuff:"stuff",slump:"slump",sell:"sell",
+  done:"done",oops:"oops",hello:"wave",celebrate:"celebrate",cheer:"cheer",yawn:"yawn",startle:"startle"};
+/* how long each tell plays. A swing, and what an action turns into, fills
+   the ticks it takes (WORK_ACTS); a moment that is not an action has its own */
+const MOMENT_MS={done:900,hello:1600,celebrate:2000,cheer:1600,yawn:1800,startle:600,oops:1600,say:1500};
+function animMs(type,stepMs){
+  if(MOMENT_MS[type])return MOMENT_MS[type];
+  if(type==="rest")return 1400;
+  if(type==="wait")return stepMs;
+  if(type==="move")return 220;
+  if(type==="turnL"||type==="turnR")return Math.max(220,Math.min(560,stepMs*.9));
+  return Math.max(320,Math.min(1400,stepMs*(WORK_ACTS[type]||1)*.95));
+}
+const LEGS=["fLz","fLy","fLp","fRz","fRy","fRp","bob","gp"];
+const MOMENT_SAYS={bump:1,edge:1,teeter:1,stuff:1,slump:1};
+/* left alone this long, it yawns; this long, it dozes off */
+const YAWN_MS=25000, DOZE_MS=45000;
+const wrapAng=a=>Math.atan2(Math.sin(a),Math.cos(a));
 function robotPose(r,B,atype,ap,moving,t,i){
-  const S=B.st||(B.st={gp:(i*.37)%1,runk:0,wb:0,px:r.rx,py:r.ry,anim:null,ap:0});
+  const S=B.st||(B.st={gp:(i*.37)%1,runk:0,wb:0,px:r.rx,py:r.ry,anim:null,ap:0,idle0:null});
   const dt=lastDtSec, c={fs:DX[r.dir]||0,dir:r.dir,turn:atype==="turnR"?-1:1};
   const spd=Math.hypot(r.rx-S.px,r.ry-S.py);S.px=r.rx;S.py=r.ry;S.nx=S.ny=0;
   const tps=spd/Math.max(.0001,dt);
@@ -371,26 +394,58 @@ function robotPose(r,B,atype,ap,moving,t,i){
      not stop for that */
   if(moving)S.mt=t;
   S.wb+=((t-(S.mt==null?-1e9:S.mt)<160?1:0)-S.wb)*Math.min(1,dt*8);
+  const n=typeof bagCount==="function"?bagCount(r):0, cap=r.cap||1, heavy=n>0&&n>=cap;
+  const en=r.energy==null?100:r.energy;
   const ms=t+i*700, clip=atype==="move"&&r.blocked?"bump":atype&&RIG_OF[atype];
+  const walkP=()=>{
+    let w;
+    if(heavy)w=CC_RIG.pose("heavy",0,S.gp*760,c);
+    else{
+      w=CC_RIG.pose("walk",0,S.gp*620,c);
+      if(S.runk>.02)w=CC_RIG.mix(w,CC_RIG.pose("run",0,S.gp*420,c),S.runk);
+      // nearly out of battery: the head hangs and the arms barely swing
+      if(en<20){w.headNod+=.24;w.lean+=.08;w.lP*=.35;w.rP*=.35;w.lE*=.5;w.rE*=.5;w.ant=.55*(c.fs||1);w.expr="tired";}
+    }
+    return w;
+  };
+  /* Left alone — not running, not walking, nothing to do — it yawns, and
+     later dozes off. Anything that happens wakes it, with a start. */
+  const still=!r.running&&S.wb<=.02&&!r.tired&&!(r.wait>0)&&(!clip||clip==="yawn");
+  if(!still){
+    if(S.dozing&&!(r.anim&&r.anim.keep))robotMoment(r,"startle",{keep:true,until:performance.now()+600});
+    S.idle0=null;S.yawned=false;S.dozing=false;
+  }else if(S.idle0==null)S.idle0=t;
+  else if(!S.yawned&&t-S.idle0>YAWN_MS){S.yawned=true;robotMoment(r,"yawn");}
   let P,key;
-  if(clip){P=CC_RIG.pose(clip,ap,t-r.anim.t0,c);key=clip;
-    if(clip==="bump"){const n=CC_RIG.nudge(ap)*TILE;S.nx=DX[r.dir]*n;S.ny=DY[r.dir]*n;}}
+  if(clip){
+    P=CC_RIG.pose(clip,ap,t-r.anim.t0,c);key=clip;
+    // a moment that outlasts the step: the legs go on walking under it
+    if(r.anim.keep&&S.wb>.02){const w=walkP();for(const k of LEGS)P[k]=w[k];P.lift=0;P.moving=true;}
+    if(clip==="bump"){const k=CC_RIG.nudge(ap)*TILE;S.nx=DX[r.dir]*k;S.ny=DY[r.dir]*k;}
+    if(clip==="teeter"){const k=CC_RIG.teeter(ap)*TILE;S.nx=DX[r.dir]*k;S.ny=DY[r.dir]*k;}
+    // a wave is for the player: it turns to face them, and back
+    if(atype==="hello")P.yawAdd+=wrapAng(-B.yaw)*Math.min(1,ap/.12)*Math.min(1,(1-ap)/.15);
+  }
   else if(S.wb>.02){
-    let w=CC_RIG.pose("walk",0,S.gp*620,c);
-    if(S.runk>.02)w=CC_RIG.mix(w,CC_RIG.pose("run",0,S.gp*420,c),S.runk);
-    P=S.wb<.98?CC_RIG.mix(CC_RIG.pose("idle",0,ms,c),w,S.wb):w;key="walk";
+    const w=walkP();
+    P=S.wb<.98?CC_RIG.mix(CC_RIG.pose("idle",0,ms,c),w,S.wb):w;key=heavy?"heavy":"walk";
   }
   else if(r.wait>0){P=CC_RIG.pose("wait",0,ms,c);key="wait";}
   else if(r.tired){P=CC_RIG.pose("tired",0,ms,c);key="tired";}
-  else{P=CC_RIG.pose("idle",0,ms,c);key="idle";}
+  else if(still&&t-S.idle0>DOZE_MS){P=CC_RIG.pose("rest",0,ms,c);P.charge=false;key="doze";S.dozing=true;}
+  else{
+    P=CC_RIG.pose("idle",0,ms,c);key="idle";
+    // standing under a full bag: bent a little, hands on the straps
+    if(heavy){P.lean+=.07;P.crouch+=1.4;P.lP=P.rP=.42;P.lE=P.rE=2.05;P.lR=P.rR=.05;P.lX=P.rX=-.2;P.lG=P.rG=1;}
+  }
+  S.key=key;
   /* the bulb is the program: green while it runs, gold while it waits,
      red when the robot is stuck */
-  if(key==="idle"||key==="walk"||key==="wait")P.bulb=r.running?"run":"idle";
-  if(r.blocked)P.bulb="error";
-  P.energy=(r.energy==null?100:r.energy)/100;
-  const n=typeof bagCount==="function"?bagCount(r):0, cap=r.cap||1;
+  if(key==="idle"||key==="walk"||key==="heavy"||key==="wait")P.bulb=r.running?"run":"idle";
+  if(r.blocked&&key!=="done")P.bulb="error";
+  P.energy=en/100;
   P.packFill=Math.min(1,n/cap);
-  if(n>0&&n>=cap){P.packFull=true;P.packScale=1.16;}
+  if(heavy){P.packFull=true;P.packScale=Math.max(P.packScale,1.16);}
   if(r.say&&now<r.say.until){P.expr="talk";P.talk=r.say.until-now>900?1:0;}
   // the pop a sale gives
   r.pop=Math.max(0,(r.pop||0)-dt*3);
@@ -398,25 +453,76 @@ function robotPose(r,B,atype,ap,moving,t,i){
   return B.blend(P,key,dt*1000);
 }
 /* the moments a clip crosses become a few of the world's own particles,
-   thrown from where the tool or the hand actually is */
-function robotFx(r,B,atype,ap){
+   thrown from where the tool or the hand actually is; a bump leaves stars
+   circling the head, the edge of the world shows itself, a heavy slog
+   sweats */
+const RES_COL={wood:"#c98a4b",stone:"#9aa3b8",iron:"#7f8aa0",crystal:"#7cf1ff",water:"#6fd3ff"};
+function robotFx(r,B,atype,ap,cx,gy,t){
   const S=B.st, clip=atype&&RIG_OF[atype];
-  if(r.anim!==S.anim){S.anim=r.anim;S.ap=0;}
-  const evs=clip?CC_RIG.events(clip,S.ap,ap):[];
-  S.ap=ap;
-  const a=B.anchors;if(!evs.length||!a.valid)return;
-  const spray=(p,cols,n,sp)=>{if(!p)return;
-    for(let k=0;k<n;k++)parts.push({x:p.x,y:p.y,vx:(Math.random()-.5)*sp*2,vy:-20-Math.random()*sp,g:380,
+  const spray=(p,cols,n,sp,up)=>{if(!p)return;
+    for(let k=0;k<n;k++)parts.push({x:p.x,y:p.y,vx:(Math.random()-.5)*sp*2,vy:-(up||20)-Math.random()*sp,g:380,
       s:1.3+Math.random()*1.5,c:cols[k%cols.length],t:0,life:.4+Math.random()*.3});
     if(parts.length>280)parts.splice(0,parts.length-280);};
+  // where it touched what it walked into
+  const hit={x:cx+DX[r.dir]*TILE*.45,y:gy-6+DY[r.dir]*TILE*.3};
+  if(r.anim!==S.anim){
+    S.anim=r.anim;S.ap=0;
+    const ty=r.anim&&r.anim.type;
+    if(ty==="bump"||ty==="edge"){S.starT=t;spray(hit,["#e8e2d0","#d8d2c0","#fff"],5,45,30);}
+    if(ty==="edge")S.edge={x:r.x,y:r.y,dir:r.dir,t0:t};
+  }
+  const evs=clip?CC_RIG.events(clip,S.ap,ap):[];
+  S.ap=ap;
+  const a=B.anchors;
+  // dazed: three stars round the head for a second or so
+  if(S.starT!=null&&t-S.starT<1300&&a.valid&&a.hat)
+    CC_RIG.stars(ctx,a.hat.x,a.hat.y,(TILE*.72)/76.9,t,Math.min(1,(1300-(t-S.starT))/350));
+  // the edge of the world, seen for the moment it is touched
+  if(S.edge&&t-S.edge.t0<1100)worldEdge(S.edge,1-(t-S.edge.t0)/1100,t);
+  // a slog under a full bag: a drop of sweat now and then
+  if(S.key==="heavy"&&a.valid&&a.headC&&t-(S.sweatT||0)>700){
+    S.sweatT=t;const sd=Math.random()<.5?-1:1;
+    parts.push({x:a.headC.x+sd*TILE*.22,y:a.headC.y-TILE*.08,vx:sd*28,vy:-46,g:420,s:2,c:"#a8ecff",t:0,life:.55});
+  }
+  if(!evs.length||!a.valid)return;
   const tp=a.tool||a.handR;
   for(const k of evs){
     if(k==="hit"&&clip==="chop")spray(tp,["#c98a4b","#ecc08b","#8a5a2c"],5,90);
     else if(k==="hit"&&clip==="mine")spray(tp,["#ffe27a","#ffffff","#9aa3b8","#c3cad9"],7,130);
     else if(k==="hit"||k==="tap")spray(tp,["#e4dcbe","#cfc3a0"],k==="hit"?4:2,50);
+    else if(k==="splash"&&clip==="teeter")spray({x:hit.x+DX[r.dir]*TILE*.2,y:hit.y+6},["#6fd3ff","#bff0ff","#ffffff"],6,70,60);
     else if(k==="splash")spray(tp,["#6fd3ff","#bff0ff"],6,80);
     else if(k==="toss")spray(a.packTop||tp,["#fff6c9","#ffe27a"],3,40);
+    else if(k==="pop"){
+      // the one thing too many flies back out of the bag
+      const most=Object.keys(r.inv||{}).sort((p,q)=>(r.inv[q]||0)-(r.inv[p]||0))[0];
+      const col=RES_COL[most]||"#ffe27a", p=a.packTop||a.chest;
+      if(p)parts.push({x:p.x,y:p.y,vx:-DX[r.dir]*30+(Math.random()-.5)*50,vy:-170,g:520,s:4.2,c:col,t:0,life:.75});
+      spray(p,[col,"#ffffff"],3,40,60);
+    }
   }
+}
+/* The map has an edge, and a robot that reaches it walks into nothing.
+   For the moment it does, the edge shows itself: a soft wall of light
+   along the tile side it bonked. */
+function worldEdge(e,a,t){
+  const x0=(e.x+(e.dir===1?1:0))*TILE, y0=(e.y+(e.dir===2?1:0))*TILE;
+  const along=(e.dir===1||e.dir===3), L=TILE*2.6, depth=TILE*.42;
+  const sx=along?x0:(e.x+.5)*TILE-L/2, sy=along?(e.y+.5)*TILE-L/2:y0;
+  ctx.save();
+  ctx.globalAlpha=Math.max(0,a);
+  // the glow falls off into the world, away from the edge
+  const inward=e.dir===1||e.dir===2?-1:1;
+  const g=along?ctx.createLinearGradient(x0,0,x0+inward*depth,0):ctx.createLinearGradient(0,y0,0,y0+inward*depth);
+  g.addColorStop(0,"rgba(170,225,255,.55)");g.addColorStop(1,"rgba(170,225,255,0)");
+  ctx.fillStyle=g;
+  if(along)ctx.fillRect(inward<0?x0-depth:x0,sy,depth,L);else ctx.fillRect(sx,inward<0?y0-depth:y0,L,depth);
+  ctx.strokeStyle="rgba(225,245,255,.9)";ctx.lineWidth=2.5;ctx.lineCap="round";
+  ctx.setLineDash([7,6]);ctx.lineDashOffset=-t/40;
+  ctx.beginPath();
+  if(along){ctx.moveTo(x0,sy+8);ctx.lineTo(x0,sy+L-8);}else{ctx.moveTo(sx+8,y0);ctx.lineTo(sx+L-8,y0);}
+  ctx.stroke();ctx.setLineDash([]);
+  ctx.restore();
 }
 function rr(c,x,y,w2,h2,r2){
   c.beginPath();

@@ -86,7 +86,8 @@ function handleTap(sx,sy){
     return;
   }
   const ri=robots.findIndex(r=>Math.round(r.rx)===tx&&Math.round(r.ry)===ty);
-  if(ri>=0){selRobot=ri;selBlock=null;elseSel=null;follow=true;updateChips();updateHud();updateFab();renderProgram();renderPy();toast("🤖 Selected "+robots[ri].name);sfx(500,.05);return;}
+  if(ri>=0){selRobot=ri;selBlock=null;elseSel=null;follow=true;updateChips();updateHud();updateFab();renderProgram();renderPy();toast("🤖 Selected "+robots[ri].name);sfx(500,.05);
+    if(typeof robotHello==="function")robotHello(robots[ri]);return;}
   const o=objects.get(key(tx,ty));
   if(o&&PLAYER_BUILT[o.type]){openObjMenu(key(tx,ty),o,sx,sy);return;}
   const names={tree:"🌳 Tree — chop it for wood!",rock:"🪨 Rock — mine it for stone!",iron:"⛓️ Iron ore — mine it, worth 6🪙!",crystal:"💎 Crystal — mine it, worth 15🪙!",home:"🏠 Home base",market:"🏪 Market — sell resources here!",flower:"🌼 Just a pretty flower",item:"📦 Dropped items — a robot can collect these!",gift:"🎁 Treasure! Send a robot to collect it!",decor:"🔨 Your creation — tap 🔨 Build to move or remove it."};
