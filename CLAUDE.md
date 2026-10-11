@@ -86,6 +86,16 @@ difference (`resize()`), so the top edge never jumps at release.
 **Out the way it came in.** A surface that arrives from the bottom
 leaves to the bottom, and a menu grows from the control that opened it.
 
+**Between pages the panel does not move.** Every destination is a
+sheet of its own, so menu → page used to be two sheets crossing — the
+old one sinking (it read as shrinking) while the new one rose. `swap()`
+in `js/game/nav.js` watches the sheets: when one closes and another
+opens in the SAME task, the new one takes the old one's place with no
+slide, the old one fades out above it, and the contents step in from
+the side (right going deeper, left coming Back). So close-then-open
+must be synchronous — a `setTimeout` between them brings the crossing
+back. Only arriving from the world and leaving to it still slide.
+
 **Answer the three accessibility settings.** `prefers-reduced-motion`,
 `prefers-reduced-transparency` and `prefers-contrast` are all handled in
 `css/apple.css`. New animation inherits that for free; a new translucent

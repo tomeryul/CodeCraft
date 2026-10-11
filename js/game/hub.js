@@ -216,6 +216,11 @@ function hubPage(key,pointSel,restore){
   if(t)t.textContent=p.em+" "+p.title;
   if(s)s.textContent=p.sub;
   $("projects").classList.add("open");
+  /* this page is now where the journey is. Its cards close it before they
+     open their level, so without this the level found nothing open and
+     fell back to the menu's hint: Back from an Academy lesson went to the
+     menu instead of the Academy. */
+  window.mgOriginHint="projects";
   $("projList").scrollTop=restore?(hubScroll[key]||0):0;
   if(pointSel)setTimeout(()=>{
     const c=document.querySelector(pointSel); if(!c)return;
@@ -251,10 +256,8 @@ function accountRows(){
 /* ---------------- rewire ---------------- */
 $("hubBtn").addEventListener("click",hubOpen);
 $("hubClose").addEventListener("click",hubClose);
-$("projBack").addEventListener("click",()=>{
-  $("projects").classList.remove("open");
-  setTimeout(hubOpen,120);
-});
+/* #projBack is nav.js's: navBack, which puts the menu in the page's place
+   in the same task (a second handler here reopened it 120ms later) */
 
 /* The Journey pointed at "Projects ▸ Tower Mode" and scrolled the giant
    list to find a card. Each step now names a page and goes straight to

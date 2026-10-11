@@ -312,6 +312,49 @@ async function toWorld(pg){
   ck('Back from a challenge opened in Projects returns to Projects',
      origin.fromProjects==='projects', origin);
 
+  // ------------------------------------------------ one page that changes
+  /* Menu → page used to be two sheets crossing: the menu sinking off the
+     bottom while the page rose behind it, the old one seeming to shrink.
+     Now the page takes the menu's place: by the next frame it stands where
+     it will rest, the menu held where it was above it, fading. */
+  const SW = await pg.evaluate(async () => {
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    const raf=()=>new Promise(r=>requestAnimationFrame(()=>r()));
+    navHome(); await wait(400); hubOpen(); await wait(500);
+    const restTop=$('hub').getBoundingClientRect().top;
+    hubPage('academy'); await raf(); await raf();
+    const pTop=$('projects').getBoundingClientRect().top;
+    const hubTop=$('hub').getBoundingClientRect().top;
+    const hubOver=parseInt(getComputedStyle($('hub')).zIndex,10)>parseInt(getComputedStyle($('projects')).zIndex,10);
+    await wait(600);
+    const clean=['hub','projects','scrim'].every(id=>!$(id).getAttribute('style'));
+    const hubGone=$('hub').getBoundingClientRect().top>=innerHeight-1;
+    navBack(); await raf(); await raf();
+    const backTop=$('hub').getBoundingClientRect().top, pBack=$('projects').getBoundingClientRect().top;
+    await wait(600);
+    // a lesson from the Academy page, and Back: to the Academy page, not the menu
+    hubPage('academy'); await wait(500);
+    const card=[...document.querySelectorAll('#projList .pcard')].find(e=>e.offsetParent&&/First Steps/.test(e.textContent));
+    if(card)card.click(); await wait(700);
+    navBack(); await wait(700);
+    const backTo=['hub','projects'].filter(id=>$(id).classList.contains('open')).join()+':'+$('projects').dataset.page;
+    // out to the world: it still sinks the way it came
+    navHome(); await wait(120);    // a CSS transition starts a frame or two late
+    const sinkTop=$('projects').getBoundingClientRect().top;
+    await wait(500);
+    return {restTop,pTop,hubTop,hubOver,clean,hubGone,backTop,pBack,backTo,sinkTop,card:!!card};
+  });
+  ck('a page opened from the menu takes its place instead of rising past it',
+     Math.abs(SW.pTop-SW.restTop)<=1 && Math.abs(SW.hubTop-SW.restTop)<=1 && SW.hubOver, SW);
+  ck('...and the swap leaves no inline style and no half-shown sheet behind',
+     SW.clean && SW.hubGone, SW);
+  ck('Back puts the menu in the page\'s place the same way',
+     Math.abs(SW.backTop-SW.restTop)<=1 && Math.abs(SW.pBack-SW.restTop)<=1, SW);
+  ck('Back from an Academy lesson returns to the Academy page, not the menu',
+     SW.card && SW.backTo==='projects:academy', SW);
+  ck('going out to the world still sinks the page the way it came',
+     SW.sinkTop>SW.restTop+1, SW);
+
   // ------------------------------------------------ every header is built the same
   const heads = await pg.evaluate(()=>{
     const S=["mentor","quests","projects","guide","funcLib","orders","style","maker","report","settings"];
