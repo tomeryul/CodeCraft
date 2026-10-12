@@ -209,13 +209,13 @@ function robot(g,P,r,t){
     const B=L.B, sy=B.yaw, sh=B.hyaw;
     const scr=a=>{const q=P(x+Math.sin(a),y+Math.cos(a),z);return Math.atan2(q.x-foot.x,q.y-foot.y);};
     B.yaw=scr(sy);B.hyaw=B.yaw+(sh-sy);
-    B.draw(g,L.P,foot.x,foot.y,tile*.72/76.9,{t});
+    B.draw(g,L.P,foot.x,foot.y,tile*window.CC_RIG.UNIT,{t});
     B.yaw=sy;B.hyaw=sh;
     return;
   }
   if(typeof window!=="undefined"&&window.CC_RIG){
     const RP=window.CC_RIG.pose("idle",0,t,{fs:0});
-    window.CC_RIG.drawStill(g,foot.x,foot.y,tile*.72/76.9,Math.atan2(dx,dy),r.color||BOT,RP,{t});
+    window.CC_RIG.drawStill(g,foot.x,foot.y,tile*window.CC_RIG.UNIT,Math.atan2(dx,dy),r.color||BOT,RP,{t});
     return;
   }
   const S=36, k=tile*0.72/S;                 // authored at S=36, scaled to the tile

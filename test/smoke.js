@@ -485,6 +485,19 @@ async function ev(expr) {
   check("a level up cheers, and the next action does not cut it short",
     MOM.cheer === 'cheer' && MOM.kept === 'cheer', MOM);
   check("every moment is a clip the rig has, with a length", MOM.missing.length === 0 && MOM.timed === true, MOM);
+  /* It stands where the trees and rocks stand on their tiles — feet in the
+     lower part of its own tile, not on the line to the next one. */
+  const FEET = JSON.parse(await ev(`(async()=>{
+    const r=R(); stopRobot(r); r.anim=null; r.x=30;r.y=30;r.rx=30;r.ry=30;
+    cam.x=30.5*TILE; cam.y=30.5*TILE; follow=false;
+    document.querySelectorAll('.sheet.open').forEach(e=>e.classList.remove('open'));
+    document.querySelectorAll('#ccCele').forEach(e=>e.remove());
+    for(let k=0;k<12;k++)await new Promise(f=>requestAnimationFrame(f));   // the world is drawn again
+    const g=CC_RIG.botFor(r).anchors.ground;
+    return JSON.stringify({foot:CC_RIG.FOOT,y:g&&(g.y/TILE-30),x:g&&(g.x/TILE-30)});
+  })()`));
+  check("the robot's feet stand inside its own tile, low, like a tree's",
+    FEET.y > .6 && FEET.y < .9 && Math.abs(FEET.x - .5) < .05, FEET);
 
   console.log("▶ scoop water");
   const water = await ev(`(()=>{

@@ -2693,8 +2693,9 @@ function mgLookPos(r){
    Answers false when there is no rig, and the caller draws the token. */
 function mgLookDraw(g,cell,T,wear,CW){
   const L=mgLookStep(T);if(!L)return false;
-  const rb=L.rb, s2=cell*.72, rs=s2/76.9;
-  const cx=(L.x+L.nx+.5)*cell, gy=(L.y+L.ny+.5)*cell+s2*.66;
+  // where the world robot stands on its tile, and its size there (CC_RIG.FOOT, UNIT)
+  const rb=L.rb, rs=cell*CC_RIG.UNIT;
+  const cx=(L.x+L.nx+.5)*cell, gy=(L.y+L.ny+.5)*cell+cell*CC_RIG.FOOT;
   L.B.draw(g,L.P,cx,gy,rs,{t:T,glow:false,wear:wear||{}});
   // dazed for a second after a bump
   const an=L.B.anchors;

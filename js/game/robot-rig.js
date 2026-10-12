@@ -869,6 +869,13 @@ function boardPose(kind,t){
   return pose('idle',0,t,{fs:0});
 }
 
+/* Where a robot stands on a tile, and how big it is there — the same for
+   every host that puts one on a grid (the world and a board; the Tower
+   stands it on the projected centre of its cell, which is the same spot in
+   3D). Its feet are FOOT of a tile below the tile's centre, where the
+   trees and rocks stand on theirs: on the tile's bottom edge it read as
+   standing on the line between two. UNIT is one rig unit, in tiles. */
+const FOOT=.28, UNIT=.72/82.5;
 /* how far a bump carries the robot toward what it hit, in tiles */
 function nudge(t){return t<.2?.16*E.i2(t/.2):.16*(1-E.o3(clamp((t-.2)/.3,0,1)));}
 /* how far a teeter leans it out over the water, in tiles */
@@ -893,7 +900,7 @@ function stars(g,x,y,s,t,a){
 
 const bots=new WeakMap();
 window.CC_RIG={
-  Bot, P0, mix:mixPose, anim:A, pose, events, drawItem, drawStill, boardPose, nudge, teeter, stars, EXP, DIRYAW,
+  Bot, P0, mix:mixPose, anim:A, pose, events, drawItem, drawStill, boardPose, nudge, teeter, stars, FOOT, UNIT, EXP, DIRYAW,
   /* one Bot per game robot, held beside it rather than on it, so it never
      reaches a save */
   botFor(r){let b=bots.get(r);if(!b){b=new Bot(r.color||'#ffb830',r.dir==null?2:r.dir);bots.set(r,b);}return b;}

@@ -85,7 +85,20 @@ function handleTap(sx,sy){
     toast(movingObj.o.type==="bridge"?"🌉 Bridges go on water.":"🚫 Pick an empty spot on land.");
     return;
   }
-  const ri=robots.findIndex(r=>Math.round(r.rx)===tx&&Math.round(r.ry)===ty);
+  /* a robot is picked by its body, not only by its tile: it stands low on
+     its tile and its head reaches into the one above (CC_RIG.FOOT) */
+  const ri=(()=>{
+    const U=window.CC_RIG?TILE*CC_RIG.UNIT:0, F=window.CC_RIG?TILE*CC_RIG.FOOT:0;
+    let best=-1,bd=1e9;
+    robots.forEach((r,i)=>{
+      const cx=(r.rx+.5)*TILE, gy=(r.ry+.5)*TILE+F;
+      const inBody=U&&Math.abs(wx-cx)<TILE*.42&&wy<gy+TILE*.12&&wy>gy-112*U;
+      if(!inBody&&!(Math.round(r.rx)===tx&&Math.round(r.ry)===ty))return;
+      const d=Math.abs(wx-cx)+Math.abs(wy-(gy-50*U));
+      if(d<bd){bd=d;best=i;}
+    });
+    return best;
+  })();
   if(ri>=0){selRobot=ri;selBlock=null;elseSel=null;follow=true;updateChips();updateHud();updateFab();renderProgram();renderPy();toast("🤖 Selected "+robots[ri].name);sfx(500,.05);
     if(typeof robotHello==="function")robotHello(robots[ri]);return;}
   const o=objects.get(key(tx,ty));

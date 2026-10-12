@@ -205,6 +205,11 @@ agree. `robotKeep` makes a moment the next action cannot cut short (a
 wave when tapped, a cheer on a level up). Left alone a robot yawns, then
 dozes, and wakes with a start. How long each takes is `WORK_ACTS`
 (ticks) and `animMs`.
+Where it stands is `CC_RIG.FOOT` (its feet that far below the tile's
+centre, on the line the trees and rocks stand on — on the bottom edge it
+read as standing between two tiles) and how big is `CC_RIG.UNIT`; the
+world, a board and the Tower all read those two, and a tap finds a robot
+by its body, since its head reaches into the tile above.
 Hats, outfits, capes and shoes were drawn on the old
 34.56px body square; the rig maps that square onto the head, the torso
 and the feet (`WEAR_S`), so a new piece is still drawn on the square.

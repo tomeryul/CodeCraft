@@ -171,20 +171,22 @@ function draw(t){
     ctx.drawImage(sp,(a.rx+.5)*TILE-sp.lw/2,(a.ry+.5)*TILE-sp.lw/2-Math.abs(Math.sin(t/300+a.x))*3,sp.lw,sp.lw);
   }
   // robots
-  robots.forEach((r,i)=>{
+  /* nearer the camera (further down the map) is drawn later, so in front;
+     the index stays the robot's own (selection, the stagger of their idles) */
+  robots.map((r,i)=>[r,i]).sort((a,b)=>a[0].ry-b[0].ry).forEach(([r,i])=>{
     /* a step is walked at an even pace that fills the tick, so a run of
        steps is one unbroken walk rather than a dart and a wait */
     const stepMs=robotStepMs(r), v=lastDtSec*1000/(stepMs*.96);
     r.rx=glide(r.rx,r.x,v);r.ry=glide(r.ry,r.y,v);
     const cx=(r.rx+.5)*TILE, cy=(r.ry+.5)*TILE, s2=TILE*.72;
-    /* the robot stands on its tile where it always has, its feet at gy,
-       a little shorter than the old one: rs is one rig unit in world px,
-       hy is just above the antenna (or the hat) */
-    const rs=s2/76.9, gy=cy+s2*.66, hy0=gy-(r.hat?122:114)*rs;
+    /* the robot stands where the trees and rocks stand on their tiles, its
+       feet at gy (CC_RIG.FOOT): rs is one rig unit in world px, hy is just
+       above the antenna (or the hat) */
+    const rs=TILE*CC_RIG.UNIT, gy=cy+TILE*CC_RIG.FOOT, hy0=gy-(r.hat?122:114)*rs;
     if(i===selRobot){
       ctx.save();
       const k=Math.sin(t/250);
-      ctx.beginPath();ctx.ellipse(cx,gy,TILE*.46+k*1.5,TILE*.2+k*.6,0,0,7);
+      ctx.beginPath();ctx.ellipse(cx,gy,TILE*.4+k*1.5,TILE*.16+k*.6,0,0,7);
       ctx.strokeStyle="rgba(255,214,107,.9)";ctx.lineWidth=3;
       ctx.setLineDash([10,7]);ctx.lineDashOffset=-t/30;ctx.stroke();ctx.setLineDash([]);
       ctx.restore();
@@ -476,7 +478,7 @@ function robotFx(r,B,atype,ap,cx,gy,t){
   const a=B.anchors;
   // dazed: three stars round the head for a second or so
   if(S.starT!=null&&t-S.starT<1300&&a.valid&&a.hat)
-    CC_RIG.stars(ctx,a.hat.x,a.hat.y,(TILE*.72)/76.9,t,Math.min(1,(1300-(t-S.starT))/350));
+    CC_RIG.stars(ctx,a.hat.x,a.hat.y,TILE*CC_RIG.UNIT,t,Math.min(1,(1300-(t-S.starT))/350));
   // the edge of the world, seen for the moment it is touched
   if(S.edge&&t-S.edge.t0<1100)worldEdge(S.edge,1-(t-S.edge.t0)/1100,t);
   // a slog under a full bag: a drop of sweat now and then
