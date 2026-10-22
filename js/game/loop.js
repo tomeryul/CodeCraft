@@ -65,7 +65,10 @@ function loop(t){
 /* Looked at ten times a second, not on every frame, and never trusted
    while a sheet is moving: a sheet being dragged or springing shows the
    world again from its first pixel, so it is drawn again at once. A press
-   anywhere may be the start of that, so it draws for a moment regardless. */
+   where a drag can start — a sheet's header, the edge a Back swipe comes
+   from — may be the start of that, so it draws for a moment regardless.
+   Not a press anywhere: a tap on a menu tile used to buy half a second of
+   world drawn under an opaque page, in the frames of its own transition. */
 let worldCovered=false, coverChk=0;
 function worldHidden(){
   if(document.getElementById("ccCele"))return true;
@@ -77,7 +80,10 @@ function worldHidden(){
   }
   return false;
 }
-addEventListener("pointerdown",()=>{worldCovered=false;coverChk=30;},true);
+addEventListener("pointerdown",e=>{
+  const t=e.target, head=t&&t.closest&&t.closest(".m-head,.v5-head,.ed-head");
+  if(head||e.clientX<28){worldCovered=false;coverChk=30;}
+},true);
 function updateExecHighlight(){
   if(!$("editor").classList.contains("open"))return;
   const r=R();

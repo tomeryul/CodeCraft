@@ -474,7 +474,7 @@ window.mgSuccess=function(){
 const _renderProjects=window.renderProjects;
 window.renderProjects=function(){
   _renderProjects();
-  const el=$("projList"); if(!el)return;
+  const el=$("projList"); if(!el||(window.projWants&&!projWants("cyber")))return;
   const done=LEVELS.filter(l=>player.projects[l.id]).length;
   /* the next level to play glows, as it does on every other list of levels */
   hotId=(LEVELS.find(l=>!player.projects[l.id]&&unlocked(l))||{}).id;

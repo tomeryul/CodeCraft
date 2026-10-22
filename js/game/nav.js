@@ -140,6 +140,11 @@ function swap(A,B){
      later, so the two pages are never read on top of each other */
   const MOVE=calm?160:(parseFloat(css.getPropertyValue("--dur-move"))||.28)*1000, FADE=calm?120:110, LAG=calm?40:50, STEP=24;
   const L={anims:[],undo:[],after:[]}; live=L;
+  /* a page taking another's place does not make its entrance again: the
+     menu's tiles do not re-stagger in on the way Back (apple.css §9). It
+     stays on until the page closes — taken off sooner, the entrance would
+     start then, late */
+  B.classList.add("swap-in");
   // set an inline !important value for the swap, and put it back after
   const put=(el,p,v,late)=>{
     const o=el.style.getPropertyValue(p), pr=el.style.getPropertyPriority(p);
@@ -189,6 +194,7 @@ function watchSwaps(){
       if(was&&!is)gone.push(el); else if(!was&&is)came.push(el);
     }
     const back=swapBack; swapBack=false;
+    for(const el of gone)el.classList.remove("swap-in");
     if(came.length!==1||!gone.length)return;
     // two pages closing for one (rare): the one on top is the one being replaced
     const A=gone.sort((p,q)=>(parseInt(getComputedStyle(q).zIndex,10)||0)-(parseInt(getComputedStyle(p).zIndex,10)||0))[0];

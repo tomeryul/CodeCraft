@@ -96,6 +96,22 @@ the side (right going deeper, left coming Back). So close-then-open
 must be synchronous — a `setTimeout` between them brings the crossing
 back. Only arriving from the world and leaving to it still slide.
 
+**A tap on a page costs one page.** "Pressing a button feels stuck" was
+five costs stacked on every tap, and each has a guard in `test/perf.js`:
+the splash, once hidden, kept animating full-screen forever (it is
+`visibility:hidden` now, its animations paused); a page built all seven
+bands of the list to show one (`hubPage` sets `window.projWant` for its
+own render, so a tap builds one band and Community is fetched only on its
+own page; any other render builds them all and the open page filters
+them); Back rebuilt and re-staggered an unchanged menu (`hubSig`; a page
+that arrives by `swap()` carries `.swap-in`, which skips entrances); any
+press drew the world for half a second (only a press where a drag can
+start does); and rows measured one by one, each read forcing a layout
+after the last row's write (`fadeSoon` batches them). iOS shows
+`:active` only with a `touchstart` listener above the element —
+`input.js` registers a passive one; take it away and every press goes
+silent on an iPhone.
+
 **Answer the three accessibility settings.** `prefers-reduced-motion`,
 `prefers-reduced-transparency` and `prefers-contrast` are all handled in
 `css/apple.css`. New animation inherits that for free; a new translucent

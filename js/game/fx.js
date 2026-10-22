@@ -159,21 +159,39 @@ else heldWatch();
    exactly at the edge of a 320px phone looked like all there was. */
 function edgeFade(el,axis){
   if(!el||el._fade)return;
-  /* and the top edge too, once something has scrolled up under the header:
-     text cut hard against the header's line reads as glued to it */
-  /* only content counts as "more": what is left to scroll inside the
-     scroller's own end padding is empty space, and fading over it dimmed a
-     last line that was fully on screen */
-  const pad=side=>parseFloat(getComputedStyle(el)["padding"+side])||0;
-  const f=el._fade=axis==="x"
-    ?()=>{ el.classList.toggle("fade-r",el.scrollWidth-el.clientWidth-el.scrollLeft-pad("Right")>4);
-           el.classList.toggle("fade-l",el.scrollLeft>4); }
-    :()=>{ el.classList.toggle("fade-b",el.scrollHeight-el.clientHeight-el.scrollTop-pad("Bottom")>4);
-           el.classList.toggle("fade-t",el.scrollTop>4); };
+  el._fadeAxis=axis;
+  const f=el._fade=()=>fadeApply(el,fadeMeasure(el));
   el.addEventListener("scroll",f,{passive:true});
-  try{new ResizeObserver(f).observe(el);}catch(_){}
-  new MutationObserver(()=>requestAnimationFrame(f)).observe(el,{childList:true,subtree:true,characterData:true});
-  f();
+  try{new ResizeObserver(()=>fadeSoon(el)).observe(el);}catch(_){}
+  new MutationObserver(()=>fadeSoon(el)).observe(el,{childList:true,subtree:true,characterData:true});
+  fadeSoon(el);
+}
+/* and the top edge too, once something has scrolled up under the header:
+   text cut hard against the header's line reads as glued to it. Only
+   content counts as "more": what is left to scroll inside the scroller's
+   own end padding is empty space, and fading over it dimmed a last line
+   that was fully on screen. */
+function fadeMeasure(el){
+  const pad=side=>parseFloat(getComputedStyle(el)["padding"+side])||0;
+  return el._fadeAxis==="x"
+    ?{"fade-r":el.scrollWidth-el.clientWidth-el.scrollLeft-pad("Right")>4,"fade-l":el.scrollLeft>4}
+    :{"fade-b":el.scrollHeight-el.clientHeight-el.scrollTop-pad("Bottom")>4,"fade-t":el.scrollTop>4};
+}
+function fadeApply(el,m){for(const k in m)el.classList.toggle(k,m[k]);}
+/* Every row a page builds asks once, in the next frame, all together: every
+   size read first, then every class written. Asked one by one, each read
+   came straight after the last row's write and forced a fresh layout — the
+   Style page has a row per kind of piece, and that was a fifth of its tap. */
+const fadeQ=new Set(); let fadeRaf=0;
+function fadeSoon(el){
+  fadeQ.add(el);
+  if(fadeRaf)return;
+  fadeRaf=requestAnimationFrame(()=>{
+    fadeRaf=0;
+    const all=[...fadeQ].filter(e=>e.isConnected); fadeQ.clear();
+    const ms=all.map(fadeMeasure);
+    all.forEach((e,i)=>fadeApply(e,ms[i]));
+  });
 }
 function edgeFadeWire(){ ["boardTab","programWrap","palette","designTab","pyTab"].forEach(id=>edgeFade($(id)));
   ["robotChips","chips","routineTabs"].forEach(id=>edgeFade($(id),"x")); }

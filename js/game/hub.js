@@ -40,7 +40,7 @@ const PAGES={
   cyber    :{em:"🔐",title:"Cyber Lab",     sub:"Locks, codes, lying notes.",bands:["cyber"]},
   mine     :{em:"🛠️",title:"My Challenges",sub:"Levels you designed.",bands:["mine","tower"]},
   community:{em:"🌍",title:"Community",   sub:"Levels by other players.",bands:["community"]},
-  account  :{em:"👤",title:"Account & save",sub:"Your world on any device.",bands:[],auth:true}
+  account  :{em:"👤",title:"Account & save",sub:"Your world on any device.",bands:["account"],auth:true}
 };
 
 /* ---------------- the menu ----------------
@@ -105,8 +105,24 @@ function hubClose(){
   $("hub").classList.remove("open");
 }
 
+/* What the menu would show right now, as one string: the journey's next
+   step and every tile's name and count. Back to the menu is the commonest
+   tap in the game, and rebuilding fourteen tiles that had not changed —
+   each walked again by the icon and language observers — was most of it. */
+function hubSig(){
+  const s=typeof journeyStep==="function"?journeyStep():null;
+  const parts=[s?s.title+"|"+s.hint+"|"+journeyProgress():"",(typeof lang!=="undefined"?lang:"")];
+  for(const g of GROUPS)for(const t of g.tiles){
+    if(t.show&&!t.show())continue;
+    parts.push((typeof t.name==="function"?t.name():t.name)+"|"+(t.meta?t.meta():""));
+  }
+  return parts.join("\n");
+}
 function hubRender(){
   const el=$("hubBody"); if(!el)return;
+  const sig=hubSig();
+  if(el.children.length&&el.dataset.sig===sig)return;
+  el.dataset.sig=sig;
   el.innerHTML="";
   /* The journey's next step, at the top. The hub is where you come when
      you don't know what to do, so the answer goes above the menu — not
@@ -160,6 +176,7 @@ function bandKey(t){
   if(/build\s*projects/i.test(t))return "builds";
   if(/my\s*challenges/i.test(t))return "mine";
   if(/community/i.test(t))return "community";
+  if(/your save/i.test(t))return "account";
   return "?";
 }
 function bands(){
@@ -192,7 +209,32 @@ function hubPage(key,pointSel,restore){
   if(typeof mgState!=="undefined"&&mgState&&has("mgExit"))mgExit(false);
   $("editor").classList.remove("open");
   hubCur=key;
-  renderProjects();                       // the whole chain, patches included
+  /* A tap builds only this page's bands (projWants, challenges.js); any
+     other render — a delete, a sign-in — builds them all, and the page on
+     screen filters them (the renderProjects wrapper below) */
+  window.projWant=p.bands.slice();
+  $("projects").dataset.page=key;
+  try{ renderProjects(); }finally{ window.projWant=null; }
+  hubFilter(key);
+  $("authBox").style.display=p.auth?"":"none";
+  const t=$("projTitle"),s=$("projSub");
+  if(t)t.textContent=p.em+" "+p.title;
+  if(s)s.textContent=p.sub;
+  $("projects").classList.add("open");
+  /* this page is now where the journey is. Its cards close it before they
+     open their level, so without this the level found nothing open and
+     fell back to the menu's hint: Back from an Academy lesson went to the
+     menu instead of the Academy. */
+  window.mgOriginHint="projects";
+  $("projList").scrollTop=restore?(hubScroll[key]||0):0;
+  if(pointSel)setTimeout(()=>{
+    const c=document.querySelector(pointSel); if(!c)return;
+    c.classList.add("j-point");setTimeout(()=>c.classList.remove("j-point"),2600);
+  },240);
+}
+// show only the bands that belong to page `key`
+function hubFilter(key){
+  const p=PAGES[key]; if(!p)return;
   const bs=bands(), keep=p.bands;
   /* Failure mode matters more than the happy path: if a section header is
      ever reworded, bandKey stops matching and this page would come up
@@ -208,24 +250,6 @@ function hubPage(key,pointSel,restore){
     const on=showAll||keep.indexOf(b.key)>=0;
     for(const n of b.nodes)n.style.display=on?"":"none";
   }
-  // the page is named on the sheet, so a band can show differently per page
-  $("projects").dataset.page=key;
-  $("authBox").style.display=p.auth?"":"none";
-  if(p.auth)accountRows();
-  const t=$("projTitle"),s=$("projSub");
-  if(t)t.textContent=p.em+" "+p.title;
-  if(s)s.textContent=p.sub;
-  $("projects").classList.add("open");
-  /* this page is now where the journey is. Its cards close it before they
-     open their level, so without this the level found nothing open and
-     fell back to the menu's hint: Back from an Academy lesson went to the
-     menu instead of the Academy. */
-  window.mgOriginHint="projects";
-  $("projList").scrollTop=restore?(hubScroll[key]||0):0;
-  if(pointSel)setTimeout(()=>{
-    const c=document.querySelector(pointSel); if(!c)return;
-    c.classList.add("j-point");setTimeout(()=>c.classList.remove("j-point"),2600);
-  },240);
 }
 let hubCur=null;
 
@@ -251,6 +275,21 @@ function accountRows(){
   ccCard(el,{em:"📥",name:"Import a save",badge:"⤒",
     desc:"Load a world back from a file. This replaces the world you have now.",
     onTap:()=>$("importFile").click()});
+}
+
+/* A render while a page is on screen — a deleted challenge, a sign-in —
+   keeps that page: its own rows (the account's), and only its bands shown.
+   It used to put the whole catalogue under the page's title. hub.js loads
+   after every file that wraps renderProjects, so this runs last. */
+if(typeof renderProjects==="function"){
+  const _rp=window.renderProjects;
+  window.renderProjects=function(){
+    const r=_rp.apply(this,arguments);
+    const key=$("projects").dataset.page;
+    if(key==="account")accountRows();
+    if(key&&PAGES[key]&&$("projects").classList.contains("open"))hubFilter(key);
+    return r;
+  };
 }
 
 /* ---------------- rewire ---------------- */

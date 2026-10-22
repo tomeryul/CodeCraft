@@ -457,6 +457,16 @@ textarea, select{
   animation-delay:calc(min(var(--i,0),8) * 35ms);
 }
 @keyframes hubTileIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* ...from the world only. Coming Back from a page the menu takes that
+   page's place (nav.js swap) and its contents step in as one; a stagger
+   on top made the menu fill in for half a second every time. */
+#hub.open.swap-in .hub-tile{animation:none;}
+
+/* No frosted glass inside a page. A header button blurred an opaque panel
+   — nothing to see through — and paid for it on every frame the page
+   moved: the whole page fades during a page change, and the blur under a
+   fading layer is redrawn each frame. */
+.sheet .iconbtn,#shop .iconbtn{-webkit-backdrop-filter:none;backdrop-filter:none;}
 
 /* One end gap for every list a sheet scrolls. Scrolled to the bottom, the
    last row sat 8px from the edge under Settings, 13 under Quests and 28

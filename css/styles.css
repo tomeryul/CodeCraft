@@ -308,7 +308,14 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
   background:linear-gradient(168deg,#7350d4 0%,#4a2f9e 46%,#241b56 100%);background-size:100% 170%;animation:sky 11s ease-in-out infinite alternate;
   display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;transition:opacity .5s;}
 @keyframes sky{from{background-position:50% 0}to{background-position:50% 80%}}
-#splash.hide{opacity:0;pointer-events:none;}
+/* Gone means gone. It used to stop at opacity 0: a full-screen layer over
+   the whole game, its sky, its bobbing robot, its floating icons and the
+   glow on Play all still animating — style and paint on every frame of
+   the session, under every page and every page change. It fades, then
+   leaves the picture (visibility, after the fade), and its animations stop
+   where they are rather than jump. */
+#splash.hide{opacity:0;pointer-events:none;visibility:hidden;transition:opacity .5s,visibility 0s .5s;}
+#splash.hide,#splash.hide *{animation-play-state:paused !important;}
 #splash .bot{font-size:74px;animation:bob 2.6s ease-in-out infinite;filter:drop-shadow(0 12px 22px rgba(0,0,0,.35));}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 /* the antenna light sits 24px above the body and the bob lifts it 10px

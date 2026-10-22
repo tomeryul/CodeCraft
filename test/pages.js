@@ -88,6 +88,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     // no internet: words a child understands, not the browser's
     const f = window.fetch; window.fetch = () => Promise.reject(new TypeError('Failed to fetch'));
     const ready = window.sbReady; window.sbReady = () => true;
+    // on the Community page — the one place its list is built now (projWant)
+    hubPage('community'); await w(300);
     await loadCommunity();
     out.offline = $('ccList').textContent;
     window.fetch = f; window.sbReady = ready;

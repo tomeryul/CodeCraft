@@ -162,3 +162,9 @@ $("objDelete").addEventListener("click",()=>{
   closeObjMenu();
 });
 $("objCancel").addEventListener("click",closeObjMenu);
+/* iOS shows :active — the press state every button and card has — only
+   while some touchstart listener is registered above the element. Without
+   one a tap gave no answer at all until the page had already changed,
+   which is most of what "it feels stuck" was. Passive: it never delays a
+   scroll. */
+document.addEventListener("touchstart",()=>{},{passive:true});

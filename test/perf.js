@@ -100,14 +100,52 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     const wait = ms => new Promise(r => setTimeout(r, ms));
     hubOpen(); await wait(600);
     const covered = (await __watch(300)).draws;
-    // a press on the sheet may be the start of a drag that shows the world
-    document.querySelector('#hub').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    // a press on the sheet's header may be the start of a drag that shows the world
+    document.querySelector('#hub .m-head').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 200 }));
     const pressed = (await __watch(200)).draws;
+    await wait(900);
+    /* a tap on a menu tile is not a drag: it used to buy half a second of
+       world drawn under the opaque page, in its own transition's frames */
+    document.querySelector('#hub .hub-tile').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 200 }));
+    const tile = (await __watch(200)).draws;
     await __home();
-    return { covered, pressed };
+    return { covered, pressed, tile };
   });
-  ck('a press on a full sheet (maybe a drag) brings the world back at once',
+  ck('a press on a full sheet header (maybe a drag) brings the world back at once',
     D.covered === 0 && D.pressed > 5, D);
+  ck('a tap on a menu tile does not draw the world under the page', D.tile === 0, D);
+
+  console.log('▶ a tap on a menu tile');
+  /* "Pressing a button is stuck": what a page change cost, and what kept
+     costing under every page. */
+  const T = await pg.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const out = {};
+    // the splash, once gone, animates nothing
+    out.splashAnims = document.getAnimations().filter(a => a.playState === 'running' &&
+      a.effect && a.effect.target && $('splash').contains(a.effect.target)).length;
+    out.splashHidden = getComputedStyle($('splash')).visibility === 'hidden';
+    // a page builds its own band, not all seven
+    hubOpen(); await wait(500);
+    const tile = document.querySelector('#hub .hub-tile');
+    hubPage('academy'); await wait(600);
+    out.nodes = document.querySelectorAll('#projList *').length;
+    out.others = !!document.querySelector('#projList .t3sec, #ccList');
+    // Back: the menu is not rebuilt when nothing in it changed, and does not re-stagger in
+    navBack(); await wait(40);
+    out.sameTile = document.querySelector('#hub .hub-tile') === tile;
+    out.stagger = document.getAnimations().filter(a => a.animationName === 'hubTileIn' && a.playState === 'running').length;
+    // no frosted glass inside a page
+    out.blur = [...document.querySelectorAll('.sheet .iconbtn')].filter(e =>
+      (getComputedStyle(e).backdropFilter || 'none') !== 'none').length;
+    await __home();
+    return out;
+  });
+  ck('the splash, once gone, is gone: nothing in it still animates', T.splashAnims === 0 && T.splashHidden, T);
+  ck('a menu page builds only its own band', T.others === false && T.nodes < 250, T);
+  ck('Back to an unchanged menu reuses its tiles', T.sameTile === true, T);
+  ck('...and they do not stagger in again', T.stagger === 0, T);
+  ck('no header button inside a page blurs what is behind it', T.blur === 0, T);
 
   console.log('▶ nothing is rewritten at idle');
   const I = await pg.evaluate(async () => {

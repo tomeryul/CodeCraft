@@ -2816,11 +2816,18 @@ function mgDraw(){
     }
   }
 }
+/* Which bands of the list to build. The list is one page of the menu at a
+   time (hub.js sets window.projWant to that page's bands), and building all
+   seven to show one was most of what a tap on a menu tile cost: four times
+   the nodes, each one walked by the icon and language observers, and a
+   Community fetch on every page. null builds everything. */
+function projWants(k){const w=window.projWant;return !w||w.indexOf(k)>=0;}
 function renderProjects(){
   renderAuthBox();
   const el=$("projList");el.innerHTML="";
-  if(typeof renderAcademySection==="function")renderAcademySection(el); // 🎓 starter tutorials first
-  if(typeof renderPuzzleSection==="function")renderPuzzleSection(el);   // 🧩 then the puzzle campaign
+  if(projWants("academy")&&typeof renderAcademySection==="function")renderAcademySection(el); // 🎓 starter tutorials first
+  if(projWants("puzzles")&&typeof renderPuzzleSection==="function")renderPuzzleSection(el);   // 🧩 then the puzzle campaign
+  if(projWants("builds")){
   const bh=document.createElement("h4");bh.className="qsec";bh.textContent="🏗️ Build Projects";el.appendChild(bh);
   // Nothing here is locked. `needs` used to bar the door; it now only orders the
   // list and prints a "play X first" suggestion, so a player who wants the hard
@@ -2836,6 +2843,8 @@ function renderProjects(){
       badge:done?"✅":"▶",
       onTap:()=>mgEnter(p)});
   }
+  }
+  if(projWants("mine")){
   // player's own saved challenges (incl. sorting games) — persisted + cloud-synced
   const mh=document.createElement("h4");mh.className="qsec";mh.textContent="🛠️ My Challenges";el.appendChild(mh);
   /* The creator reopens on whatever you were last building, so this card
@@ -2871,9 +2880,10 @@ function renderProjects(){
       if(!confirm("Delete “"+p.name+"”?"))return;
       player.myChallenges=player.myChallenges.filter(x=>x!==p);saveNow();renderProjects();});
   }
+  }
   // Below the cutoff the community list is not shown at all — not greyed out,
   // not empty: user-made content simply is not part of that player's game.
-  if(!ageOk())return;
+  if(!ageOk()||!projWants("community"))return;
   const hh=document.createElement("h4");hh.className="qsec";
   hh.innerHTML='🌍 Community <button id="ccRefresh" class="secbtn" title="Refresh">↻</button>';
   el.appendChild(hh);

@@ -2206,7 +2206,8 @@ async function ev(expr) {
       return Promise.resolve([]);
     };
     player.blocked=[];player.reported=[];
-    $("projects").classList.add("open");
+    // on the Community page — the one place its list is built now (projWant)
+    hubPage("community");
     await loadCommunity();
     const names=()=>[...document.querySelectorAll("#ccList .pcard")].map(c=>c.textContent);
     out.allThree=names().length;

@@ -636,7 +636,7 @@ window.mgExit=function(reopen){t3Bar(false);if(raf){cancelAnimationFrame(raf);ra
 const _renderProjects=window.renderProjects;
 window.renderProjects=function(){
   _renderProjects();
-  const el=$("projList");if(!el)return;
+  const el=$("projList");if(!el||(window.projWants&&!projWants("tower")))return;
   const sec=document.createElement("div");sec.className="t3sec";
   const done=TOWER_LEVELS.filter(l=>player.projects[l.id]).length;
   sec.innerHTML='<div class="t3head"><div class="t3ico">🧊</div>'+

@@ -104,9 +104,10 @@ const shownBands = () => [...document.getElementById('projList').children]
 
   // ------------------------------------------------ the reworded-header net
   /* bandKey matches on header text. If a header is ever reworded the match
-     fails, and the handoff's deliberate choice is to show everything: a page
-     with extra sections beats a blank one. Fixing the account page must not
-     have cost that. */
+     fails, and the handoff's deliberate choice is that a page is never left
+     blank. A page now BUILDS only its own band (projWant), by key, not by
+     text — so a reworded header still leaves exactly that band on screen,
+     where it used to fall back to the whole catalogue. */
   await pg.evaluate(()=>{
     const _bk=renderProjects;
     window.renderProjects=function(){ const r=_bk.apply(this,arguments);
@@ -115,7 +116,7 @@ const shownBands = () => [...document.getElementById('projList').children]
   });
   await pg.evaluate(()=>hubPage('builds')); await pg.waitForTimeout(500);
   const fb = await pg.evaluate(`(${shownBands})()`);
-  ck('a reworded header still falls back to showing everything', fb.length>1, fb);
+  ck('a reworded header still leaves the page its band, never blank', fb.length===1 && fb[0]==='Zzz', fb);
 
   // ------------------------------------------------ narrow phones
   await pg.setViewportSize({width:340,height:740}); await pg.waitForTimeout(300);
