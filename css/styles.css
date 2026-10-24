@@ -320,10 +320,10 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
    filter on a moving element is drawn by iOS as a texture that goes soft */
 #splash .bot{font-size:74px;animation:bob 2.6s ease-in-out infinite;}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-/* the antenna light sits 24px above the body and the bob lifts it 10px
+/* the antenna light sits 32px above the body and the bob lifts it 10px
    more: on a 568px phone the content starts at the top edge, and the
    antenna was cut off by it */
-#splash .mascot{margin-top:34px;}
+#splash .mascot{margin-top:42px;}
 #splash h1{font-size:var(--fs-brand);margin:8px 0 2px;background:linear-gradient(90deg,#ffd66b,#ff9d6b);-webkit-background-clip:text;background-clip:text;color:transparent;
   letter-spacing:1px;text-shadow:0 6px 22px rgba(255,180,60,.3);}
 #splash .tag{color:#cfc4f5;font-size:var(--fs-md);max-width:340px;line-height:1.55;margin:8px 0 26px;}
@@ -655,17 +655,28 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .cc-conf{position:absolute;top:-24px;width:10px;height:13px;border-radius:3px;animation:cfall linear infinite;}
 @keyframes cfall{to{transform:translateY(110vh) rotate(560deg)}}
 /* ---------- v2 extras: splash mascot + returning state ---------- */
-.mascot{position:relative;width:104px;margin:0 auto;}
-.mascot .ant{position:absolute;left:50%;top:-16px;transform:translateX(-50%);width:4px;height:14px;background:#8a6210;border-radius:2px;}
-.mascot .antlight{position:absolute;left:50%;top:-24px;transform:translateX(-50%);width:11px;height:11px;border-radius:50%;
-  background:var(--green);box-shadow:0 0 5px #54d66a;animation:antblink 1.6s ease-in-out infinite;}
-/* the light stays lit, as it is on the app icon; only its glow breathes */
-@keyframes antblink{0%,100%{box-shadow:0 0 7px #54d66a}50%{box-shadow:0 0 1px #54d66a}}
-.mascot .mbody{width:104px;height:92px;background:linear-gradient(180deg,#ffd066,#ffb830);border-radius:28px;border-bottom:7px solid #c47d10;
-  box-shadow:inset 0 3px 0 rgba(255,255,255,.4),0 12px 30px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;gap:12px;}
-.mascot .eye{width:24px;height:26px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;}
-.mascot .eye i{width:11px;height:12px;background:#241b45;border-radius:50%;margin-top:3px;}
-.mascot .mshadow{width:72px;height:12px;background:rgba(0,0,0,.28);border-radius:50%;filter:blur(4px);margin:10px auto 0;}
+/* The mascot is the robot on the home-screen icon (icon-512.png,
+   apple-touch-icon.png), measured off it: a body 1.38 times as wide as it
+   is tall, a quarter of its width rounded off each corner, an orange base
+   an eighth of its height, two big round eyes with centred pupils, and a
+   mint light on a short gold stalk. It was a squarer robot with small oval
+   eyes and a thin brown antenna — the old icon's — so the splash and the
+   icon a player taps to open it were two different robots. */
+.mascot{position:relative;width:116px;margin:0 auto;}
+.mascot .ant{position:absolute;left:50%;top:-10px;transform:translateX(-50%);width:7px;height:12px;
+  background:linear-gradient(180deg,#fdb11b,#feb825);border-radius:3px;}
+.mascot .antlight{position:absolute;left:50%;top:-32px;transform:translateX(-50%);width:23px;height:23px;border-radius:50%;
+  background:radial-gradient(circle at 36% 30%,#a8f5d2 0 16%,#67e7b1 42%,#41ce9e 100%);
+  box-shadow:0 0 8px rgba(90,223,173,.7);animation:antblink 1.6s ease-in-out infinite;}
+/* the light stays lit, as it is on the icon; only its glow breathes */
+@keyframes antblink{0%,100%{box-shadow:0 0 9px rgba(90,223,173,.75)}50%{box-shadow:0 0 2px rgba(90,223,173,.35)}}
+.mascot .mbody{width:116px;height:84px;padding-top:4px;background:linear-gradient(180deg,#fed43e,#ffcb2d 55%,#fec425);
+  border-radius:30px;border-bottom:11px solid #fda122;
+  box-shadow:inset 0 2px 0 rgba(255,236,150,.75),0 12px 30px rgba(0,0,0,.35);
+  display:flex;align-items:center;justify-content:center;gap:15px;}
+.mascot .eye{width:34px;height:34px;background:#fbfbfd;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.mascot .eye i{width:15.5px;height:15.5px;background:#1e185c;border-radius:50%;}
+.mascot .mshadow{width:84px;height:12px;background:rgba(0,0,0,.28);border-radius:50%;filter:blur(4px);margin:10px auto 0;}
 #contBtn{position:relative;z-index:1;margin-top:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22);
   color:#e8e2ff;border-radius:999px;padding:10px 22px;font-size:var(--fs-md);font-weight:var(--fw-medium);}
 
