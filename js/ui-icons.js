@@ -129,7 +129,12 @@ const ICONS={/* ---- v3: the last of the UI emoji ---- */
 "🗺️":W('<rect x="4.4" y="4.4" width="15.2" height="15.2" rx="2.6" '+ST+' stroke-width="2.1"/><path d="M4.4 12 H19.6 M12 4.4 V19.6" '+ST+' stroke-width="2.1"/>'),
 "🐍":W('<path d="M9 5.5 L4.5 12 L9 18.5 M15 5.5 L19.5 12 L15 18.5" '+ST+' stroke-width="2.4"/>'),
 "🖌️":W('<path d="M13.8 4.2 l6 6 L12 18 l-6-6 Z" fill="#5ab8ff"/><path d="M5.6 12.4 l6 6 -1.4 1.4 c-2 2-6.6 2.2-6.6 2.2 s.2-4.6 2.2-6.6 Z" fill="#ffb830"/>'),
-"🤖":W('<rect x="5.4" y="8" width="13.2" height="10.8" rx="3.2" fill="#5ab8ff"/><circle cx="9.4" cy="12.6" r="1.7" fill="#241b45"/><circle cx="14.6" cy="12.6" r="1.7" fill="#241b45"/><path d="M10 16 h4" stroke="#241b45" stroke-width="1.8" stroke-linecap="round"/><rect x="11" y="4.4" width="2" height="3.4" rx="1" fill="#5ab8ff"/><circle cx="12" cy="3.8" r="1.5" fill="#ff5d73"/>'),
+/* the robot is the app's own mascot — the one on the splash and on the
+   app icon (scripts/make-icons.js renders both from .mascot in styles.css):
+   a gold body with a darker base, white eyes with dark pupils, and a green
+   light on a short brown antenna. Flat fills only — a gradient needs an id,
+   and a hundred inline copies of one id is a bug waiting in the DOM. */
+"🤖":W('<rect x="11.6" y="3.4" width="0.8" height="3.2" rx=".4" fill="#8a6210"/><circle cx="12" cy="3.1" r="1.45" fill="#54d66a"/><rect x="3.6" y="6.2" width="16.8" height="15.6" rx="4.6" fill="#c47d10"/><rect x="3.6" y="6.2" width="16.8" height="14.2" rx="4.6" fill="#ffc23d"/><path d="M8.2 7.2 h7.6" stroke="#ffd877" stroke-width=".9" stroke-linecap="round"/><ellipse cx="9.1" cy="13.4" rx="2.25" ry="2.45" fill="#fff"/><ellipse cx="14.9" cy="13.4" rx="2.25" ry="2.45" fill="#fff"/><ellipse cx="9.1" cy="13.95" rx="1.1" ry="1.2" fill="#241b45"/><ellipse cx="14.9" cy="13.95" rx="1.1" ry="1.2" fill="#241b45"/>'),
 "✏️":W('<path d="M4.4 19.6 v-4.2 L15.4 4.4 a1.9 1.9 0 0 1 2.7 0 l1.5 1.5 a1.9 1.9 0 0 1 0 2.7 L8.6 19.6 Z" '+ST+' stroke-width="2.2"/>'),
 "🦉":W('<circle cx="12" cy="12.6" r="8.6" fill="#c98d4b"/><circle cx="8.9" cy="10.8" r="2.9" fill="#fff"/><circle cx="15.1" cy="10.8" r="2.9" fill="#fff"/><circle cx="8.9" cy="10.8" r="1.3" fill="#241b45"/><circle cx="15.1" cy="10.8" r="1.3" fill="#241b45"/><path d="M12 13 l-1.6 2.2 h3.2 Z" fill="#ffb830"/>'),
 "🚚":W('<rect x="2.8" y="6.8" width="11.2" height="8.8" rx="1.6" fill="#5ab8ff"/><path d="M14 9.8 h4.2 L20.8 13 v2.6 H14 Z" fill="#4aa3e8"/><circle cx="7.4" cy="17.2" r="2.1" fill="#241b45"/><circle cx="16.6" cy="17.2" r="2.1" fill="#241b45"/>'),

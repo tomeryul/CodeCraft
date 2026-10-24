@@ -316,7 +316,9 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
    where they are rather than jump. */
 #splash.hide{opacity:0;pointer-events:none;visibility:hidden;transition:opacity .5s,visibility 0s .5s;}
 #splash.hide,#splash.hide *{animation-play-state:paused !important;}
-#splash .bot{font-size:74px;animation:bob 2.6s ease-in-out infinite;filter:drop-shadow(0 12px 22px rgba(0,0,0,.35));}
+/* no filter: the robot carries its own shadow (.mbody, .mshadow), and a
+   filter on a moving element is drawn by iOS as a texture that goes soft */
+#splash .bot{font-size:74px;animation:bob 2.6s ease-in-out infinite;}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 /* the antenna light sits 24px above the body and the bob lifts it 10px
    more: on a 568px phone the content starts at the top edge, and the
@@ -657,7 +659,8 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 .mascot .ant{position:absolute;left:50%;top:-16px;transform:translateX(-50%);width:4px;height:14px;background:#8a6210;border-radius:2px;}
 .mascot .antlight{position:absolute;left:50%;top:-24px;transform:translateX(-50%);width:11px;height:11px;border-radius:50%;
   background:var(--green);box-shadow:0 0 5px #54d66a;animation:antblink 1.6s ease-in-out infinite;}
-@keyframes antblink{0%,100%{opacity:1}50%{opacity:.4}}
+/* the light stays lit, as it is on the app icon; only its glow breathes */
+@keyframes antblink{0%,100%{box-shadow:0 0 7px #54d66a}50%{box-shadow:0 0 1px #54d66a}}
 .mascot .mbody{width:104px;height:92px;background:linear-gradient(180deg,#ffd066,#ffb830);border-radius:28px;border-bottom:7px solid #c47d10;
   box-shadow:inset 0 3px 0 rgba(255,255,255,.4),0 12px 30px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;gap:12px;}
 .mascot .eye{width:24px;height:26px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;}

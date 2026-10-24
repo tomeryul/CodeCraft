@@ -359,6 +359,12 @@ h4.hub-sec:first-child{margin-top:2px;}
 /* content taller than the viewport was unreachable: centred, no scroll.
    `safe center` keeps the top edge in view once it overflows. */
 #splash{justify-content:safe center;overflow-y:auto;}
+/* The status bar is not part of the page. On a phone this screen's content
+   is taller than the screen, so it starts at the very top — and iOS blurs
+   whatever sits under the clock and the battery to keep them readable. The
+   robot's head and antenna were under there: the app icon's robot, soft
+   at the top and missing its light. It starts below the status bar now. */
+#splash{padding-top:calc(var(--sat) + 24px);padding-bottom:calc(var(--sab) + 16px);}
 #splash .tag{margin-bottom:22px;}
 
 /* the primary gets the space it earns */
@@ -392,7 +398,7 @@ h4.hub-sec:first-child{margin-top:2px;}
 /* a short viewport (landscape phone, small laptop) pushed Play and the
    features below the fold. Compress the vertical rhythm instead. */
 @media (max-height:700px){
-  #splash{padding:16px;}
+  #splash{padding:calc(var(--sat) + 18px) 16px calc(var(--sab) + 12px);}
   #splash .bot{font-size:56px;}
   #splash h1{font-size:var(--fs-xxl);margin:4px 0 0;}
   #splash .tag{font-size:var(--fs-md);margin-bottom:16px;}
