@@ -22,13 +22,17 @@ if(window.__i18n)return; window.__i18n=1;
 /* Zones never translated: real code, the player's own text, and the
    canvas. A dictionary hit inside a Python listing would be a bug. */
 const SKIP=new Set(["SCRIPT","STYLE","CANVAS","TEXTAREA","INPUT","PRE","CODE"]);
-/* Only the Python view. An earlier version also skipped #palette and
-   #programWrap to protect user text, but those hold the block names —
+/* Only the Python listing itself. An earlier version also skipped #palette
+   and #programWrap to protect user text, but those hold the block names —
    the most important words in the game to translate — and it left the
    palette in English. What protects a player's own variable or challenge
    name is that matching is whole-string: nothing in the dictionary is a
-   name anyone would choose. */
-const SKIP_IN="#pyTab,#pyCode,.mono";
+   name anyone would choose.
+   It was the whole #pyTab while that tab was a listing and one sentence;
+   now it is an editor with a hint, a message and a row of keys, and those
+   are read like any other part of the game. The code in it is in <pre>,
+   <textarea> and <code>, which SKIP above already leaves alone. */
+const SKIP_IN="#pyCode,.mono";
 
 const HE={
 /* QA: the object menu's titles, whole (see "{s} — what to do?" in HE_T) */
@@ -579,6 +583,17 @@ const HE={
 "go to the nearest X":"לך אל ה-X הקרוב ביותר",
 "not equal":"לא שווה",
 "Variable name:":"שם משתנה:",
+/* ---- the Python editor (js/game/pyedit.js). What it says about a line
+   that is wrong is NOT here: those sentences have code in them, and are
+   written in both languages in pyparse.js — see PY_MSG there. ---- */
+"Type your program here — or tap a block below to add its line.":
+  "תכתוב כאן את התוכנית שלך — או תלחץ על בלוק למטה כדי להוסיף את השורה שלו.",
+"This program has a block that can't be typed yet. Change it in the Blocks tab.":
+  "בתוכנית הזאת יש בלוק שעדיין אי אפשר להקליד. תשנה אותו בלשונית הבלוקים.",
+"Python code":"קוד פייתון",
+"Pull the line out":"להוציא את השורה החוצה","Push the line in":"להזיז את השורה פנימה",
+"New function":"פונקציה חדשה",
+"Undo typing":"לבטל הקלדה","Redo typing":"להחזיר הקלדה",
 "Challenge name:":"שם האתגר:",
 
 /* ---- quests ---- */
@@ -1152,6 +1167,11 @@ const SCOPED=[
   ["#ageYear",       {"Year":"שנה"}],
   /* Build mode's pieces and shelves. None was on any screen a test opened,
      and "Tree", "Sign" or "Well" outside this bar could be anything. */
+  /* the names of the keys over the keyboard in the Python tab, for a
+     screen reader. "Dot" is a shape in the wear maker and "Note" could be
+     anyone's challenge. */
+  ["#pyKeys",        {"Dot":"נקודה","Brackets":"סוגריים","Colon":"נקודתיים","Quotes":"מירכאות",
+                      "Equals":"שווה","Underscore":"קו תחתון","Note":"הערה"}],
   ["#buildBar",      {"Nature":"טבע","Decor":"קישוט",
                       "Wall":"קיר","Roof":"גג","Blue Roof":"גג כחול","Green Roof":"גג ירוק","Purple Roof":"גג סגול",
                       "Door":"דלת","Window":"חלון","Storefront":"חזית חנות","Awning":"סוכך","Sign":"שלט",
@@ -1167,6 +1187,8 @@ const SCOPED=[
    the ⛓️ from "Collect 5 ⛓️ iron". These are used verbatim instead, and
    ui-icons.js turns whatever emoji they carry into icons either way. */
 const HE_RAW={
+  "🐍 You typed it — and its block is in 🧩 Blocks now. They are one program.":
+    "🐍 הקלדת את זה — והבלוק שלו כבר נמצא ב-🧩 בלוקים. זו אותה תוכנית.",
   /* design-audit stage 6 */
   "Try: 🚶 Walk To 🌳 → 🪓 Chop → 🚶 Walk To 🏪 → ⤵️ Drop.":
     "נסה: 🚶 לך אל 🌳 ← 🪓 כרות ← 🚶 לך אל 🏪 ← ⤵️ הנח.",
@@ -1511,8 +1533,8 @@ const HE_RAW={
    question typed in Hebrew, these five answered it in English ---- */
 "In the world you don't count steps — you name a destination. Add 🚶 Walk To and pick what to walk to (🌳 tree, 🪨 rock, 🏪 market…). Your robot finds its own way around whatever is in between, and arrives FACING it, so a ✋ Collect or 🪓 Chop right after just works.\n\nIf it's not moving, check:\n1️⃣ Did you press ▶ Run?\n2️⃣ Is there any of that thing left on the map?\n3️⃣ Does the program have blocks in it?":
   "בעולם לא סופרים צעדים — אומרים לאן ללכת. תוסיף 🚶 לך אל ותבחר אל מה (🌳 עץ, 🪨 סלע, 🏪 שוק…). הרובוט מוצא לבד את הדרך מסביב לכל מה שבאמצע, ומגיע כשהוא כבר מסתכל על זה — אז ✋ אסוף או 🪓 כרות מיד אחרי פשוט עובדים.\n\nאם הוא לא זז, תבדוק:\n1️⃣ לחצת ▶ הרצה?\n2️⃣ נשאר מהדבר הזה משהו על המפה?\n3️⃣ יש בתוכנית בלוקים?",
-"🐍 Tap the Python tab in the editor! Every block you place is shown as real Python code — the same language used at NASA, Google and in AI.\n\nrobot.move() is a function call, for i in range(3): is a loop… you're already writing it!":
-  "🐍 תלחץ על הלשונית פייתון בעורך! כל בלוק שאתה מניח מופיע כקוד פייתון אמיתי — אותה שפה שמשתמשים בה בנאס״א, בגוגל ובבינה מלאכותית.\n\nrobot.move() זו קריאה לפונקציה, for i in range(3): זו לולאה… אתה כבר כותב את זה!",
+"🐍 Tap the Python tab in the editor! Every block you place is shown as real Python code — the same language used at NASA, Google and in AI.\n\nAnd you can type it: write robot.move() there and its block appears. Make a mistake and the line tells you how to fix it.":
+  "🐍 תלחץ על הלשונית פייתון בעורך! כל בלוק שאתה מניח מופיע כקוד פייתון אמיתי — אותה שפה שמשתמשים בה בנאס״א, בגוגל ובבינה מלאכותית.\n\nואפשר גם להקליד: תכתוב שם robot.move() והבלוק שלו יופיע. אם תטעה, השורה תגיד לך איך לתקן.",
 "Great question! In this world:\n• A robot's program is like a function — a reusable recipe\n• 📦 Memory blocks ARE variables — real ones\n• Your robot team is like an array of workers\n\nSwitch to the 🐍 Python tab to see the real syntax. When you're ready, try Python on a computer — you already know the ideas!":
   "שאלה מצוינת! בעולם הזה:\n• התוכנית של רובוט היא כמו פונקציה — מתכון שאפשר להשתמש בו שוב ושוב\n• 📦 בלוקי זיכרון הם משתנים — אמיתיים\n• צוות הרובוטים שלך הוא כמו מערך של עובדים\n\nתעבור ללשונית 🐍 פייתון כדי לראות איך זה נכתב באמת. כשתרגיש מוכן, תנסה פייתון במחשב — את הרעיונות אתה כבר מכיר!",
 "🏗️ Build Projects (📜 → Build Projects) are coding challenges a few levels above normal play!\n\nYou get a blueprint and a tiny block budget — the only way to fit is smart loops (even loops inside loops!). Finished builds appear near home (tap one to 🚚 Move or 🗑 Delete it).\n\n✏️ Make your OWN: paint a blueprint, set the map size 📐 and budget, use ANY blocks (loops, variables, conditions!), solve it, and 🌍 Publish it for other players to try!":

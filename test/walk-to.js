@@ -142,7 +142,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   ck('and tapping it cycles through only those places',
     P.seen.every(x => x === 'key' || x === 'flag') && P.seen.indexOf('flag') > 0, P.seen);
   ck('there is no "wherever a variable says" on a board', P.noVar === true, P);
-  ck('the Python says what the block does', /robot\.walk_to_nearest\("key"\)/.test(P.py), P.py);
+  ck('the Python says what the block does', /robot\.walk_to\("key"\)/.test(P.py), P.py);
 
   console.log('▶ the author chooses, and the choice is kept');
   const C = await pg.evaluate(async () => {

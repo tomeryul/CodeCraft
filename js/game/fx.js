@@ -194,7 +194,7 @@ function fadeSoon(el){
   });
 }
 function edgeFadeWire(){ ["boardTab","programWrap","palette","designTab","pyTab"].forEach(id=>edgeFade($(id)));
-  ["robotChips","chips","routineTabs"].forEach(id=>edgeFade($(id),"x")); }
+  ["robotChips","chips","routineTabs","pySnips","pyKeys"].forEach(id=>edgeFade($(id),"x")); }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",edgeFadeWire);
 else edgeFadeWire();
 

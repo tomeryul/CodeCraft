@@ -36,7 +36,14 @@ const PAGES = [
   ['my functions', 'openFuncLib()'], ['the design guide', 'openGuide()'], ['Byte', "$('mentor').classList.add('open')"],
   ['the market panel', "navHome();$('ticker').classList.add('open');renderMarket()"],
   ['the editor', "$('editor').classList.add('open');setTab('blocks');renderProgram()"],
+  /* the Python tab is an editor now, with words of its own round the code:
+     empty, with a mistake in it (the message has code in it, in <code>), and
+     with a block that is still locked */
+  ['the python tab, empty', "$('editor').classList.add('open');R().program=[];renderProgram();setTab('python')"],
+  ['the python tab, a mistake', "$('editor').classList.add('open');setTab('python');CC_PY.type('# x\\nrobot.jupm()')"],
+  ['the python tab, a locked block', "$('editor').classList.add('open');setTab('python');unlocks.loops=false;CC_PY.type('# x\\nfor i in range(3):\\n    robot.chop()')"],
   ['a level', 'packEnter(PUZZLE_PACKS[1],0)'], ['its blocks', "packEnter(PUZZLE_PACKS[1],0);setTab('blocks')"],
+  ['its python', "packEnter(PUZZLE_PACKS[1],0);setTab('python')"],
   ['a lesson, full height', "academyEnter(2);$('edMax').click()"],
   ['a tower level', 't3Enter(TOWER_LEVELS[1])'], ['a cyber level', 'CC_CYBER.enter(CC_CYBER.levels[0])'],
   ['an errand', "packEnter(PUZZLE_PACKS.find(p=>p.id==='errands'),0)"],
@@ -52,6 +59,11 @@ const PAGES = [
   const errs = [];
   pg.on('pageerror', e => errs.push(String(e)));
   await pg.addInitScript(() => { try { localStorage.setItem('codecraft_lang', 'he'); } catch (_) {} });
+  /* The Community page lists what other players made, under the names they
+     gave it, in whatever language they write — that is their text, not the
+     game's, and with a network this suite failed on "Sorting challenge".
+     Offline, the page shows only the game's own words, every time. */
+  await pg.route(/supabase\.co/, r => r.abort());
   await pg.goto(APP); await wait(1300);
 
   const scan = where => pg.evaluate(([where, okSrc]) => {
@@ -62,7 +74,7 @@ const PAGES = [
     const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n;
     while ((n = w.nextNode())) {
       const p = n.parentElement;
-      if (!p || !vis(p) || p.closest('script,style,pre,code,textarea,#pyTab,#pyCode,.mono,svg,#delWho')) continue;
+      if (!p || !vis(p) || p.closest('script,style,pre,code,textarea,#pyCode,#pyGut,.mono,svg,#delWho')) continue;
       const t = n.nodeValue.replace(/\s+/g, ' ').trim();
       if (t && english(t).length) found.push(where + ': "' + t.slice(0, 70) + '"');
     }

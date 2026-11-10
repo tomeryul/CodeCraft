@@ -38,6 +38,8 @@ js/
     blocks.js       Block DEFS/CATS, newBlock, value resolver
     interpreter.js  World helpers, condition eval, the block interpreter (doAction…)
     python.js       Blocks → real Python source
+    pyparse.js      Python → blocks: the parser behind the 🐍 tab, and what it says about a mistake
+    pyedit.js       The 🐍 tab as an editor: typing, colours, chips, the keyboard (loads after hud.js)
     editor.js       Block editor: render, palette, selection, undo/redo
     dragdrop.js     Long-press drag-and-drop of blocks (nest/reorder)
     engagement.js   XP/levels, quests, daily gift

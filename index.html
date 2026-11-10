@@ -31,6 +31,7 @@
   <link rel="stylesheet" href="./css/codecraft-v5.css">
   <link rel="stylesheet" href="./css/codecraft-v6.css">
   <link rel="stylesheet" href="./css/codecraft-v7.css">
+  <link rel="stylesheet" href="./css/pyedit.css">
   <!-- last on purpose: the motion + material house rules answer for
        everything above them. See css/apple.css and CLAUDE.md. -->
   <link rel="stylesheet" href="./css/apple.css">
@@ -150,9 +151,26 @@
     </div>
     <div id="palette"></div>
   </div>
+  <!-- The listing is an editor (js/game/pyedit.js). #pyCode is the coloured
+       copy the player reads; #pyEdit lies on top of it, see-through, and is
+       the one they type in — so the two must be set in exactly the same
+       type, which css/pyedit.css does in one rule for both. -->
   <div class="tabbody" id="pyTab" style="display:none">
-    <pre id="pyCode"></pre>
-    <div class="pynote">🐍 This is your block program written in Python — the same language real engineers use! Your blocks and this code always match.</div>
+    <div id="pyBox">
+      <div id="pyPane"><div id="pyRow">
+        <div id="pyGut" aria-hidden="true"></div>
+        <div id="pyField">
+          <div id="pyMarks" aria-hidden="true"></div>
+          <pre id="pyCode" aria-hidden="true"></pre>
+          <textarea id="pyEdit" aria-label="Python code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" dir="ltr"></textarea>
+          <div id="pyHint">Type your program here — or tap a block below to add its line.</div>
+        </div>
+      </div></div>
+      <span id="pyDot" aria-hidden="true"></span>
+      <div id="pySay" role="status" aria-live="polite"></div>
+    </div>
+    <div id="pyKeys"></div>
+    <div id="pySnips"></div>
   </div>
   <!-- filled at load from the creator bar: see the dock IIFE in challenges.js -->
   <div class="tabbody" id="designTab" style="display:none"></div>
@@ -393,6 +411,7 @@
 <script src="./js/game/blocks.js"></script>
 <script src="./js/game/interpreter.js"></script>
 <script src="./js/game/python.js"></script>
+<script src="./js/game/pyparse.js"></script>
 <script src="./js/game/editor.js"></script>
 <script src="./js/game/dragdrop.js"></script>
 <script src="./js/game/engagement.js"></script>
@@ -415,6 +434,7 @@
 <script src="./js/game/fx.js"></script>
 <script src="./js/game/tutorial.js"></script>
 <script src="./js/game/hud.js"></script>
+<script src="./js/game/pyedit.js"></script>
 <script src="./js/game/input.js"></script>
 <script src="./js/game/decor-tiles.js"></script>
 <script src="./js/game/build.js"></script>

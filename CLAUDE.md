@@ -188,6 +188,53 @@ chapter. The author also picks its destinations (`proj.goTargets`). A
 single level's row has no column for either, so a level that hands it
 out publishes as a one-level pack. `test/walk-to.js`.
 
+## Python you can type
+
+The 🐍 tab is an editor: type a line and its block appears, change a block
+and its line changes. `js/game/python.js` writes blocks out as Python,
+`js/game/pyparse.js` reads Python back in, `js/game/pyedit.js` is the page
+round them, `css/pyedit.css` its styles, `test/python.js` the proof.
+
+**The text is turned INTO blocks, never run.** One interpreter, one block
+budget, one save format, one set of level rules: a level that hands out
+Move, Turn and Repeat accepts exactly those three typed (`pyCtx`), and the
+world's locks hold at the keyboard too. Do not add a second way to execute.
+
+**A block needs three things or the tab goes read-only for any program
+that holds it:** its line in `toPy`, its reading in `pyparse.js`, and its
+shape in `pyCanonList`. The names (`PY_ACT`, `PY_SEES`, `PY_ASK`,
+`PY_READ`) live once, in `python.js`; the parser reads the same tables
+backwards. `test/python.js` builds two thousand random programs out of
+every block in `DEFS` and fails if one does not come back the same — so a
+new block type fails there until all three exist.
+
+**`pyCanon` is what "the same program" means** — no uids, every field
+written the one way it runs. The editor uses it to decide whether the text
+and the blocks still match; `r.py` is `{text, base, gen}`, and while the
+blocks still come to `base` the text is the player's and is left alone
+(their notes, a line they are half way through). Change the blocks any
+other way and the listing is written out fresh.
+
+**What it says about a mistake is in `PY_MSG`, in both languages, not in
+`i18n.js`.** Those sentences have code in them, and the dictionary would
+translate the code ("tree" → "עץ" in a line the child is told to type).
+Text between backticks is shown as code. A new message needs both
+languages, the same backticks and the same `{0}` in each — the suite
+counts them.
+
+**The field and its coloured copy are set by ONE rule** in
+`css/pyedit.css` (`#pyTab #pyCode,#pyTab #pyEdit`). The see-through
+`<textarea>` lies on the `<pre>`; a pixel of difference in type and the
+caret is no longer where the letters are. Nothing else may style either.
+
+**A phone:** the keyboard covers the bottom of the screen without
+shortening the page, so `kbSync` measures it (`visualViewport`) and the
+sheet stands on top of it (`#editor.kb`); the keys it buries are in
+`#pyKeys`; and the palette is in the tab as chips that each write their
+own line, so nothing has to be typed at all. ▶ asks `pyHold()` first: on
+the Python tab a mistake is answered, never skipped past to run the older
+blocks. None of the keyboard part can be tested without a real phone.
+
 ## The robot
 
 `js/game/robot-rig.js` draws every robot in the game — the world, the

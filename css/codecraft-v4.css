@@ -187,11 +187,6 @@
 #actionBar{justify-content:center;}
 #actionBar #runBtn,#actionBar #stopBtn{max-width:320px;}
 
-/* H2. Python ran off the panel edge with no scrollbar and no wrap, so a long
-   line was simply cut. `#pyTab pre` in styles.css outranks a bare `#pyCode`,
-   hence the doubled id. */
-#pyTab #pyCode{white-space:pre-wrap;overflow-wrap:anywhere;}
-
 /* H4. The status icons are drawn art (coin, backpack), not glyphs — at
    1.18em of 13.5px they were 16px and read as coloured dots. */
 #stats .chip{gap:6px;}

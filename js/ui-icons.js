@@ -232,8 +232,17 @@ function svgFor(ch){
   return null;
 }
 const SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,PRE:1,svg:1,SVG:1,CANVAS:1,INPUT:1};
+/* A <pre> or a field is code or the player's own text. walk() skips them
+   on the way down, but a text node that ARRIVES inside one reaches
+   processText directly — and an emoji swapped for an icon in the Python
+   listing is a different width from the one in the field typed over it. */
+function inSkipped(n){
+  for(let p=n.parentNode;p&&p.nodeType===1;p=p.parentNode)if(p.tagName==="PRE"||p.tagName==="TEXTAREA")return true;
+  return false;
+}
 function processText(tn){
   if(!tn.parentNode)return; // node was detached before this batched mutation ran
+  if(inSkipped(tn))return;
   const s=tn.nodeValue; if(!s)return;
   RX.lastIndex=0; if(!RX.test(s))return;
   const frag=document.createDocumentFragment();
@@ -255,7 +264,7 @@ function processText(tn){
 }
 function walk(node){
   if(node.nodeType===3){processText(node);return;}
-  if(node.nodeType!==1||SKIP[node.tagName])return;
+  if(node.nodeType!==1||SKIP[node.tagName]||inSkipped(node))return;
   if(node.classList&&node.classList.contains('ui-emoji'))return;
   const kids=[...node.childNodes];
   for(const k of kids)walk(k);

@@ -1893,6 +1893,7 @@ function mgEnter(proj0){
   const proj=JSON.parse(JSON.stringify(proj0));
   mgRobot=makeRobot(0,0,proj.name);
   applyProg(mgRobot,player.projPrograms[proj.id]);
+  if(typeof pyUnstash==="function")pyUnstash(proj.id,mgRobot);   // …and its Python, as it was typed
   // a level may HAND the player a starter routine (e.g. a ready-made 🔧 Swap) so the
   // exercise is writing the algorithm, not re-deriving its primitive. Only applied
   // when they have nothing of their own saved for this level yet.
@@ -1954,6 +1955,7 @@ function mgExit(reopen){
   if(!mgState)return;
   mgStop();
   player.projPrograms[mgState.proj.id]=packProg(mgRobot);
+  if(typeof pyStash==="function")pyStash(mgState.proj.id,mgRobot);
   mgSaveDraft();          // leaving is the commonest way work was lost
   mgState=null;mgRobot=null;
   $("boardTabBtn").style.display="none";

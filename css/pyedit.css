@@ -1,0 +1,179 @@
+/* =====================================================================
+   The Python editor  (js/game/pyedit.js, js/game/pyparse.js)
+   ---------------------------------------------------------------------
+   The 🐍 tab is an editor: type a line and its block appears. It is a
+   see-through <textarea> lying exactly on top of a coloured <pre>, so the
+   colours come from one element and the caret, the selection and the
+   keyboard from the other. That only works while the two are set in the
+   same type, to the pixel — which is why both take their type from the
+   ONE rule below and nothing else in this file may touch it.
+
+   One scroller (#pyPane) holds both, so they scroll as a single thing and
+   nothing has to keep them in step. A line never wraps: a wrapped line of
+   Python hides the very indentation the child is being asked to read.
+   ===================================================================== */
+#pyTab{
+  --py-lh:26px;            /* one line of code; pyedit.js reads this too */
+  --py-pad:10px;
+  --py-bg:#171230;
+  --py-ink:#cde3ff; --py-note:#8a7fb8; --py-text:#8ff0a0; --py-word:#ff9d6b;
+  --py-who:#b184ff; --py-call:#5ab8ff; --py-num:#ffd66b;
+  gap:8px;
+}
+#pyBox{position:relative;flex:1 1 0;min-height:0;display:flex;overflow:hidden;
+  background:var(--py-bg);border-radius:var(--r-card);}
+#pyPane{flex:1;min-width:0;overflow:auto;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;}
+#pyPane::-webkit-scrollbar{display:none;}
+/* as tall as its tallest child, so the gutter runs the full length of the
+   code and not just the height of the window onto it */
+#pyRow{display:flex;min-height:100%;width:max-content;min-width:100%;}
+#pyGut{position:sticky;left:0;z-index:3;flex:0 0 auto;min-width:28px;box-sizing:border-box;
+  padding:var(--py-pad) 5px var(--py-pad) 6px;background:var(--py-bg);text-align:right;
+  color:#5f588c;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:var(--fs-xs);line-height:var(--py-lh);
+  -webkit-user-select:none;user-select:none;pointer-events:none;}
+#pyGut div{height:var(--py-lh);}
+#pyGut .bad{color:var(--red);font-weight:var(--fw-bold);}
+#pyGut .run{color:var(--green);font-weight:var(--fw-bold);}
+#pyField{position:relative;flex:1 0 auto;}
+
+/* THE rule: the copy you read and the field you type in, set identically */
+#pyTab #pyCode,#pyTab #pyEdit{
+  margin:0;border:0;box-sizing:border-box;
+  padding:var(--py-pad) 10px var(--py-pad) 4px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:var(--fs-lg) !important;   /* 16.5px: over iOS's 16px zoom threshold, and on the type scale */
+  font-weight:var(--fw-regular);font-style:normal;font-variant-ligatures:none;
+  line-height:var(--py-lh);letter-spacing:0;word-spacing:0;tab-size:4;-moz-tab-size:4;
+  white-space:pre;overflow-wrap:normal;word-break:normal;text-align:left;
+  direction:ltr;unicode-bidi:normal;text-indent:0;text-transform:none;
+}
+#pyTab #pyCode{position:relative;z-index:1;display:block;overflow:visible;min-height:0;
+  background:none;border-radius:0;color:var(--py-ink);pointer-events:none;}
+#pyTab #pyEdit{position:absolute;left:0;top:0;z-index:2;width:100%;height:100%;display:block;
+  resize:none;overflow:hidden;outline:none;border-radius:0;
+  -webkit-appearance:none;appearance:none;
+  background:transparent;color:transparent;-webkit-text-fill-color:transparent;caret-color:#fff;}
+#pyTab #pyEdit::selection{background:rgba(122,150,255,.38);}
+#pyTab #pyEdit[readonly]{caret-color:transparent;}
+/* the colours */
+#pyCode .c{color:var(--py-note);font-style:italic;}
+#pyCode .s{color:var(--py-text);}
+#pyCode .k{color:var(--py-word);}
+#pyCode .o{color:var(--py-who);}
+#pyCode .f{color:var(--py-call);}
+#pyCode .n{color:var(--py-num);}
+/* the piece of the line a message is about */
+#pyCode .q{background:rgba(255,93,115,.26);border-radius:3px;
+  -webkit-text-decoration:underline wavy var(--red);text-decoration:underline wavy var(--red);
+  text-decoration-skip-ink:none;text-underline-offset:3px;}
+#pyCode .q.soft{background:rgba(255,214,107,.16);-webkit-text-decoration:none;text-decoration:none;}
+
+/* whole-line marks, under the text: the line that is wrong, the line the
+   robot is on, and the line a tap just added */
+#pyMarks{position:absolute;left:0;right:0;top:var(--py-pad);z-index:0;pointer-events:none;}
+#pyMarks i{position:absolute;left:0;right:0;height:var(--py-lh);display:none;}
+#pyMarks .bad{background:rgba(255,93,115,.12);}
+#pyMarks .run{background:rgba(84,214,106,.16);box-shadow:inset 3px 0 0 var(--green);}
+#pyMarks .new{background:rgba(255,255,255,.14);opacity:0;}
+#pyMarks .new.go{display:block;animation:pyNew .7s var(--ease-settle);}
+@keyframes pyNew{from{opacity:1}to{opacity:0}}
+
+/* nothing written yet: what to do here, in the player's own language —
+   it used to be four lines of English comments inside the listing */
+#pyHint{position:absolute;z-index:1;left:4px;right:16px;top:calc(var(--py-pad) + var(--py-lh));
+  max-width:300px;display:none;pointer-events:none;white-space:normal;
+  color:var(--ink-dim);font-size:var(--fs-sm);line-height:1.5;}
+#pyTab.empty #pyHint{display:block;}
+
+/* in step with the blocks, or not: a dot in the corner, never a row that
+   takes a line of code away from a half-height sheet */
+#pyDot{position:absolute;right:9px;top:9px;z-index:4;width:9px;height:9px;border-radius:50%;
+  background:var(--green);pointer-events:none;transition:background-color var(--dur-move) var(--ease-settle);}
+#pyTab.wait #pyDot{background:var(--accent);}
+#pyTab.bad #pyDot{background:var(--red);}
+#pyTab.ro #pyDot{background:var(--ink-dim);}
+
+/* what is wrong and how to fix it. It floats over the code — at whichever
+   edge is further from the line it is about — so a message arriving never
+   resizes the code or moves a single row beneath it. */
+#pySay{position:absolute;left:8px;right:8px;bottom:8px;z-index:5;display:none;}
+#pySay.top{bottom:auto;top:8px;}
+#pySay.on{display:block;animation:pySay var(--dur-move) var(--ease-settle);}
+@keyframes pySay{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+#pySay.top.on{animation-name:pySayTop;}
+@keyframes pySayTop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+#pySay button{display:block;width:100%;text-align:left;padding:9px 11px;border-radius:var(--r-ctl);
+  background:#3a1c33;border:1px solid rgba(255,93,115,.55);color:var(--ink);
+  font-size:var(--fs-sm);font-weight:var(--fw-medium);line-height:1.5;
+  box-shadow:0 6px 18px rgba(0,0,0,.4);
+  -webkit-user-select:none;user-select:none;}
+#pySay.soft button{background:#2b2550;border-color:var(--hair);}
+#pySay button:active{transform:scale(.99);}
+#pySay .ln{display:inline-block;margin-right:7px;padding:0 7px;border-radius:999px;
+  background:var(--red);color:#fff;font-size:var(--fs-xs);font-weight:var(--fw-bold);line-height:1.7;
+  vertical-align:1px;}
+#pySay.soft .ln{background:var(--panel3);}
+#pySay code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:var(--fs-sm);
+  font-weight:var(--fw-regular);color:var(--accent2);background:rgba(0,0,0,.28);border-radius:5px;
+  padding:1px 4px;white-space:pre-wrap;overflow-wrap:anywhere;direction:ltr;unicode-bidi:isolate;}
+/* A Hebrew sentence with code in the middle of it: the sentence runs right
+   to left, every piece of code inside it left to right. #pyTab as a whole
+   stays ltr (the listing is code), so the message says so itself. */
+html.he #pySay button{direction:rtl;text-align:right;unicode-bidi:isolate;}
+html.he #pySay .ln{margin-right:0;margin-left:7px;}
+html.he #pyHint{direction:rtl;text-align:right;left:auto;right:16px;}
+
+/* the keys a phone keyboard buries two layers down, in reach while typing */
+#pyKeys{display:none;flex:0 0 auto;gap:6px;overflow-x:auto;scrollbar-width:none;}
+#pyKeys::-webkit-scrollbar{display:none;}
+#editor.typing #pyKeys{display:flex;}
+#pyKeys button{flex:1 0 auto;min-width:42px;height:40px;padding:0 6px;border-radius:var(--r-ctl);
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--glass-on);color:var(--ink);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:var(--fs-lg);font-weight:var(--fw-bold);
+  -webkit-user-select:none;user-select:none;
+  transition:transform var(--dur-quick) var(--ease-settle),background-color var(--dur-quick) var(--ease-settle);}
+#pyKeys button:active{transform:scale(.94);background:var(--panel3);}
+#pyKeys button:disabled{opacity:.35;}
+#pyKeys svg{width:20px;height:20px;display:block;}
+
+/* the palette, as lines of code: the same chips as the Blocks tab, in one
+   row, each one writing its own line */
+#pySnips{display:flex;flex:0 0 auto;gap:6px;overflow-x:auto;scrollbar-width:none;padding:0 0 3px;
+  scroll-padding:0 12px;}
+#pySnips::-webkit-scrollbar{display:none;}
+#pySnips .pblk{flex:0 0 auto;min-height:40px;gap:6px;white-space:nowrap;
+  -webkit-user-select:none;user-select:none;}
+#pySnips .pblk code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:var(--fs-sm);font-weight:var(--fw-bold);}
+#pySnips .pysk{flex:0 0 auto;width:42px;height:40px;padding:0;border-radius:var(--r-ctl);
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--glass-on);color:var(--ink);
+  transition:transform var(--dur-quick) var(--ease-settle);}
+#pySnips .pysk:active{transform:scale(.94);}
+#pySnips .pysk svg{width:20px;height:20px;display:block;}
+#pyTab.ro #pySnips,#pyTab.ro #pyKeys{opacity:.4;pointer-events:none;}
+
+/* a draft with a mistake in it, seen from the other tabs */
+#editor #tabs button[data-tab="python"].warn{position:relative;}
+#editor #tabs button[data-tab="python"].warn::after{content:"";position:absolute;top:7px;right:calc(50% - 22px);
+  width:8px;height:8px;border-radius:50%;background:var(--red);}
+
+/* ---- while the keyboard is up ----
+   A phone's keyboard covers the bottom of the screen and the page under it
+   does not get any shorter, so a sheet pinned to the bottom is simply
+   covered. pyedit.js measures the keyboard (visualViewport) and hands the
+   two numbers over; the sheet stands on top of it and gives up the tab bar,
+   which cannot be reached anyway. */
+#editor.kb{bottom:var(--kb,0px);max-height:calc(var(--kbv,100vh) - var(--sat) - 6px);padding-bottom:0;
+  border-radius:var(--r-sheet) var(--r-sheet) 0 0;}
+#editor.kb #tabs{display:none;}
+#editor.kb #actionBar{padding-bottom:7px;}
+
+@media (prefers-reduced-motion:reduce){
+  #pySay.on,#pySay.top.on{animation:none;}
+  #pyMarks .new.go{animation:none;display:none;}
+}

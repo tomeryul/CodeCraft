@@ -82,13 +82,17 @@ function updateFab(){
   const live=(typeof mgState!=="undefined"&&mgState)?!!mgState.running:!!r.running;
   $("editor").classList.toggle("running",live);
 }
+/* typed Python with a mistake in it is answered before anything runs
+   (pyHold in pyedit.js) — never skipped past to run the older blocks */
+const runHeld=()=>typeof pyHold==="function"&&pyHold();
 $("fabRun").addEventListener("click",()=>{
-  if(mgState){mgState.running?mgStop():mgRun();return;}
-  const r=R();r.running?stopRobot(r):startRobot(r);
+  if(mgState){ if(mgState.running)mgStop(); else if(!runHeld())mgRun(); return; }
+  const r=R();
+  if(r.running)stopRobot(r); else if(!runHeld())startRobot(r);
 });
-$("runBtn").addEventListener("click",()=>{if(mgState)mgRun();else startRobot(R());});
+$("runBtn").addEventListener("click",()=>{if(runHeld())return;if(mgState)mgRun();else startRobot(R());});
 $("stopBtn").addEventListener("click",()=>{if(mgState)mgStop();else stopRobot(R());});
-$("mgStepBtn").addEventListener("click",()=>mgStep());
+$("mgStepBtn").addEventListener("click",()=>{if(!(mgState&&mgState.running)&&runHeld())return;mgStep();});
 $("mgSpeedBtn").addEventListener("click",()=>mgSpeedCycle());
 $("mgResetBtn").addEventListener("click",()=>{
   mgStop();

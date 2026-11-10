@@ -1483,7 +1483,7 @@ async function ev(expr) {
   check("...and picks a reachable target when the nearest is walled off", WT.wentRound === true, walkTo);
   check("nothing in range reads as blocked 🚧", WT.noneBlocks === true, walkTo);
   check("Walk To is the world's Basic movement block, and generates Python",
-    WT.inPalette === true && /walk_to_nearest\("iron"\)/.test(WT.py), walkTo);
+    WT.inPalette === true && /walk_to\("iron"\)/.test(WT.py), walkTo);
   check("...and step-by-step blocks are gone from the world palette but still RUN",
     WT.noStepping === true && WT.stepsStillRun === true, walkTo);
 
@@ -2133,7 +2133,7 @@ async function ev(expr) {
     OR.gotTheRightThing === true && OR.neverToldIt === true, ord);
   check("it reads as Python",
     /what = market\.order_wants\(\)/.test(OR.py) &&
-    /robot\.walk_to_nearest\(what\)/.test(OR.py), ord);
+    /robot\.walk_to\(what\)/.test(OR.py), ord);
   check("🔁 Repeat's variable chip asks once and leaves the block alone",
     OR.repeatHasNameChip === true && OR.promptedOnce === true &&
     OR.repeatStayedClean === true, ord);

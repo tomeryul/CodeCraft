@@ -254,10 +254,7 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 /* how to unlock a group is information, not a reward: the secondary ink, not amber (design-audit stage 5) */
 .pcat .lockmsg{font-size:var(--fs-xs);color:var(--ink2);font-weight:var(--fw-medium);margin-top:3px;}
 
-/* python tab */
-#pyTab pre{flex:1;overflow:auto;background:#171230;border-radius:var(--r-card);padding:14px;margin:0;font-size:var(--fs-md);line-height:1.8;
-  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cde3ff;white-space:pre;}
-#pyTab .pynote{font-size:var(--fs-sm);color:var(--ink2);padding:9px 4px 2px;line-height:1.45;}
+/* python tab: css/pyedit.css */
 
 /* ---------- mentor ---------- */
 #mentor{height:70vh;z-index:50;}
