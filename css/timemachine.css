@@ -1,0 +1,90 @@
+/* =====================================================================
+   The time machine's bar (js/game/timemachine.js)
+   ---------------------------------------------------------------------
+   One row under the board: a step back, the track, a step forward, and
+   the triangle that walks between the steps where something went wrong.
+   Above the rail, in the track's own column, one line says which step
+   this is, which block ran, and what — if anything — went wrong on it.
+
+   It lives in the strip under the board (#mgRead), whose share of the
+   sheet is fixed — so the bar arriving does not change the board's size
+   (docs/ux-roadmap.md topic 2, test/stable.js). It takes the place of the
+   "tap Blocks to write your program" hint, which a run has made stale.
+
+   Left to right in both languages: it is a timeline, like a film's, and
+   the page is not mirrored in Hebrew either (see i18n.js).
+
+   No curve is typed here. The thumb is moved by the spring in
+   sheet-drag.js; the presses use the tokens in css/apple.css.
+   ===================================================================== */
+#mgTime{margin:0 0 8px;}
+#mgTime[hidden]{display:none;}
+#mgPanel.tm #mgBoardHint{display:none;}
+
+/* One row, 46px: the caption's line (14) and the thumb (24) share the
+   track's column, and the 40px buttons stand on the row's floor — which
+   puts their middle on the rail's, 26px down. */
+#mgTime .tm-row{display:grid;grid-template-columns:40px minmax(0,1fr) 40px 40px;grid-template-rows:46px;
+  column-gap:6px;direction:ltr;}
+#mgTime .tm-btn{grid-row:1;align-self:end;width:40px;height:40px;padding:0;margin:0;border-radius:var(--r-ctl);
+  background:var(--glass-hi);border:1px solid var(--hair);box-shadow:none;color:var(--ink);
+  font-size:var(--fs-xl);font-weight:var(--fw-bold);line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform var(--dur-quick) var(--ease-settle),background-color var(--dur-quick) var(--ease-settle),
+    opacity var(--dur-quick) var(--ease-settle);}
+#mgTime #tmBack{grid-column:1;}
+#mgTime #tmFwd{grid-column:3;}
+#mgTime #tmWhy{grid-column:4;background:rgba(255,93,115,.16);border-color:rgba(255,93,115,.5);}
+#mgTime .tm-btn:active{transform:scale(.94);background:var(--glass-on);}
+#mgTime .tm-btn:disabled{opacity:.32;}
+#mgTime .tm-btn .ui-emoji{width:20px;height:20px;}
+/* its place is kept when there is nothing to walk to, so the track is the
+   same length before a mistake and after one */
+#mgTime #tmWhy.none{visibility:hidden;}
+
+/* the whole column is the track: a finger that lands on the caption has
+   landed on the bar */
+#tmTrack{grid-column:2;grid-row:1;position:relative;min-width:0;height:46px;touch-action:none;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;border-radius:var(--r-ctl);}
+#tmTrack:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+#tmTrack .tm-rail{position:absolute;left:0;right:0;top:26px;height:6px;margin-top:-3px;border-radius:3px;
+  background:rgba(255,255,255,.16);overflow:hidden;}
+/* the run so far. Not amber and not green: those are Play and Run, and
+   this is neither — it is where you are in what already happened. */
+#tmTrack .tm-fill{position:absolute;left:0;top:0;width:100%;height:100%;border-radius:3px;
+  background:var(--ink2);transform-origin:0 50%;transform:scaleX(0);}
+/* a step where something visibly went wrong */
+#tmTrack .tm-ticks i{position:absolute;left:0;top:26px;width:4px;height:14px;margin:-7px 0 0 -2px;border-radius:2px;
+  background:var(--red);box-shadow:0 0 0 1.5px var(--panel);}
+#tmTrack .tm-thumb{position:absolute;left:0;top:26px;width:24px;height:24px;margin:-12px 0 0 -12px;will-change:transform;}
+#tmTrack .tm-thumb i{display:block;width:100%;height:100%;border-radius:50%;background:#fff;
+  box-shadow:0 2px 7px rgba(0,0,0,.4),inset 0 -2px 0 rgba(0,0,0,.12);
+  transition:transform var(--dur-quick) var(--ease-settle),background-color var(--dur-quick) var(--ease-settle);}
+/* the press: it answers under the finger before it has moved */
+#tmTrack.drag .tm-thumb i{transform:scale(1.2);}
+#mgTime.bad .tm-thumb i{background:var(--red);}
+
+#mgTime .tm-cap{grid-column:2;grid-row:1;align-self:start;position:relative;z-index:1;pointer-events:none;
+  display:flex;align-items:center;gap:5px;height:14px;min-width:0;
+  font-size:var(--fs-sm);font-weight:var(--fw-medium);color:var(--ink2);line-height:14px;white-space:nowrap;overflow:hidden;}
+#mgTime .tm-num{font-weight:var(--fw-bold);color:var(--ink2);font-variant-numeric:tabular-nums;direction:ltr;flex:0 0 auto;}
+#mgTime .tm-ic{display:inline-flex;align-items:center;flex:0 0 auto;}
+#mgTime .tm-ic .ui-emoji{width:13px;height:13px;}
+#mgTime .tm-ic:empty{display:none;}
+#mgTime .tm-cap.tight .tm-num{display:none;}
+#mgTime .tm-what{font-weight:var(--fw-bold);color:var(--ink);flex:0 0 auto;}
+#mgTime .tm-why{color:var(--red);font-weight:var(--fw-bold);overflow:hidden;text-overflow:ellipsis;min-width:0;}
+/* the secret input is running: there is nothing here to take hold of */
+#mgTime.lock{opacity:.35;pointer-events:none;}
+
+/* an input's chip can be tapped to put its run on the bar. The chip stays
+   the size it is — the strip is above the board and may not grow — and
+   the finger gets the room around it instead. */
+#mgCases .casechip.tap{position:relative;cursor:pointer;}
+#mgCases .casechip.tap::after{content:"";position:absolute;left:-3px;right:-3px;top:-10px;bottom:-10px;}
+#mgCases .casechip.view{box-shadow:0 0 0 2px var(--ink);}
+
+@media (prefers-contrast:more){
+  #tmTrack .tm-rail{background:rgba(255,255,255,.4);}
+  #mgTime .tm-btn{border-color:var(--ink);}
+}

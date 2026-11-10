@@ -87,7 +87,8 @@ addEventListener("pointerdown",e=>{
 function updateExecHighlight(){
   if(!$("editor").classList.contains("open"))return;
   const r=R();
-  const on=r.running&&r.curUid?document.querySelector('#programEl .blk[data-uid="'+r.curUid+'"]'):null;
+  /* r.peek: the time machine is standing on an earlier step of a board run */
+  const on=(r.running||r.peek)&&r.curUid?document.querySelector('#programEl .blk[data-uid="'+r.curUid+'"]'):null;
   document.querySelectorAll("#programEl .blk.exec").forEach(el=>{if(el!==on)el.classList.remove("exec");});
   if(on&&!on.classList.contains("exec"))on.classList.add("exec");
   /* rebuilt only when a value changed: this runs three times a second */

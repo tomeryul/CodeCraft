@@ -691,6 +691,12 @@ const HE={
 "Undo":"בטל","Redo":"בצע שוב","Copy":"העתק","Paste here":"הדבק כאן",
 "Playback speed":"מהירות הרצה","Run one action at a time":"הרץ פעולה אחת בכל פעם",
 "Reset the board":"אפס את הלוח","Difficulty":"דרגת קושי",
+/* the time machine under the board (js/game/timemachine.js): its controls.
+   What it says went wrong on a step is two or three words, so those are in
+   SCOPED, under #mgTime. */
+"Time machine":"מכונת הזמן","Drag to go back in time":"גרור כדי לחזור אחורה בזמן",
+"One step back":"צעד אחד אחורה","One step forward":"צעד אחד קדימה",
+"Go to what went wrong":"לקפוץ למה שהשתבש",
 "Level setup":"הגדרות שלב","Save to My Challenges":"שמור לאתגרים שלי",
 "Prove the level, then bank it and start the next":"הוכח את השלב, שמור אותו, והתחל את הבא",
 "Hand players a ready-made routine":"תן לשחקנים שגרה מוכנה",
@@ -1144,6 +1150,9 @@ const SCOPED=[
   ["#statsBox",      {"Collected":"נאספו","Earned":"הרווחת"}],
   ["#playBtn",       {"Play":"שחק","Play offline":"שחק במצב לא מקוון"}],
   ["#actionBar",     {"Reset":"אפס"}],
+  /* what the time machine saw go wrong on a step: short enough to be a
+     challenge's name anywhere else */
+  ["#mgTime",        {"Blocked":"הדרך חסומה","Nothing happened":"לא קרה כלום","Off the plan":"מחוץ לתוכנית"}],
   [".hub-sec",       {"Play":"לשחק"}],
   /* Scoped to a block on purpose: "is" is two letters and could be a word in
      anyone's challenge name or robot name. Inside a block it is the is/is-not

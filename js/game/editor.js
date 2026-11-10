@@ -152,7 +152,7 @@ function renderRoutineTabs(){
   const r=R(), R2=robotRoutines(r);
   const inCur=uid=>uid!=null&&!!byUid(curList(),uid);
   const tab=(id,label,list)=>{
-    const running=r.running&&r.curUid!=null&&byUid(list,r.curUid);
+    const running=(r.running||r.peek)&&r.curUid!=null&&byUid(list,r.curUid);
     return '<button class="rtab'+(edTarget===id?" on":"")+'" data-rt="'+id+'">'+
       label+' <span class="rn">'+countBlocks(list)+'</span>'+(running?' ●':'')+'</button>';
   };

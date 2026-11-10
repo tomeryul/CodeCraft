@@ -235,6 +235,28 @@ own line, so nothing has to be typed at all. ▶ asks `pyHold()` first: on
 the Python tab a mistake is answered, never skipped past to run the older
 blocks. None of the keyboard part can be tested without a real phone.
 
+## ⏪ The time machine
+
+Every run on a board is kept, one snapshot per action, and a bar under the
+board slides through them (`js/game/timemachine.js`, `css/timemachine.css`,
+`test/timemachine.js`). Drag it back and the board, the variables and the
+lit block are that step.
+
+**It records; it never runs.** `mgTick` calls `tmRec` after each action and
+`tmLive` before the next one, which puts the real run back if the player was
+looking at an earlier step. Do not let it execute anything — the suite runs
+two hundred random programs and checks every step of the bar against the
+board as it actually ran.
+
+It marks only what can be SEEN to have gone wrong: a step that did not move,
+a reach that changed nothing, the first brick off the plan. Not a refused
+keypad guess (guessing is the Cyber Lab's method), not a brick laid twice.
+After a failed run with several inputs it stands on the input that failed;
+the secret input is never replayed. There is none in the designer.
+
+The caption writes into its existing text nodes (`set()`): replacing a node
+re-matches the stylesheets' `body::has()` rules and cost 0.35ms a step.
+
 ## The robot
 
 `js/game/robot-rig.js` draws every robot in the game — the world, the

@@ -1891,6 +1891,7 @@ function mgEnter(proj0){
   // play (the test-case loop does) would corrupt the built-in level for the session,
   // or worse, mutate persisted save data.
   const proj=JSON.parse(JSON.stringify(proj0));
+  if(window.tmClear)tmClear();   // a recording belongs to the level it was made on
   mgRobot=makeRobot(0,0,proj.name);
   applyProg(mgRobot,player.projPrograms[proj.id]);
   if(typeof pyUnstash==="function")pyUnstash(proj.id,mgRobot);   // …and its Python, as it was typed
@@ -1954,6 +1955,7 @@ function mgEnter(proj0){
 function mgExit(reopen){
   if(!mgState)return;
   mgStop();
+  if(window.tmClear)tmClear();
   player.projPrograms[mgState.proj.id]=packProg(mgRobot);
   if(typeof pyStash==="function")pyStash(mgState.proj.id,mgRobot);
   mgSaveDraft();          // leaving is the commonest way work was lost
@@ -1990,6 +1992,7 @@ function mgExit(reopen){
 }
 function mgReset(){
   if(!mgState)return;
+  if(window.tmReset)tmReset();   // the time machine lets go of the board it was showing
   const p=mgState.proj;
   const rs={x:p.start.x,y:p.start.y,dir:p.start.dir};mgSeed(rs,p);
   mgState.robot=rs;
@@ -2002,6 +2005,7 @@ function mgUpdateCount(){
   const el=$("mgCount");
   el.textContent="🧩 "+n+"/"+mgState.proj.maxBlocks;
   el.style.color=over?"#ff5d73":"";
+  if(window.tmProg)tmProg();     // a recording of the old program is not this program's
   updateChips(); // keep the block budget visible on the challenge chip while coding
 }
 /* ---------------- test cases: one program, many inputs ----------------
@@ -2063,6 +2067,7 @@ function mgStartCase(fast){
     st.tickMs=Math.max(25,Math.round(base/(player.mgSpeed||1)));
     st.timer=setInterval(mgRunTick,st.tickMs);
   }
+  if(window.tmBegin)tmBegin(st);   // js/game/timemachine.js: step 0 of this input
   mgCaseStrip();mgVarsUI();
 }
 /* ---------------- the instruments ----------------
@@ -2127,7 +2132,10 @@ function mgCaseStrip(){
     const cls=r===true?"ok":r===false?"bad":(i===st.ci&&st.running)?"now":"";
     const mark=r===true?"✓":r===false?"✗":(i===st.ci&&st.running)?"▶":"○";
     const lab=(c&&c.hidden)?"?":esc(mgCaseLabel(c,i));
-    return '<span class="lvchip casechip '+cls+'">'+mark+" "+lab+'</span>';
+    /* after a run an input can be tapped to put ITS run on the time
+       machine — never the secret one, which stays unseen */
+    const tm=window.tmCase?tmCase(i):"";
+    return '<span class="lvchip casechip '+cls+(tm?" "+tm+'" role="button" tabindex="0" data-ci="'+i:"")+'">'+mark+" "+lab+'</span>';
   }).join("");
 }
 // Undo the board-swapping a creator run does: a run overlays every input onto the
@@ -2167,6 +2175,7 @@ function mgStop(){
   clearInterval(mgState.timer);mgState.timer=null;
   mgState.running=false;
   if(mgRobot){mgRobot.running=false;mgRobot.curUid=null;}
+  if(window.tmStop)tmStop();
   updateChips();updateFab();
 }
 /* ▶ Run's timer. A swing — a block set down, a tree felled — holds the
@@ -2181,6 +2190,9 @@ function mgRunTick(){
 function mgTick(){
   const st=mgState;
   if(!st||!st.running)return;
+  // the time machine may be showing an earlier step: the run carries on from
+  // where it really is, never from the step being looked at
+  if(window.tmLive)tmLive();
   // Runaway guard. It has to scale with the level's own block budget: a
   // straight-line program executes every block at least once, so a 999-block level
   // could never finish under a flat 500. ×20 leaves generous room for loops, and
@@ -2196,7 +2208,7 @@ function mgTick(){
     if(st.cases&&st.cases.length>1){mgFinish();return;}
     toast("♾️ Your program ran too long — something is looping forever!");return;
   }
-  if(st.wait>0){st.wait--;mgDraw();return;} // ⏱️ Wait holds the robot still for n ticks
+  if(st.wait>0){st.wait--;if(window.tmRec)tmRec(st,null,null);mgDraw();return;} // ⏱️ Wait holds the robot still for n ticks
   let guard=0;
   while(guard++<60){
     const fr=st.frames[st.frames.length-1];
@@ -2273,7 +2285,7 @@ function mgTick(){
     mgRobot.curUid=b.uid;
     const rb=st.robot;
     // what the board was, so the look can tell a step from a bump
-    const was={x:rb.x,y:rb.y,z:rb.z||0,held:rb.held,items:rb.items?rb.items.size:0};
+    const was={x:rb.x,y:rb.y,z:rb.z||0,held:rb.held,items:rb.items?rb.items.size:0,trees:rb.trees?rb.trees.size:0};
     // 3D levels handle their own actions before anything falls through
     // to the flat-board rules. Answers false off 3D levels, and no-ops when the
     // file isn't loaded.
@@ -2283,7 +2295,7 @@ function mgTick(){
     else if(b.t==="move")mgMoveAhead(st,rb);
     // 🚶 Walk To takes one tile a tick, so the same block stays current
     // until it arrives
-    else if(b.t==="goNear"&&mgWalkTick(st,b,fr)){mgLookAct(st,b.t,was);mgDraw();mgVarsUI();return;}
+    else if(b.t==="goNear"&&mgWalkTick(st,b,fr)){if(window.tmRec)tmRec(st,b,was);mgLookAct(st,b.t,was);mgDraw();mgVarsUI();return;}
     else if(b.t==="turnL")rb.dir=(rb.dir+3)%4;
     else if(b.t==="turnR")rb.dir=(rb.dir+1)%4;
     else if(b.t==="build"){const kk=rb.x+"_"+rb.y;if(!rb.bricks.has(kk)){rb.bricks.add(kk);rb.brickNo[kk]=rb.nextNo++;}sfx(430,.03);}
@@ -2312,6 +2324,9 @@ function mgTick(){
     else if(b.t==="wait")st.wait=Math.max(0,(b.n|0)-1); // this tick counts as the first
     // any remaining world-only action is a harmless no-op on the challenge grid
     fr.i++;
+    // one action, one step on the time machine's track — taken before the
+    // goal is judged, so the step that wins a level is on it too
+    if(window.tmRec)tmRec(st,b,was);
     mgLookAct(st,b.t,was);
     mgDraw();mgVarsUI();
     // A ♾️ Forever program never runs out of blocks, so the goal can't be checked
@@ -2457,6 +2472,7 @@ function mgFinish(){
   // suite drives mgTick/mgFinish by hand in a dozen places)
   if(!st.cases){st.cases=mgCases(st.proj);st.ci=0;st.results=[];st.costs=[];st.failAt=-1;}
   const r=mgCheck(st);
+  if(window.tmEnd)tmEnd(st,r.ok);
   st.results[st.ci]=r.ok;
   st.costs[st.ci]=st.steps;
   if(!r.ok&&st.failAt<0){st.failAt=st.ci;st.failMsg=r.msg;}
@@ -2470,6 +2486,9 @@ function mgFinish(){
   mgCostUI(); // every input has run — show what each one cost
   mgRestoreDraft(); // give the author their working board back (see mgRun)
   const total=st.cases.length, passed=st.results.filter(Boolean).length;
+  /* before the robot reacts: the time machine may put the input that FAILED
+     back on the board, and the shrug belongs to the robot standing there */
+  if(window.tmDone)tmDone(st);
   mgLookEnd(passed===total);
   if(passed===total){mgSuccess();return;}
   if(total>1){
@@ -2635,6 +2654,19 @@ function mgLookAct(st,t,was){
   if(t==="say")L.sayAt=T;
   if(t==="wait")L.waitTo=T+ms*((st.wait|0)+1);
   st.hold=hold;
+}
+/* The time machine steps forward by one: stand where the step began and
+   let the look play it as it did the first time, at the pace of a 1x run —
+   a walk, a swing, the bonk and the stars. Nothing here touches the rules. */
+function mgLookReplay(st,t,prev){
+  const L=mgLook();if(!L||!prev)return;
+  const z=prev.z||0;
+  L.x=L.fx=L.tx=L.px=prev.x;L.y=L.fy=L.ty=L.py=prev.y;L.z=L.fz=L.tz=z;L.m0=-1e9;
+  L.B.face(prev.dir,true);
+  const keep=[st.tickMs,st.fast,st.stepping,st.hold];
+  st.tickMs=340;st.fast=false;st.stepping=false;
+  mgLookAct(st,t,{x:prev.x,y:prev.y,z,held:prev.held,items:prev.items?prev.items.size:0,trees:prev.trees?prev.trees.size:0});
+  st.tickMs=keep[0];st.fast=keep[1];st.stepping=keep[2];st.hold=keep[3];
 }
 // the run is over: a jump for joy, or a shrug
 function mgLookEnd(won){
