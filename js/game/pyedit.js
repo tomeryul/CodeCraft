@@ -88,7 +88,10 @@ function paint(){
   if(bad&&gut.children[bad-1])gut.children[bad-1].classList.add("bad");
   mark(mBad,bad);
   runMark();
-  tab.classList.toggle("empty",!/^[ \t]*[^#\s]/m.test(text));
+  /* nothing but notes: say what goes here, on the line after the last of them */
+  const empty=!/^[ \t]*[^#\s]/m.test(text);
+  tab.classList.toggle("empty",empty);
+  if(empty)$("pyHint").style.top=(PAD+text.replace(/\s+$/,"").split("\n").length*(text.trim()?LH:0))+"px";
   tab.classList.toggle("ro",S.ro);
   tab.classList.toggle("bad",!!e&&!SOFT[e.key]);
   tab.classList.toggle("wait",!S.ro&&((!!S.err&&!(e&&!SOFT[e.key]))||!!S.tCheck));
@@ -227,9 +230,9 @@ function commit(r,p){
   r.py.base=pyCanon(r); r.py.gen=false;
   selBlock=null; elseSel=null;
   programChanged();
-  /* once: say out loud that the two tabs are one program */
-  if(typed&&typeof mentorFlags!=="undefined"&&!mentorFlags.pyTyped&&progSize(r)>0){
-    mentorFlags.pyTyped=true;
+  /* once, ever: say out loud that the two tabs are one program */
+  if(typed&&!player.pyTyped&&progSize(r)>0){
+    player.pyTyped=true;
     toast("🐍 You typed it — and its block is in 🧩 Blocks now. They are one program.");
   }
 }

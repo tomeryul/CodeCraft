@@ -28,7 +28,7 @@
 /* as tall as its tallest child, so the gutter runs the full length of the
    code and not just the height of the window onto it */
 #pyRow{display:flex;min-height:100%;width:max-content;min-width:100%;}
-#pyGut{position:sticky;left:0;z-index:3;flex:0 0 auto;min-width:28px;box-sizing:border-box;
+#pyTab #pyGut{position:sticky;left:0;z-index:3;flex:0 0 auto;min-width:28px;box-sizing:border-box;
   padding:var(--py-pad) 5px var(--py-pad) 6px;background:var(--py-bg);text-align:right;
   color:#5f588c;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   font-size:var(--fs-xs);line-height:var(--py-lh);
@@ -82,7 +82,7 @@
 
 /* nothing written yet: what to do here, in the player's own language —
    it used to be four lines of English comments inside the listing */
-#pyHint{position:absolute;z-index:1;left:4px;right:16px;top:calc(var(--py-pad) + var(--py-lh));
+#pyHint{position:absolute;z-index:1;left:4px;right:16px;top:calc(var(--py-pad) + var(--py-lh));   /* pyedit.js moves it under the last note */
   max-width:300px;display:none;pointer-events:none;white-space:normal;
   color:var(--ink-dim);font-size:var(--fs-sm);line-height:1.5;}
 #pyTab.empty #pyHint{display:block;}
