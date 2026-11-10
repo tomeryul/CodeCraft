@@ -73,14 +73,25 @@ Regenerate from the game's own CSS mascot — do not hand-edit the files inside
 `ios/` or `android/`, they are overwritten:
 
 ```bash
-node scripts/make-icons.js       # → build/icon-1024.png, icon-fg.png, icon-bg.png
+node scripts/make-icons.js       # → build/icon-1024.png, icon-fg.png, icon-bg.png, splash.png
 cp build/icon-1024.png assets/icon.png
 cp build/icon-fg.png   assets/icon-foreground.png
 cp build/icon-bg.png   assets/icon-background.png
-npx @capacitor/assets generate --iconBackgroundColor '#4a2f9e' \
+cp build/splash.png    assets/splash.png
+cp build/splash.png    assets/splash-dark.png
+npx @capacitor/assets generate --ios --android --iconBackgroundColor '#4a2f9e' \
     --iconBackgroundColorDark '#4a2f9e' \
     --splashBackgroundColor '#1a1230' --splashBackgroundColorDark '#1a1230'
 ```
+
+The robot is `.mascot` in `css/styles.css`, which is measured off the
+home-screen icon (`icon-512.png`); the store icon is given that icon's own
+purple and its pale arc, so the icon a player taps, the launch screen that
+follows it and the game's first screen are one robot. `--ios --android`
+keeps the tool off the web icons, which are the reference and are not
+regenerated. The launch screen is `splash.png`: the robot alone on the dark
+the app starts on — without it the tool pastes the whole square icon in
+the middle of the screen.
 
 Two rules that are easy to get wrong and are already handled:
 
