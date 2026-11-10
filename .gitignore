@@ -41,3 +41,6 @@ fastlane/Preview.html
 fastlane/README.md
 fastlane/test_output/
 *.dSYM.zip
+
+# graphify knowledge graph (generated: /graphify .)
+graphify-out/
