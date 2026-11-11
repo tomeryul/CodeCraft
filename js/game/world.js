@@ -21,6 +21,8 @@ function buildTerrain(){
   homePos={x:W>>1,y:H>>1}; marketPos={x:(W>>1)+2,y:H>>1};
   for(let y=homePos.y-4;y<=homePos.y+4;y++)for(let x=homePos.x-4;x<=homePos.x+4;x++)
     if(x>=0&&y>=0&&x<W&&y<H) terrain[key(x,y)]=T_GRASS;
+  /* the ground is drawn once and kept; a new seed makes every kept piece wrong */
+  if(typeof terrainReset==="function")terrainReset();
 }
 /* What the seed itself puts in the world: trees, flowers and the rock, iron
    and crystal nodes. A node is mined and comes back on the same tile, so this

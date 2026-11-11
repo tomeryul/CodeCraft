@@ -23,45 +23,86 @@ function sprite(ch,size){
 const GRASS=["#79c34e","#71ba47","#7fc957"],SANDC="#ecd9a0",ROCKC=["#a9a9b4","#b3b3be","#9f9faa"],WATERC=["#3f9fd8","#48a8e0"];
 const OBJ_EM={rock:"🪨",iron:"⛓️",crystal:"💎",home:"🏠",market:"🏪",chest:"📦",bridge:"🌉",flower:"🌼",gift:"🎁"};
 let now=0, lastDtSec=0.016;
-/* terrain chunk cache — terrain never mutates after generation */
+/* The ground, kept in pieces. A chunk is 16x16 tiles drawn once into a
+   canvas of its own (js/game/terrain.js draws it) and then only copied to
+   the screen. Three things keep that from ever being felt:
+
+   - a chunk about to come into view is drawn AHEAD, in idle time: the one
+     the camera is within three tiles of. Walking across the map used to pay
+     for a whole new chunk in the frame it appeared;
+   - when several are needed at once (a pinch out, a jump to a far robot)
+     at most two are drawn per frame, and the rest show as flat squares
+     for the frame or two it takes — a soft pop instead of a freeze;
+   - and they are not kept for ever. Each is 9MB, the map is twenty-five of
+     them, and nothing used to let go: a long walk ended with all of it in
+     memory. The ones not seen for longest are dropped. */
 const CHUNK=16, chunks=new Map();
+let chunkClock=0, chunkWarming=false;
 function tileHash(x,y){let h=(x*374761393+y*668265263)^(seed|0);h=Math.imul(h^(h>>>13),1274126177);return ((h^(h>>>16))>>>0)/4294967296;}
-function getChunk(cx,cy){
-  const ck=cx+"_"+cy;
-  let c=chunks.get(ck);
-  if(c)return c;
-  c=document.createElement("canvas");c.width=c.height=CHUNK*TILE*2;
+function bakeChunk(cx,cy){
+  const c=document.createElement("canvas");c.width=c.height=CHUNK*TILE*2;
   const g=c.getContext("2d");g.scale(2,2);
-  for(let ly=0;ly<CHUNK;ly++)for(let lx=0;lx<CHUNK;lx++){
-    const x=cx*CHUNK+lx, y=cy*CHUNK+ly;
-    if(x>=W||y>=H)continue;
-    const tr=terrain[key(x,y)], px=lx*TILE, py=ly*TILE;
-    if(tr===T_WATER)g.fillStyle="#3f9fd8";
-    else if(tr===T_SAND)g.fillStyle=SANDC;
-    else if(tr===T_GRASS)g.fillStyle=GRASS[(x*31+y*17)%3];
-    else g.fillStyle=ROCKC[(x*31+y*17)%3];
-    g.fillRect(px,py,TILE+1,TILE+1);
-    const h1=tileHash(x,y),h2=tileHash(x*3+1,y),h3=tileHash(x,y*5+2);
-    if(tr===T_GRASS){
-      g.fillStyle="rgba(38,96,24,.28)";
-      g.fillRect(px+h1*(TILE-6)+2,py+h2*(TILE-8)+2,2,5);
-      g.fillRect(px+h3*(TILE-6)+2,py+h1*(TILE-8)+2,2,4);
-      if(h2<.12){g.fillStyle="rgba(255,255,255,.5)";g.fillRect(px+h3*(TILE-8)+3,py+h2*(TILE-8)+3,3,3);}
-    }else if(tr===T_SAND){
-      g.fillStyle="rgba(150,120,60,.3)";
-      g.beginPath();g.arc(px+h1*TILE,py+h2*TILE,1.6,0,7);g.arc(px+h3*TILE,py+h1*TILE,1.3,0,7);g.fill();
-    }else if(tr===T_ROCKY){
-      g.fillStyle="rgba(60,60,75,.3)";
-      g.beginPath();g.arc(px+h1*TILE,py+h2*TILE,2.2,0,7);g.arc(px+h3*TILE,py+h1*TILE,1.6,0,7);g.fill();
-      g.fillStyle="rgba(255,255,255,.14)";
-      g.fillRect(px+h2*(TILE-8),py+h3*(TILE-8),4,2);
-    }
-    // depth shading at terrain-type boundaries
-    if(tr!==T_WATER&&y+1<H&&terrain[key(x,y+1)]===T_WATER){g.fillStyle="rgba(0,0,0,.18)";g.fillRect(px,py+TILE-3,TILE+1,3);}
-    if(tr!==T_WATER&&y>0&&terrain[key(x,y-1)]===T_WATER){g.fillStyle="rgba(255,255,255,.12)";g.fillRect(px,py,TILE+1,2);}
-  }
-  chunks.set(ck,c);
+  CC_LAND.bake(g,cx,cy);
+  c.seen=chunkClock;
+  chunks.set(cx+"_"+cy,c);
   return c;
+}
+function getChunk(cx,cy){
+  const c=chunks.get(cx+"_"+cy)||bakeChunk(cx,cy);
+  c.seen=chunkClock;
+  return c;
+}
+/* a new seed is a new landscape: nothing drawn for the old one is true */
+function terrainReset(){chunks.clear();CC_LAND.reset();}
+/* a chunk that is not ready yet, for one frame: its tiles as plain squares */
+function roughChunk(cx,cy,x0,y0,x1,y1){
+  const ax=Math.max(x0,cx*CHUNK), bx=Math.min(x1,cx*CHUNK+CHUNK-1);
+  const ay=Math.max(y0,cy*CHUNK), by=Math.min(y1,cy*CHUNK+CHUNK-1);
+  for(let y=ay;y<=by;y++)for(let x=ax;x<=bx;x++){
+    const tr=terrain[key(x,y)];
+    ctx.fillStyle=tr===T_WATER?WATERC[0]:tr===T_SAND?SANDC:tr===T_GRASS?GRASS[(x*31+y*17)%3]:ROCKC[(x*31+y*17)%3];
+    ctx.fillRect(x*TILE,y*TILE,TILE+1,TILE+1);
+  }
+}
+function drawGround(x0,y0,x1,y1){
+  chunkClock++;
+  const cx0=Math.floor(x0/CHUNK),cx1=Math.floor(x1/CHUNK),cy0=Math.floor(y0/CHUNK),cy1=Math.floor(y1/CHUNK);
+  /* the very first picture is drawn whole; after that, two new chunks a frame */
+  let fresh=chunks.size?2:99;
+  for(let cy=cy0;cy<=cy1;cy++)for(let cx=cx0;cx<=cx1;cx++){
+    let c=chunks.get(cx+"_"+cy);
+    if(!c){
+      if(fresh<=0){roughChunk(cx,cy,x0,y0,x1,y1);continue;}
+      fresh--;c=bakeChunk(cx,cy);
+    }
+    c.seen=chunkClock;
+    ctx.drawImage(c,cx*CHUNK*TILE,cy*CHUNK*TILE,CHUNK*TILE,CHUNK*TILE);
+  }
+  /* What is near stays: every kept chunk within three tiles of the view is
+     as good as seen, so it is never the one let go. */
+  const M=3;
+  const wx0=Math.floor(Math.max(0,x0-M)/CHUNK), wx1=Math.floor(Math.min(W-1,x1+M)/CHUNK);
+  const wy0=Math.floor(Math.max(0,y0-M)/CHUNK), wy1=Math.floor(Math.min(H-1,y1+M)/CHUNK);
+  let next=null;
+  for(let cy=wy0;cy<=wy1;cy++)for(let cx=wx0;cx<=wx1;cx++){
+    const c=chunks.get(cx+"_"+cy);
+    if(c)c.seen=chunkClock;else if(!next)next=[cx,cy];
+  }
+  /* let go of the ground furthest behind */
+  const cap=Math.max(8,(wx1-wx0+1)*(wy1-wy0+1)+2);
+  while(chunks.size>cap){
+    let old=null,ok=null;
+    for(const [k,c] of chunks)if(c.seen<chunkClock&&(!old||c.seen<old.seen)){old=c;ok=k;}
+    if(!old)break;
+    old.width=old.height=0;          // hand the memory back now, not at the next collection
+    chunks.delete(ok);
+  }
+  /* and get the next one ready, in idle time: the first that is missing */
+  if(next&&!chunkWarming){
+    chunkWarming=true;
+    const go=()=>{chunkWarming=false;if(!chunks.has(next[0]+"_"+next[1]))bakeChunk(next[0],next[1]);};
+    if(window.requestIdleCallback)requestIdleCallback(go,{timeout:400});else setTimeout(go,60);
+  }
 }
 /* drifting clouds */
 const clouds=Array.from({length:6},(_,i)=>({
@@ -86,9 +127,8 @@ function draw(t){
   const y1=clamp(Math.ceil((cam.y+h/2/cam.scale)/TILE)+1,0,H-1);
   // terrain via cached chunks
   const cx0=Math.floor(x0/CHUNK),cx1=Math.floor(x1/CHUNK),cy0=Math.floor(y0/CHUNK),cy1=Math.floor(y1/CHUNK);
-  for(let cy=cy0;cy<=cy1;cy++)for(let cx=cx0;cx<=cx1;cx++)
-    ctx.drawImage(getChunk(cx,cy),cx*CHUNK*TILE,cy*CHUNK*TILE,CHUNK*TILE,CHUNK*TILE);
-  // animated water: ripples + foam at shores
+  drawGround(x0,y0,x1,y1);
+  // animated water: ripples in open water
   for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
     if(terrain[key(x,y)]!==T_WATER)continue;
     const wx=x*TILE,wy=y*TILE;
@@ -96,12 +136,11 @@ function draw(t){
     ctx.globalAlpha=.10+.07*ph;
     ctx.fillStyle="#cfeaff";
     ctx.fillRect(wx+7,wy+TILE*(.35+.15*Math.sin(t/950+x)),TILE-14,3);
-    ctx.globalAlpha=.5;
-    ctx.fillStyle="rgba(255,255,255,.55)";
-    if(y>0&&terrain[key(x,y-1)]!==T_WATER)ctx.fillRect(wx,wy+1+Math.sin(t/600+x)*1.2,TILE+1,2.5);
-    if(x>0&&terrain[key(x-1,y)]!==T_WATER)ctx.fillRect(wx+1+Math.sin(t/600+y)*1.2,wy,2.5,TILE+1);
     ctx.globalAlpha=1;
   }
+  /* foam: two rings off every coast, following its curve (it was a straight
+     white bar along the north and west side of each water tile) */
+  CC_LAND.foam(ctx,cx0,cy0,cx1,cy1,t);
   // home territory: animated dashed border
   ctx.strokeStyle="rgba(255,214,107,.55)";ctx.lineWidth=3;
   ctx.setLineDash([12,8]);ctx.lineDashOffset=-t/40;

@@ -257,6 +257,29 @@ the secret input is never replayed. There is none in the designer.
 The caption writes into its existing text nodes (`set()`): replacing a node
 re-matches the stylesheets' `body::has()` rules and cost 0.35ms a step.
 
+## The ground
+
+`js/game/terrain.js` draws the world's ground, and `test/terrain.js` holds
+it to this. The seed is a height map cut at three levels, so water < sand
+< grass < rock is how high a tile stands, and it is drawn that way: as
+terraces. Every outline is rounded (an outward corner cut back, an inward
+one filled in), grass and rock stand on a face that shows along their
+SOUTHERN edges only, the water steps down from two bands of shallows to
+the deep, and two rings of foam breathe off every coast.
+
+**The grid does not change.** A tile is still a 48px square in its own one
+of the three greens: a child counts tiles, so only the edge of a terrace
+is softened, never its tiles. And nothing here feeds the rules — what can
+be walked on is `terrain[]` in `interpreter.js`, never a pixel. A cut
+corner is still a whole tile of land.
+
+The ground is kept in 16x16-tile chunks (`drawGround` in `render.js`),
+each 9MB. The next one is drawn ahead in idle time, at most two are drawn
+in one frame (the rest show as flat squares for a frame), and the ones
+not seen for longest are let go — it used to keep all twenty-five. Two
+costs already paid for: stroke an OUTLINE (`edge`), never an area of
+tile-rectangles, and send only a terrace's edge tiles through a clip.
+
 ## The robot
 
 `js/game/robot-rig.js` draws every robot in the game — the world, the
