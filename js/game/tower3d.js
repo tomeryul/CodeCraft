@@ -567,6 +567,7 @@ window.mgDraw=function(){
   if($("boardTab").style.display==="none")return;
   const cv=$("mgCanvas"), sc=t3Scene();
   if(!sc)return;
+  if(window.mgSlab)mgSlab(cv,false);     // a view of the sky does not stand on soil
   if(window.mgFitBoard)mgFitBoard(0.72);
   const W=cv.clientWidth||320, H=Math.round(W*0.72);
   const dpr=(typeof DPR!=="undefined"?DPR:Math.min(3,window.devicePixelRatio||1));

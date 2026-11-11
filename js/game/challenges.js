@@ -2763,10 +2763,17 @@ function mgLookDraw(g,cell,T,wear,CW){
   }
   return true;
 }
+/* a flat board stands on a face of soil; the 3D scene, which is a view of
+   a sky, does not. Written only when it changes: this is called per frame. */
+function mgSlab(cv,on){
+  if(cv._slab===on)return;
+  cv._slab=on;cv.classList.toggle("slab",on);
+}
 function mgDraw(){
   if(!mgState)return;
   if($("boardTab").style.display==="none")return; // board hidden — nothing to draw
   const cv=$("mgCanvas"),st=mgState,p=st.proj;
+  mgSlab(cv,true);          // before the fit: the slab's face takes room under the board
   mgFitBoard(p.gh/p.gw);
   const cw=cv.clientWidth||300;
   const cell=Math.floor(cw/p.gw);
@@ -2790,10 +2797,14 @@ function mgDraw(){
     g.fillRect(px+h3*(cell-6)+2,py+h1*(cell-8)+2,2,4);
     if(h2<.14){g.fillStyle="rgba(255,255,255,.5)";g.fillRect(px+h3*(cell-8)+3,py+h2*(cell-8)+3,3,3);}
   }
-  // vignette so the board reads as a framed little world (CSS-px space)
-  const vg=g.createRadialGradient(CW/2,CH/2,cell,CW/2,CH/2,Math.max(CW,CH)*.72);
-  vg.addColorStop(0,"rgba(0,0,0,0)");vg.addColorStop(1,"rgba(0,0,0,.14)");
-  g.fillStyle=vg;g.fillRect(0,0,CW,CH);
+  /* The board is a piece of the world's ground, lifted out: the same greens
+     with nothing laid over them (it had a dark vignette, which the world
+     never had, and the two grasses did not match), light along the edge
+     furthest away and the turf's darker rim along the nearest, above the
+     face of soil it stands on. The face is the canvas's own shadow
+     (.slab in css/codecraft-v7.css), so the grid is not a pixel smaller. */
+  g.fillStyle="rgba(255,255,255,.16)";g.fillRect(0,0,CW,2);
+  g.fillStyle="#5fa83a";g.fillRect(0,CH-2.5,CW,2.5);
   // ---- puzzle terrain (walls, pits) — under the plan so targets read on top ----
   if(window.CC_TILES)CC_TILES.draw(g,st.robot,cell);
   // ---- blueprint target outlines (unbuilt cells) ----

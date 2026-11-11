@@ -536,6 +536,13 @@ body.sheets-full #maker.sized,
 #boardTab{display:flex;flex-direction:column;}
 #boardTab #mgPanel{flex:0 0 auto;display:flex;flex-direction:column;}
 #boardTab #mgCanvas{flex:0 0 auto;margin:6px auto 0;}
+/* A flat board is a slab of the world's ground (js/game/terrain.js): it
+   stands on a face of soil, darker at its foot, and shades what is under
+   it. All of it is shadow, so the canvas and its grid are the size they
+   were; the margin is the room the face needs, and the fit counts it
+   (mgFitBoard). No hairline round it: the map has no outlines. */
+#boardTab #mgCanvas.slab{margin-bottom:13px;border-color:transparent;
+  box-shadow:0 7px 0 #b27d48,0 10px 0 #9a693a,0 16px 16px rgba(8,4,24,.34);}
 #boardTab #mgRead{display:block;padding-top:8px;}
 /* the board's own status bar belongs to the board, not to the reading */
 #boardTab #t3Bar{flex:0 0 auto;margin:7px auto 0;}

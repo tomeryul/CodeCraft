@@ -280,6 +280,12 @@ not seen for longest are let go — it used to keep all twenty-five. Two
 costs already paid for: stroke an OUTLINE (`edge`), never an area of
 tile-rectangles, and send only a terrace's edge tiles through a clip.
 
+A level's flat board is a slab of the same ground: the world's greens with
+nothing laid over them, the turf's rim along the near edge, standing on
+the same two-tone face of soil. The face is the canvas's own `box-shadow`
+(`.slab`, set by `mgSlab` in `challenges.js`), so the grid is not a pixel
+smaller; the 3D scene, a view of a sky, does not get one.
+
 ## The robot
 
 `js/game/robot-rig.js` draws every robot in the game — the world, the

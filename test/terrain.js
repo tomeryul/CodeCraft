@@ -211,6 +211,40 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   ck('a walk over all twenty-five keeps a dozen at most, not all of them', K.roam.most <= 12 && K.roam.all === 25, K.roam);
   ck('a new seed throws the kept ground away', K.reset.had > 0 && K.reset.now === 0, K.reset);
 
+  console.log('▶ the board of a level is a slab of the same ground');
+  const B = await pg.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const out = {};
+    if (mgState) mgExit(false); academyEnter(0); await wait(500);
+    const cv = $('mgCanvas'), cs = getComputedStyle(cv), p = mgState.proj;
+    out.slab = cv.classList.contains('slab');
+    out.face = /rgb\(178, 125, 72\) 0px 7px 0px/.test(cs.boxShadow) && /rgb\(154, 105, 58\) 0px 10px 0px/.test(cs.boxShadow);
+    /* the grid is the canvas, whole: the face is shadow, not pixels of the board */
+    const r = cv.getBoundingClientRect(), cell = Math.floor(cv.clientWidth / p.gw);
+    /* the canvas is the grid and nothing else: its shape is the board's, columns by rows */
+    out.dims = [cv.clientWidth, cv.clientHeight, cv.width, cv.height, p.gw, p.gh];
+    out.grid = Math.abs(cv.clientHeight / cv.clientWidth - p.gh / p.gw) < 0.012 && Math.abs(cv.width / cv.height - p.gw / p.gh) < 0.012;
+    /* nothing under the board is covered by it: the face ends above the next thing */
+    const next = $('mgRead').getBoundingClientRect();
+    out.clear = next.top >= r.bottom + 10;
+    /* its grass is the world's grass: a corner tile is its own green, not a darkened one */
+    const g = cv.getContext('2d'), k = cv.width / cv.clientWidth;
+    const px = (x, y) => { const d = g.getImageData(Math.round(x * k), Math.round(y * k), 1, 1).data; return [d[0], d[1], d[2]]; };
+    const want = __hex(GRASS[0]);                       // tile (0,0)
+    out.corner = [[6, 8], [cell - 8, 10], [10, cell - 8], [cell / 2, cell / 2 + 6], [cell - 12, cell - 12]].filter(o => __near(px(o[0], o[1]), want, 4)).length >= 3;
+    { const d = g.getImageData(cv.width >> 1, cv.height - 2, 1, 1).data; out.rim = __near([d[0], d[1], d[2]], __hex('#5fa83a'), 8); }
+    mgExit(false);
+    /* the 3D scene is a view of a sky: no soil under it */
+    t3Enter(TOWER_LEVELS[0]); await wait(800);
+    out.tower = { slab: $('mgCanvas').classList.contains('slab'), shadow: getComputedStyle($('mgCanvas')).boxShadow };
+    mgExit(false); await wait(200);
+    return out;
+  });
+  ck('a flat board stands on the same two-tone face of soil as the plateau', B.slab && B.face, B);
+  ck('the face is shadow: the canvas is still exactly the grid, and nothing below it is covered', B.grid && B.clear, B);
+  ck('its grass is the world\'s grass, undarkened, with the turf\'s rim along the near edge', B.corner && B.rim, B);
+  ck('the 3D board, a view of a sky, has none', B.tower.slab === false && B.tower.shadow === 'none', B.tower);
+
   console.log('▶ it ships');
   const idx = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'), sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
   ck('terrain.js is loaded before render.js, and is in the service worker\'s list',
