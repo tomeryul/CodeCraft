@@ -30,6 +30,8 @@ const OK = /^(CodeCraft|Byte|Robo|Python|AI|2D|3D|HTML|CSS|px|English|kid|exampl
 const PAGES = [
   ['the world', 'navHome()'],
   ['the menu', 'hubOpen()'],
+  /* the tab bar's other two pages, and the bar itself on the world */
+  ['tab: create', "hubOpen('create')"], ['tab: me', "hubOpen('me')"],
   ...['academy', 'puzzles', 'builds', 'tower', 'cyber', 'mine', 'community', 'account'].map(k => ['page: ' + k, `hubOpen();hubPage('${k}')`]),
   ['the shop', 'openShop()'], ['style', 'styleOpen()'], ['settings', 'openSettings()'],
   ['orders', 'ordersOpen()'], ['quests', "renderQuests();$('quests').classList.add('open')"],

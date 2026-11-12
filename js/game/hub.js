@@ -49,7 +49,7 @@ const PAGES={
    world's money and settings. `tag` is the dimension — the one label
    that was missing everywhere. */
 const GROUPS=[
-  {name:"Play",tiles:[
+  {name:"Play",tab:"play",tiles:[
     {em:"🎓",name:"Academy",tag:"lessons",page:"academy",
      meta:()=>num(()=>academyDoneCount()+"/"+TUTS.length)},
     {em:"🧩",name:"Puzzle Chapters",tag:"2D",page:"puzzles"},
@@ -63,7 +63,7 @@ const GROUPS=[
     {em:"🌍",name:"Community",tag:"2D + 3D",page:"community",
      show:()=>!has("ageOk")||ageOk()}
   ]},
-  {name:"Create",tiles:[
+  {name:"Create",tab:"create",tiles:[
     /* same rule as the Projects card: the creator resumes, so say so */
     /* a function, not a string: GROUPS is built once at load, so a fixed
        label here would answer "is there a draft?" before there ever is one */
@@ -79,7 +79,7 @@ const GROUPS=[
     {em:"📚",name:"My Functions",tag:"reusable",go:()=>{hubClose();openFuncLib();}},
     {em:"📘",name:"How to design",tag:"guide",go:()=>{hubClose();openGuide();}}
   ]},
-  {name:"Your world",tiles:[
+  {name:"Your world",tab:"me",tiles:[
     {em:"🛒",name:"Shop",tag:"robots & upgrades",go:()=>{hubClose();openShop();}},
     {em:"🎩",name:"Style",tag:"dress your robots",go:()=>{hubClose();styleOpen();}},
     {em:"⚙️",name:"Settings",tag:"sound & world",go:()=>{hubClose();openSettings();}},
@@ -90,11 +90,64 @@ const GROUPS=[
   ]}
 ];
 
+/* ---------------- the tabs ----------------
+   The menu was one scroll of three groups behind a ☰. Each group is a tab
+   of its own now (tabbar.js), and this sheet shows one at a time: the same
+   sheet, retitled, the way a page of #projects is. `head` is the heading
+   over the tab's tiles, where there is something above them to set apart. */
+const TABS={
+  play  :{title:"Play",  sub:"Lessons, puzzles and levels to beat.",head:"Everything to play"},
+  create:{title:"Create",sub:"Make levels for other players.",head:null},
+  me    :{title:"Me",    sub:"Your robot, your world, your save.",head:"Your world"}
+};
+const TAB_ORDER=["world","play","create","me"];
+/* which tab a page belongs to, so Back from it lands on that tab */
+const PAGE_TAB={academy:"play",puzzles:"play",builds:"play",tower:"play",cyber:"play",
+  community:"play",mine:"create",account:"me"};
+let hubTab="play";
+
+/* the tab's own glyph, from its button, in the header's face */
+function hubHead(){
+  const hub=$("hub"); if(hub.dataset.tab===hubTab)return;
+  hub.dataset.tab=hubTab;
+  const T=TABS[hubTab], h=hub.querySelector(".m-head");
+  const face=h&&h.querySelector(".face"), t=h&&h.querySelector("h3"), p=h&&h.querySelector("h3+p");
+  const ic=document.querySelector('#tabbar .tb[data-tab="'+hubTab+'"] svg');
+  if(face&&ic)face.innerHTML=ic.outerHTML.replace(/tbm/g,"tbh");
+  if(t)t.textContent=T.title;
+  if(p)p.textContent=T.sub;
+}
+
 /* ---------------- open / close ---------------- */
-function hubOpen(){
+/* hubOpen() opens the tab you were last on; hubOpen("me") that tab. It is
+   also a click handler in places, so anything but a tab's name is "the last
+   one". Moving between two tabs while the sheet is up changes what is in it,
+   not the sheet: the contents step in from the side of the tab you went to. */
+function hubOpen(tab){
+  const hub=$("hub"), was=hub.classList.contains("open"), from=hubTab;
+  if(typeof tab==="string"&&TABS[tab])hubTab=tab;
+  hubHead();
   hubRender();
-  $("hub").classList.add("open");
+  hub.classList.add("open");
+  if(was&&from!==hubTab)hubStep(TAB_ORDER.indexOf(hubTab)>TAB_ORDER.indexOf(from)?1:-1);
   if(has("sfx"))sfx(560,.04);
+}
+function hubStep(dir){
+  const hub=$("hub"), el=$("hubBody");
+  hub.classList.add("swap-in");          // no tile entrance: the page did not arrive, it changed
+  el.scrollTop=0;
+  if(typeof el.animate!=="function")return;
+  let calm=false; try{calm=matchMedia("(prefers-reduced-motion: reduce)").matches;}catch(_){}
+  const css=getComputedStyle(document.documentElement);
+  const ease=css.getPropertyValue("--ease-settle").trim()||"ease-out";
+  const ms=(parseFloat(css.getPropertyValue("--dur-move"))||.28)*1000;
+  for(const n of [el,hub.querySelector(".m-head > div:not(.face)")]){
+    if(!n)continue;
+    n.getAnimations().forEach(a=>a.cancel());
+    n.animate(calm?[{opacity:0},{opacity:1}]:
+      [{opacity:0,transform:"translateX("+(dir*22)+"px)"},{opacity:1,transform:"none"}],
+      {duration:calm?140:ms,easing:calm?"linear":ease});
+  }
 }
 /* Every menu row closes the menu and THEN opens its destination, so by the
    time a challenge starts there is no open sheet left to remember. The
@@ -111,11 +164,13 @@ function hubClose(){
    each walked again by the icon and language observers — was most of it. */
 function hubSig(){
   const s=typeof journeyStep==="function"?journeyStep():null;
-  const parts=[s?s.title+"|"+s.hint+"|"+journeyProgress():"",(typeof lang!=="undefined"?lang:"")];
-  for(const g of GROUPS)for(const t of g.tiles){
+  const parts=[hubTab,s&&hubTab==="play"?s.title+"|"+s.hint+"|"+journeyProgress():"",
+    (typeof lang!=="undefined"?lang:"")];
+  if(hubTab==="me")parts.push(meSig());
+  for(const g of GROUPS){ if(g.tab!==hubTab)continue; for(const t of g.tiles){
     if(t.show&&!t.show())continue;
     parts.push((typeof t.name==="function"?t.name():t.name)+"|"+(t.meta?t.meta():""));
-  }
+  }}
   return parts.join("\n");
 }
 function hubRender(){
@@ -127,7 +182,7 @@ function hubRender(){
   /* The journey's next step, at the top. The hub is where you come when
      you don't know what to do, so the answer goes above the menu — not
      as a fourteenth tile competing with the rest. */
-  if(typeof journeyStep==="function"){
+  if(hubTab==="play"&&typeof journeyStep==="function"){
     const s=journeyStep();
     if(s){
       const w=document.createElement("div");w.className="hub-next";
@@ -140,12 +195,17 @@ function hubRender(){
       el.appendChild(w);
     }
   }
+  if(hubTab==="me")meCard(el);
   let tileN=0;                 // each tile's place in the entrance stagger
   for(const g of GROUPS){
+    if(g.tab!==hubTab)continue;
     const tiles=g.tiles.filter(t=>!t.show||t.show());
     if(!tiles.length)continue;
-    const h=document.createElement("h4");h.className="hub-sec";h.textContent=g.name;
-    el.appendChild(h);
+    const head=TABS[hubTab].head;
+    if(head){
+      const h=document.createElement("h4");h.className="hub-sec";h.textContent=head;
+      el.appendChild(h);
+    }
     const grid=document.createElement("div");grid.className="hub-grid";
     for(const t of tiles){
       const m=t.meta?t.meta():null;
@@ -164,6 +224,61 @@ function hubRender(){
     }
     el.appendChild(grid);
   }
+}
+
+/* ---------------- the Me tab's card ----------------
+   Who you are in this game, at a glance: your robot as you dressed it, the
+   name other players see, how far into this level you are, and three
+   counts. Every word is its own element (Hebrew matches whole text nodes),
+   and the robot is drawn once, still — a card, not a stage. */
+function meSolved(){
+  let n=0;
+  try{ n+=academyDoneCount(); }catch(_){}
+  const P=player.projects||{}; for(const k in P)if(P[k])n++;
+  return n;
+}
+function meBot(){ return (has("styleRobot")&&styleRobot())||(typeof robots!=="undefined"&&robots[0])||null; }
+function meSig(){
+  const r=meBot()||{};
+  return [has("nickOf")?nickOf():"",player.level,Math.floor(player.xp||0),
+    typeof coins!=="undefined"?coins:0,typeof robots!=="undefined"?robots.length:0,meSolved(),
+    r.color,r.hat,r.outfit,r.shoes].join("|");
+}
+function meCard(el){
+  const need=has("xpNeed")?xpNeed(player.level):100;
+  const xp=Math.max(0,Math.floor(player.xp||0)), f=Math.max(0,Math.min(1,xp/need));
+  const c=document.createElement("div");c.className="me-card";
+  c.innerHTML='<canvas class="me-bot" aria-hidden="true"></canvas>'+
+    '<div class="me-who"><b class="me-name"></b>'+
+    '<div class="me-lvrow"><span class="me-k">Level</span><b class="me-lv"></b>'+
+    '<span class="me-xp"></span></div>'+
+    '<div class="me-bar"><i></i></div></div>';
+  c.querySelector(".me-name").textContent=has("nickOf")?nickOf():"builder";
+  c.querySelector(".me-lv").textContent=String(player.level);
+  c.querySelector(".me-xp").textContent=xp+"/"+need;
+  c.querySelector(".me-bar i").style.transform="scaleX("+f.toFixed(3)+")";
+  el.appendChild(c);
+  const st=document.createElement("div");st.className="me-stats";
+  const cells=[[typeof coins!=="undefined"?coins:0,"Coins"],
+               [typeof robots!=="undefined"?robots.length:0,"Robots"],[meSolved(),"Solved"]];
+  for(const [v,k] of cells){
+    const d=document.createElement("div");d.className="me-st";
+    d.innerHTML='<b></b><small></small>';
+    d.firstChild.textContent=String(v); d.lastChild.textContent=k;
+    st.appendChild(d);
+  }
+  el.appendChild(st);
+  meDraw(c.querySelector(".me-bot"));
+}
+function meDraw(cv){
+  const r=meBot(); if(!cv||!r||!has("drawBoardRobot"))return;
+  const S=72, d=Math.min(2,window.devicePixelRatio||1);
+  cv.width=S*d; cv.height=S*d;
+  const g=cv.getContext("2d"); g.setTransform(d,0,0,d,0,0); g.clearRect(0,0,S,S);
+  const col=has("safeColor")?safeColor(r.color):(r.color||"#ffb830");
+  /* a portrait, not a full figure: the head and body fill the round frame
+     and the feet run off its bottom edge */
+  try{ drawBoardRobot(g,S/2,S*.58,S*.56,"E",col,false,0,{hat:r.hat,outfit:r.outfit,shoes:r.shoes}); }catch(_){}
 }
 
 /* ---------------- one page of the Projects sheet ----------------
@@ -209,6 +324,7 @@ function hubPage(key,pointSel,restore){
   if(typeof mgState!=="undefined"&&mgState&&has("mgExit"))mgExit(false);
   $("editor").classList.remove("open");
   hubCur=key;
+  if(PAGE_TAB[key])hubTab=PAGE_TAB[key];
   /* A tap builds only this page's bands (projWants, challenges.js); any
      other render — a delete, a sign-in — builds them all, and the page on
      screen filters them (the renderProjects wrapper below) */
@@ -293,7 +409,6 @@ if(typeof renderProjects==="function"){
 }
 
 /* ---------------- rewire ---------------- */
-$("hubBtn").addEventListener("click",hubOpen);
 $("hubClose").addEventListener("click",hubClose);
 /* #projBack is nav.js's: navBack, which puts the menu in the page's place
    in the same task (a second handler here reopened it 120ms later) */
@@ -333,13 +448,13 @@ if(typeof renderJourney==="function"){
 }
 
 /* The quest badge lived on #questBtn, which is now hidden. Mirror it onto
-   the menu button — a reward you can claim is exactly the kind of thing
-   the one visible entry point should be able to tell you. */
+   the Me tab, where Quests lives — a reward you can claim is exactly the
+   kind of thing the tab bar should be able to tell you. */
 if(typeof updateQuestBadge==="function"){
   const _uqb=window.updateQuestBadge;
   window.updateQuestBadge=function(){
     const r=_uqb.apply(this,arguments);
-    try{$("hubBtn").classList.toggle("badge",$("questBtn").classList.contains("badge"));}catch(_){}
+    try{$("tabMe").classList.toggle("badge",$("questBtn").classList.contains("badge"));}catch(_){}
     return r;
   };
 }
@@ -369,4 +484,8 @@ if(typeof mgEnter==="function"){
 }
 
 window.hubOpen=hubOpen; window.hubClose=hubClose; window.hubPage=hubPage;
+/* tabbar.js: which tab the sheet shows, and which one a page belongs to */
+window.hubTabNow=()=>hubTab;
+window.hubTabSet=k=>{ if(TABS[k])hubTab=k; };
+window.hubPageTab=k=>PAGE_TAB[k]||null;
 })();

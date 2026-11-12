@@ -51,9 +51,11 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
         const hit=document.elementFromPoint(x,y);
         return !!hit && (hit===e || e.contains(hit));
       });
-      // #topbar and #bottombar are the docks; only strays between them count
+      /* #topbar, and the bottom stack — the tab bar, the World tab's
+         Code|Build|Run row standing on it, and the journey card on that —
+         are the docks; only strays between them count */
       const mid=tap.filter(e=>{
-        if(e.closest('#topbar,#bottombar')) return false;
+        if(e.closest('#topbar,#bottombar,#tabbar,#journey')) return false;
         const r=e.getBoundingClientRect();
         return r.top>96 && r.bottom<H-140;
       }).map(e=>e.id||e.className);
@@ -74,12 +76,10 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
        world.energyShown === (W>=384), world);
 
     // ---------------------------------------------- the bottom row fits
-    /* The menu button costs this row 48px. At 320 (SE) that pushed Run past
-       the bar and 25px of it off the screen, and at 360 it collapsed to its
-       min-width. Run is the primary and the one control here that has to
-       keep its word, so the room comes out of the paddings. */
+    /* Run is the primary and the one control here that has to keep its
+       word. The ☰ that used to cost this row 48px is the tab bar now. */
     const bar = await pg.evaluate(()=>{
-      const ids=['hubBtn','codeBtn','buildBtn','fabRun'];
+      const ids=['codeBtn','buildBtn','fabRun'];
       const bb=$('bottombar').getBoundingClientRect();
       return { fits:ids.every(n=>$(n).getBoundingClientRect().right<=bb.right+.5),
                tap:ids.every(n=>{const r=$(n).getBoundingClientRect();
@@ -91,6 +91,28 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
     ck(`${W}x${H} the whole bottom row fits, labels intact`,
        bar.fits && bar.tap && bar.noClip &&
        bar.labels[0]==='Code' && bar.labels[1]==='Build' && /Run/.test(bar.labels[2]), bar);
+
+    // ---------------------------------------------- the tab bar
+    /* Four tabs across the bottom, on screen, none clipped, each at least a
+       44pt target; the World tab's row stands on the bar without touching
+       it, and the journey card stands on that row. */
+    const tb = await pg.evaluate(()=>{
+      const bar=$('tabbar').getBoundingClientRect(), row=$('bottombar').getBoundingClientRect();
+      const tabs=[...document.querySelectorAll('#tabbar .tb')];
+      const j=document.querySelector('#journey .j-btn'), jr=j&&j.offsetParent?j.getBoundingClientRect():null;
+      return { n:tabs.length,
+               on:bar.left>=0&&bar.right<=innerWidth&&bar.bottom<=innerHeight&&bar.top>innerHeight-110,
+               tap:tabs.every(t=>{const r=t.getBoundingClientRect();return r.height>=44&&r.width>=44;}),
+               noClip:tabs.every(t=>{const l=t.querySelector('.tb-l');return l.scrollWidth<=l.clientWidth+1;}),
+               labels:tabs.map(t=>t.textContent.trim()),
+               lit:tabs.filter(t=>t.getAttribute('aria-selected')==='true').map(t=>t.dataset.tab),
+               rowAbove:row.bottom<=bar.top-4,
+               cardAbove:!jr||jr.bottom<=row.top-4 };
+    });
+    ck(`${W}x${H} four tabs on screen, labelled, none clipped, 44pt each`,
+       tb.n===4 && tb.on && tb.tap && tb.noClip && tb.labels.join()==='World,Play,Create,Me', tb);
+    ck(`${W}x${H} in the world, World is the lit tab`, tb.lit.join()==='world', tb);
+    ck(`${W}x${H} the row stands on the bar, the journey on the row`, tb.rowAbove && tb.cardAbove, tb);
 
     // ---------------------------------------------- world editor: Run only
     const wed = await pg.evaluate(()=>{

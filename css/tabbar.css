@@ -1,0 +1,114 @@
+/* =====================================================================
+   The tab bar (js/game/tabbar.js)
+   ---------------------------------------------------------------------
+   A capsule floating over the bottom edge, the way a phone's own apps
+   carry theirs: four equal tabs, a glyph over a word, the tab you are on
+   lit in the accent and sitting on a lighter pill that glides to the next
+   one. It is the HUD's surface — near-solid, no blur (the HUD dropped its
+   blur in codecraft-v5.css §M, and the bar sits in the same layer).
+
+   Everything that floated over the bottom of the world stands on it now:
+   the Code|Build|Run row, the journey card, the build palette, an object's
+   menu and the coach all move up by the bar's footprint, --tb-space, and
+   the pages that belong to a tab keep their content clear of it.
+   ===================================================================== */
+:root{
+  --tb-h:60px;
+  /* on a phone with a home indicator the bar sits a little into the safe
+     area, as the system's own does; with none it keeps 10px off the edge */
+  --tb-bot:max(10px,calc(var(--sab) - 6px));
+  --tb-space:calc(var(--tb-bot) + var(--tb-h) + 10px);
+}
+
+#tabbar{position:fixed;left:50%;bottom:var(--tb-bot);z-index:80;
+  width:min(calc(100% - 28px),440px);height:var(--tb-h);box-sizing:border-box;
+  display:flex;align-items:stretch;padding:5px;gap:2px;
+  border-radius:calc(var(--tb-h) / 2);
+  background:rgba(43,33,80,.95);border:1px solid rgba(255,255,255,.13);
+  box-shadow:0 10px 28px rgba(6,3,20,.42),0 2px 6px rgba(6,3,20,.28),inset 0 1px 0 rgba(255,255,255,.12);
+  transform:translateX(-50%);
+  transition:transform var(--dur-move) var(--ease-settle),visibility 0s linear 0s;}
+/* out the way it came in: down, past the edge, and gone for VoiceOver too */
+body.tb-off #tabbar{transform:translateX(-50%) translateY(calc(100% + var(--tb-bot) + 18px));
+  visibility:hidden;
+  transition:transform var(--dur-move) var(--ease-settle),visibility 0s linear var(--dur-move);}
+
+#tabbar .tb{position:relative;z-index:1;flex:1 1 0;min-width:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  padding:0;border:none;border-radius:calc(var(--tb-h) / 2 - 5px);background:none;
+  font:inherit;color:var(--ink2);cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  transition:color var(--dur-quick) linear,transform var(--dur-quick) var(--ease-settle);}
+/* on the press, not the release */
+#tabbar .tb:active{transform:scale(.9);}
+#tabbar .tb[aria-selected="true"]{color:var(--accent2);}
+#tabbar .tb:focus-visible{outline:2px solid var(--accent2);outline-offset:-2px;}
+#tabbar .tb-ic{width:25px;height:25px;display:block;flex:0 0 auto;}
+#tabbar .tb-l{font-size:var(--fs-xs);font-weight:var(--fw-bold);line-height:1;white-space:nowrap;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;}
+
+/* the lit tab's pill: placed by tabbar.js, glides only once placed */
+#tabbar .tb-pill{position:absolute;top:5px;bottom:5px;left:0;width:0;z-index:0;pointer-events:none;
+  border-radius:calc(var(--tb-h) / 2 - 5px);
+  background:rgba(255,255,255,.11);box-shadow:inset 0 1px 0 rgba(255,255,255,.09);}
+#tabbar.ready .tb-pill{transition:transform var(--dur-move) var(--ease-settle),width var(--dur-move) var(--ease-settle);}
+
+/* a reward waiting in Quests, on the tab that holds it */
+#tabbar .tb.badge::after{content:"";position:absolute;top:7px;left:calc(50% + 9px);
+  width:9px;height:9px;border-radius:50%;background:#ff5d73;
+  box-shadow:0 0 0 2px rgba(43,33,80,.95);}
+
+/* ---- everything over the bottom of the world stands on the bar ---- */
+#bottombar{bottom:var(--tb-space);}
+#journey{bottom:calc(var(--tb-space) + 70px);}
+#buildBar{bottom:calc(var(--tb-space) + 78px);}
+#objMenu{bottom:calc(var(--tb-space) + 76px);}
+#coach{bottom:calc(var(--tb-space) + 82px);}
+
+/* ---- a tab's pages keep their content above it ----
+   The sheet still reaches the bottom edge, so it rises and sinks exactly as
+   before and two pages are still the same frame for a swap; only its
+   content stops short, and the bar sits on the sheet's own colour. */
+body.tb-on #hub,body.tb-on #projects,body.tb-on #settings,body.tb-on #style,
+body.tb-on #quests,body.tb-on #orders,body.tb-on #funcLib,body.tb-on #guide,
+body.tb-on #shop{padding-bottom:var(--tb-space);}
+
+/* the header's face carries the tab's own glyph */
+#hub .m-head .face svg{width:26px;height:26px;color:#3a2800;display:block;}
+
+/* ---------------------------------------------------------------------
+   Me: your robot, your name, your level
+   --------------------------------------------------------------------- */
+.me-card{display:flex;align-items:center;gap:14px;margin:2px 0 10px;padding:14px;
+  border-radius:var(--r-card);
+  background-color:rgba(255,214,107,.06);
+  background-image:linear-gradient(160deg,rgba(255,214,107,.12),rgba(255,184,48,0) 60%);
+  border:1px solid rgba(255,214,107,.32);}
+.me-bot{flex:0 0 auto;width:72px;height:72px;border-radius:50%;
+  background:radial-gradient(circle at 50% 38%,#5a4a96,#2f2456 72%);
+  box-shadow:inset 0 0 0 2px rgba(255,214,107,.55),0 4px 14px rgba(0,0,0,.3);}
+.me-who{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+.me-name{font-size:var(--fs-lg);font-weight:var(--fw-bold);color:var(--ink);line-height:1.15;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.me-lvrow{display:flex;align-items:baseline;gap:6px;}
+.me-k{font-size:var(--fs-sm);font-weight:var(--fw-medium);color:var(--ink2);}
+.me-lv{font-size:var(--fs-sm);font-weight:var(--fw-bold);color:var(--accent2);font-variant-numeric:tabular-nums;}
+.me-xp{margin-left:auto;font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--ink-dim,#8f83b8);
+  font-variant-numeric:tabular-nums;}
+.me-bar{height:8px;border-radius:999px;background:rgba(0,0,0,.32);overflow:hidden;}
+.me-bar i{display:block;height:100%;border-radius:inherit;transform-origin:left center;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));}
+.me-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 0 4px;}
+.me-st{display:flex;flex-direction:column;align-items:center;gap:3px;padding:11px 6px 10px;
+  border-radius:var(--r-card);background:var(--glass-hi);border:1px solid var(--hair);}
+.me-st b{font-size:var(--fs-lg);font-weight:var(--fw-bold);color:var(--ink);line-height:1.1;
+  font-variant-numeric:tabular-nums;}
+.me-st small{font-size:var(--fs-xs);font-weight:var(--fw-medium);color:var(--ink2);}
+
+/* the narrowest phones: the labels stay; the glyph gives a little */
+@media (max-width:359px){
+  #tabbar{width:calc(100% - 20px);}
+  #tabbar .tb-ic{width:23px;height:23px;}
+  .me-card{gap:11px;padding:12px;}
+  .me-bot{width:62px;height:62px;}
+}

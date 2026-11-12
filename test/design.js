@@ -93,7 +93,7 @@ const WEIGHTS = ['400', '600', '700'];
   await pg.evaluate(() => { player.fresh = false; HELD.length = 0; document.querySelectorAll('#ccCele').forEach(e => e.remove());
     if (mgState) mgExit(false); navHome(); });
   const pages = [
-    ['world', 'navHome()'], ['menu', 'hubOpen()'],
+    ['world', 'navHome()'], ['menu', 'hubOpen()'], ['me', "hubOpen('me')"], ['create', "hubOpen('create')"],
     ['academy', "hubOpen();hubPage('academy')"], ['chapters', "hubOpen();hubPage('puzzles')"],
     ['cyber', "hubOpen();hubPage('cyber')"], ['account', "hubOpen();hubPage('account')"],
     ['shop', 'openShop()'], ['style', 'styleOpen()'], ['settings', 'openSettings()'],
@@ -182,7 +182,7 @@ const WEIGHTS = ['400', '600', '700'];
     out.lockInk = lm ? getComputedStyle(lm).color : null;
     out.ink2 = getComputedStyle(document.documentElement).getPropertyValue('--ink2').trim();
     // "New tower level" makes a tower; "Tower Mode" is the page of tower levels
-    await home(); hubOpen(); await wait(300);
+    await home(); hubOpen('create'); await wait(300);   // a tile of the Create tab
     const tile = [...document.querySelectorAll('.hub-tile')].find(t => /New tower level/.test(t.textContent));
     if (tile) tile.click(); await wait(900);
     out.newTower = { designer3d: !!(mgState && mgState.proj.mode3d), towerPage: $('projects').classList.contains('open') };

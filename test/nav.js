@@ -252,7 +252,7 @@ async function toWorld(pg){
     const card=[...document.querySelectorAll('#projList .pcard.pnew:not(.t3new) .pname')]
       .map(e=>e.textContent).find(x=>/Continue|Design a level/.test(x))||'';
     const side=!!document.querySelector('#projList .pcard.pnew .pside');
-    hubOpen(); await wait(300);
+    hubOpen('create'); await wait(300);   // the Create tab holds it
     const tile=[...document.querySelectorAll('.hub-tile .ht-name')]
       .map(e=>e.textContent).find(x=>/challenge/i.test(x))||'';
     // 🆕 throws it away on purpose

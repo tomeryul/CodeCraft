@@ -61,6 +61,11 @@ const HE={
 "Your world keeps running.":"העולם שלך ממשיך לרוץ בינתיים.",
 "Next up":"הבא בתור",
 "Play":"לשחק","Create":"ליצור","Your world":"העולם שלך",
+/* the tab bar's pages (tabbar.js, hub.js) */
+"Main navigation":"ניווט ראשי","Everything to play":"כל מה שאפשר לשחק",
+"Lessons, puzzles and levels to beat.":"שיעורים, חידות ושלבים לפתור.",
+"Make levels for other players.":"תבנה שלבים לשחקנים אחרים.",
+"Your robot, your world, your save.":"הרובוט שלך, העולם שלך, השמירה שלך.",
 "Academy":"אקדמיה","lessons":"שיעורים",
 "Puzzle Chapters":"פרקי חידות","Build Projects":"פרויקטי בנייה",
 "Tower Mode":"מצב מגדל","Community":"קהילה",
@@ -1154,6 +1159,11 @@ const SCOPED=[
      challenge's name anywhere else */
   ["#mgTime",        {"Blocked":"הדרך חסומה","Nothing happened":"לא קרה כלום","Off the plan":"מחוץ לתוכנית"}],
   [".hub-sec",       {"Play":"לשחק"}],
+  /* the four tabs, and the Me page's header and card: one-word labels that
+     anywhere else could be a robot's or a challenge's name */
+  ["#tabbar",        {"World":"עולם","Play":"לשחק","Create":"ליצור","Me":"אני"}],
+  ["#hub .m-head",   {"Me":"אני"}],
+  [".me-card,.me-stats",{"Level":"רמה","Coins":"מטבעות","Robots":"רובוטים","Solved":"נפתרו"}],
   /* Scoped to a block on purpose: "is" is two letters and could be a word in
      anyone's challenge name or robot name. Inside a block it is the is/is-not
      switch and nothing else. */

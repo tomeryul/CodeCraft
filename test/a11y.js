@@ -69,6 +69,7 @@ const CONTROLS = ['button', 'link', 'textbox', 'combobox', 'slider', 'tab', 'che
     await pg.evaluate(() => { const c = document.querySelector('#ccCele .cc-cta'); if (c) c.click(); });
     await scan('world and editor');
     await pg.evaluate(() => { navHome(); hubOpen(); }); await scan('menu');
+    await pg.evaluate(() => { hubOpen('me'); }); await scan('me');
     await pg.evaluate(() => { navHome(); player.level = 20; if (typeof renderProjects === 'function') renderProjects();
       $('projects').classList.add('open'); }); await scan('projects');
     await pg.evaluate(() => { navHome(); mgEnterCreator(); }); await wait(600);

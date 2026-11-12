@@ -1,4 +1,4 @@
-const CACHE = "codecraft-v216";
+const CACHE = "codecraft-v217";
 const ASSETS = [
   "./",
   "./index.html",
@@ -15,6 +15,7 @@ const ASSETS = [
   "./css/codecraft-v7.css",
   "./css/pyedit.css",
   "./css/timemachine.css",
+  "./css/tabbar.css",
   "./css/apple.css",
   "./fonts/fredoka-latin.woff2",
   "./fonts/fredoka-latin-ext.woff2",
@@ -50,6 +51,7 @@ const ASSETS = [
   "./js/game/hub.js",
   "./js/game/settings.js",
   "./js/game/nav.js",
+  "./js/game/tabbar.js",
   "./js/game/sheet-drag.js",
   "./js/game/i18n.js",
   "./js/game/fx.js",

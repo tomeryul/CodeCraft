@@ -177,6 +177,28 @@ library), `write-swift`. Two more only run when you type them:
 `.claude/skills/performance-cheatsheet.md` is a one-page table from the
 same repo — the fifteen lines are worth reading once.
 
+## The tab bar
+
+Four tabs along the bottom — World, Play, Create, Me (`js/game/tabbar.js`,
+`css/tabbar.css`) — replaced the ☰ and its menu. Play, Create and Me are
+the menu's three groups, one per tab: `hubOpen(tab)` shows one group in
+the same `#hub` sheet (`hubOpen()` is the tab you were last on). World is
+the tab with no sheet. Sheets did not change: they still rise and sink,
+and tab to tab is the same in-place `swap()` as Back (`navTab` in
+`nav.js`), stepping in from the side of the tab pressed.
+
+**Which tab is lit is read from what is open, never stored** (`current()`
+in `tabbar.js`): a page lights its tab however it was reached, and Back
+from it lands there. A new destination sheet needs an entry in `PAGE_OF`
+there, its id in the padding list in `tabbar.css` (its content stops above
+the bar), and in `WATCH`. A screen that is a task of its own — a level, the
+code editor, the mentor, the wear maker — is in `OWN`, and the bar steps
+aside for it (`body.tb-off`).
+
+**Everything floating over the bottom of the world stands on the bar:** the
+Code|Build|Run row, the journey card, the build palette, an object's menu
+and the coach are placed from `--tb-space`, never from `--sab` alone.
+
 ## 🚶 Walk To on a board
 
 A challenge board can hand out the world's 🚶 Walk To (`goNear`): it

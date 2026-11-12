@@ -33,6 +33,7 @@
   <link rel="stylesheet" href="./css/codecraft-v7.css">
   <link rel="stylesheet" href="./css/pyedit.css">
   <link rel="stylesheet" href="./css/timemachine.css">
+  <link rel="stylesheet" href="./css/tabbar.css">
   <!-- last on purpose: the motion + material house rules answer for
        everything above them. See css/apple.css and CLAUDE.md. -->
   <link rel="stylesheet" href="./css/apple.css">
@@ -48,7 +49,7 @@
     <div class="chip" id="energyChip"><span id="energyEl">⚡100</span></div>
   </div>
   <!-- Only the two controls that act on THIS screen. Quests and the Shop are
-       destinations, so they moved into the ☰ menu with the other eleven.
+       destinations, so they live on the tab bar's Me tab with the others.
        Both buttons stay in the DOM, hidden: boot.js, shop.js and
        engagement.js each address them by id, and engagement.js puts the
        "reward waiting" badge on #questBtn — hub.js mirrors that badge onto
@@ -64,14 +65,37 @@
 
 <div id="journey"></div>
 <div id="buildBar"></div>
+<!-- The World tab's own toolbar: the two tools and Run. The ☰ that sat
+     beside them is the tab bar below now (js/game/tabbar.js). -->
 <div id="bottombar">
-  <button id="hubBtn" title="Menu — everything in the game" aria-label="Menu">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-  </button>
   <button id="codeBtn">🧩 Code</button>
   <button id="buildBtn">🔨 Build</button>
   <div class="spacer"></div>
   <button id="fabRun">▶</button>
+</div>
+
+<!-- ============ THE TAB BAR ============
+     Four places, always in the same spot: the world, the things to play,
+     the things to make, and you. Each tab raises its page as the same sheet
+     the menu was; the world is the tab with no sheet. js/game/tabbar.js -->
+<div id="tabbar" role="tablist" aria-label="Main navigation">
+  <span class="tb-pill" aria-hidden="true"></span>
+  <button class="tb" id="tabWorld" data-tab="world" role="tab" aria-selected="true" type="button">
+    <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><defs><mask id="tbmW"><rect width="24" height="24" fill="#fff"/><g fill="none" stroke="#000" stroke-width="1.7"><ellipse cx="12" cy="12" rx="3.9" ry="9.3"/><path d="M2.6 12h18.8M4 7.7h16M4 16.3h16"/></g></mask></defs><circle cx="12" cy="12" r="9.7" fill="currentColor" mask="url(#tbmW)"/></svg>
+    <span class="tb-l">World</span>
+  </button>
+  <button class="tb" id="tabPlay" data-tab="play" role="tab" aria-selected="false" type="button">
+    <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><defs><mask id="tbmP"><rect width="24" height="24" fill="#fff"/><path d="M7.6 10.1v3.8M5.7 12h3.8" stroke="#000" stroke-width="1.9" stroke-linecap="round"/><circle cx="15.7" cy="10.7" r="1.35" fill="#000"/><circle cx="18" cy="13.3" r="1.35" fill="#000"/></mask></defs><path mask="url(#tbmP)" fill="currentColor" d="M7.2 6h9.6c2.7 0 4.8 2 5.2 4.6l.8 5.4c.3 2.1-1.2 3.8-3.1 3.8-1 0-2-.5-2.5-1.4L16 16.3H8l-1.2 2.1c-.5.9-1.5 1.4-2.5 1.4-1.9 0-3.4-1.7-3.1-3.8l.8-5.4C2.4 8 4.5 6 7.2 6z"/></svg>
+    <span class="tb-l">Play</span>
+  </button>
+  <button class="tb" id="tabCreate" data-tab="create" role="tab" aria-selected="false" type="button">
+    <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><defs><mask id="tbmC"><rect width="24" height="24" fill="#fff"/><path d="M14.3 6.1l3.6 3.6" stroke="#000" stroke-width="1.7" stroke-linecap="round"/></mask></defs><path mask="url(#tbmC)" fill="currentColor" d="M16.3 3.2a2.3 2.3 0 0 1 3.2 0l1.3 1.3a2.3 2.3 0 0 1 0 3.2L9.4 19.1l-5.5 1.5a.6.6 0 0 1-.7-.7l1.5-5.5z"/></svg>
+    <span class="tb-l">Create</span>
+  </button>
+  <button class="tb" id="tabMe" data-tab="me" role="tab" aria-selected="false" type="button">
+    <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><defs><mask id="tbmM"><rect width="24" height="24" fill="#fff"/><circle cx="8.9" cy="13.6" r="1.8" fill="#000"/><circle cx="15.1" cy="13.6" r="1.8" fill="#000"/></mask></defs><g fill="currentColor" mask="url(#tbmM)"><rect x="3.3" y="7.4" width="17.4" height="13" rx="5.2"/><rect x="11.1" y="3.8" width="1.8" height="4.4" rx=".9"/><circle cx="12" cy="3.4" r="2"/></g></svg>
+    <span class="tb-l">Me</span>
+  </button>
 </div>
 
 <!-- ============ CODE EDITOR ============ -->
@@ -455,6 +479,7 @@
 <script src="./js/game/hub.js"></script>
 <script src="./js/game/settings.js"></script>
 <script src="./js/game/nav.js"></script>
+<script src="./js/game/tabbar.js"></script>
 <script src="./js/game/sheet-drag.js"></script>
 <script src="./js/game/i18n.js"></script>
 <script src="./js/game/native.js"></script>

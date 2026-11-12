@@ -1,7 +1,8 @@
-/* The Hub — one menu, and one destination per page.
+/* The Hub — four tabs, and one destination per page.
    The change this pins: eleven destinations with no map became one grouped
-   sheet, and the Projects scroll that held seven kinds of content became one
-   band at a time with its own title.
+   sheet, then a tab bar with one page per group (tabbar.js); and the Projects
+   scroll that held seven kinds of content became one band at a time with its
+   own title.
 
    Run: NODE_PATH=/opt/node22/lib/node_modules /opt/node22/bin/node test/hub.js */
 const { chromium } = require('playwright');
@@ -12,7 +13,7 @@ let pass=0, fail=0;
 const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'':' — '+JSON.stringify(d)));};
 
 /* Pressing Play drops you into the first academy lesson, so every test here
-   has to leave it before the world (and the menu button) is reachable. */
+   has to leave it before the world (and the tab bar) is reachable. */
 async function toWorld(pg){
   await pg.goto('file://'+ROOT+'/index.html'); await pg.waitForTimeout(1000);
   await pg.evaluate(()=>{ ageSet(true); document.getElementById('agegate').classList.remove('open'); });
@@ -42,25 +43,85 @@ const shownBands = () => [...document.getElementById('projList').children]
   pg.on('pageerror', e=>errs.push(String(e)));
   await toWorld(pg);
 
-  // ------------------------------------------------ one door, three groups
-  await pg.click('#hubBtn'); await pg.waitForTimeout(600);
-  const menu = await pg.evaluate(()=>({
-    open:$('hub').classList.contains('open'),
-    groups:[...document.querySelectorAll('.hub-sec')].map(h=>h.textContent),
-    tiles:[...document.querySelectorAll('.hub-tile')].map(t=>t.querySelector('.ht-name').textContent),
-    tagged:[...document.querySelectorAll('.hub-tile')].every(t=>t.querySelector('.ht-tag').textContent.trim()),
-    next:!!document.querySelector('.hub-next .j-btn'),
+  // ------------------------------------------------ four tabs, one page each
+  /* The ☰ and its menu of three groups became a tab bar: World, and one tab
+     per group. Every destination the menu held is still one tap from the
+     bar — 17 tiles across the three tabs that have pages. */
+  const tabs={};
+  for (const k of ['play','create','me']) {
+    await pg.click('#tab'+k[0].toUpperCase()+k.slice(1)); await pg.waitForTimeout(500);
+    tabs[k] = await pg.evaluate(()=>({
+      open:$('hub').classList.contains('open'),
+      title:$('hub').querySelector('.m-head h3').textContent,
+      tiles:[...document.querySelectorAll('#hub .hub-tile')].map(t=>t.querySelector('.ht-name').textContent),
+      tagged:[...document.querySelectorAll('#hub .hub-tile')].every(t=>t.querySelector('.ht-tag').textContent.trim()),
+      next:!!document.querySelector('.hub-next .j-btn'),
+      me:!!document.querySelector('#hub .me-card'),
+      lit:[...document.querySelectorAll('#tabbar .tb[aria-selected="true"]')].map(b=>b.dataset.tab)
+    }));
+  }
+  const all=[].concat(tabs.play.tiles,tabs.create.tiles,tabs.me.tiles);
+  ck('each tab raises its own page, titled and lit', ['play','create','me'].every(k=>
+     tabs[k].open && tabs[k].lit.join()===k) &&
+     tabs.play.title==='Play' && tabs.create.title==='Create' && tabs.me.title==='Me', tabs);
+  ck('every destination is on a tab', all.length===17 && new Set(all).size===17, all);
+  ck('every tile carries a dimension tag', ['play','create','me'].every(k=>tabs[k].tagged), tabs);
+  ck('"Next up" answers what to do, on Play', tabs.play.next && !tabs.create.next && !tabs.me.next, tabs);
+  ck('Me opens on who you are', tabs.me.me && !tabs.play.me, tabs);
+  const old = await pg.evaluate(()=>({
     // the old entry points stay in the DOM for boot.js / shop.js / engagement.js
     questInDom:!!$('questBtn'), questHidden:$('questBtn').hidden,
-    shopInDom:!!$('shopBtn'),  shopHidden:$('shopBtn').hidden
+    shopInDom:!!$('shopBtn'),  shopHidden:$('shopBtn').hidden, hubBtn:!!$('hubBtn')
   }));
-  ck('the menu opens with all three groups', menu.open &&
-     menu.groups.join()==='Play,Create,Your world', menu);
-  ck('every destination is on it', menu.tiles.length===17, menu.tiles);
-  ck('every tile carries a dimension tag', menu.tagged, menu.tiles);
-  ck('"Next up" answers what to do, above the menu', menu.next, menu);
-  ck('the old buttons are hidden, not deleted', menu.questInDom && menu.questHidden &&
-     menu.shopInDom && menu.shopHidden, menu);
+  ck('the old buttons are hidden, not deleted; the ☰ is gone', old.questInDom && old.questHidden &&
+     old.shopInDom && old.shopHidden && !old.hubBtn, old);
+
+  // ------------------------------------------------ the bar follows the screen
+  /* Which tab is lit is read from what is open: a page lights its own tab
+     however it was reached, and the bar steps aside for a level. */
+  const lit = await pg.evaluate(async()=>{
+    const w=ms=>new Promise(r=>setTimeout(r,ms));
+    const now=()=>[...document.querySelectorAll('#tabbar .tb[aria-selected="true"]')].map(b=>b.dataset.tab).join();
+    const out={};
+    navHome(); await w(350); out.world=now();
+    openShop(); await w(350); out.shop=now();
+    navBack(); await w(350); out.backFromShop=now()+':'+$('hub').dataset.tab;
+    hubPage('mine'); await w(350); out.mine=now();
+    hubPage('academy'); await w(350); out.academy=now();
+    academyEnter(0); await w(700); out.levelHides=document.body.classList.contains('tb-off');
+    out.hidden=getComputedStyle($('tabbar')).visibility;
+    mgExit(true); await w(600); out.backShows=!document.body.classList.contains('tb-off');
+    out.afterLevel=now();
+    navHome(); await w(350);
+    $('codeBtn').click(); await w(450); out.editorHides=document.body.classList.contains('tb-off');
+    navHome(); await w(450); out.home=now()+':'+document.body.classList.contains('tb-off');
+    return out;
+  });
+  ck('the world lights World', lit.world==='world', lit);
+  ck('a page lights its tab however it was reached', lit.shop==='me' && lit.mine==='create' &&
+     lit.academy==='play', lit);
+  ck('Back from a page lands on its tab', lit.backFromShop==='me:me', lit);
+  ck('a level and the code editor have the screen to themselves', lit.levelHides &&
+     lit.hidden==='hidden' && lit.editorHides, lit);
+  ck('leaving a level brings the bar back on its tab', lit.backShows && lit.afterLevel==='play', lit);
+  ck('home is the world, with the bar', lit.home==='world:false', lit);
+
+  // ------------------------------------------------ pressing the tab you are on
+  const again = await pg.evaluate(async()=>{
+    const w=ms=>new Promise(r=>setTimeout(r,ms));
+    navHome(); await w(300); hubPage('academy'); await w(400);
+    $('tabPlay').click(); await w(450);
+    const root=$('hub').classList.contains('open')&&!$('projects').classList.contains('open')&&$('hub').dataset.tab;
+    $('tabCreate').click(); await w(450);
+    const moved=$('hub').dataset.tab;
+    navHome(); await w(350);
+    return {root,moved};
+  });
+  ck('the lit tab, pressed again, goes back to its start', again.root==='play', again);
+  ck('another tab, pressed, changes the page in place', again.moved==='create', again);
+
+  /* the rest of this file opens the menu by hand */
+  await pg.evaluate(()=>hubOpen('play')); await pg.waitForTimeout(500);
 
   // ------------------------------------------------ one band per page
   const want = {

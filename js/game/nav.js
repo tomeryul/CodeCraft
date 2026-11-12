@@ -78,6 +78,25 @@ function navBack(){
   if(has("sfx"))sfx(500,.04);
 }
 
+/* A tab: its page, from wherever you are, in one step. From another tab's
+   page it is the same swap as Back — the panel stays and the contents
+   change — but they step in from the side of the tab you pressed, the way
+   the tabs are laid out (dir: 1 the tab is to the right, -1 to the left).
+   Between two tabs of the menu itself nothing closes, so hubOpen moves the
+   contents on its own. */
+function navTab(k,dir){
+  const onlyHub=$("hub").classList.contains("open")&&
+    !SHEETS.concat(["shopWrap"]).some(id=>id!=="hub"&&$(id)&&$(id).classList.contains("open"));
+  if(onlyHub){ if(has("hubOpen"))hubOpen(k); return; }
+  if(typeof mgState!=="undefined"&&mgState&&has("mgExit"))mgExit(false);
+  swapDir=dir||0;
+  closeAll();
+  if(has("hubOpen"))hubOpen(k);
+  // the observer has read it by now (its microtask was queued first); if
+  // nothing changed it never ran, and the hint must not reach the next swap
+  Promise.resolve().then(()=>{swapDir=0;});
+}
+
 /* =====================================================================
    One page that changes, not two sheets that cross
    ---------------------------------------------------------------------
@@ -101,7 +120,7 @@ function navBack(){
    ===================================================================== */
 const SWAP_ID=SHEETS.concat(["shopWrap"]);
 const frameOf=el=>el.id==="shopWrap"?$("shop"):el;
-let swapBack=false, live=null;
+let swapBack=false, swapDir=0, live=null;
 const imp=(el,p,v)=>el.style.setProperty(p,v,"important");
 function restBox(el){
   let t=0,l=0;
@@ -123,8 +142,9 @@ function settle(){
 }
 function swap(A,B){
   settle();
-  // Back: the ‹, the menu (it is the top), or out of a level to its list
-  const back=swapBack||B.id==="hub"||A.id==="editor";
+  // Back: the ‹, the menu (it is the top), or out of a level to its list;
+  // a tab says which side it is on instead
+  const back=swapDir?swapDir<0:(swapBack||B.id==="hub"||A.id==="editor");
   const fa=frameOf(A), fb=frameOf(B);
   if(!fa||!fb||typeof fa.animate!=="function")return;
   // only two frames that are the same shape in the same place can be one
@@ -193,14 +213,14 @@ function watchSwaps(){
       const is=el.classList.contains("open");
       if(was&&!is)gone.push(el); else if(!was&&is)came.push(el);
     }
-    const back=swapBack; swapBack=false;
+    const back=swapBack, side=swapDir; swapBack=false; swapDir=0;
     for(const el of gone)el.classList.remove("swap-in");
     if(came.length!==1||!gone.length)return;
     // two pages closing for one (rare): the one on top is the one being replaced
     const A=gone.sort((p,q)=>(parseInt(getComputedStyle(q).zIndex,10)||0)-(parseInt(getComputedStyle(p).zIndex,10)||0))[0];
-    swapBack=back;
+    swapBack=back; swapDir=side;
     try{swap(A,came[0]);}catch(_){settle();}
-    swapBack=false;
+    swapBack=false; swapDir=0;
   });
   for(const el of els)mo.observe(el,{attributes:true,attributeFilter:["class"],attributeOldValue:true});
   // a press during a swap means the player is already on the new page
@@ -292,5 +312,5 @@ function wire(){
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",wire);
 else wire();
 
-window.navBack=navBack; window.navHome=navHome;
+window.navBack=navBack; window.navHome=navHome; window.navTab=navTab;
 })();

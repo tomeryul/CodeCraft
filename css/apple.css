@@ -124,9 +124,10 @@ b,strong{font-weight:var(--fw-bold);}
   #bottombar #codeBtn,#bottombar #buildBtn,#buildBar,#actionBar,
   #objMenu,#shopWrap,#splashAuth,#splashAuth .sp-card,
   #ticker .tk,#ticker .tk-btn,#ticker .tk-order,#ticker .tk-panel,
-  #mgBrickStp,#coach,.toast,.chip,.iconbtn{
+  #mgBrickStp,#coach,.toast,.chip,.iconbtn,#tabbar,.me-card{
     background-color:var(--panel,#241c46) !important;
   }
+  .me-card{background-image:none !important;}
   /* the win card's veil: solid, so no level text reads through the card */
   #ccCele{background:rgb(16,10,38) !important;}
   #fabRun{background-image:none !important;background-color:#3ca85a !important;}
@@ -141,7 +142,7 @@ b,strong{font-weight:var(--fw-bold);}
    --------------------------------------------------------------------- */
 @media (prefers-contrast:more){
   .sheet,.pcard,.hub-tile,.toast,#actionBar,#objMenu,#shopWrap,
-  #mgCreatorBar .blkrow,.dsec{
+  #mgCreatorBar .blkrow,.dsec,#tabbar,.me-card,.me-st{
     border:1px solid var(--ink2,#b9b0d8) !important;
   }
   .blk{outline:1px solid rgba(0,0,0,.45);outline-offset:-1px;}
