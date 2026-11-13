@@ -370,6 +370,13 @@ Hats, outfits, capes and shoes were drawn on the old 34.56px body square;
 the rig maps that square onto the head and the feet (`WEAR_S`), so a new
 piece is still drawn on the square. No outlines, because the map has
 none.
+Every size in it is the canvas's own number: the SVG is 116 units to
+the 64 the rig draws, so `C(v)` (`v*CS`, `CS=64/116`) turns a number read
+off the canvas into the rig's — write the canvas's number, not a guess.
+The yellow team (`#ffb830`) takes the canvas's own three yellows (`ROBO`).
+The face is crisp: the eyes carry the canvas's soft cyan halo and its
+glint, and nothing on the robot is blurred (`glow:false`). Seen from the
+side the mitts drop and fall back behind the screen, never across it.
 
 ## The 3D board
 
