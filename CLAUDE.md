@@ -374,9 +374,15 @@ edges and hanging below the head: a scarf's tail, a hood's strings, an
 apron) — handed `G`, the head and its screen as they are this frame, so
 every piece turns with the head. A shoe IS the foot: it stands where the
 stub stood, and in shoes the head stands `SHOE_UP` higher so the toe and
-sole show. A shop hat stays its sprite, sat on the top edge by `HAT_FIT`
-(where its brim and crown are), and the antenna comes out of its crown —
-the light is never under a hat, which is why `TALL_HAT` is taller. Keep
+sole show. A shop hat is drawn in the robot's own two tones (`hats`,
+`hatArt`) and worn small, at a slant, on the top edge BESIDE the antenna
+(`HAT_X`, left of it, the side a preview turns toward us) — never on it.
+The antenna keeps its place and its sway; the hat has its own spring
+(`hatS`, beside the antenna's in `update`), heavier and slower, so the
+two never move as one: it hops and rocks as the head bobs and tips
+against a turn, and a tassel or pom-pom hangs from it (`hang`). Side on
+it slides toward the back of the head (`HAT_BACK`), and when its side of
+the head is turned away the antenna is drawn over it. Keep
 two dots and a curve off anything below the face: on a shoe they read
 as a second face. A piece the player PAINTED is still a grid on the old
 34.56px body square (`WEAR_S`, `WEAR_BOX`), mapped onto the head and the

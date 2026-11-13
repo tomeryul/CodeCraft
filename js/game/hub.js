@@ -278,10 +278,7 @@ function meDraw(cv){
   const col=has("safeColor")?safeColor(r.color):(r.color||"#ffb830");
   /* a portrait, not a full figure: the head and body fill the round frame
      and the feet run off its bottom edge */
-  /* a hat stands taller (the antenna comes out of its crown): a little
-     smaller and lower, so it is inside the circle */
-  const k=r.hat?.5:.56, cy=r.hat?.6:.58;
-  try{ drawBoardRobot(g,S/2,S*cy,S*k,"E",col,false,0,{hat:r.hat,outfit:r.outfit,shoes:r.shoes}); }catch(_){}
+  try{ drawBoardRobot(g,S/2,S*.58,S*.56,"E",col,false,0,{hat:r.hat,outfit:r.outfit,shoes:r.shoes}); }catch(_){}
 }
 
 /* ---------------- one page of the Projects sheet ----------------

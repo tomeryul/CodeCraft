@@ -143,11 +143,11 @@ function stylePlay(){
       const w=Math.max(200,Math.round(cv.clientWidth||330));
       /* 186 tall, with the pose chips in the bottom 40: the robot stands
          above them rather than behind them, its feet at 130, and a size at
-         which a hat with the antenna out of its crown still clears the top */
+         which the light on the antenna still clears the top */
       const g=styleFit(cv,w,186);
       /* a soft light behind it: a top hat and a cap are dark, and the sheet is too */
       if(g){const L=g.createRadialGradient(w/2,74,4,w/2,74,86);
-        L.addColorStop(0,"rgba(170,150,255,.2)");L.addColorStop(1,"rgba(170,150,255,0)");
+        L.addColorStop(0,"rgba(170,150,255,.3)");L.addColorStop(1,"rgba(170,150,255,0)");
         g.fillStyle=L;g.fillRect(0,0,w,186);}
       if(g)drawBoardRobot(g,w/2,89,62,"E",safeColor(r.color),false,ts||0,
         {hat:r.hat,outfit:r.outfit,shoes:r.shoes},styleMode);
@@ -171,8 +171,9 @@ function stylePaintSwatch(c,kind,id,color){
     g.restore();return;
   }
   if(kind==="hat"){
-    const hp=sprite(id,30);
-    g.drawImage(hp,23-hp.lw/2,25-hp.lw/2,hp.lw,hp.lw);
+    /* the hat the robot wears, by the painter that puts it on the head */
+    if(window.CC_WEAR&&CC_WEAR.hats&&CC_WEAR.hats[id]){g.translate(23,35);g.scale(1.45,1.45);CC_WEAR.hatArt(g,id,{t:0,a:0,v:0});}
+    else{const hp=sprite(id,30);g.drawImage(hp,23-hp.lw/2,25-hp.lw/2,hp.lw,hp.lw);}
   }else if(kind==="outfit"){
     /* the outfit on the head it is made for, by the rig that wears it: face
        on, or from behind for a cape — so the swatch is what you will see */

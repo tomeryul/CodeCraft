@@ -13,9 +13,11 @@
      a shoe      IS the foot: it stands where the leg stub stood, on the
                  ground, and the head is lifted a little (SHOE_UP) so its
                  sole and its toe show under the head instead of a sliver
-     a hat       stays the sprite from js/sprites.js; HAT_FIT says where
-                 its brim and its top are, so it sits ON the head and the
-                 antenna comes out of its top
+     a hat       is drawn here too, in the robot's own two tones, small and
+                 worn at a slant on the top of the head BESIDE the antenna —
+                 the antenna keeps its place and its own sway, and the hat
+                 has a spring of its own (the rig's), so they never move as
+                 one
 
    G, what a layer is handed (rig units, the head's own space):
      hw top H bot rad   the shell: half-width, top, height, bottom, corner
@@ -273,15 +275,78 @@ const shoes={
   }
 };
 
-/* ---------- hats: where each sprite's brim and top are ----------
-   In the sprite's own 48-unit box: brim = the bottom of the brim (it sits
-   on the shell's top edge, sunk into it a little), top = the top of the
-   crown (the antenna comes out there). */
-const HAT_FIT={
-  "🎩":{brim:34.5,top:12}, "⛑️":{brim:34.5,top:14}, "⛑":{brim:34.5,top:14},
-  "👑":{brim:34.5,top:17}, "🎓":{brim:33,top:16}, "🤠":{brim:28,top:11.5},
-  "🥳":{brim:33.5,top:8}
+/* ---------- hats: worn beside the antenna ----------
+   Hat-local: the origin is the middle of the brim's underside, sitting on
+   the head; up is negative. H is {t, a, v}: time, the hat's own tilt from
+   its spring and how fast it is swinging, so what hangs off a hat (a
+   tassel, a pom-pom) can trail it. Each piece is painted the way the
+   shell is: whole in its darker tone, then again in the lit one moved up
+   and left, so it shades on the right and underneath like the head. */
+function tone(g,path,lit,shade,dx,dy){
+  path();g.fillStyle=shade;g.fill();
+  g.save();path();g.clip();g.translate(dx==null?-1.6:dx,dy==null?-1.2:dy);path();g.fillStyle=lit;g.fill();g.restore();
+}
+/* where something hanging from the hat points, in the hat's own frame:
+   straight down whatever its tilt (H.a, all of it), swung back a little by
+   how fast the hat is moving (H.v) */
+function hang(H,len){const a=(H.a||0)+(H.v||0)*.6;return{x:Math.sin(a)*len,y:Math.cos(a)*len};}
+const hats={
+  /* ⛑️ a hard hat: a red dome on a brim, a ridge over the top, a cross */
+  "⛑️":{h:15,k:1.12,draw(g,H){
+    tone(g,()=>{g.beginPath();g.moveTo(-9.6,-2.6);g.bezierCurveTo(-9.6,-15.6,9.6,-15.6,9.6,-2.6);g.closePath();},"#ff5d73","#e04a5f");
+    RR(g,-1.7,-15,3.4,9,1.7);g.fillStyle="#ff8fa0";g.fill();
+    g.fillStyle="#f2f3f7";g.fillRect(-6.9,-7.9,4.2,1.3);g.fillRect(-5.45,-9.35,1.3,4.2);
+    tone(g,()=>{RR(g,-12.4,-3.6,24.8,3.6,1.8);},"#e04a5f","#c23a55",-.8,-.8);
+  }},
+  /* 🎩 a top hat: a tall crown, a gold band, a narrow brim */
+  "🎩":{h:18,k:1.1,draw(g,H){
+    tone(g,()=>{RR(g,-6.8,-18,13.6,15.6,2.4);},"#4b4686","#2f2a5c");
+    g.fillStyle="#ffb830";g.fillRect(-6.8,-7,13.6,3);g.fillStyle="#e09a12";g.fillRect(4.6,-7,2.2,3);
+    RR(g,-5.2,-16.4,1.8,7.4,.9);g.fillStyle="rgba(255,255,255,.12)";g.fill();
+    tone(g,()=>{RR(g,-11.4,-3.4,22.8,3.4,1.7);},"#4b4686","#2a2452",-.8,-.8);
+  }},
+  /* 🎓 a mortarboard: a cap, a board on it, a gold tassel that hangs */
+  "🎓":{h:14,k:1.06,draw(g,H){
+    tone(g,()=>{RR(g,-7.6,-8.4,15.2,8.4,3);},"#4b4686","#2f2a5c");
+    const D=()=>{g.beginPath();g.moveTo(0,-14);g.lineTo(13.6,-9.6);g.lineTo(0,-5.2);g.lineTo(-13.6,-9.6);g.closePath();};
+    g.save();g.translate(0,1.3);D();g.fillStyle="#2a2452";g.fill();g.restore();
+    D();g.fillStyle="#4b4686";g.fill();
+    g.save();D();g.clip();g.beginPath();g.moveTo(0,-14);g.lineTo(13.6,-9.6);g.lineTo(0,-5.2);g.closePath();g.fillStyle="#3d3873";g.fill();g.restore();
+    g.strokeStyle="#ffd66b";g.lineWidth=.9;g.lineCap="round";
+    const e=hang(H,7.2), x0=-10.4, y0=-9.4;
+    g.beginPath();g.moveTo(0,-9.6);g.lineTo(x0,y0);g.lineTo(x0+e.x,y0+e.y);g.stroke();
+    g.save();g.translate(x0+e.x,y0+e.y);g.rotate(Math.atan2(-e.x,e.y));RR(g,-1.3,-.4,2.6,3.8,1);g.fillStyle="#ffd66b";g.fill();g.restore();
+    g.beginPath();g.arc(0,-9.6,1.3,0,TAU);g.fillStyle="#ffd66b";g.fill();
+  }},
+  /* 🤠 a ranger's hat: a dented crown, a dark band, a brim turned up */
+  "🤠":{h:13,k:.98,draw(g,H){
+    tone(g,()=>{g.beginPath();g.moveTo(-7.2,-2.6);g.lineTo(-6.4,-10.6);g.quadraticCurveTo(-5.2,-13.4,-1.8,-12.2);g.quadraticCurveTo(0,-11.2,1.8,-12.2);
+      g.quadraticCurveTo(5.2,-13.4,6.4,-10.6);g.lineTo(7.2,-2.6);g.closePath();},"#b0703a","#8a5a2b");
+    g.fillStyle="#6e4422";g.fillRect(-7,-5.8,14,2.5);
+    tone(g,()=>{g.beginPath();g.moveTo(-14.6,-6.6);g.quadraticCurveTo(-12.6,-2,0,-1.8);g.quadraticCurveTo(12.6,-2,14.6,-6.6);
+      g.quadraticCurveTo(13.2,.2,0,.4);g.quadraticCurveTo(-13.2,.2,-14.6,-6.6);g.closePath();},"#c98d4b","#a8743f",-.6,-.9);
+  }},
+  /* 👑 a crown: three points with a pearl each, a band, a red stone */
+  "👑":{h:14,k:1.15,draw(g,H){
+    tone(g,()=>{g.beginPath();g.moveTo(-8.4,-.6);g.lineTo(-8.4,-11);g.lineTo(-4.2,-6.2);g.lineTo(0,-13);g.lineTo(4.2,-6.2);
+      g.lineTo(8.4,-11);g.lineTo(8.4,-.6);g.closePath();},"#ffd66b","#e8b23e");
+    tone(g,()=>{RR(g,-8.8,-4.4,17.6,4.2,1.6);},"#ffc93f","#e09a12",-.8,-.8);
+    for(const [x,y] of [[-8.4,-11],[0,-13],[8.4,-11]]){g.beginPath();g.arc(x,y,1.5,0,TAU);g.fillStyle="#fff1b8";g.fill();}
+    g.beginPath();g.arc(0,-2.3,1.8,0,TAU);g.fillStyle="#ff5d73";g.fill();
+    g.fillStyle="#5ab8ff";for(const x of [-5,5]){g.beginPath();g.arc(x,-2.3,1.05,0,TAU);g.fill();}
+  }},
+  /* 🥳 a party hat: a striped cone, a trim, a pom-pom that bounces */
+  "🥳":{h:24,k:1.08,draw(g,H){
+    const C=()=>{g.beginPath();g.moveTo(-7.6,-.8);g.lineTo(0,-20.6);g.lineTo(7.6,-.8);g.closePath();};
+    tone(g,C,"#ff5d73","#e04a5f");
+    g.save();C();g.clip();g.fillStyle="#ffd66b";g.fillRect(-9,-8.6,18,2.6);g.fillRect(-9,-14.8,18,2.2);g.restore();
+    RR(g,-8.2,-2.2,16.4,2.4,1.2);g.fillStyle="#fff1b8";g.fill();
+    const e=hang(H,1.4);
+    g.beginPath();g.arc(e.x*.8,-21+e.y*.3-.6,2.9,0,TAU);g.fillStyle="#ffd66b";g.fill();
+    g.beginPath();g.arc(e.x*.8-.9,-21.9+e.y*.3-.6,1.1,0,TAU);g.fillStyle="#fff1b8";g.fill();
+  }}
 };
+hats["⛑"]=hats["⛑️"];
 
 /* =====================================================================
    Pieces the player painted
@@ -774,7 +839,12 @@ function paintPiece(g,slot,p){
 }
 
 window.CC_WEAR={
-  outfits:outfits, backs:backs, shoes:shoes, shoeUp:SHOE_UP, hatFit:HAT_FIT,
+  outfits:outfits, backs:backs, shoes:shoes, shoeUp:SHOE_UP, hats:hats,
+  /* a shop hat, hat-local (origin under the middle of its brim); false if
+     there is no such hat */
+  hatArt(g,id,H){const h=hats[id]; if(!h)return false;
+    if(h.k&&h.k!==1){g.save();g.scale(h.k,h.k);h.draw(g,H||{});g.restore();} else h.draw(g,H||{});
+    return true;},
   pal:WEAR_PAL, key:WEAR_KEY, cells:WEAR_N, max:WEAR_MAX, prefix:WEAR_PRE, box:WEAR_BOX,
   names:WEAR_NAME, rad:PART_RAD, partMax:PART_MAX,
   isCustom:isCustom,

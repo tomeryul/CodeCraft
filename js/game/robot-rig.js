@@ -151,7 +151,9 @@ function mixPose(A,B,w){
 function breathe(P,ms,k,per){k=k==null?1:k;per=per||2600;const b=Math.sin(ms/per*TAU);P.bob+=-.9*b*k;P.sy*=1+.012*b*k;P.sx*=1-.008*b*k;P.lR+=.025*b*k;P.rR+=.025*b*k;return b;}
 
 /* ---------------------------------------------------------------- the robot */
-const HAT_K=1.2; // a shop hat's 48-unit sprite box, in rig units per unit
+/* a shop hat: where on the top it sits (left of the antenna), how far it
+   slides back when the head is side on, and its slant (outward) */
+const HAT_X=-16, HAT_BACK=14, HAT_TILT=-.22, HAT_REST={a:0,l:0,v:0};
 const WEAR_S=34.56; // the body square the hats, outfits and capes were drawn on (TILE*.72 at TILE 48)
 class Bot{
   constructor(color,dir){
@@ -203,6 +205,20 @@ class Bot{
     const dx=ox-rest.x, dy=oy-rest.y, dl=Math.hypot(dx,dy);
     if(dl>7){ox=rest.x+dx/dl*7;oy=rest.y+dy/dl*7;this.tip.x=bx+ox;this.tip.y=byy+oy;}
     this.ant={x:ox,y:oy};
+    /* The hat has a spring of its own on the same push, heavier and slower
+       than the antenna's, so the two never move as one: it tips against the
+       way the head moves, lifts a little when the head drops, and settles. */
+    if(!this.hatQ){this.hatQ={x:bx,y:byy};this.hatQv={x:0,y:0};}
+    if(dt>0){const sub=4, hh=hs/sub;
+      for(let s=0;s<sub;s++){
+        this.hatQv.x+=(-130*(this.hatQ.x-bx)-6*(this.hatQv.x-bvx))*hh;
+        this.hatQv.y+=(-190*(this.hatQ.y-byy)-7*(this.hatQv.y-bvy))*hh;
+        this.hatQ.x+=this.hatQv.x*hh;this.hatQ.y+=this.hatQv.y*hh;
+      }}
+    let qx=this.hatQ.x-bx, qy=this.hatQ.y-byy;const ql=Math.hypot(qx,qy);
+    if(ql>4){qx*=4/ql;qy*=4/ql;this.hatQ.x=bx+qx;this.hatQ.y=byy+qy;}
+    /* lifting, it also rocks a little outward: walking, the hat hops and sways */
+    this.hatS={a:clamp(qx*.07-qy*.05,-.3,.3),l:clamp(-qy*.85,-1,2.4),v:clamp((this.hatQv.x-bvx)*.004,-1,1)};
     // blinking, with the odd double blink
     this.blinkIn-=dt;
     if(this.blinkIn<0&&this.blinkT<0){this.blinkT=0;this.blinkIn=2300+Math.random()*2700;this.dbl=Math.random()<.2;}
@@ -373,13 +389,23 @@ class Bot{
        antenna coming out of its crown. G is the head, as the pieces see it. */
     const W=this.ctx.wear, CW=window.CC_WEAR;
     const fit=W.outfit&&CW&&CW.outfits&&CW.outfits[W.outfit]?CW.outfits[W.outfit]:null;
-    const hf=W.hat&&CW&&CW.hatFit&&CW.hatFit[W.hat]&&typeof sprite==='function'?CW.hatFit[W.hat]:null;
+    /* A shop hat is worn at a slant on the top edge to the LEFT of the
+       antenna (the side a preview turns toward us), never on it: the antenna keeps its place and its sway, the
+       hat rides its own spring (hatS). It turns with the head; it always
+       sits ON the top edge, and when its side of the head turns away the
+       antenna is drawn over it instead of behind it. */
+    const hat=W.hat&&CW&&CW.hats&&CW.hats[W.hat]?W.hat:null;
+    /* turned to the side it also slides toward the back of the head, so it
+       is beside the antenna there too and not behind it */
+    const sn=Math.sin(ah), hxx=HAT_X*Math.cos(ah)-HAT_BACK*sn*sn*sn, hfront=-Math.sign(HAT_X)*sn;
+    const hatDraw=()=>{const S=this.hatS||HAT_REST, ov=Math.abs(hxx)-(hw-rad), drop=ov>0?rad-Math.sqrt(Math.max(0,rad*rad-ov*ov)):0;
+      const tilt=HAT_TILT*Math.cos(ah)+S.a;
+      g.save();g.translate(hxx,top+1.4+drop+P.headNod*1.2);g.rotate(tilt);g.translate(0,-S.l);
+      CW.hatArt(g,hat,{t:this.ctx.t,a:tilt,v:S.v});g.restore();};
     const f=feat(ah), fb=feat(ah+PI);fb.vis=sm(.15,.55,fb.c);
     const sc=this.scr(f,hw,P);
     const G=fit?{hw,top,H,bot:top+H,rad,lx:-C(7),ly:-C(8),sx:sc.sx,sy:sc.sy,sw:sc.sw,sh:sc.sh,k:sc.sw/C(84),
       fvis:f.vis,bvis:fb.vis,bu:fb.u*hw*.4,ca,sa,pal,t:this.ctx.t,gp:P.gp||0,sway:(P.roll+P.lean*sa)*57.3}:null;
-    /* the stalk stands behind the head's top edge, under its dark cap */
-    if(!hf)this.stalk(g,ah,P);
     /* The shell: drawn whole in the darker tone, then again in the team
        colour moved up and left inside it, so the darker tone shows along
        its right side and underneath with the corners' own curve */
@@ -398,9 +424,13 @@ class Bot{
       g.moveTo(bx+2.4*k,my-6.5);g.lineTo(bx-2.4*k,my+6.5);g.stroke();g.restore();
     }
     g.restore();
+    /* a hat on the far side of the top is under the antenna */
+    if(hat&&hfront<-.12)hatDraw();
+    /* the stalk rises from under the head's dark cap, which hides its foot */
+    this.stalk(g,ah,P);
     // the antenna's dark cap on the top edge, and the one light on the shell
-    if(!hf){const capx=-Math.sin(ah)*3-C(4)*Math.max(0,ca);
-      g.beginPath();g.ellipse(capx,top,C(13)*(.55+.45*Math.abs(ca)),C(5),0,0,TAU);g.fillStyle=NAVY;g.fill();}
+    const capx=-Math.sin(ah)*3-C(4)*Math.max(0,ca);
+    g.beginPath();g.ellipse(capx,top,C(13)*(.55+.45*Math.abs(ca)),C(5),0,0,TAU);g.fillStyle=NAVY;g.fill();
     const kx=hw/C(58);
     g.save();g.globalAlpha*=.9;rr(g,-hw+C(18)*kx,top+C(9),C(24)*kx,C(6),C(3));g.fillStyle=(fit&&fit.hi)||pal.hi;g.fill();g.restore();
     if(f.vis>.01)this.screen(g,f,hw,P);
@@ -411,29 +441,15 @@ class Bot{
     if(P.packFull){const sc=P.packScale*(1+(P.packB||0)*.07);
       drawItem(g,'sack',-12*ca-13*sa,top-6.5*sc+1,sc*.95,this.ctx.t);}
     this.anchors.headC=AP(0,top+H/2);this.anchors.hat=AP(0,top);
-    if(hf){
-      /* A hat from the shop sits ON the head: its brim on the top edge,
-         sunk into it a little, the same size whatever way the head turns.
-         The antenna comes out of the top of its crown, shorter, so the
-         light that says what the robot is doing is never under a hat. */
-      const hk=HAT_K, hx=-Math.sin(ah)*3, hb=top+2.6+P.headNod*1.2, hp=sprite(W.hat,96), off=(hp.lw-96)/2;
-      g.save();g.translate(hx,hb);g.scale(hk,hk);
-      g.drawImage(hp,-24-off/2,-hf.brim-off/2,hp.lw/2,hp.lw/2);
+    this.bulb(g,ah,P);
+    if(hat){if(hfront>=-.12)hatDraw();}
+    /* a painted hat: the body square it was painted on, its top edge on
+       the top of this head, as wide as the head is — over the antenna */
+    else if(W.hat&&CW){
+      const k=64/WEAR_S;
+      g.save();g.translate(0,top+WEAR_S/2*k);g.scale(k,k);
+      if(!CW.hat(g,W.hat)&&typeof sprite==='function'){const hp=sprite(W.hat,24);g.drawImage(hp,-hp.lw/2,-WEAR_S/2-4.75-hp.lw/2,hp.lw,hp.lw);}
       g.restore();
-      const base=hb-(hf.brim-hf.top)*hk+1, o=this.ant, k=.6;
-      g.lineCap='round';g.beginPath();g.moveTo(hx,base);g.quadraticCurveTo(hx,base-C(6),hx+o.x*k,base+o.y*k+C(4));
-      g.strokeStyle=NAVY;g.lineWidth=C(4.5);g.stroke();
-      this.bulb(g,ah,P,base,k);
-    }else{
-      this.bulb(g,ah,P);
-      /* a painted hat: the body square it was painted on, its top edge on
-         the top of this head, as wide as the head is — over the antenna */
-      if(W.hat&&CW){
-        const k=64/WEAR_S;
-        g.save();g.translate(0,top+WEAR_S/2*k);g.scale(k,k);
-        if(!CW.hat(g,W.hat)&&typeof sprite==='function'){const hp=sprite(W.hat,24);g.drawImage(hp,-hp.lw/2,-WEAR_S/2-4.75-hp.lw/2,hp.lw,hp.lw);}
-        g.restore();
-      }
     }
     g.restore();
   }
@@ -465,10 +481,9 @@ class Bot{
   }
   /* the light: a pale halo, the bulb, its lit side and one glint. Mint is
      a robot with nothing to say; the program's state recolours it */
-  bulb(g,ah,P,base,k){
+  bulb(g,ah,P){
     const {t,AP}=this.ctx;
-    k=k||1;
-    const bx=-Math.sin(ah)*3, by=base!=null?base:H_TOP+P.headNod*1.2, o=this.ant, tx=bx+o.x*k, ty=by+o.y*k;
+    const bx=-Math.sin(ah)*3, by=H_TOP+P.headNod*1.2, o=this.ant, tx=bx+o.x, ty=by+o.y;
     const st=P.bulb||'idle', idle=st==='idle';
     const col=idle?'#4fcfa6':bulbCol(st,t), lit=idle?'#86f2cc':colA(col,.55);
     g.beginPath();g.arc(tx,ty,C(19),0,TAU);g.fillStyle=idle?'rgba(134,242,204,.26)':colA(col,.26);g.fill();
@@ -901,7 +916,7 @@ function drawStill(g,X,Y,s,yaw,color,P,o){
   o=o||{};
   still.color=color;still.lock=true;still.yaw=still.hyaw=yaw;still.hlag=0;
   const r=still.restOf(P);still.ant={x:r.x,y:r.y};still.bv=0;still.swapK=1;still.expr=P.expr||'neutral';still.exprNext=null;
-  still.anchors={};
+  still.anchors={};still.hatS=HAT_REST;
   still.draw(g,P,X,Y,s,o);
   return still.anchors;
 }
@@ -923,7 +938,7 @@ const FOOT=.28, UNIT=1/82.5;
 /* how tall it stands, in rig units, for whatever a host puts over or on it
    (a name, a carried block, the tap that picks it): just above the light,
    the same under a hat, and where its hands hold a thing up from */
-const TALL=80, TALL_HAT=102, HOLD=22;
+const TALL=80, TALL_HAT=86, HOLD=22;
 /* how far a bump carries the robot toward what it hit, in tiles */
 function nudge(t){return t<.2?.16*E.i2(t/.2):.16*(1-E.o3(clamp((t-.2)/.3,0,1)));}
 /* how far a teeter leans it out over the water, in tiles */

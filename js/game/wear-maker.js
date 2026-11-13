@@ -269,8 +269,8 @@ function mkPlay(){
       const wear={hat:r.hat,outfit:r.outfit,shoes:r.shoes};
       wear[mkSlot]=mkId;
       /* A chopping robot is 1.9 body-widths across once the axe is out and
-         1.84 tall from the light over a hat to the sole, so the fit is
-         against both — and one size for all three poses, because a robot
+         about 1.6 tall from the light to the sole, so the fit is against
+         both — and one size for all three poses, because a robot
          that changes size when you switch pose is a robot you cannot
          compare. Its feet stand near the bottom, so the hat has the room.
          The chop reaches to the right, so the body sits a little left of

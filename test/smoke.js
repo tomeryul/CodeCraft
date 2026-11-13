@@ -2488,10 +2488,10 @@ async function ev(expr) {
   /* the robot is drawn by robot-rig.js now: the hat is painted inside the
      head's own save/restore, so it inherits the nod, tilt, lean and squash */
   const HEAD_SRC = (RIG_SRC.match(/\n  head\(g,ah,P\)\{[\s\S]*?\n  \}\n/) || [''])[0];
-  /* a shop hat (hf) and a painted one (else) are both drawn before the
-     head's own last restore */
+  /* a shop hat (hatDraw) and a painted one (else) are both drawn before
+     the head's own last restore */
   check("the hat is drawn inside the robot's transform tree",
-    /if\(hf\)\{[\s\S]{0,900}?drawImage\(hp[\s\S]{0,1600}?CW\.hat\(g,W\.hat\)[\s\S]{0,300}?\n    \}\n    g\.restore\(\);\n  \}\n$/.test(HEAD_SRC) &&
+    /if\(hat\)\{if\(hfront>=-\.12\)hatDraw\(\);\}[\s\S]{0,600}?CW\.hat\(g,W\.hat\)[\s\S]{0,300}?\n    \}\n    g\.restore\(\);\n  \}\n$/.test(HEAD_SRC) &&
     !/ctx\.translate\(cx\+2,cy\+bobY/.test(RENDER_SRC));
   /* the pieces reach the canvas: a dressed robot must not paint the same
      pixels as a bare one */
