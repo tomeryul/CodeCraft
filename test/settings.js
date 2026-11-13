@@ -29,8 +29,9 @@ const titles = sel => `[...document.querySelectorAll('${sel} .shopitem')]
   // ------------------------------------------------ the shop sells things
   await pg.evaluate(()=>openShop()); await pg.waitForTimeout(500);
   const shop = await pg.evaluate(titles('#shopItems'));
+  /* a row for each robot of the family (six), the bag, speed, the bank, Style */
   ck('the Shop is only things you buy or wear',
-     shop.length===5 && !shop.some(t=>/Sound|Music|Your name|Hidden|New World|Backup/i.test(t)), shop);
+     shop.length===10 && !shop.some(t=>/Sound|Music|Your name|Hidden|New World|Backup/i.test(t)), shop);
 
   // ------------------------------------------------ settings are settings
   await pg.evaluate(()=>{ $('shopWrap').classList.remove('open'); openSettings(); });

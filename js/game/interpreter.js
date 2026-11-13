@@ -10,10 +10,15 @@ function solidObj(o){
   if(o.type==="decor")return !!(DECOR_BY[o.deco]&&DECOR_BY[o.deco].solid);
   return o.type==="rock"||o.type==="iron"||o.type==="crystal"||o.type==="home"||o.type==="market"||o.type==="chest"||o.type==="gift"||o.type==="proj"||(o.type==="tree"&&o.stage>=1);
 }
-function canWalk(x,y){
+/* r is optional: without it, the rule for a robot on two feet. Tipi
+   floats, so water is ground to it; Zoom is always in the air, so only the
+   edge of the map stops it */
+function canWalk(x,y,r){
   if(!inB(x,y))return false;
+  const K=r&&ROBOT_KINDS[r.kind];
+  if(K&&K.fly)return true;
   const o=objects.get(key(x,y));
-  if(terrain[key(x,y)]===T_WATER)return o&&o.type==="bridge";
+  if(terrain[key(x,y)]===T_WATER)return !!(o&&o.type==="bridge")||!!(K&&K.water&&!solidObj(o));
   return !solidObj(o);
 }
 function ahead(r){return {x:r.x+DX[r.dir],y:r.y+DY[r.dir]};}
@@ -58,7 +63,7 @@ function evalCond(r,c){
     case "rockAhead":return !!(o&&o.type==="rock");
     case "ironAhead":return !!(o&&o.type==="iron");
     case "waterAhead":return inB(a.x,a.y)&&terrain[key(a.x,a.y)]===T_WATER&&!(o&&o.type==="bridge");
-    case "blocked":return !canWalk(a.x,a.y);
+    case "blocked":return !canWalk(a.x,a.y,r);
     case "bagFull":return bagCount(r)>=r.cap;
     case "bagEmpty":return bagCount(r)===0;
     case "tired":return (r.energy==null?100:r.energy)<10;
@@ -82,7 +87,7 @@ function tickRobot(r){
   if(r.path&&r.path.length){
     const s=r.path.shift();
     faceTo(r,s.x,s.y);
-    if(canWalk(s.x,s.y)){
+    if(canWalk(s.x,s.y,r)){
       r.x=s.x;r.y=s.y;
       // A path step IS a step. The world used to count distance only for ⬆️ Move,
       // so once 🚶 Walk To became the way you travel, "Walk 150 steps" could never
@@ -179,7 +184,7 @@ function doAction(r,b){
   if(ANIM_ACTS[b.t])robotMoment(r,b.t);
   switch(b.t){
     case "move":
-      if(canWalk(a.x,a.y)){
+      if(canWalk(a.x,a.y,r)){
         r.x=a.x;r.y=a.y;
         totals.dist=(totals.dist||0)+1;qProg("walk");skillXP("agility",1);
         if(Math.random()<.4)burst(r.x,r.y,"dust");
@@ -498,7 +503,7 @@ function pathTo(r,tx,ty){
       const nx=cx+DX[d],ny=cy+DY[d];
       if(!inB(nx,ny))continue;
       const nk=key(nx,ny);
-      if(seen[nk]||!canWalk(nx,ny))continue;
+      if(seen[nk]||!canWalk(nx,ny,r))continue;
       seen[nk]=1;prev[nk]=c;q.push(nk);
     }
   }

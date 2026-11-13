@@ -221,7 +221,7 @@ function draw(t){
     /* the robot stands where the trees and rocks stand on their tiles, its
        feet at gy (CC_RIG.FOOT): rs is one rig unit in world px, hy is just
        above the antenna (or the hat) */
-    const rs=TILE*CC_RIG.UNIT, gy=cy+TILE*CC_RIG.FOOT, hy0=gy-(r.hat?CC_RIG.TALL_HAT:CC_RIG.TALL)*rs;
+    const rs=TILE*CC_RIG.UNIT, gy=cy+TILE*CC_RIG.FOOT, hy0=gy-CC_RIG.tallOf(r.kind,r.hat)*rs;
     if(i===selRobot){
       ctx.save();
       const k=Math.sin(t/250);
@@ -236,7 +236,7 @@ function draw(t){
     if(A){
       /* a tool swing stretches to fill the gap until the next sim step, so
          a faster robot swings faster; a turn is quick, a rest is long */
-      const dur=animMs(A.type,stepMs);
+      const dur=animMs(A.type,stepMs,r);
       /* an action is stamped with performance.now() during the frame, and the
          frame is drawn with the time it STARTED, a moment earlier — so the
          first frame of a clip reads a little below zero. That is the clip
@@ -249,7 +249,7 @@ function draw(t){
     B.color=safeColor(r.color);B.face(r.dir);
     const P=robotPose(r,B,atype,ap,moving,t,i);
     B.update(lastDtSec*1000,P);
-    B.draw(ctx,P,cx+B.st.nx,gy+B.st.ny,rs,{t,glow:false,wear:{hat:r.hat,outfit:r.outfit,shoes:r.shoes}});
+    B.draw(ctx,P,cx+B.st.nx,gy+B.st.ny,rs,{t,glow:false,kind:r.kind,wear:{hat:r.hat,outfit:r.outfit,shoes:r.shoes}});
     /* what floats over the head — the name, a speech bubble, a badge — rides
        up with a jump, or the jump hides behind its own name tag */
     const hy=hy0-Math.max(0,P.lift||0)*rs;
@@ -411,13 +411,13 @@ const RIG_OF={turnL:"turn",turnR:"turn",collect:"collect",chop:"chop",mine:"mine
 /* how long each tell plays. A swing, and what an action turns into, fills
    the ticks it takes (WORK_ACTS); a moment that is not an action has its own */
 const MOMENT_MS={done:900,hello:1600,celebrate:2000,cheer:1600,yawn:1800,startle:600,oops:1600,say:1500};
-function animMs(type,stepMs){
+function animMs(type,stepMs,r){
   if(MOMENT_MS[type])return MOMENT_MS[type];
   if(type==="rest")return 1400;
   if(type==="wait")return stepMs;
   if(type==="move")return 220;
   if(type==="turnL"||type==="turnR")return Math.max(220,Math.min(560,stepMs*.9));
-  return Math.max(320,Math.min(1400,stepMs*(WORK_ACTS[type]||1)*.95));
+  return Math.max(320,Math.min(1400,stepMs*(r?workTicks(r,type):(WORK_ACTS[type]||1))*.95));
 }
 const LEGS=["fLz","fLy","fLp","fRz","fRy","fRp","bob","gp"];
 const MOMENT_SAYS={bump:1,edge:1,teeter:1,stuff:1,slump:1};
@@ -628,13 +628,13 @@ function drawTeamLayer(t,x0,y0,x1,y1){
    world robot's own idle, walk or chop. A board has no memory, so the
    robot it draws has none either: the same inputs give the same pixels. */
 function boardPose(pose,t){return CC_RIG.boardPose(pose,t);}
-function drawBoardRobot(g,cx,cy,s2,dir,color,running,t,wear,pose){
+function drawBoardRobot(g,cx,cy,s2,dir,color,running,t,wear,pose,kind){
   if(!window.CC_RIG)return;
   const P=pose?CC_RIG.boardPose(pose,t):CC_RIG.P0();
   if(!pose)P.blink=(!running&&((t+cx*7)%3400)<110)?1:0;
   if(P.bulb==="idle"||P.bulb==="run")P.bulb=running?"run":"idle";
   const yaw=typeof dir==="number"?CC_RIG.DIRYAW[dir&3]:.45;
-  CC_RIG.drawStill(g,cx,cy+s2*.66,s2/55.5,yaw,color,P,{t,wear:wear||{}});
+  CC_RIG.drawStill(g,cx,cy+s2*.66,s2/55.5,yaw,color,P,{t,wear:wear||{},kind});
 }
 function drawBoardBrick(g,px,py,cell,onPlan,no){
   const m=Math.max(3,cell*0.08), x=px+m, y=py+m, s=cell-2*m;

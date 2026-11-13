@@ -991,6 +991,19 @@ const HE={
 "· takes nothing":"· לא מקבל כלום",
 "Bigger Bag +4 — 60 🪙":"תיק גדול יותר +4 — 60 🪙",
 "New Robot — 100 🪙":"רובוט חדש — 100 🪙",
+/* the family in the shop: names as the canvas spells them, and each one's line */
+"Robo — 100 🪙":"רובו — 100 🪙","Timber — 150 🪙":"טימבר — 150 🪙","Rocky — 200 🪙":"רוקי — 200 🪙",
+"Tipi — 250 🪙":"טיפי — 250 🪙","Sabli — 250 🪙":"סבלי — 250 🪙","Zoom — 400 🪙":"זום — 400 🪙",
+"The first of all. Does a bit of everything.":"הראשון של כולם. יודע לעשות הכל קצת.",
+"The lumberjack. Chops trees twice as fast.":"חוטב העצים. כורת עצים פי שניים מהר.",
+"The miner. Mines twice as fast, but its tracks are slow.":"הכורה. כורה פי שניים מהר, אבל הזחלים שלו איטיים.",
+"The water man. Floats on water, so it has routes no one else has.":"איש המים. צף על המים, אז יש לו מסלולים שאין לאחרים.",
+"The porter. A double bag and fewer trips home, but heavy and slow.":"הסבל. תיק כפול ופחות נסיעות הביתה, אבל כבד ואיטי.",
+"The flying scout. The fastest, and flies over everything — but its bag is small.":"הסייר המעופף. הכי מהיר ועף מעל הכל, אבל התיק שלו קטן.",
+/* Style, for a slot a robot's kind does not take */
+"Only Robo wears a hat.":"רק רובו חובש כובע.",
+"This robot doesn't wear clothes.":"הרובוט הזה לא לובש בגדים.",
+"This robot has no feet for shoes.":"לרובוט הזה אין רגליים לנעליים.",
 "Speed Boost — 80 🪙":"האצה — 80 🪙",
 /* ---- account, build, editor, journey, tutorial, skills ---- */
 "DAILY GIFT":"מתנה יומית",
@@ -1125,6 +1138,8 @@ const HE_N={
   "{n}/{n} open":"{n}/{n} פתוחים",
   "Bigger Bag +{n} — {n}":"תיק גדול יותר +{n} — {n}",
   "New Robot — {n}":"רובוט חדש — {n}",
+  "Robo — {n}":"רובו — {n}","Timber — {n}":"טימבר — {n}","Rocky — {n}":"רוקי — {n}",
+  "Tipi — {n}":"טיפי — {n}","Sabli — {n}":"סבלי — {n}","Zoom — {n}":"זום — {n}",
   "Speed Boost — {n}":"האצה — {n}",
   "Sell the Bank — +{n}":"למכור את הבנק — +{n}",
   "Hats, outfits and shoes — {n} of {n} unlocked.":"כובעים, תלבושות ונעליים — {n} מתוך {n} נפתחו.",

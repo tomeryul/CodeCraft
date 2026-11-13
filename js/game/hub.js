@@ -242,7 +242,7 @@ function meSig(){
   const r=meBot()||{};
   return [has("nickOf")?nickOf():"",player.level,Math.floor(player.xp||0),
     typeof coins!=="undefined"?coins:0,typeof robots!=="undefined"?robots.length:0,meSolved(),
-    r.color,r.hat,r.outfit,r.shoes].join("|");
+    r.color,r.hat,r.outfit,r.shoes,r.kind].join("|");
 }
 function meCard(el){
   const need=has("xpNeed")?xpNeed(player.level):100;
@@ -278,7 +278,7 @@ function meDraw(cv){
   const col=has("safeColor")?safeColor(r.color):(r.color||"#ffb830");
   /* a portrait, not a full figure: the head and body fill the round frame
      and the feet run off its bottom edge */
-  try{ drawBoardRobot(g,S/2,S*.58,S*.56,"E",col,false,0,{hat:r.hat,outfit:r.outfit,shoes:r.shoes}); }catch(_){}
+  try{ drawBoardRobot(g,S/2,S*.58,S*.56,"E",col,false,0,{hat:r.hat,outfit:r.outfit,shoes:r.shoes},null,r.kind); }catch(_){}
 }
 
 /* ---------------- one page of the Projects sheet ----------------

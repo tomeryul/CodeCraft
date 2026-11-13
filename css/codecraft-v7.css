@@ -47,6 +47,9 @@
 #styleBody .st-lab i{flex:1;font-style:normal;font-size:var(--fs-sm);color:var(--ink2);}
 #styleBody .st-lab i{color:var(--ink);font-weight:var(--fw-medium);}
 #styleBody .st-lab b{font-size:var(--fs-xs);color:var(--ink2);}
+#styleBody .st-note{margin:0;font-size:var(--fs-sm);font-weight:var(--fw-medium);color:var(--ink2);}
+/* a robot in the shop is pictured, not an emoji: the rig draws it */
+.shopitem .em canvas{width:42px;height:42px;display:block;}
 /* seven 52px swatches do not fit 354px of sheet: the row scrolls, and the
    edge with more beyond it fades so it says so (fx.js edgeFade) */
 #styleBody .st-row{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;

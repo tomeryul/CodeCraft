@@ -7,7 +7,7 @@ let saveOwner=null;
 // serialize the whole game into a plain object (used for both localStorage and the cloud)
 function buildSave(){
   return {v:2,owner:(typeof sbUser!=="undefined"&&sbUser)?sbUser.uid:saveOwner,savedAt:Date.now(),seed,coins,stash,totals,unlocks,muted,musicOff,sheetFull,lang,selRobot,tutDone:tut.done,player,skills,
-    robots:robots.map(r=>({x:r.x,y:r.y,dir:r.dir,name:r.name,color:r.color,inv:r.inv,cap:r.cap,speed:r.speed,energy:r.energy,program:packProg(r),vars:r.vars,hat:r.hat,outfit:r.outfit,shoes:r.shoes,
+    robots:robots.map(r=>({x:r.x,y:r.y,dir:r.dir,kind:r.kind||"robo",name:r.name,color:r.color,inv:r.inv,cap:r.cap,speed:r.speed,energy:r.energy,program:packProg(r),vars:r.vars,hat:r.hat,outfit:r.outfit,shoes:r.shoes,
       py:typeof pyKept==="function"?pyKept(r):undefined})),   // the Python as the player typed it, notes and all
     objects:[...objects.entries()].map(([k2,o])=>{
       const c={...o};
@@ -109,7 +109,8 @@ function applySave(d){
       /* A save can arrive from a file someone else wrote, and the name and
          colour are both rendered. They are cleaned here, where untrusted
          data enters the game, as well as escaped where it is drawn. */
-      const r=makeRobot(rd.x,rd.y,safeText(rd.name,24));
+      /* a kind this game does not know is a Robo: it is read off a list, never trusted */
+      const r=makeRobot(rd.x,rd.y,safeText(rd.name,24),ROBOT_KINDS[rd.kind]?rd.kind:"robo");
       Object.assign(r,{dir:rd.dir,color:safeColor(rd.color),cap:rd.cap,speed:rd.speed,
         vars:rd.vars||{},hat:rd.hat||null,outfit:rd.outfit||null,shoes:rd.shoes||null,
         inv:Object.assign({wood:0,stone:0,iron:0,crystal:0,water:0},rd.inv),

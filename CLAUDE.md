@@ -397,6 +397,37 @@ The face is crisp: the eyes carry the canvas's soft cyan halo and its
 glint, and nothing on the robot is blurred (`glow:false`). Seen from the
 side the mitts drop and fall back behind the screen, never across it.
 
+## The family
+
+Robo has five siblings, each from its own page of the "משפחת הרובוטים
+החדשה" canvas: Timber the lumberjack, Rocky the miner, Tipi the water man,
+Sabli the porter and Zoom the flying scout. A robot's `kind` is one of the
+six (`robots[i].kind`, saved; a kind the game does not know loads as Robo).
+
+**The look is the rig's** (`KIND` in `robot-rig.js`): the canvas draws all
+six at one scale, so every number there is the canvas's own times `CS`,
+as Robo's are. They share Robo's face, mitts and every clip; what differs is
+the shell (a box, Tipi's drop, Zoom's ball), what sits on it (a beanie, a
+miner's helmet, a handle, goggles and a rotor), where the light is (the
+beanie's bobble, the helmet lamp, the snorkel's tip, the handle, the rotor's
+hub) and what it stands on (boots, tracks, a life ring in its own puddle,
+two wheels, the air). Timber and Rocky hold their axe and pick at rest.
+`drawStill` takes `kind`; the board, the Academy and the Tower are always
+Robo, because a board has its own rules and a flying robot would lie
+about them. Only Robo wears a hat (a type is known by its own headgear),
+shoes only go on feet (Robo, Timber), outfits only on a box (`kindWear`);
+Style says so in one line for a slot a kind does not take.
+
+**What each is good at is the canvas's own line "in the game"**
+(`ROBOT_KINDS` in `robot.js`), and only time and place change — a program
+means the same thing on all six (`test/family.js` walks one square with
+each): `pace` divides the clock (`robotStepMs`), `chop`/`mine` shorten that
+swing (`workTicks`, which the clock and the clip both read), `bag` is the
+starting bag, `water` makes water ground (Tipi) and `fly` lets nothing but
+the map's edge stop it (Zoom). `canWalk(x,y,r)` takes the robot for that;
+without one it is the old rule. Each is bought in the Shop by its own row,
+pictured by the rig, named for its kind ("Timber-2").
+
 ## The 3D board
 
 `js/game/tower3d.js` is a painter, not a z-buffer, so order is

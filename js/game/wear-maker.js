@@ -277,7 +277,7 @@ function mkPlay(){
          centre on that one. */
       const s2=Math.min(w/1.95,h*.5);
       drawBoardRobot(g,w/2-(mkPose==="work"?s2*.2:0),h*.94-s2*.66,s2,
-        "E",safeColor(r.color),false,ts||0,wear,mkPose);
+        "E",safeColor(r.color),false,ts||0,wear,mkPose,r.kind);
     }
     mkRaf=requestAnimationFrame(step);
   };

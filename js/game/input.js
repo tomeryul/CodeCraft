@@ -92,9 +92,10 @@ function handleTap(sx,sy){
     let best=-1,bd=1e9;
     robots.forEach((r,i)=>{
       const cx=(r.rx+.5)*TILE, gy=(r.ry+.5)*TILE+F;
-      const inBody=U&&Math.abs(wx-cx)<TILE*.42&&wy<gy+TILE*.12&&wy>gy-(CC_RIG.TALL+4)*U;
+      const tall=CC_RIG.tallOf?CC_RIG.tallOf(r.kind):CC_RIG.TALL;
+      const inBody=U&&Math.abs(wx-cx)<TILE*.42&&wy<gy+TILE*.12&&wy>gy-(tall+4)*U;
       if(!inBody&&!(Math.round(r.rx)===tx&&Math.round(r.ry)===ty))return;
-      const d=Math.abs(wx-cx)+Math.abs(wy-(gy-CC_RIG.TALL*.45*U));
+      const d=Math.abs(wx-cx)+Math.abs(wy-(gy-tall*.45*U));
       if(d<bd){bd=d;best=i;}
     });
     return best;

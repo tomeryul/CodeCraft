@@ -1,9 +1,37 @@
 "use strict";
 /* ---------------- robots ---------------- */
-function makeRobot(x,y,name){
-  return {id:uid(),x,y,rx:x,ry:y,dir:1,name:name||("Robo-"+(robots.length+1)),
+/* The family: Robo and the five from the "משפחת הרובוטים החדשה" canvas.
+   What each costs and what it is good and bad at is the canvas's own line
+   "in the game", and the rig draws each (robot-rig.js, KIND):
+     pace   how fast its clock runs — Rocky's tracks and Sabli's load are
+            slow, Zoom is the fastest (loop.js, robotStepMs)
+     bag    what it carries to start with (the shop still makes it bigger)
+     chop / mine  a swing of the axe / the pick takes this much of a work
+            action's time: the same program, the same three swings, sooner
+     water  it floats, so water is ground to it (canWalk)
+     fly    it is always in the air: nothing but the edge of the map stops it
+   A program means the same thing on every one of them; only the time it
+   takes and where it can go are theirs. */
+const ROBOT_KINDS={
+  robo:  {name:"Robo",  price:100, pace:1,    bag:8},
+  timber:{name:"Timber",price:150, pace:1,    bag:8,  chop:.5},
+  rocky: {name:"Rocky", price:200, pace:.8,   bag:8,  mine:.5},
+  tipi:  {name:"Tipi",  price:250, pace:1,    bag:8,  water:true},
+  sabli: {name:"Sabli", price:250, pace:.8,   bag:16},
+  zoom:  {name:"Zoom",  price:400, pace:1.35, bag:4,  fly:true}
+};
+const kindOf=r=>ROBOT_KINDS[r&&r.kind]||ROBOT_KINDS.robo;
+/* how many ticks this robot's action takes: a work action's own, made
+   shorter by the kind that is good at it */
+function workTicks(r,type){
+  const K=kindOf(r), n=WORK_ACTS[type]||1;
+  return type==="chop"&&K.chop?n*K.chop:type==="mine"&&K.mine?n*K.mine:n;
+}
+function makeRobot(x,y,name,kind){
+  kind=ROBOT_KINDS[kind]?kind:"robo";
+  return {id:uid(),x,y,rx:x,ry:y,dir:1,kind,name:name||(ROBOT_KINDS[kind].name+"-"+(robots.length+1)),
     color:ROBOT_COLORS[robots.length%ROBOT_COLORS.length],
-    inv:{wood:0,stone:0,iron:0,crystal:0,water:0},cap:8,speed:1,energy:100,
+    inv:{wood:0,stone:0,iron:0,crystal:0,water:0},cap:ROBOT_KINDS[kind].bag,speed:1,energy:100,
     vars:{},hat:null,outfit:null,shoes:null,say:null,pop:0,tired:false,
     program:[],routines:{A:[],B:[]}, // 🔧 named routines the program can Call
     frames:null,running:false,wait:0,path:null,blocked:false,curUid:null,nextAct:0};

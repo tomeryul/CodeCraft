@@ -26,23 +26,43 @@ function robotSpot(){
   return {x:hx,y:hy+1};
 }
 function openShop(){renderShop();$("shopWrap").classList.add("open");}
+/* The family, one row each: what each one is good and bad at is the
+   canvas's own line "in the game", and the picture is the robot itself —
+   drawn by the rig, in the colour the next robot will get. */
+const KIND_LINE={
+  robo:"The first of all. Does a bit of everything.",
+  timber:"The lumberjack. Chops trees twice as fast.",
+  rocky:"The miner. Mines twice as fast, but its tracks are slow.",
+  tipi:"The water man. Floats on water, so it has routes no one else has.",
+  sabli:"The porter. A double bag and fewer trips home, but heavy and slow.",
+  zoom:"The flying scout. The fastest, and flies over everything — but its bag is small."
+};
+function shopKindPic(em,kind){
+  if(!window.CC_RIG)return;
+  em.textContent="";
+  const cv=document.createElement("canvas");em.appendChild(cv);
+  const g=styleFit(cv,42,42);if(!g)return;
+  g.save();g.beginPath();g.rect(0,0,42,42);g.clip();
+  CC_RIG.drawStill(g,21,39,.36,.35,ROBOT_COLORS[robots.length%ROBOT_COLORS.length],CC_RIG.pose("idle",0,0,{fs:0}),{t:0,kind,noShadow:true});
+  g.restore();
+}
 function renderShop(){
   const r=R(), el=$("shopItems");
   const stashSum=Object.keys(stash).reduce((s,k2)=>s+stash[k2]*RES[k2].price,0);
-  const items=[
-    {em:"🤖",b:"New Robot — 100 🪙",s:"More robots = more automation! It spawns at your home base.",
-     can:coins>=100,fn(){coins-=100;const p=robotSpot(),nr=makeRobot(p.x,p.y);robots.push(nr);selRobot=robots.length-1;toast("🤖 "+nr.name+" joined your team!");checkUnlocks();}},
+  const items=Object.keys(ROBOT_KINDS).map(k=>{const K=ROBOT_KINDS[k];return{kind:k,em:"🤖",b:K.name+" — "+K.price+" 🪙",s:KIND_LINE[k],
+     can:coins>=K.price,fn(){coins-=K.price;const p=robotSpot(),nr=makeRobot(p.x,p.y,null,k);robots.push(nr);selRobot=robots.length-1;toast("🤖 "+nr.name+" joined your team!");checkUnlocks();}};}).concat([
     {em:"🎒",b:"Bigger Bag +4 — 60 🪙",s:esc(r.name)+" carries "+r.cap+" now. Fewer trips home!",
      can:coins>=60,fn(){coins-=60;r.cap+=4;toast("🎒 "+r.name+" bag upgraded to "+r.cap+"!");}},
     {em:"⚡",b:"Speed Boost — 80 🪙",s:esc(r.name)+" runs code 25% faster. (x"+r.speed.toFixed(2)+" now, max x2)",
      can:coins>=80&&r.speed<2,fn(){coins-=80;r.speed=Math.min(2,r.speed*1.25);toast("⚡ "+r.name+" is faster!");}},
     {em:"🏦",b:"Sell the Bank — +"+stashSum+" 🪙",go:"Sell",s:"Bank: "+RES.wood.em+stash.wood+" "+RES.stone.em+stash.stone+" "+RES.iron.em+stash.iron+" "+RES.crystal.em+stash.crystal+(stash.water?" "+RES.water.em+stash.water:"")+" — or keep it and let robots 🔨 Build from it!",
      can:stashSum>0,fn(){coins+=stashSum;totals.earned+=stashSum;stash={wood:0,stone:0,iron:0,crystal:0,water:0};toast("💰 Bank sold for "+stashSum+" 🪙");sfx(880,.1);checkUnlocks();}},
-  ];
+  ]);
   el.innerHTML="";
   for(const it of items){
     const d=document.createElement("div");d.className="shopitem";
     d.innerHTML='<div class="em">'+it.em+'</div><div class="tx"><b>'+it.b+'</b><small>'+it.s+'</small></div>';
+    if(it.kind)shopKindPic(d.querySelector(".em"),it.kind);
     /* the bank row sells: a "Get" on it read as buying the bank */
     const btn=document.createElement("button");btn.textContent=it.go||"Get";btn.disabled=!it.can;
     btn.addEventListener("click",()=>{it.fn();updateHud();updateChips();renderShop();saveSoon();});
@@ -150,7 +170,7 @@ function stylePlay(){
         L.addColorStop(0,"rgba(170,150,255,.3)");L.addColorStop(1,"rgba(170,150,255,0)");
         g.fillStyle=L;g.fillRect(0,0,w,186);}
       if(g)drawBoardRobot(g,w/2,89,62,"E",safeColor(r.color),false,ts||0,
-        {hat:r.hat,outfit:r.outfit,shoes:r.shoes},styleMode);
+        {hat:r.hat,outfit:r.outfit,shoes:r.shoes},styleMode,r.kind);
     }
     styleRaf=requestAnimationFrame(step);
   };
@@ -227,9 +247,19 @@ function renderStyle(){
   pv.appendChild(modes);
 
   /* three slots */
+  /* a slot this robot's kind does not take says so in one line: Robo wears a
+     hat, and the others are known by their own (robot-rig.js, KIND) */
+  const can=window.CC_RIG&&CC_RIG.kindWear?CC_RIG.kindWear(r.kind):{hat:1,outfit:1,shoes:1};
+  const SLOT_NOTE={hat:"Only Robo wears a hat.",outfit:"This robot doesn't wear clothes.",shoes:"This robot has no feet for shoes."};
   const slot=(kind,label,list,label4)=>{
     const cur=r[kind];
     const wrap=document.createElement("div");wrap.className="st-slot";
+    if(!can[kind]){
+      const lab=document.createElement("div");lab.className="st-lab";
+      lab.innerHTML='<span class="st-name">'+esc(label)+'</span>';
+      const note=document.createElement("p");note.className="st-note";note.textContent=SLOT_NOTE[kind];
+      wrap.appendChild(lab);wrap.appendChild(note);body.appendChild(wrap);return;
+    }
     const found=list.find(x=>(x.id||x.em)===cur)||wearFind(cur);
     const owned=list.filter(x=>x.lvl<=player.level).length;
     const lab=document.createElement("div");lab.className="st-lab";
