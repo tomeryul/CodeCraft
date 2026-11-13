@@ -21,9 +21,55 @@ function buildTerrain(){
   homePos={x:W>>1,y:H>>1}; marketPos={x:(W>>1)+2,y:H>>1};
   for(let y=homePos.y-4;y<=homePos.y+4;y++)for(let x=homePos.x-4;x<=homePos.x+4;x++)
     if(x>=0&&y>=0&&x<W&&y<H) terrain[key(x,y)]=T_GRASS;
+  terrainSteps();
   /* the ground is drawn once and kept; a new seed makes every kept piece wrong */
   if(typeof terrainReset==="function")terrainReset();
 }
+/* One step at a time. The ground is drawn as terraces (terrain.js), water <
+   sand < grass < rock, and where the noise was steep two of them touched:
+   grass straight into a lake, rock onto a beach, a meadow cut off by the sea
+   at the map's edge. A drop of two terraces at once read as a mistake. So no
+   two tiles that touch, corners included, differ by more than one level, and
+   the sea outside the map counts as water. Three passes, each of which keeps
+   what the passes before it made true:
+
+     1. the edge: the outer ring is at most sand, the next at most grass
+        (this is the only place rock is lowered);
+     2. round rock: it never moves, because its nodes are what a mine is
+        for — a tile next to rock is at least grass, two away at least sand;
+     3. beaches: grass touching water becomes sand. After pass 2 no water is
+        within two tiles of rock, so this never puts sand against rock.
+
+   A pure function of the seed, like everything else here: a save keeps its
+   objects and rebuilds the ground, so every device draws the same world. */
+function terrainSteps(){
+  const at=(x,y)=>terrain[key(x,y)];
+  // 1. the edge
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const d=Math.min(x,y,W-1-x,H-1-y);
+    if(d<2)terrain[key(x,y)]=Math.min(at(x,y),d+1);
+  }
+  // 2. round rock
+  const rock=[];
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(at(x,y)===T_ROCKY)rock.push(x,y);
+  for(let i=0;i<rock.length;i+=2){
+    const rx=rock[i], ry=rock[i+1];
+    for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
+      const x=rx+dx, y=ry+dy; if(x<0||y<0||x>=W||y>=H)continue;
+      const need=Math.max(Math.abs(dx),Math.abs(dy))<=1?T_GRASS:T_SAND;
+      if(at(x,y)<need)terrain[key(x,y)]=need;
+    }
+  }
+  // 3. beaches
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    if(at(x,y)!==T_GRASS)continue;
+    wet: for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+      const nx=x+dx, ny=y+dy;
+      if(nx>=0&&ny>=0&&nx<W&&ny<H&&at(nx,ny)===T_WATER){terrain[key(x,y)]=T_SAND;break wet;}
+    }
+  }
+}
+
 /* What the seed itself puts in the world: trees, flowers and the rock, iron
    and crystal nodes. A node is mined and comes back on the same tile, so this
    is also the full list of tiles where a node may ever stand — see worldTidy. */

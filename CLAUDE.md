@@ -289,6 +289,14 @@ one filled in), grass and rock stand on a face that shows along their
 SOUTHERN edges only, the water steps down from two bands of shallows to
 the deep, and two rings of foam breathe off every coast.
 
+**One step at a time.** No two tiles that touch, corners included, are more
+than one level apart, and the sea outside the map counts as water —
+`terrainSteps()` in `world.js`, after the noise and the home meadow. Grass
+that met water becomes a beach; anything next to rock is raised (rock never
+moves inside the map: its nodes are the mines, and `worldTidy` would delete
+a node left off rock); only the two outer rings are lowered, to sand and
+then grass. `test/terrain.js` checks forty seeds.
+
 **The grid does not change.** A tile is still a 48px square in its own one
 of the three greens: a child counts tiles, so only the edge of a terrace
 is softened, never its tiles. And nothing here feeds the rules — what can

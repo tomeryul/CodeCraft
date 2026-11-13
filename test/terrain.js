@@ -137,6 +137,40 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   ck('against a shore it steps down in two lighter bands (' + Wt.shore + ' tiles)', Wt.shore > 5 && Wt.steps === Wt.shore, Wt);
   ck('and the sand is darker where it is wet', Wt.beach > 3 && Wt.wet === Wt.beach, Wt);
 
+  console.log('▶ one step at a time');
+  /* water < sand < grass < rock, and no two tiles that touch — corners
+     included, the sea outside the map counted as water — differ by more
+     than one: grass never runs straight into a lake, rock never onto a
+     beach, and the map's edge comes down to sand before the sea. On forty
+     seeds. Rock is never moved inside the map (its nodes are the mines),
+     and the home meadow is still grass. */
+  const J = await pg.evaluate(() => {
+    const keep = seed, lv = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? 0 : terrain[key(x, y)];
+    const out = { seeds: 0, jumps: 0, where: null, rockMoved: 0, home: true, beaches: 0 };
+    const raw = window.terrainSteps;
+    for (let i = 0; i < 40; i++) {
+      seed = 1000 + i * 7919;
+      window.terrainSteps = () => {}; buildTerrain(); const before = Array.from(terrain);
+      window.terrainSteps = raw; buildTerrain(); out.seeds++;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const t = terrain[key(x, y)], d = Math.min(x, y, W - 1 - x, H - 1 - y);
+        if (d >= 2 && before[key(x, y)] === T_ROCKY && t !== T_ROCKY) out.rockMoved++;
+        if (before[key(x, y)] === T_GRASS && t === T_SAND) out.beaches++;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          if (!dx && !dy) continue;
+          if (Math.abs(t - lv(x + dx, y + dy)) > 1) { out.jumps++; if (!out.where) out.where = [seed, x, y, t, x + dx, y + dy]; }
+        }
+      }
+      for (let y = homePos.y - 3; y <= homePos.y + 3; y++) for (let x = homePos.x - 3; x <= homePos.x + 3; x++)
+        if (terrain[key(x, y)] !== T_GRASS) out.home = false;
+    }
+    seed = keep; buildTerrain(); genObjects();
+    return out;
+  });
+  ck('no two touching tiles are more than one level apart, edge included (' + J.seeds + ' seeds)', J.seeds === 40 && J.jumps === 0, J);
+  ck('a beach is cut where grass met water, and rock inside the map never moves', J.beaches > 100 && J.rockMoved === 0, J);
+  ck('the meadow round home is still grass', J.home, J);
+
   console.log('▶ the picture is only a picture');
   const R = await pg.evaluate(() => {
     const before = Array.from(terrain).join('');
