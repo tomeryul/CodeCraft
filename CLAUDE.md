@@ -366,9 +366,22 @@ and leans down to a head on two stubs. A full bag is a sack riding on the
 head. The team colour paints only the shell. How tall it stands for a
 host (a name tag, a carried block, the tap that picks it) is
 `CC_RIG.TALL`, `TALL_HAT` and `HOLD`, never a number in the host.
-Hats, outfits, capes and shoes were drawn on the old 34.56px body square;
-the rig maps that square onto the head and the feet (`WEAR_S`), so a new
-piece is still drawn on the square. No outlines, because the map has
+**What it wears is made for the head** (`js/game/cosmetics.js`). An outfit
+is drawn in the rig's own units in up to three layers the rig calls at
+the right moments: `back` (the cape, behind the head), `shell` (on the
+shell, clipped to it, under the screen) and `front` (over the screen's
+edges and hanging below the head: a scarf's tail, a hood's strings, an
+apron) — handed `G`, the head and its screen as they are this frame, so
+every piece turns with the head. A shoe IS the foot: it stands where the
+stub stood, and in shoes the head stands `SHOE_UP` higher so the toe and
+sole show. A shop hat stays its sprite, sat on the top edge by `HAT_FIT`
+(where its brim and crown are), and the antenna comes out of its crown —
+the light is never under a hat, which is why `TALL_HAT` is taller. Keep
+two dots and a curve off anything below the face: on a shoe they read
+as a second face. A piece the player PAINTED is still a grid on the old
+34.56px body square (`WEAR_S`, `WEAR_BOX`), mapped onto the head and the
+feet. The Style swatches draw the outfit on the robot and the shoe on
+its own, from the same painters. No outlines, because the map has
 none.
 Every size in it is the canvas's own number: the SVG is 116 units to
 the 64 the rig draws, so `C(v)` (`v*CS`, `CS=64/116`) turns a number read

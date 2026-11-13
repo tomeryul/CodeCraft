@@ -121,12 +121,6 @@ function styleOpen(){
 }
 function styleClose(){ $("style").classList.remove("open"); }
 
-/* the limb colour render.js strokes legs with, so a shoe swatch stands on the
-   same leg the robot does */
-function styleLimb(hex){
-  try{const n=parseInt(safeColor(hex).slice(1),16);const f=c=>Math.max(0,Math.round(c*.72));
-    return "rgb("+f(n>>16&255)+","+f(n>>8&255)+","+f(n&255)+")";}catch(e){return hex;}
-}
 function styleFit(c,w,h){
   const d=Math.min(2,window.devicePixelRatio||1);
   if(c.width!==Math.round(w*d)){c.width=Math.round(w*d);c.height=Math.round(h*d);}
@@ -148,9 +142,14 @@ function stylePlay(){
          narrow sheet */
       const w=Math.max(200,Math.round(cv.clientWidth||330));
       /* 186 tall, with the pose chips in the bottom 40: the robot stands
-         above them rather than behind them */
+         above them rather than behind them, its feet at 130, and a size at
+         which a hat with the antenna out of its crown still clears the top */
       const g=styleFit(cv,w,186);
-      if(g)drawBoardRobot(g,w/2,78,70,"E",safeColor(r.color),false,ts||0,
+      /* a soft light behind it: a top hat and a cap are dark, and the sheet is too */
+      if(g){const L=g.createRadialGradient(w/2,74,4,w/2,74,86);
+        L.addColorStop(0,"rgba(170,150,255,.2)");L.addColorStop(1,"rgba(170,150,255,0)");
+        g.fillStyle=L;g.fillRect(0,0,w,186);}
+      if(g)drawBoardRobot(g,w/2,89,62,"E",safeColor(r.color),false,ts||0,
         {hat:r.hat,outfit:r.outfit,shoes:r.shoes},styleMode);
     }
     styleRaf=requestAnimationFrame(step);
@@ -175,22 +174,17 @@ function stylePaintSwatch(c,kind,id,color){
     const hp=sprite(id,30);
     g.drawImage(hp,23-hp.lw/2,25-hp.lw/2,hp.lw,hp.lw);
   }else if(kind==="outfit"){
-    g.translate(23,25);g.scale(.78,.78);
-    const S=TILE*0.72;
-    const grd=g.createLinearGradient(0,-S/2,0,S/2);
-    grd.addColorStop(0,window.CC_EXTRAS?CC_EXTRAS.lighten(col,.3):col);grd.addColorStop(1,col);
-    /* a cape is worn behind the body, so the swatch shows it behind the body */
-    if(window.CC_WEAR&&CC_WEAR.back[id])CC_WEAR.back(g,id,0,.25);
-    g.fillStyle=grd;rr(g,-S/2,-S/2,S,S,11);g.fill();
-    g.save();rr(g,-S/2,-S/2,S,S,11);g.clip();
-    if(window.CC_WEAR)CC_WEAR.outfit(g,id,col);
-    g.fillStyle="rgba(0,0,0,.25)";g.fillRect(-S/2,S/2-6,S,6);
-    g.restore();
+    /* the outfit on the head it is made for, by the rig that wears it: face
+       on, or from behind for a cape — so the swatch is what you will see */
+    if(window.CC_RIG){
+      const back=!!(window.CC_WEAR&&CC_WEAR.backs&&CC_WEAR.backs[id]), k=.6;
+      g.beginPath();g.rect(0,0,46,46);g.clip();
+      CC_RIG.drawStill(g,23,24+31*k,k,back?2.75:.3,col,CC_RIG.pose("idle",0,0,{fs:0}),{t:0,wear:{outfit:id},noShadow:true});
+    }
   }else{
-    g.translate(23,20);g.scale(2.1,2.1);
-    g.strokeStyle=styleLimb(col);g.lineWidth=5;g.lineCap="round";
-    g.beginPath();g.moveTo(0,-5.5);g.lineTo(0,0);g.stroke();
-    if(window.CC_WEAR)CC_WEAR.shoe(g,id,styleLimb(col),false,0);
+    /* a shoe is a foot now: the whole shoe, the part the head hides too */
+    g.translate(23,36);g.scale(2.1,2.1);
+    if(window.CC_WEAR)CC_WEAR.shoe(g,id,{w:12,side:1,moving:false,t:0});
   }
   g.restore();
 }

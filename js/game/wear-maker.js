@@ -269,12 +269,14 @@ function mkPlay(){
       const wear={hat:r.hat,outfit:r.outfit,shoes:r.shoes};
       wear[mkSlot]=mkId;
       /* A chopping robot is 1.9 body-widths across once the axe is out and
-         1.68 tall from hat to sole, so the fit is against both — and one
-         size for all three poses, because a robot that changes size when you
-         switch pose is a robot you cannot compare. The chop reaches to the
-         right, so the body sits a little left of centre on that one. */
-      const s2=Math.min(w/1.95,h*.55);
-      drawBoardRobot(g,w/2-(mkPose==="work"?s2*.2:0),h*.5,s2,
+         1.84 tall from the light over a hat to the sole, so the fit is
+         against both — and one size for all three poses, because a robot
+         that changes size when you switch pose is a robot you cannot
+         compare. Its feet stand near the bottom, so the hat has the room.
+         The chop reaches to the right, so the body sits a little left of
+         centre on that one. */
+      const s2=Math.min(w/1.95,h*.5);
+      drawBoardRobot(g,w/2-(mkPose==="work"?s2*.2:0),h*.94-s2*.66,s2,
         "E",safeColor(r.color),false,ts||0,wear,mkPose);
     }
     mkRaf=requestAnimationFrame(step);

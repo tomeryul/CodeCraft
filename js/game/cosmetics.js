@@ -1,26 +1,34 @@
 "use strict";
 /* =====================================================================
-   Robot cosmetics — outfits, back pieces and shoes
+   Robot cosmetics — outfits, shoes and the hats' fit
    ---------------------------------------------------------------------
-   Painters, not sprites. A hat is rigid, so it stays a sprite in
-   js/sprites.js; an outfit has to squash with the body inside its clip
-   path and a shoe has to ride a foot that re-rotates every frame, and a
-   bitmap can do neither.
+   The robot is a head on two short legs (robot-rig.js), so nothing here
+   is drawn on a body: every built-in piece is made for THAT head, in the
+   rig's own units, and turns with it.
 
-   Everything here is drawn in BODY UNITS — the same space render.js draws
-   the robot in, where the body square is S = TILE*0.72, the hips sit at
-   (±5.53, 13.28) and the leg is 5.53 long. The caller has already applied
-   the whole transform tree, so these functions never translate to a
-   world position and never save/restore around the caller's state beyond
-   their own work.
+     an outfit   is worn on the head itself, in up to three layers:
+                   back   behind the head (a cape), in the body's space
+                   shell  on the shell, inside its outline, under the screen
+                   front  over the screen's edges and hanging below the head
+     a shoe      IS the foot: it stands where the leg stub stood, on the
+                 ground, and the head is lifted a little (SHOE_UP) so its
+                 sole and its toe show under the head instead of a sliver
+     a hat       stays the sprite from js/sprites.js; HAT_FIT says where
+                 its brim and its top are, so it sits ON the head and the
+                 antenna comes out of its top
 
-   Three anchors, three entry points:
-     back(g,id,sway,gp)          (0,2), before the legs
-     shoe(g,id,limbColor,mv,t)   the leg end, after rotate(footDeg)
-     outfit(g,id,color)          (0,0), inside the body's clip
+   G, what a layer is handed (rig units, the head's own space):
+     hw top H bot rad   the shell: half-width, top, height, bottom, corner
+     lx ly              how far the lit face is moved inside it (the
+                        darker tone shows on the right and underneath)
+     sx sy sw sh        the screen; k = how wide it is now / face on
+     fvis bvis          how much of the face / the back is turned to us
+     ca sa              the head's yaw; pal = the team's three tones
+     t gp sway          time, gait phase, sway — for whatever hangs
 
-   No new colours: every fill below already exists in css/styles.css or
-   js/sprites.js.
+   A piece the player painted is still a grid in the old body units (the
+   maker paints in WEAR_BOX); the rig maps that box onto the head, so the
+   entry points outfit/shoe/hat are kept for it.
    ===================================================================== */
 (function(){
 const S=TILE*0.72;
@@ -34,92 +42,245 @@ function RR(g,x,y,w,h,r){
   g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);
   g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();
 }
+const TAU=Math.PI*2;
+/* Two tones, the way the shell is painted: the whole shape in the darker
+   one, then again in the lit one clipped to the lit face — so a piece
+   shades along the right and underneath exactly where the shell does. */
+function two(g,G,lit,shade,path,rule){
+  g.fillStyle=shade;path();g.fill(rule||"nonzero");
+  g.save();RR(g,-G.hw+G.lx,G.top+G.ly,G.hw*2,G.H,G.rad);g.clip();
+  g.fillStyle=lit;path();g.fill(rule||"nonzero");g.restore();
+}
+/* the shell grown by d: what a wrapped band is clipped to, so it reads
+   as wound round the head and a hair thicker than it */
+function around(g,G,d){RR(g,-G.hw-d,G.top-d,G.hw*2+d*2,G.H+d*2,G.rad+d);}
+/* the screen's rim, as screen() draws it */
+function rim(G){const r=2.2;return{x:G.sx-G.sw/2-r,y:G.sy-G.sh/2-r,w:G.sw+r*2,h:G.sh+r*2,r:13.8};}
+function fade(g,v){g.globalAlpha*=Math.max(0,Math.min(1,v));}
 
-/* ---------- outfits: inside the body's clip, so they squash with it ----------
-   `cape` is deliberately absent here: it is worn on the back anchor, not
-   the torso, so it is painted by back() before the legs instead. */
+/* ---------- outfits ---------- */
 const outfits={
-  vest(g){
-    g.fillStyle="#ffb830";RR(g,-S/2,-6,9.4,S/2+6,3);g.fill();RR(g,S/2-9.4,-6,9.4,S/2+6,3);g.fill();
-    g.fillStyle="rgba(232,242,255,.85)";g.fillRect(-S/2,3.6,S,3.2);
-    g.fillStyle="#e09a12";g.fillRect(-S/2,-6,S,2.2);
-  },
-  apron(g){
-    g.fillStyle="#e2d7b8";RR(g,-11,-3,22,S/2+3,4);g.fill();
-    g.strokeStyle="#c4b58c";g.lineWidth=1.6;
-    g.beginPath();g.moveTo(-9,-3);g.lineTo(-4.5,-9.5);g.moveTo(9,-3);g.lineTo(4.5,-9.5);g.stroke();
-    g.beginPath();g.moveTo(-7.5,6.5);g.lineTo(7.5,6.5);g.stroke();
-    g.fillStyle="#cfc09a";RR(g,-6.5,7.5,13,6,1.6);g.fill();
-  },
-  stripes(g){
-    g.fillStyle="rgba(255,255,255,.88)";
-    g.fillRect(-S/2,-9.5,S,3.4);g.fillRect(-S/2,-2.5,S,3.4);g.fillRect(-S/2,4.5,S,3.4);
-  },
-  hoodie(g){
-    g.fillStyle="#5ab8ff";g.fillRect(-S/2,-S/2,S,15.5);
-    g.fillStyle="#3f93cf";g.beginPath();g.moveTo(-S/2,-S/2);g.quadraticCurveTo(0,-S/2+9,S/2,-S/2);g.lineTo(S/2,-S/2);g.closePath();g.fill();
-    g.strokeStyle="rgba(23,17,48,.4)";g.lineWidth=1.4;g.beginPath();g.moveTo(0,-11);g.lineTo(0,0);g.stroke();
-    g.fillStyle="#ffd66b";g.beginPath();g.arc(0,.6,1.5,0,7);g.fill();
-  },
-  lab(g){
-    g.fillStyle="#f2f3f7";RR(g,-S/2,-5,S,S/2+5,3);g.fill();
-    g.fillStyle="#dfe3ec";g.beginPath();g.moveTo(-8,-5);g.lineTo(0,2);g.lineTo(8,-5);g.closePath();g.fill();
-    g.strokeStyle="#c3c9d6";g.lineWidth=1.4;RR(g,3.4,5,7,6,1.4);g.stroke();
-    g.fillStyle="#5ab8ff";g.fillRect(5.2,4.4,1.4,4);
-  }
+  /* Hi-Vis Vest: orange from the cheeks down, zipped up under the screen,
+     a silver band round the bottom and a silver strap up each side */
+  vest:{covers:true,
+    shell(g,G){
+      const R=rim(G), yT=R.y+R.h*.55, yS=G.bot-7.2;
+      two(g,G,"#ff8a3d","#ea6a2c",()=>{RR(g,-G.hw-2,yT,G.hw*2+4,G.bot-yT+4,4);});
+      two(g,G,"#eef3fb","#c9d1df",()=>{g.beginPath();
+        g.rect(-G.hw-2,yS,G.hw*2+4,2.8);
+        if(G.fvis>.01)for(const x of [(R.x-G.hw)/2,(R.x+R.w+G.hw)/2])g.rect(x-1.3,yT,2.6,yS-yT);
+        if(G.bvis>.01)for(const sd of [-1,1])g.rect(G.bu+sd*G.hw*.42-1.3,yT,2.6,yS-yT);});
+      if(G.fvis<=.01)return;
+      const yz=R.y+R.h+.4;
+      g.fillStyle="#c4521c";g.fillRect(G.sx-.55,yz,1.1,G.bot-yz);
+      g.fillStyle="#eef3fb";RR(g,G.sx-1,yz,2,2.8,.8);g.fill();
+    }},
+  /* Builder Apron: a belt round the bottom of the head and a short canvas
+     apron hanging from it, a hammer and a pencil in its pocket */
+  apron:{
+    front(g,G){
+      const by=G.bot-9.4;
+      g.save();around(g,G,1.2);g.clip();
+      g.fillStyle="#8a5a2b";g.fillRect(-G.hw-2,by,G.hw*2+4,3.6);
+      g.fillStyle="#a8743f";g.fillRect(-G.hw-2,by,G.hw*2+4,1.1);
+      g.restore();
+      if(G.fvis<=.01)return;
+      g.save();fade(g,G.fvis);
+      const cx=G.sx, w=26*G.k, y0=by+1.6, y1=G.bot+5.8;
+      /* the hammer behind the bib, the pencil in front of the pocket */
+      g.save();g.translate(cx-w*.24,y0+4.2);g.rotate(-.42);
+      g.fillStyle="#c98d4b";RR(g,-.9,-9.4,1.8,9.4,.9);g.fill();
+      g.fillStyle="#9aa3b5";RR(g,-3.4,-11,6.8,2.8,1.1);g.fill();
+      g.restore();
+      RR(g,cx-w/2,y0,w,y1-y0,3.6);g.fillStyle="#c9b98c";g.fill();
+      RR(g,cx-w/2,y0,w-1.6,y1-y0-1.4,3.6);g.fillStyle="#e8dcb8";g.fill();
+      RR(g,cx-w/2+2.2,y0+3.8,w-4.4,5.8,1.6);g.fillStyle="#d6c69c";g.fill();
+      g.fillStyle="#c4b58c";g.fillRect(cx-.4,y0+3.8,.8,5.8);
+      g.save();g.translate(cx+w*.24,y0+4.6);g.rotate(.28);
+      g.fillStyle="#ffd66b";RR(g,-.8,-6.4,1.6,6.4,.6);g.fill();
+      g.fillStyle="#4a3728";g.beginPath();g.moveTo(-.8,-6.4);g.lineTo(.8,-6.4);g.lineTo(0,-8.2);g.closePath();g.fill();
+      g.restore();
+      /* the buckle */
+      RR(g,cx-2.4,by-.3,4.8,4.2,1.1);g.fillStyle="#ffd66b";g.fill();
+      RR(g,cx-1.1,by+1,2.2,1.6,.5);g.fillStyle="#8a5a2b";g.fill();
+      g.restore();
+    }},
+  /* Stripes: a knitted scarf, wound round the bottom of the head and
+     knotted at the front, its end hanging down past the head */
+  stripes:{
+    front(g,G){
+      const y0=G.bot-8.8, h=9.4, ph=((G.sx*1.6)%7.2+7.2)%7.2;
+      g.save();around(g,G,1.5);g.clip();
+      g.fillStyle="#ff5d73";g.fillRect(-G.hw-2,y0,G.hw*2+4,h);
+      g.fillStyle="#f2f3f7";for(let x=-G.hw-9+ph;x<G.hw+2;x+=7.2)g.fillRect(x,y0,3.2,h);
+      g.fillStyle="rgba(140,24,60,.2)";g.fillRect(-G.hw-2,y0+h-2.6,G.hw*2+4,2.6);
+      g.restore();
+      if(G.fvis<=.01)return;
+      g.save();fade(g,G.fvis);
+      const kx=G.sx-G.sw*.3, ky=y0+h*.55, sw=(G.sway||0)*.012+Math.sin((G.gp||0)*TAU)*.05;
+      g.save();g.translate(kx,ky+2);g.rotate(.16+sw);
+      const L=11.5;
+      g.fillStyle="#ff5d73";RR(g,-3.2,0,6.4,L,1.6);g.fill();
+      g.fillStyle="#f2f3f7";g.fillRect(-3.2,2.6,6.4,2.4);g.fillRect(-3.2,6.8,6.4,2.4);
+      g.fillStyle="rgba(140,24,60,.2)";g.fillRect(1.6,0,1.6,L-.6);
+      g.fillStyle="#ff5d73";for(let i=0;i<4;i++)g.fillRect(-2.9+i*1.8,L-.4,1.1,1.8);
+      g.restore();
+      g.beginPath();g.ellipse(kx,ky,4.4,4.1,0,0,TAU);g.fillStyle="#e04a5f";g.fill();
+      g.beginPath();g.ellipse(kx-.5,ky-.5,3.6,3.3,0,0,TAU);g.fillStyle="#ff5d73";g.fill();
+      g.fillStyle="#f2f3f7";g.fillRect(kx-3.4,ky-.9,6.4,1.8);
+      g.restore();
+    }},
+  /* Hoodie: a hood round the whole head, the face looking out of it, two
+     drawstrings hanging down */
+  hoodie:{covers:true,hi:"#a9dcff",
+    shell(g,G){
+      two(g,G,"#5ab8ff","#3f93cf",()=>{g.beginPath();g.rect(-G.hw-3,G.top-3,G.hw*2+6,G.H+6);});
+      const R=rim(G), o={x:R.x-2.6,y:R.y-2.6,w:R.w+5.2,h:R.h+5.2,r:R.r+2.6};
+      /* the seam over the crown */
+      g.strokeStyle="#3f93cf";g.lineWidth=1.3;g.lineCap="round";
+      g.beginPath();g.moveTo(G.sx*.8,G.top+1);g.lineTo(G.sx*.8,o.y-2);g.stroke();
+      if(G.fvis<=.01)return;
+      g.save();fade(g,G.fvis);
+      RR(g,o.x-2.6,o.y-2.6,o.w+5.2,o.h+5.2,o.r+2.6);g.fillStyle="#3f93cf";g.fill();
+      RR(g,o.x-2.6,o.y-2.6,o.w+3.8,o.h+3.8,o.r+2.6);g.fillStyle="#7cc8ff";g.fill();
+      RR(g,o.x,o.y,o.w,o.h,o.r);g.fillStyle=G.pal.face;g.fill();
+      g.restore();
+    },
+    front(g,G){
+      if(G.fvis<=.01)return;
+      const R=rim(G), y0=R.y+R.h+3.6, y1=G.bot+5.4, sw=(G.sway||0)*.03;
+      g.save();fade(g,G.fvis);
+      g.lineCap="round";g.lineWidth=1.5;g.strokeStyle="#f2f3f7";
+      for(const sd of [-1,1]){
+        const x=G.sx+sd*G.sw*.2, xe=x+sd*.6+sw;
+        g.beginPath();g.moveTo(x,y0);g.quadraticCurveTo(x+sd*.8,(y0+y1)/2,xe,y1);g.stroke();
+        RR(g,xe-1.2,y1-.4,2.4,3.4,1.2);g.fillStyle="#cfd4e0";g.fill();
+      }
+      g.restore();
+    }},
+  /* Lab Coat: a white coat from the cheeks down with its lapels under the
+     screen and a pen in the pocket, and goggles pushed up on the forehead */
+  lab:{covers:true,
+    shell(g,G){
+      const R=rim(G), yT=R.y+R.h*.55;
+      two(g,G,"#f4f6fb","#d3d8e4",()=>{RR(g,-G.hw-2,yT,G.hw*2+4,G.bot-yT+4,4);});
+      if(G.fvis<=.01)return;
+      g.save();fade(g,G.fvis);
+      const yb=R.y+R.h, cx=G.sx;
+      /* the lapels: two folds meeting in a V under the screen */
+      g.fillStyle="#e3e7f0";
+      for(const sd of [-1,1]){g.beginPath();g.moveTo(cx+sd*G.sw*.34,yb-1);g.lineTo(cx+sd*1.2,G.bot-1.2);g.lineTo(cx+sd*G.sw*.16,yb-1);g.closePath();g.fill();}
+      g.fillStyle=G.pal.face;g.beginPath();g.moveTo(cx-G.sw*.12,yb-1);g.lineTo(cx,G.bot-2.6);g.lineTo(cx+G.sw*.12,yb-1);g.closePath();g.fill();
+      /* the pocket on the right, a blue pen in it */
+      const px=R.x+R.w+1.4;
+      if(px+4<G.hw){g.fillStyle="#5ab8ff";RR(g,px+1.4,yT+1,1.6,5,.8);g.fill();
+        g.fillStyle="#dfe3ec";RR(g,px,yT+4,Math.min(6,G.hw-px-1),5,1.2);g.fill();}
+      g.restore();
+    },
+    front(g,G){
+      const y=G.top+7.4;
+      g.save();around(g,G,.8);g.clip();
+      g.fillStyle="#35325e";g.fillRect(-G.hw-2,y-1.6,G.hw*2+4,3.2);
+      g.restore();
+      if(G.fvis<=.01)return;
+      g.save();fade(g,G.fvis);
+      for(const sd of [-1,1]){
+        const x=G.sx+sd*7.8*G.k;
+        g.beginPath();g.arc(x,y,4.8,0,TAU);g.fillStyle="#35325e";g.fill();
+        g.beginPath();g.arc(x,y,3.4,0,TAU);g.fillStyle="#9fe3ff";g.fill();
+        g.beginPath();g.arc(x-1.1,y-1.1,1.1,0,TAU);g.fillStyle="#f2feff";g.fill();
+      }
+      g.fillStyle="#35325e";g.fillRect(G.sx-3.6*G.k,y-1,7.2*G.k,2);
+      g.restore();
+    }},
+  /* Cape: hung from behind the ears, wider than the head, to the ground —
+     a red collar and a gold clasp under the screen hold it on */
+  cape:{
+    back(g,G){
+      const w=Math.sin((G.gp||0)*TAU)*1.8+(G.sway||0)*.04, f=.4+.6*Math.abs(G.ca), off=-G.sa*G.hw*.45;
+      const y0=G.top+G.H*.42, y1=1.6, a=G.hw*.8*f, b=(G.hw+8)*f;
+      g.save();g.translate(off,0);
+      g.beginPath();g.moveTo(-a,y0);g.quadraticCurveTo(0,y0-3,a,y0);
+      g.quadraticCurveTo(b-1+w,y0+14,b+w*1.4,y1);
+      g.quadraticCurveTo(w,y1+4.5,-b+w*1.4,y1);
+      g.quadraticCurveTo(-b+1+w,y0+14,-a,y0);g.closePath();
+      g.fillStyle="#e04a5f";g.fill();
+      g.beginPath();g.moveTo(a*.15,y0);g.quadraticCurveTo(b*.5+w,y0+16,b*.55+w*1.4,y1+2.8);
+      g.quadraticCurveTo(b*.2+w,y1+3.8,a*.15,y0);g.closePath();g.fillStyle="#c23a55";g.fill();
+      g.restore();
+    },
+    front(g,G){
+      const y=G.bot-8.6;
+      g.save();around(g,G,1);g.clip();
+      g.fillStyle="#e04a5f";g.fillRect(-G.hw-2,y,G.hw*2+4,3.4);
+      g.fillStyle="#ff5d73";g.fillRect(-G.hw-2,y,G.hw*2+4,1.1);
+      g.restore();
+      if(G.fvis<=.01)return;
+      g.save();fade(g,G.fvis);
+      g.beginPath();g.arc(G.sx,y+1.7,3.3,0,TAU);g.fillStyle="#e8b23e";g.fill();
+      g.beginPath();g.arc(G.sx-.3,y+1.4,2.4,0,TAU);g.fillStyle="#ffd66b";g.fill();
+      g.beginPath();g.arc(G.sx-1.1,y+.7,.8,0,TAU);g.fillStyle="#fff6d6";g.fill();
+      g.restore();
+    }}
 };
+/* Back pieces, kept by name for whoever asks "is this worn behind?" */
+const backs={};Object.keys(outfits).forEach(k=>{if(outfits[k].back)backs[k]=outfits[k].back;});
 
-/* ---------- back pieces: before the legs, so they read as behind ----------
-   The cape trails on the gait phase and leans with the sway, which is the
-   whole reason it lives inside the transform tree. */
-const backs={
-  cape(g,sway,gp){
-    const w=Math.sin((gp||0)*6.283)*2.2+(sway||0)*.35;
-    g.save();
-    g.fillStyle="#e04a5f";
-    g.beginPath();g.moveTo(-12,-9);g.lineTo(12,-9);
-    g.quadraticCurveTo(15+w,4,17+w*1.6,20);
-    g.quadraticCurveTo(0,25,-17+w*1.6,20);
-    g.quadraticCurveTo(-15+w,4,-12,-9);g.closePath();g.fill();
-    g.fillStyle="rgba(0,0,0,.16)";
-    g.beginPath();g.moveTo(0,-9);g.quadraticCurveTo(4+w,6,6+w*1.6,22);g.quadraticCurveTo(0,24,-2,22);g.closePath();g.fill();
-    g.fillStyle="#ffd66b";RR(g,-12.5,-10.5,25,3.6,1.8);g.fill();
-    g.restore();
-  }
-};
-
-/* ---------- shoes: inside the per-leg closure, after rotate(footDeg) ----------
-   Origin is the leg end and the foot has already counter-rotated, which is
-   why a shoe never slides for the same reason the plain foot never did.
-   `limb` is the darkened body colour the leg is stroked with, passed in so a
-   shoe can match it; the rocket flame only burns while the robot is moving. */
+/* ---------- shoes: each one IS a foot ----------
+   Foot-local: the origin is under the middle of the foot, on the ground;
+   F.w is how wide the leg stub would be from here and F.side which way it
+   points (-1, 0 face on, 1), so a shoe seen from the side is longer, its
+   toe forward. The upper reaches up behind the head, which hides its top:
+   what shows is the toe, the sides and the sole. */
+const SHOE_UP=2.6;   // the head stands this much higher in shoes
+function shoeBox(F){const w=F.w+1.6, L=w+Math.abs(F.side)*3.6;return{w,L,x:-L/2+F.side*1.8};}
 const shoes={
-  boots(g){
-    g.fillStyle="#4a3728";RR(g,-4.9,-1.8,9.8,6.2,2.6);g.fill();
-    g.fillStyle="#241b45";RR(g,-5.3,3.2,10.6,2.4,1.2);g.fill();
-    g.fillStyle="rgba(255,255,255,.16)";RR(g,-3.6,-1,4.4,1.8,.9);g.fill();
+  boots(g,F){const b=shoeBox(F);
+    RR(g,b.x,-12,b.L,10,3.6);g.fillStyle="#8a5a2b";g.fill();
+    RR(g,b.x,-12,b.L-1.6,8.8,3.4);g.fillStyle="#9b6634";g.fill();
+    const tx=F.side>0?b.x+b.L-6:F.side<0?b.x+.4:-b.w*.36, tw=F.side?5.6:b.w*.72;
+    RR(g,tx,-6,tw,3.6,1.8);g.fillStyle="#b07a45";g.fill();
+    g.fillStyle="#6e4422";g.fillRect(b.x,-8.4,b.L-1.6,1);
+    RR(g,b.x-.6,-2.9,b.L+1.2,3.3,1.5);g.fillStyle="#4a3728";g.fill();
   },
-  sneakers(g){
-    g.fillStyle="#f2f3f7";RR(g,-4.7,-1.9,9.4,5.2,2.4);g.fill();
-    g.fillStyle="#5ab8ff";RR(g,-5.1,2.6,10.2,2.6,1.3);g.fill();
-    g.strokeStyle="#c3c9d6";g.lineWidth=1;g.beginPath();g.moveTo(-2.6,-.6);g.lineTo(1.6,-.6);g.stroke();
+  sneakers(g,F){const b=shoeBox(F);
+    RR(g,b.x,-11,b.L,9,3.8);g.fillStyle="#d3d8e4";g.fill();
+    RR(g,b.x,-11,b.L-1.4,8,3.6);g.fillStyle="#f4f6fb";g.fill();
+    g.fillStyle="#5ab8ff";g.fillRect(b.x,-7.2,b.L-1.4,1.6);
+    const tx=F.side>0?b.x+b.L-5.4:F.side<0?b.x:-b.w*.34, tw=F.side?5.4:b.w*.68;
+    RR(g,tx,-4.8,tw,2.6,1.3);g.fillStyle="#e3e7f0";g.fill();
+    RR(g,b.x-.6,-2.6,b.L+1.2,3,1.4);g.fillStyle="#5ab8ff";g.fill();
+    g.fillStyle="#f4f6fb";g.fillRect(b.x+.4,-2.6,b.L-.8,.8);
   },
-  wellies(g){
-    g.fillStyle="#54d66a";RR(g,-3.3,-9.5,6.6,9.5,1.8);g.fill();
-    g.fillStyle="#3fb257";RR(g,-4.9,-1.8,9.8,6,2.5);g.fill();
-    g.fillStyle="#241b45";RR(g,-5.2,3.2,10.4,2.2,1.1);g.fill();
-    g.fillStyle="rgba(255,255,255,.22)";g.fillRect(-3.3,-8.4,6.6,1.4);
+  wellies(g,F){const b=shoeBox(F);
+    RR(g,b.x+.2,-13,b.L-.4,11,3.2);g.fillStyle="#3fb257";g.fill();
+    RR(g,b.x+.2,-13,b.L-2,10,3);g.fillStyle="#54d66a";g.fill();
+    RR(g,b.x+1.6,-10,1.3,6.4,.65);g.fillStyle="#a6f0b0";g.fill();
+    RR(g,b.x-.5,-2.6,b.L+1,3,1.4);g.fillStyle="#241b45";g.fill();
   },
-  rockets(g,limb,moving,t){
-    g.fillStyle="#cfd4e0";RR(g,-4.2,-2.4,8.4,6.4,2.2);g.fill();
-    g.fillStyle="#9aa3b5";g.beginPath();g.moveTo(-3.4,4);g.lineTo(3.4,4);g.lineTo(2.4,6.6);g.lineTo(-2.4,6.6);g.closePath();g.fill();
-    g.fillStyle="#ff5d73";RR(g,-4.2,-.6,8.4,1.8,.9);g.fill();
-    if(moving){
-      const fl=.7+.3*Math.sin((t||0)/70);
-      g.fillStyle="#ffb830";g.beginPath();g.moveTo(-2.2,6.6);g.lineTo(2.2,6.6);g.lineTo(0,6.6+6*fl);g.closePath();g.fill();
-      g.fillStyle="#ffe9a0";g.beginPath();g.moveTo(-1.1,6.6);g.lineTo(1.1,6.6);g.lineTo(0,6.6+3.4*fl);g.closePath();g.fill();
+  rockets(g,F){const b=shoeBox(F);
+    RR(g,b.x,-12,b.L,9.6,3.6);g.fillStyle="#b4bccb";g.fill();
+    RR(g,b.x,-12,b.L-1.5,8.6,3.4);g.fillStyle="#dfe3ec";g.fill();
+    g.fillStyle="#ff5d73";g.fillRect(b.x,-6.4,b.L,1.9);
+    RR(g,b.x-.4,-3,b.L+.8,2.8,1.3);g.fillStyle="#6e7690";g.fill();
+    const nw=b.w*.42;
+    g.fillStyle="#9aa3b5";g.beginPath();g.moveTo(-nw/2,-.4);g.lineTo(nw/2,-.4);g.lineTo(nw*.36,1.6);g.lineTo(-nw*.36,1.6);g.closePath();g.fill();
+    if(F.moving){
+      const fl=.7+.3*Math.sin((F.t||0)/70);
+      g.fillStyle="#ffb830";g.beginPath();g.moveTo(-nw*.36,1.6);g.lineTo(nw*.36,1.6);g.lineTo(0,1.6+5.6*fl);g.closePath();g.fill();
+      g.fillStyle="#ffe9a0";g.beginPath();g.moveTo(-nw*.18,1.6);g.lineTo(nw*.18,1.6);g.lineTo(0,1.6+3.2*fl);g.closePath();g.fill();
     }
   }
+};
+
+/* ---------- hats: where each sprite's brim and top are ----------
+   In the sprite's own 48-unit box: brim = the bottom of the brim (it sits
+   on the shell's top edge, sunk into it a little), top = the top of the
+   crown (the antenna comes out there). */
+const HAT_FIT={
+  "🎩":{brim:34.5,top:12}, "⛑️":{brim:34.5,top:14}, "⛑":{brim:34.5,top:14},
+  "👑":{brim:34.5,top:17}, "🎓":{brim:33,top:16}, "🤠":{brim:28,top:11.5},
+  "🥳":{brim:33.5,top:8}
 };
 
 /* =====================================================================
@@ -613,7 +774,7 @@ function paintPiece(g,slot,p){
 }
 
 window.CC_WEAR={
-  outfits:outfits, backs:backs, shoes:shoes,
+  outfits:outfits, backs:backs, shoes:shoes, shoeUp:SHOE_UP, hatFit:HAT_FIT,
   pal:WEAR_PAL, key:WEAR_KEY, cells:WEAR_N, max:WEAR_MAX, prefix:WEAR_PRE, box:WEAR_BOX,
   names:WEAR_NAME, rad:PART_RAD, partMax:PART_MAX,
   isCustom:isCustom,
@@ -623,17 +784,21 @@ window.CC_WEAR={
      the box-model overlay */
   layout:layoutParts, rings:boxRings, lay:LAY, jus:JUS, ali:ALI, boxDefault:BOXF,
   field:bf,
-  /* body-local; the caller has already clipped to the body square */
-  outfit(g,id,color){
+  /* a painted outfit: body-local, the caller has mapped the body square
+     onto the shell and clipped to it. The built-in ones are worn by fit() */
+  outfit(g,id){
     const p=customPiece(id); if(p)return paintPiece(g,"outfit",p);
-    const f=outfits[id]; if(f)f(g,color);
   },
-  /* body-local; drawn before the legs */
-  back(g,id,sway,gp){const f=backs[id]; if(f)f(g,sway,gp);},
-  /* foot-local; origin = leg end, already rotated */
-  shoe(g,id,limb,moving,t){
+  /* one layer of a built-in outfit on the head ("back", "shell", "front");
+     true if the outfit has that layer */
+  fit(g,id,layer,G){const o=outfits[id]; if(!o||!o[layer])return false; o[layer](g,G); return true;},
+  /* a built-in outfit's back piece (the cape), in the body's space */
+  back(g,id,G){const o=outfits[id]; if(o&&o.back)o.back(g,G);},
+  /* a shoe IS the foot: foot-local, origin on the ground under it. F is
+     {w, side, moving, t}; a painted one keeps its old box, at the ankle */
+  shoe(g,id,F){
     const p=customPiece(id); if(p)return paintPiece(g,"shoes",p);
-    const f=shoes[id]; if(f)f(g,limb,moving,t);
+    const f=shoes[id]; if(f)f(g,F||{w:12,side:0});
   },
   /* body-local. Returns false for a shop hat so the caller falls back to
      the sprite — a hat that is not painted is still rigid art. */

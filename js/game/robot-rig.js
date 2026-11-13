@@ -151,6 +151,7 @@ function mixPose(A,B,w){
 function breathe(P,ms,k,per){k=k==null?1:k;per=per||2600;const b=Math.sin(ms/per*TAU);P.bob+=-.9*b*k;P.sy*=1+.012*b*k;P.sx*=1-.008*b*k;P.lR+=.025*b*k;P.rR+=.025*b*k;return b;}
 
 /* ---------------------------------------------------------------- the robot */
+const HAT_K=1.2; // a shop hat's 48-unit sprite box, in rig units per unit
 const WEAR_S=34.56; // the body square the hats, outfits and capes were drawn on (TILE*.72 at TILE 48)
 class Bot{
   constructor(color,dir){
@@ -233,8 +234,10 @@ class Bot{
     g.rotate(P.roll);g.scale(Math.max(.01,P.sx),Math.max(.01,P.sy));g.translate(0,-P.lift);
     anc.ground=AP(0,0);
     const bodyY=P.bob+P.crouch*KC;
-    const W=this.ctx.wear, cape=W.outfit&&window.CC_WEAR&&CC_WEAR.back&&CC_WEAR.back[W.outfit];
-    const upper=()=>{g.translate(0,bodyY);g.translate(0,HIP);g.rotate(P.lean*KL*sa);g.scale(1,1-.1*Math.abs(P.lean*KL*ca));g.translate(0,-HIP);};
+    const W=this.ctx.wear, CW=window.CC_WEAR, cape=W.outfit&&CW&&CW.backs&&CW.backs[W.outfit];
+    /* in a pair of shoes the shoes are the feet, and the head stands on them */
+    const up=W.shoes&&CW&&CW.shoes&&CW.shoes[W.shoes]?CW.shoeUp:0;
+    const upper=()=>{g.translate(0,bodyY-up);g.translate(0,HIP);g.rotate(P.lean*KL*sa);g.scale(1,1-.1*Math.abs(P.lean*KL*ca));g.translate(0,-HIP);};
     // a cape seen from the front hangs behind everything, legs included
     if(cape&&ca>.2){g.save();upper();this.cape(g,a,P);g.restore();}
     const legs=[-1,1].map(sd=>({sd,x:sd*C(18)*ca,d:-sd*C(18)*sa}));
@@ -257,10 +260,8 @@ class Bot{
     g.restore();g.restore();anc.valid=true;
   }
   cape(g,a,P){
-    const ca=Math.cos(a), sa=Math.sin(a), hw=Math.hypot(31*ca,26*sa);
-    g.save();g.translate(0,H_TOP+H_H/2);g.scale(2*hw/WEAR_S,H_H/WEAR_S);
-    CC_WEAR.back(g,this.ctx.wear.outfit,(P.roll+P.lean*sa)*57.3,P.gp||0);
-    g.restore();
+    const ca=Math.cos(a), sa=Math.sin(a), hw=Math.hypot(32*ca,27*sa);
+    CC_WEAR.back(g,this.ctx.wear.outfit,{hw,top:H_TOP,H:H_H,bot:H_BOT,ca,sa,gp:P.gp||0,sway:(P.roll+P.lean*sa)*57.3,t:this.ctx.t});
   }
   /* No legs: a boot stands under the head, and a step is the boot itself
      lifting and reaching. The clips still write a stride (fLz), a lift
@@ -283,16 +284,22 @@ class Bot{
     const fz=(isL?P.fLz:P.fRz)*KS, fy=(isL?P.fLy:P.fRy)*KF, fp=isL?P.fLp:P.fRp;
     const A={x:L.x+fz*sa,y:ANK-fy+L.d*.22+(fz*ca)*KZ};
     const fs=Math.abs(sa)>.15?Math.sign(sa):0;
-    const shoe=this.ctx.wear.shoes;
-    if(shoe&&window.CC_WEAR){
-      /* a shoe is drawn foot-local, origin at the ankle: it rides the same
-         pitch the stub would have, so it never slides */
+    const shoe=this.ctx.wear.shoes, CW=window.CC_WEAR;
+    const w=C(22)*(.72+.28*Math.abs(ca))+C(6)*Math.abs(sa), h=C(14);
+    if(shoe&&CW&&CW.shoes&&CW.shoes[shoe]){
+      /* a shoe IS the foot: on the ground where the stub stood, as wide,
+         riding the same pitch, its toe forward when seen from the side */
+      g.save();g.translate(A.x,A.y+5+C(1));g.rotate(-fp*fs*.6);
+      CW.shoe(g,shoe,{w,side:fs,moving:!!P.moving,t});
+      this.anchors[isL?'footL':'footR']=AP(0,0);
+      g.restore();
+    }else if(shoe&&CW){
+      /* a painted one keeps the box it was painted in, at the ankle */
       g.save();g.translate(A.x+2*sa,A.y-3);g.rotate(-fp*fs);g.scale(1.1,1.1);
-      CC_WEAR.shoe(g,shoe,pal.limb,!!P.moving,t);
+      CW.shoe(g,shoe);
       this.anchors[isL?'footL':'footR']=AP(0,8);
       g.restore();
     }else{
-      const w=C(22)*(.72+.28*Math.abs(ca))+C(6)*Math.abs(sa), h=C(14);
       g.save();g.translate(A.x,A.y+5+C(1));g.rotate(-fp*fs*.6);
       rr(g,-w/2,-h,w,h,C(6));g.fillStyle=NAVY;g.fill();
       rr(g,-w/2,-C(5),w,C(5),C(2.5));g.fillStyle=SOLE;g.fill();
@@ -360,8 +367,19 @@ class Bot{
       g.beginPath();g.arc(e.x+out,ey,C(6),0,TAU);g.fillStyle=EAR_IN;g.fill();
       if(e.c>.15)this.anchors.ear=AP(e.x,ey);};
     ears.filter(e=>e.c<=.15).forEach(ear);
+    /* What the robot wears on its head (cosmetics.js): an outfit in
+       layers — on the shell, under the screen; then over the screen's
+       edges and hanging below — and a hat sat on the top edge, the
+       antenna coming out of its crown. G is the head, as the pieces see it. */
+    const W=this.ctx.wear, CW=window.CC_WEAR;
+    const fit=W.outfit&&CW&&CW.outfits&&CW.outfits[W.outfit]?CW.outfits[W.outfit]:null;
+    const hf=W.hat&&CW&&CW.hatFit&&CW.hatFit[W.hat]&&typeof sprite==='function'?CW.hatFit[W.hat]:null;
+    const f=feat(ah), fb=feat(ah+PI);fb.vis=sm(.15,.55,fb.c);
+    const sc=this.scr(f,hw,P);
+    const G=fit?{hw,top,H,bot:top+H,rad,lx:-C(7),ly:-C(8),sx:sc.sx,sy:sc.sy,sw:sc.sw,sh:sc.sh,k:sc.sw/C(84),
+      fvis:f.vis,bvis:fb.vis,bu:fb.u*hw*.4,ca,sa,pal,t:this.ctx.t,gp:P.gp||0,sway:(P.roll+P.lean*sa)*57.3}:null;
     /* the stalk stands behind the head's top edge, under its dark cap */
-    this.stalk(g,ah,P);
+    if(!hf)this.stalk(g,ah,P);
     /* The shell: drawn whole in the darker tone, then again in the team
        colour moved up and left inside it, so the darker tone shows along
        its right side and underneath with the corners' own curve */
@@ -369,11 +387,10 @@ class Bot{
     shell();g.fillStyle=pal.shade;g.fill();
     g.save();shell();g.clip();
     rr(g,-hw-C(7),top-C(8),hw*2,H,rad);g.fillStyle=pal.face;g.fill();
-    /* an outfit is worn on the shell, under the screen */
-    const Wr=this.ctx.wear;
-    if(Wr.outfit&&window.CC_WEAR){g.save();g.translate(0,top+H/2);g.scale(2*hw/WEAR_S,H/WEAR_S);CC_WEAR.outfit(g,Wr.outfit,pal.base);g.restore();}
-    const fb=feat(ah+PI);fb.vis=sm(.15,.55,fb.c);
-    if(fb.vis>.01){ // the back of the head: two vents and the </> mark
+    if(fit)CW.fit(g,W.outfit,'shell',G);
+    /* a painted outfit: the body square it was painted on, laid over the shell */
+    else if(W.outfit&&CW){g.save();g.translate(0,top+H/2);g.scale(2*hw/WEAR_S,H/WEAR_S);CW.outfit(g,W.outfit);g.restore();}
+    if(fb.vis>.01&&!(fit&&fit.covers)){ // the back of the head: two vents and the </> mark
       g.save();g.globalAlpha*=fb.vis;const bx=fb.u*hw*.4, k=.6+.4*Math.max(0,fb.c), my=top+H*.58;
       g.strokeStyle=pal.shade;g.lineWidth=2.6;g.lineCap='round';g.lineJoin='round';
       for(let i=0;i<2;i++){g.beginPath();g.moveTo(bx-10*k,top+11+i*5);g.lineTo(bx+10*k,top+11+i*5);g.stroke();}
@@ -382,42 +399,54 @@ class Bot{
     }
     g.restore();
     // the antenna's dark cap on the top edge, and the one light on the shell
-    const capx=-Math.sin(ah)*3-C(4)*Math.max(0,ca);
-    g.beginPath();g.ellipse(capx,top,C(13)*(.55+.45*Math.abs(ca)),C(5),0,0,TAU);g.fillStyle=NAVY;g.fill();
+    if(!hf){const capx=-Math.sin(ah)*3-C(4)*Math.max(0,ca);
+      g.beginPath();g.ellipse(capx,top,C(13)*(.55+.45*Math.abs(ca)),C(5),0,0,TAU);g.fillStyle=NAVY;g.fill();}
     const kx=hw/C(58);
-    g.save();g.globalAlpha*=.9;rr(g,-hw+C(18)*kx,top+C(9),C(24)*kx,C(6),C(3));g.fillStyle=pal.hi;g.fill();g.restore();
-    const f=feat(ah);
+    g.save();g.globalAlpha*=.9;rr(g,-hw+C(18)*kx,top+C(9),C(24)*kx,C(6),C(3));g.fillStyle=(fit&&fit.hi)||pal.hi;g.fill();g.restore();
     if(f.vis>.01)this.screen(g,f,hw,P);
     ears.filter(e=>e.c>.15).forEach(ear);
+    if(fit)CW.fit(g,W.outfit,'front',G);
     /* A full bag rides on the head, behind the light: there is no back to
        hang a pack on. The clips swell it (packScale) and bounce it (packB). */
     if(P.packFull){const sc=P.packScale*(1+(P.packB||0)*.07);
       drawItem(g,'sack',-12*ca-13*sa,top-6.5*sc+1,sc*.95,this.ctx.t);}
-    this.bulb(g,ah,P);
     this.anchors.headC=AP(0,top+H/2);this.anchors.hat=AP(0,top);
-    /* the head anchor. A hat is drawn here, after the antenna and inside
-       the head's own transform, so it rides every nod, tilt, lag, lean and
-       squash the head does — and sits over the antenna, as it always has.
-       Hats were made on a body square of WEAR_S; that square's top edge is
-       put on the top of this head, as wide as the head is. */
-    const W=this.ctx.wear;
-    if(W.hat){
-      const k=64/WEAR_S;
-      g.save();g.translate(0,top+WEAR_S/2*k);g.scale(k,k);
-      if(!(window.CC_WEAR&&CC_WEAR.hat(g,W.hat))&&typeof sprite==='function'){
-        const hp=sprite(W.hat,24);
-        g.drawImage(hp,-hp.lw/2,-WEAR_S/2-4.75-hp.lw/2,hp.lw,hp.lw);
-      }
+    if(hf){
+      /* A hat from the shop sits ON the head: its brim on the top edge,
+         sunk into it a little, the same size whatever way the head turns.
+         The antenna comes out of the top of its crown, shorter, so the
+         light that says what the robot is doing is never under a hat. */
+      const hk=HAT_K, hx=-Math.sin(ah)*3, hb=top+2.6+P.headNod*1.2, hp=sprite(W.hat,96), off=(hp.lw-96)/2;
+      g.save();g.translate(hx,hb);g.scale(hk,hk);
+      g.drawImage(hp,-24-off/2,-hf.brim-off/2,hp.lw/2,hp.lw/2);
       g.restore();
+      const base=hb-(hf.brim-hf.top)*hk+1, o=this.ant, k=.6;
+      g.lineCap='round';g.beginPath();g.moveTo(hx,base);g.quadraticCurveTo(hx,base-C(6),hx+o.x*k,base+o.y*k+C(4));
+      g.strokeStyle=NAVY;g.lineWidth=C(4.5);g.stroke();
+      this.bulb(g,ah,P,base,k);
+    }else{
+      this.bulb(g,ah,P);
+      /* a painted hat: the body square it was painted on, its top edge on
+         the top of this head, as wide as the head is — over the antenna */
+      if(W.hat&&CW){
+        const k=64/WEAR_S;
+        g.save();g.translate(0,top+WEAR_S/2*k);g.scale(k,k);
+        if(!CW.hat(g,W.hat)&&typeof sprite==='function'){const hp=sprite(W.hat,24);g.drawImage(hp,-hp.lw/2,-WEAR_S/2-4.75-hp.lw/2,hp.lw,hp.lw);}
+        g.restore();
+      }
     }
     g.restore();
+  }
+  /* where the screen is: dark glass 84 by 54, narrower as it turns away */
+  scr(f,hw,P){
+    return{sw:C(84)*(.6+.4*Math.max(0,f.c)), sh:C(54), sx:f.u*hw*.4-C(4)*Math.max(0,f.c), sy:H_TOP+C(46)+P.headNod*3};
   }
   /* The screen: dark glass 84 by 54 with corners of 21, in a rim of the
      shell's darker tone, a sheen across its left half, and the original
      robot's face on it (drawFace, every expression). */
   screen(g,f,hw,P){
     const {AP,pal}=this.ctx;
-    const sw=C(84)*(.6+.4*Math.max(0,f.c)), sh=C(54), sx=f.u*hw*.4-C(4)*Math.max(0,f.c), sy=H_TOP+C(46)+P.headNod*3;
+    const {sw,sh,sx,sy}=this.scr(f,hw,P);
     g.save();g.globalAlpha*=f.vis;
     g.save();g.globalAlpha*=.75;rr(g,sx-sw/2-C(4),sy-sh/2-C(4),sw+C(8),sh+C(8),C(25));g.fillStyle=pal.shade;g.fill();g.restore();
     rr(g,sx-sw/2,sy-sh/2,sw,sh,C(21));g.fillStyle=SCREEN;g.fill();
@@ -436,9 +465,10 @@ class Bot{
   }
   /* the light: a pale halo, the bulb, its lit side and one glint. Mint is
      a robot with nothing to say; the program's state recolours it */
-  bulb(g,ah,P){
+  bulb(g,ah,P,base,k){
     const {t,AP}=this.ctx;
-    const bx=-Math.sin(ah)*3, by=H_TOP+P.headNod*1.2, o=this.ant, tx=bx+o.x, ty=by+o.y;
+    k=k||1;
+    const bx=-Math.sin(ah)*3, by=base!=null?base:H_TOP+P.headNod*1.2, o=this.ant, tx=bx+o.x*k, ty=by+o.y*k;
     const st=P.bulb||'idle', idle=st==='idle';
     const col=idle?'#4fcfa6':bulbCol(st,t), lit=idle?'#86f2cc':colA(col,.55);
     g.beginPath();g.arc(tx,ty,C(19),0,TAU);g.fillStyle=idle?'rgba(134,242,204,.26)':colA(col,.26);g.fill();
@@ -893,7 +923,7 @@ const FOOT=.28, UNIT=1/82.5;
 /* how tall it stands, in rig units, for whatever a host puts over or on it
    (a name, a carried block, the tap that picks it): just above the light,
    the same under a hat, and where its hands hold a thing up from */
-const TALL=80, TALL_HAT=94, HOLD=22;
+const TALL=80, TALL_HAT=102, HOLD=22;
 /* how far a bump carries the robot toward what it hit, in tiles */
 function nudge(t){return t<.2?.16*E.i2(t/.2):.16*(1-E.o3(clamp((t-.2)/.3,0,1)));}
 /* how far a teeter leans it out over the water, in tiles */
