@@ -221,7 +221,7 @@ function draw(t){
     /* the robot stands where the trees and rocks stand on their tiles, its
        feet at gy (CC_RIG.FOOT): rs is one rig unit in world px, hy is just
        above the antenna (or the hat) */
-    const rs=TILE*CC_RIG.UNIT, gy=cy+TILE*CC_RIG.FOOT, hy0=gy-(r.hat?122:114)*rs;
+    const rs=TILE*CC_RIG.UNIT, gy=cy+TILE*CC_RIG.FOOT, hy0=gy-(r.hat?CC_RIG.TALL_HAT:CC_RIG.TALL)*rs;
     if(i===selRobot){
       ctx.save();
       const k=Math.sin(t/250);
@@ -634,7 +634,7 @@ function drawBoardRobot(g,cx,cy,s2,dir,color,running,t,wear,pose){
   if(!pose)P.blink=(!running&&((t+cx*7)%3400)<110)?1:0;
   if(P.bulb==="idle"||P.bulb==="run")P.bulb=running?"run":"idle";
   const yaw=typeof dir==="number"?CC_RIG.DIRYAW[dir&3]:.45;
-  CC_RIG.drawStill(g,cx,cy+s2*.66,s2/76.9,yaw,color,P,{t,wear:wear||{}});
+  CC_RIG.drawStill(g,cx,cy+s2*.66,s2/55.5,yaw,color,P,{t,wear:wear||{}});
 }
 function drawBoardBrick(g,px,py,cell,onPlan,no){
   const m=Math.max(3,cell*0.08), x=px+m, y=py+m, s=cell-2*m;

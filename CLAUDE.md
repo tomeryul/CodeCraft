@@ -354,11 +354,22 @@ centre, on the line the trees and rocks stand on — on the bottom edge it
 read as standing between two tiles) and how big is `CC_RIG.UNIT`; the
 world, a board and the Tower all read those two, and a tap finds a robot
 by its body, since its head reaches into the tile above.
-Hats, outfits, capes and shoes were drawn on the old
-34.56px body square; the rig maps that square onto the head, the torso
-and the feet (`WEAR_S`), so a new piece is still drawn on the square.
-The look is option א ("soft") of `design/robot-options.html`: no
-outlines, because the map has none.
+**It has no body.** The look is the "משפחת הרובוטים החדשה" canvas
+(Robo): the head is the whole robot — a shell in the team colour with
+its far side and underside in a darker tone, the original robot's dark
+screen face (`drawFace`, every expression), dark ear discs, an antenna
+with the light — on two short dark legs, with white square mitts
+floating beside it. The clips are the same clips: what moved the feet
+moves the legs (`leg`), what put the hands somewhere puts the mitts
+there (`armPts`), and `KC`/`KS`/`KF`/`KL` scale squats, strides, steps
+and leans down to a head on two stubs. A full bag is a sack riding on the
+head. The team colour paints only the shell. How tall it stands for a
+host (a name tag, a carried block, the tap that picks it) is
+`CC_RIG.TALL`, `TALL_HAT` and `HOLD`, never a number in the host.
+Hats, outfits, capes and shoes were drawn on the old 34.56px body square;
+the rig maps that square onto the head and the feet (`WEAR_S`), so a new
+piece is still drawn on the square. No outlines, because the map has
+none.
 
 ## The 3D board
 

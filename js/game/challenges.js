@@ -2735,14 +2735,14 @@ function mgLookDraw(g,cell,T,wear,CW){
   const an=L.B.anchors;
   if(L.starT!=null&&T-L.starT<1300&&an.valid&&an.hat)
     CC_RIG.stars(g,an.hat.x,an.hat.y,rs,T,Math.min(1,(1300-(T-L.starT))/350));
-  let top=gy-(wear&&wear.hat?122:114)*rs;
+  let top=gy-(wear&&wear.hat?CC_RIG.TALL_HAT:CC_RIG.TALL)*rs;
   // the block being carried rides above the head; a fresh one rises up from the hands
   if(rb.held!=null){
     const A=L.anim, lifting=A&&A.clip==="lift"&&!A.empty;
     if(!lifting||L.ap>.72){
       const hs=cell*.52, up=lifting?(L.ap-.72)/.28:1, e=1-Math.pow(1-up,3);
       const hy=top-hs*.2-hs+Math.sin(T/260)*2;
-      const y=lifting?gy-44*rs-hs/2+(hy-(gy-44*rs-hs/2))*e:hy;
+      const hold=CC_RIG.HOLD*rs, y=lifting?gy-hold-hs/2+(hy-(gy-hold-hs/2))*e:hy;
       const sz=hs*(lifting?.6+.4*e:1);
       drawBoardBrick(g,cx-sz/2,y+(hs-sz)/2,sz,true,rb.held);
       top=Math.min(top,hy);

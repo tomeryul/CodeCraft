@@ -46,24 +46,55 @@ function K(t,k){
 function hexRgb(h){h=String(h).replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16)||0;return[n>>16&255,n>>8&255,n&255];}
 function shade(h,a){const c=hexRgb(h),t=a<0?0:255,p=Math.abs(a);return'rgb('+c.map(v=>Math.round(v+(t-v)*p)).join(',')+')';}
 const PALC={};
+/* The sprites of this world are flat and two-toned, and the second tone is
+   not the first with black in it: going down it turns a little toward blue
+   (yellow to orange, green to teal), going up a little away from it. That
+   is how the icon's robot is shaded — a lemon face over an orange band —
+   and tone() gets those two from the one team colour. dh is degrees of
+   hue (+ toward blue, - away), dl is lightness, ks scales saturation. */
+function hsl3(c){const [r,g,b]=hexRgb(c).map(v=>v/255), mx=Math.max(r,g,b), mn=Math.min(r,g,b), l=(mx+mn)/2;let h=0,s=0;
+  if(mx!==mn){const d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);h=(mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4)*60;}
+  return[h,s,l];}
+function tone(c,dh,dl,ks){
+  let [h,s,l]=hsl3(c);
+  const d=((250-h+540)%360)-180;               // the shorter way round to blue
+  h=(h+(dh>0?Math.sign(d)*Math.min(Math.abs(d),dh):Math.sign(d||1)*dh)+360)%360;
+  s=clamp(s*(ks==null?1:ks),0,1);l=clamp(l+(dl||0),0,1);
+  const C=(1-Math.abs(2*l-1))*s, X=C*(1-Math.abs((h/60)%2-1)), m=l-C/2;
+  const q=h<60?[C,X,0]:h<120?[X,C,0]:h<180?[0,C,X]:h<240?[0,X,C]:h<300?[X,0,C]:[C,0,X];
+  return'rgb('+q.map(v=>Math.round((v+m)*255)).join(',')+')';
+}
 function PAL(c){
   if(PALC[c])return PALC[c];
   if(Object.keys(PALC).length>64)for(const k in PALC)delete PALC[k];
-  return PALC[c]={base:c,hi:shade(c,.34),lo:shade(c,-.14),dk:shade(c,-.34),boot:shade(c,-.26),bootHi:shade(c,.18),
-    limb:shade(c,-.28),limbHi:shade(c,-.1)};
+  /* face: the lit top of the head; lo: its band and the body under it;
+     limb and boot: the arms, legs and feet, the darkest tone; hi: the one
+     light on the head */
+  /* face: the shell, the team colour itself; shade: its far side, its
+     underside and the rim round the screen; hi: the one light on top;
+     earIn: the middle of an ear */
+  return PALC[c]={base:c,face:c,shade:tone(c,4,-.07),hi:tone(c,-8,.15),earIn:tone(c,-10,.22),lo:tone(c,4,-.07),dk:tone(c,9,-.13,.9),
+    limb:tone(c,12,-.19,.78),boot:tone(c,14,-.25,.78)};
 }
-const MITT='#f2f3fb', MITT_SH='#c9cde6', SOLE='#f5eddb', PACK='#e8c78c', PACK_HI='#f6dfb2', PACK_DK='#c69756',
-  CREAM='#fff4de', SCR_A='#2b2f5e', SCR_B='#101230', EYE='#a8f8ff', INK='#1c1638';
+/* the parts every robot shares, whatever its team colour: the dark of its
+   ears, wrists, legs and antenna, the screen, the hands */
+const NAVY='#36325a', STALK='#4b4877', SOLE='#6e6a9e', SCREEN='#1c1b4d', SCREEN_HI='#26265d',
+  MITT='#f3f2fa', MITT_LO='#c9c6e8', EYE='#a6f6ff', EYE_RING='#2b5a86', SIDE=3.8;
 /* the game's directions: 0 up (back to us), 1 right, 2 down (facing us), 3 left */
 const DIRYAW=[PI,HP,0,-HP];
 const KZ=.5; // ground depth to screen y: the camera looks down a little
-/* the body plan, feet at 0. Short legs and a short body under a big head:
-   the head carries the face, so it is the part that keeps its size */
-const ANK=-6, HIP=-20, T_TOP=-43, T_BOT=-14, SH_Y=-36, H_TOP=-88, H_H=44, H_BOT=H_TOP+H_H;
-const LEG=7.2, ARM1=9, ARM2=8.6;
-/* the clips were keyed on longer legs; these bring their squats and
-   strides down to these */
-const KC=.78, KS=.85;
+/* the body plan, feet at 0. There is no body: the head is the robot — a
+   shell in the team colour holding the original robot's screen face — on
+   two short dark legs, with two white hands floating beside it and the
+   light on an antenna. The clips move the legs and the hands exactly as
+   they moved the feet and the hands of the limbs that used to join them.
+   (It is also the square the hats, outfits and shoes were first drawn on
+   — see WEAR_S.) */
+const ANK=-5, HIP=-9, SH_Y=-24, H_BOT=-6, H_H=50, H_TOP=H_BOT-H_H;
+const ARM1=7.5, ARM2=7.5, ANT=15;
+/* the clips were keyed on a body with legs; these bring their squats,
+   strides, steps and leans down to a head on two short legs */
+const KC=.5, KS=.55, KF=.7, KL=.6;
 function rr(g,x,y,w,h,r){r=Math.max(0,Math.min(r,Math.abs(w)/2,Math.abs(h)/2));g.beginPath();g.moveTo(x+r,y);g.lineTo(x+w-r,y);g.quadraticCurveTo(x+w,y,x+w,y+r);g.lineTo(x+w,y+h-r);g.quadraticCurveTo(x+w,y+h,x+w-r,y+h);g.lineTo(x+r,y+h);g.quadraticCurveTo(x,y+h,x,y+h-r);g.lineTo(x,y+r);g.quadraticCurveTo(x,y,x+r,y);g.closePath();}
 function limb(g,pts,w,col,hi){
   g.lineCap='round';g.lineJoin='round';g.beginPath();g.moveTo(pts[0].x,pts[0].y);
@@ -120,7 +151,7 @@ class Bot{
     dir=dir==null?2:dir;
     this.color=color;this.dir=dir;this.yaw=DIRYAW[dir];this.hyaw=this.yaw;this.yv=0;this.hv=0;this.lock=false;
     this.hp=0;this.hpv=0;this.hlag=0;
-    this.tip=null;this.tipv={x:0,y:0};this.base=null;this.ant={x:0,y:-15};
+    this.tip=null;this.tipv={x:0,y:0};this.base=null;this.ant={x:0,y:-ANT};
     this.blinkIn=900+Math.random()*2600;this.blinkT=-1;this.dbl=false;this.bv=0;
     this.expr='neutral';this.exprNext=null;this.swapT=-1;this.swapK=1;this.anchors={};
     this.last=null;this.key=null;this.from=null;this.bt=1;
@@ -163,7 +194,7 @@ class Bot{
       }}
     let ox=this.tip.x-bx, oy=this.tip.y-byy;
     const dx=ox-rest.x, dy=oy-rest.y, dl=Math.hypot(dx,dy);
-    if(dl>9){ox=rest.x+dx/dl*9;oy=rest.y+dy/dl*9;this.tip.x=bx+ox;this.tip.y=byy+oy;}
+    if(dl>7){ox=rest.x+dx/dl*7;oy=rest.y+dy/dl*7;this.tip.x=bx+ox;this.tip.y=byy+oy;}
     this.ant={x:ox,y:oy};
     // blinking, with the odd double blink
     this.blinkIn-=dt;
@@ -175,7 +206,7 @@ class Bot{
     if(this.swapT>=0){this.swapT+=dt;if(this.swapT>55&&this.exprNext){this.expr=this.exprNext;this.exprNext=null;}
       if(this.swapT>120){this.swapT=-1;this.swapK=1;}else this.swapK=1-.85*Math.sin(PI*this.swapT/120);}
   }
-  restOf(P){const a=P.ant+P.headTilt+P.roll;return{x:Math.sin(a)*15,y:-Math.cos(a)*15+(P.ant?Math.abs(Math.sin(P.ant))*2:0)};}
+  restOf(P){const a=P.ant+P.headTilt+P.roll;return{x:Math.sin(a)*ANT,y:-Math.cos(a)*ANT+(P.ant?Math.abs(Math.sin(P.ant))*2:0)};}
   /* o: {t, wear:{hat,outfit,shoes}, small, glow, noShadow}. X,Y is the ground
      point and s the size of one rig unit, both in the caller's space. */
   draw(g,P,X,Y,s,o){
@@ -191,80 +222,78 @@ class Bot{
     g.save();g.translate(X,Y);g.scale(s,s);
     const lf=Math.max(0,P.lift), sh=1-clamp(lf/100,0,.6);
     // the map's own soft shadow
-    if(!o.noShadow&&P.vis>0){g.fillStyle='rgba(0,0,0,'+(.2*sh*Math.min(1,P.vis*1.5)).toFixed(3)+')';g.beginPath();g.ellipse(0,1,Math.max(1,26*sh*Math.min(1.3,P.sx)),Math.max(1,7.5*sh),0,0,TAU);g.fill();}
+    if(!o.noShadow&&P.vis>0){g.fillStyle='rgba(0,0,0,'+(.16*sh*Math.min(1,P.vis*1.5)).toFixed(3)+')';g.beginPath();g.ellipse(0,1,Math.max(1,25*sh*Math.min(1.3,P.sx)),Math.max(1,6.2*sh),0,0,TAU);g.fill();}
     if(P.vis<=.001){anc.valid=false;g.restore();return;}
     g.rotate(P.roll);g.scale(Math.max(.01,P.sx),Math.max(.01,P.sy));g.translate(0,-P.lift);
     anc.ground=AP(0,0);
     const bodyY=P.bob+P.crouch*KC;
     const W=this.ctx.wear, cape=W.outfit&&window.CC_WEAR&&CC_WEAR.back&&CC_WEAR.back[W.outfit];
-    const upper=()=>{g.translate(0,bodyY);g.translate(0,HIP);g.rotate(P.lean*sa);g.scale(1,1-.1*Math.abs(P.lean*ca));g.translate(0,-HIP);};
+    const upper=()=>{g.translate(0,bodyY);g.translate(0,HIP);g.rotate(P.lean*KL*sa);g.scale(1,1-.1*Math.abs(P.lean*KL*ca));g.translate(0,-HIP);};
     // a cape seen from the front hangs behind everything, legs included
     if(cape&&ca>.2){g.save();upper();this.cape(g,a,P);g.restore();}
-    const legs=[-1,1].map(sd=>({sd,x:sd*8.5*ca,d:-sd*8.5*sa}));
+    const legs=[-1,1].map(sd=>({sd,x:sd*10*ca,d:-sd*10*sa}));
     legs.sort((p,q)=>p.d-q.d);
     for(const L of legs)this.leg(g,L,P,a,bodyY);
     g.save();upper();
     const swap=sa>.15; // facing right, the near arm is the left one: it does the work
     const arms=[-1,1].map(sd=>this.armPts(sd,a,P,(sd>0)!==swap));
-    const parts=[{d:0,i:0,f:()=>this.torso(g,a,P)},{d:-ca*20-1,i:1,f:()=>this.pack(g,a,P)},{d:.2,i:2,f:()=>this.head(g,ah,P)}];
-    if(cape&&ca<=.2)parts.push({d:-ca*22-2,i:1,f:()=>this.cape(g,a,P)});
+    const parts=[{d:.2,i:2,f:()=>this.head(g,ah,P)}];   // the head is all there is: no torso, no pack
+    if(cape&&ca<=.2)parts.push({d:-ca*30-2,i:1,f:()=>this.cape(g,a,P)});
     for(const A of arms)parts.push({d:A.d,i:3,f:()=>this.arm(g,A,P)});
     if(P.carry&&P.carryHand==='both')parts.push({d:Math.max(arms[0].d,arms[1].d)+1,i:4,f:()=>{
-      const x=(arms[0].H.x+arms[1].H.x)/2, y=(arms[0].H.y+arms[1].H.y)/2-6+P.carryY;
-      drawItem(g,P.carry,x,y,P.carryS,t);anc.carry=AP(x,y);}});
+      const x=(arms[0].H.x+arms[1].H.x)/2+sa*15, y=Math.max((arms[0].H.y+arms[1].H.y)/2+3,H_BOT-5.5)+P.carryY;
+      drawItem(g,P.carry,x,y,P.carryS*.85,t);anc.carry=AP(x,y);}});
     parts.sort((p,q)=>p.d-q.d||p.i-q.i);
     for(const p of parts)p.f();
-    anc.chest=AP(0,(T_TOP+T_BOT)/2);anc.packTop=AP(-sa*20,T_TOP+1);
+    /* what used to be on a body is on the head: things are tossed in over its
+       top, and its middle stands in for a chest */
+    anc.chest=AP(0,H_BOT-12);anc.battery=AP(0,H_BOT-9);anc.packTop=AP(-sa*18,H_TOP+4);anc.packC=AP(-sa*18,H_TOP+H_H/2);
     g.restore();g.restore();anc.valid=true;
   }
   cape(g,a,P){
-    const ca=Math.cos(a), sa=Math.sin(a), hw=Math.hypot(19*ca,15*sa);
-    g.save();g.translate(0,(T_TOP+T_BOT)/2);g.scale(2*hw/WEAR_S,(T_BOT-T_TOP)/WEAR_S);
+    const ca=Math.cos(a), sa=Math.sin(a), hw=Math.hypot(31*ca,26*sa);
+    g.save();g.translate(0,H_TOP+H_H/2);g.scale(2*hw/WEAR_S,H_H/WEAR_S);
     CC_WEAR.back(g,this.ctx.wear.outfit,(P.roll+P.lean*sa)*57.3,P.gp||0);
     g.restore();
   }
+  /* No legs: a boot stands under the head, and a step is the boot itself
+     lifting and reaching. The clips still write a stride (fLz), a lift
+     (fLy) and a pitch (fLp) for each foot; here they move the boot. It is
+     drawn before the head, so the head's own edge hides the top of it and
+     a lifted foot tucks up behind. */
+  /* No legs: two short dark stubs stand under the head, each on a sole of
+     lighter lavender, and a step is the stub itself lifting and reaching.
+     The clips still write a stride (fLz), a lift (fLy) and a pitch (fLp)
+     for each foot; here they move the stub. Drawn before the head, so the
+     head hides its top and a lifted foot tucks up behind. */
   leg(g,L,P,a,bodyY){
-    const {pal,AP,small,t}=this.ctx, sd=L.sd, isL=sd<0, ca=Math.cos(a), sa=Math.sin(a);
-    const fz=(isL?P.fLz:P.fRz)*KS, fy=isL?P.fLy:P.fRy, fp=isL?P.fLp:P.fRp;
-    const hy=HIP+bodyY+L.d*.22, ay=ANK-fy+L.d*.22;
-    let dy=ay-hy, dz=fz, d=Math.hypot(dy,dz);
-    const MX=LEG*2-.05;
-    if(d>MX){const k=MX/d;dy*=k;dz*=k;d=MX;}
-    d=Math.max(d,.5);
-    const th=Math.atan2(dz,dy), al=Math.acos(clamp((LEG*LEG+d*d-LEG*LEG)/(2*LEG*d),-1,1));
-    const kz=Math.sin(th+al)*LEG, ky=Math.cos(th+al)*LEG, bend=Math.max(0,MX-d);
-    const pr=(x,y,z)=>({x:L.x+x*ca+z*sa,y:hy+y+(-x*sa+z*ca)*KZ});
-    const H={x:L.x,y:hy}, Kn=pr(sd*(.6+bend*.35),ky,kz), A=pr(sd*1.4,dy,dz);
-    limb(g,[H,Kn,A],6.4,pal.limb,small?null:pal.limbHi);
-    g.fillStyle=pal.limbHi;g.beginPath();g.arc(Kn.x,Kn.y,2.5,0,TAU);g.fill();
+    const {pal,AP,t}=this.ctx, sd=L.sd, isL=sd<0, ca=Math.cos(a), sa=Math.sin(a);
+    const fz=(isL?P.fLz:P.fRz)*KS, fy=(isL?P.fLy:P.fRy)*KF, fp=isL?P.fLp:P.fRp;
+    const A={x:L.x+sd*1.2*ca+fz*sa,y:ANK-fy+L.d*.22+(-sd*1.2*sa+fz*ca)*KZ};
     const fs=Math.abs(sa)>.15?Math.sign(sa):0;
     const shoe=this.ctx.wear.shoes;
     if(shoe&&window.CC_WEAR){
-      /* a shoe is drawn foot-local, origin at the leg end: it rides the same
-         pitch the boot would have, so it never slides */
-      g.save();g.translate(A.x+2*sa,A.y-2);g.rotate(-fp*fs);g.scale(1.1,1.1);
+      /* a shoe is drawn foot-local, origin at the ankle: it rides the same
+         pitch the stub would have, so it never slides */
+      g.save();g.translate(A.x+2*sa,A.y-3);g.rotate(-fp*fs);g.scale(1.1,1.1);
       CC_WEAR.shoe(g,shoe,pal.limb,!!P.moving,t);
       this.anchors[isL?'footL':'footR']=AP(0,8);
       g.restore();
     }else{
-      const len=11.5*Math.abs(ca)+16*Math.abs(sa), bh=8.6*(fs?1:1-.25*Math.abs(fp));
-      g.save();g.translate(A.x,A.y);g.rotate(-fp*fs);
-      const x0=-len/2+2.6*sa, y0=6-bh;
-      const bootPath=()=>{g.beginPath();g.moveTo(x0+4,y0);g.lineTo(x0+len-4.5,y0);g.quadraticCurveTo(x0+len,y0,x0+len,y0+4.6);g.lineTo(x0+len,y0+bh);g.lineTo(x0,y0+bh);g.lineTo(x0,y0+4);g.quadraticCurveTo(x0,y0,x0+4,y0);g.closePath();};
-      bootPath();g.fillStyle=pal.boot;g.fill();
-      g.save();bootPath();g.clip();
-      g.fillStyle=SOLE;g.fillRect(x0-1,y0+bh-2.7,len+2,3);
-      if(!small){g.fillStyle=pal.bootHi;g.globalAlpha*=.7;g.beginPath();g.ellipse(x0+len*(fs?(fs>0?.72:.28):.5),y0+2.6,len*.2,1.6,0,0,TAU);g.fill();}
-      g.restore();
-      this.anchors[isL?'footL':'footR']=AP(x0+len/2,6);
+      const w=11.5*Math.abs(ca)+13*Math.abs(sa), h=9*(fs?1:1-.2*Math.abs(fp));
+      g.save();g.translate(A.x,A.y+5);g.rotate(-fp*fs*.7);
+      rr(g,-w/2,-h,w,h,3.4);g.fillStyle=SOLE;g.fill();
+      rr(g,-w/2,-h,w,h-2.4,3.4);g.fillStyle=NAVY;g.fill();
+      this.anchors[isL?'footL':'footR']=AP(0,0);
       g.restore();
     }
-    this.anchors[isL?'hipL':'hipR']=AP(H.x,H.y);this.anchors[isL?'kneeL':'kneeR']=AP(Kn.x,Kn.y);this.anchors[isL?'ankleL':'ankleR']=AP(A.x,A.y);
+    const hip=AP(L.x,HIP+bodyY), an=AP(A.x,A.y);
+    this.anchors[isL?'hipL':'hipR']=hip;this.anchors[isL?'kneeL':'kneeR']=an;this.anchors[isL?'ankleL':'ankleR']=an;
   }
   armPts(sd,a,P,work){
     const isL=!work, ca=Math.cos(a), sa=Math.sin(a);
     const p=isL?P.lP:P.rP, r=isL?P.lR:P.rR, e=isL?P.lE:P.rE, x2=isL?P.lX:P.rX, w=isL?P.lW:P.rW, gr=isL?P.lG:P.rG;
-    const Sd=-sd*20.5*sa, S={x:sd*20.5*ca-sa*2.5,y:SH_Y+Sd*.08};
+    const Sd=-sd*35*sa, S={x:sd*35*ca-sa*17,y:SH_Y+Sd*.08};   // seen from the side a hand starts behind the eyes: a tool at rest is over the back of the head, not the face
     const u=[sd*Math.sin(r)*ARM1,Math.cos(r)*Math.cos(p)*ARM1,Math.cos(r)*Math.sin(p)*ARM1];
     const r2=r+x2, q=p+e;
     const f=[sd*Math.sin(r2)*ARM2,Math.cos(r2)*Math.cos(q)*ARM2,Math.cos(r2)*Math.sin(q)*ARM2];
@@ -275,142 +304,81 @@ class Bot{
     const T=R([0,Math.cos(qT),Math.sin(qT)]), B=R([0,Math.cos(qT+HP),Math.sin(qT+HP)]);
     return{sd,isL,S,El,H,hz:Sd+U.z+F.z,d:Sd+(U.z+F.z)*.6+.5,T:{x:T.x,y:T.y+T.z*.3},B:{x:B.x,y:B.y+B.z*.3},F:{x:F.x,y:F.y+F.z*.3},gr,fs:Math.abs(sa)>.15?Math.sign(sa):0};
   }
+  /* No arms: a hand is a white mitt on its own, where the end of the arm
+     would be. The pose still says where that is (armPts), so a hand swings
+     with a walk, lifts an axe over the head and brings it down. */
+  /* No arms: a hand is a white mitt with a short dark wrist toward the
+     head, floating where the end of the arm would be. The pose still says
+     where that is (armPts), so a hand swings with a walk, lifts an axe
+     over the head and brings it down. */
   arm(g,A,P){
-    const {pal,AP,small,t}=this.ctx;
+    const {AP,t}=this.ctx;
     const tool=A.isL?null:P.tool;
     if(tool&&tool!=='bucket')drawTool(g,tool,A,P,this);
-    limb(g,[A.S,A.El,A.H],6,pal.limb,small?null:pal.limbHi);
-    g.fillStyle=pal.limbHi;g.beginPath();g.arc(A.El.x,A.El.y,2.4,0,TAU);g.fill();
-    // the shoulder cap is the team colour: it ties the arm to the body
-    g.beginPath();g.arc(A.S.x,A.S.y,5,0,TAU);g.fillStyle=pal.lo;g.fill();
     if(tool==='bucket')drawTool(g,tool,A,P,this);
     if(!A.isL&&P.carry&&P.carryHand==='r')drawItem(g,P.carry,A.H.x+A.F.x*.25,A.H.y+A.F.y*.25+2,P.carryS*.9,t);
-    const hr=5.3*(1+clamp(A.hz,-20,20)*.006);
-    if(!A.isL&&P.point){const fl=Math.hypot(A.F.x,A.F.y)||1;limb(g,[{x:A.H.x,y:A.H.y},{x:A.H.x+A.F.x/fl*8,y:A.H.y+A.F.y/fl*8}],3.2,MITT);}
-    g.beginPath();g.arc(A.H.x,A.H.y,A.gr>.5?hr*.9:hr,0,TAU);g.fillStyle=MITT;g.fill();
-    if(!small){g.save();g.fillStyle=MITT_SH;g.globalAlpha*=.6;g.beginPath();g.arc(A.H.x+1.2,A.H.y+1.4,hr*.55,0,TAU);g.fill();g.restore();}
-    if(A.gr>.5&&!small){g.strokeStyle='rgba(28,22,56,.3)';g.lineWidth=1;g.beginPath();g.moveTo(A.H.x-2.4,A.H.y-.5);g.lineTo(A.H.x+2.4,A.H.y-.5);g.stroke();}
+    const k=(A.gr>.5?.92:1)*(1+clamp(A.hz,-20,20)*.006), w=10.4*k, h=9.2*k, inw=-Math.sign(A.H.x||A.sd);
+    if(!A.isL&&P.point){const fl=Math.hypot(A.F.x,A.F.y)||1;limb(g,[{x:A.H.x,y:A.H.y},{x:A.H.x+A.F.x/fl*9,y:A.H.y+A.F.y/fl*9}],3.4,MITT);}
+    rr(g,A.H.x+inw*(w/2+1.6)-1.6,A.H.y-2.9*k,3.2,5.8*k,1.4);g.fillStyle=NAVY;g.fill();
+    rr(g,A.H.x-w/2,A.H.y-h/2,w,h,2.8*k);g.fillStyle=MITT_LO;g.fill();
+    rr(g,A.H.x-w/2,A.H.y-h/2,w,h*.7,2.8*k);g.fillStyle=MITT;g.fill();
     this.anchors[A.isL?'handL':'handR']=AP(A.H.x,A.H.y);
     this.anchors[A.isL?'shL':'shR']=AP(A.S.x,A.S.y);this.anchors[A.isL?'elL':'elR']=AP(A.El.x,A.El.y);
   }
-  torso(g,a,P){
-    const {pal,small,t}=this.ctx, ca=Math.cos(a), sa=Math.sin(a);
-    const hw=Math.hypot(19*ca,15*sa), top=T_TOP, bot=T_BOT, tw=hw*.9;
-    const path=()=>{g.beginPath();g.moveTo(-tw+8,top);g.lineTo(tw-8,top);g.quadraticCurveTo(tw,top,tw+.4,top+8);g.lineTo(hw,bot-9);g.quadraticCurveTo(hw,bot,hw-9,bot);g.lineTo(-hw+9,bot);g.quadraticCurveTo(-hw,bot,-hw,bot-9);g.lineTo(-tw-.4,top+8);g.quadraticCurveTo(-tw,top,-tw+8,top);g.closePath();};
-    const gr=g.createLinearGradient(0,top,0,bot);gr.addColorStop(0,pal.hi);gr.addColorStop(.45,pal.base);gr.addColorStop(1,pal.lo);
-    path();g.fillStyle=gr;g.fill();
-    g.save();path();g.clip();
-    /* the torso anchor: an outfit is painted inside the body's own clip, on
-       the square it was drawn for, stretched to this torso */
-    const W=this.ctx.wear;
-    if(W.outfit&&window.CC_WEAR){g.save();g.translate(0,(top+bot)/2);g.scale(2*hw/WEAR_S,(bot-top)/WEAR_S);CC_WEAR.outfit(g,W.outfit,pal.base);g.restore();}
-    if(!small){const sg=g.createLinearGradient(-hw,0,hw,0);sg.addColorStop(0,'rgba(255,255,255,.12)');sg.addColorStop(.5,'rgba(255,255,255,0)');sg.addColorStop(1,'rgba(10,0,40,.14)');
-      g.fillStyle=sg;g.fillRect(-hw-2,top,hw*2+4,bot-top);}
-    g.fillStyle=pal.dk;g.fillRect(-hw-2,bot-5,hw*2+4,5.5);
-    g.fillStyle='rgba(255,255,255,.18)';g.fillRect(-hw-2,bot-5,hw*2+4,1.1);
-    // the backpack's straps, on the side that faces us
-    for(const sd of [-1,1]){const ph=a+sd*.78, c=Math.cos(ph);if(c>.05){const x=Math.sin(ph)*hw*.95, w=4.4*Math.max(.35,c);
-      g.fillStyle=pal.limb;rr(g,x-w/2,top-2,w,20,1.6);g.fill();
-      if(!small){g.fillStyle=PACK_DK;rr(g,x-w/2-.6,top+12.5,w+1.2,3.2,1);g.fill();}}}
-    const f=feat(a);
-    if(f.vis>.01)this.belly(g,f,hw,P);
-    if(!small){g.fillStyle='rgba(255,255,255,.3)';rr(g,-tw+7,top+2.2,tw*2-16,3,1.5);g.fill();}
-    g.restore();
-  }
-  belly(g,f,hw,P){
-    const {small,t,AP}=this.ctx;
-    const bw=19*(.62+.38*Math.max(0,f.c)), bh=14.5, bx=f.u*hw*.42, by=T_TOP+13.5;
-    g.save();g.globalAlpha*=f.vis;
-    rr(g,bx-bw/2,by-bh/2,bw,bh,5);g.fillStyle=CREAM;g.fill();
-    // the battery is the robot's energy
-    const W=bw-7.5, Hh=6.6, x0=bx-W/2-1, y0=by-Hh/2;
-    rr(g,x0,y0,W,Hh,2);g.strokeStyle=INK;g.lineWidth=1.2;g.stroke();
-    g.fillStyle=INK;g.fillRect(x0+W,by-1.6,1.8,3.2);
-    let lvl=clamp(P.energy,0,1), col='#3fcf63';
-    if(P.charge){lvl=.25+((t/3600)%1)*.75;}
-    const n=Math.max(1,Math.ceil(lvl*4-.001));
-    if(lvl<.27&&!P.charge){col='#ff5d73';if(Math.floor(t/420)%2)col='rgba(255,93,115,.25)';}
-    else if(lvl<.55&&!P.charge)col='#ffb830';
-    const sw=(W-2.4)/4;
-    g.fillStyle=col;for(let i=0;i<n;i++){rr(g,x0+1.2+i*sw+.35,y0+1.2,sw-.7,Hh-2.4,.7);g.fill();}
-    if(P.charge&&!small){g.fillStyle='#ffd24a';g.beginPath();
-      const cx=bx-1,cy=by;g.moveTo(cx+1,cy-4.6);g.lineTo(cx-2.2,cy+.6);g.lineTo(cx,cy+.6);g.lineTo(cx-1,cy+4.6);g.lineTo(cx+2.4,cy-.8);g.lineTo(cx+.2,cy-.8);g.closePath();g.fill();}
-    g.restore();
-    this.anchors.battery=AP(bx,by);
-  }
-  pack(g,a,P){
-    const {small,t,AP}=this.ctx, ca=Math.cos(a), sa=Math.sin(a);
-    const sc=P.packScale*(1+(P.packB||0)*.07), sq=1-(P.packB||0)*.07;
-    const pw=(28*Math.abs(ca)+11*Math.abs(sa))*sc, ph=24*sc*sq, px=-sa*(18.5+(sc-1)*10), bot=T_BOT-2.5, top=bot-ph;
-    if(P.packFull){ // so full that things poke out of the top
-      g.fillStyle='#b8783e';rr(g,px-pw*.32-4,top-6,9,12,3);g.fill();
-      g.fillStyle='#e9b37a';g.beginPath();g.ellipse(px-pw*.32+.5,top-6,4.5,2,0,0,TAU);g.fill();
-      drawItem(g,'gem',px+pw*.18,top-3,.75,t);
-    }
-    const gr=g.createLinearGradient(0,top,0,bot);gr.addColorStop(0,PACK_HI);gr.addColorStop(1,PACK);
-    rr(g,px-pw/2,top,pw,ph,7);g.fillStyle=gr;g.fill();
-    g.save();rr(g,px-pw/2,top,pw,ph,7);g.clip();
-    g.fillStyle='rgba(0,0,0,.1)';g.fillRect(px-pw/2,bot-4,pw,4);
-    const back=-ca;
-    if(back>.05){
-      g.globalAlpha*=sm(.05,.45,back);
-      g.fillStyle=PACK_DK;rr(g,px-pw/2,top-2,pw,ph*.38+2,7);g.fill();
-      // the window shows how full the bag is
-      const ww=Math.max(4,pw*.42), wh=ph*.34, wx=px-ww/2, wy=top+ph*.5;
-      rr(g,wx,wy,ww,wh,3);g.fillStyle='rgba(20,16,50,.75)';g.fill();
-      const lvl=clamp(P.packFill,0,1), cols=['#7cf1ff','#b8783e','#9aa3b8','#ffd34a'];
-      const nItems=Math.round(lvl*6);
-      for(let i=0;i<nItems;i++){g.fillStyle=cols[i%4];const cx=wx+3+(i%3)*(ww-6)/2, cy=wy+wh-3-Math.floor(i/3)*3.4;g.beginPath();g.arc(cx,cy,1.6,0,TAU);g.fill();}
-      if(!small){g.fillStyle=this.ctx.pal.limb;rr(g,px-2.2,top+ph*.36,4.4,4,1.2);g.fill();}
-    }
-    g.restore();
-    this.anchors.packC=AP(px,top+ph/2);
-  }
   head(g,ah,P){
-    const {pal,small,t,AP}=this.ctx, ca=Math.cos(ah), sa=Math.sin(ah);
-    const hw=Math.hypot(29*ca,24*sa)+2*Math.abs(Math.sin(2*ah)), top=H_TOP, H=H_H, rad=15;
+    const {pal,AP}=this.ctx, ca=Math.cos(ah), sa=Math.sin(ah);
+    const hw=Math.hypot(32*ca,27*sa)+2*Math.abs(Math.sin(2*ah)), top=H_TOP, H=H_H, rad=12;
     g.save();
     g.translate(0,this.hlag+P.headY);
     g.translate(0,H_BOT-1);g.rotate(P.headTilt);g.translate(0,-(H_BOT-1));
-    g.fillStyle=pal.limb;rr(g,-7.5,H_BOT-5,15,9,3);g.fill();
-    const ears=[-1,1].map(sd=>{const ph=ah+sd*HP, c=Math.cos(ph);return{sd,c,x:Math.sin(ph)*(hw+1.5*(1-Math.max(0,c)))-sa*hw*.42*Math.max(0,c)};});
-    const ear=e=>{const rx=2.6+4.6*Math.max(0,e.c), ey=top+23+P.headNod*1.5;
-      g.beginPath();g.ellipse(e.x,ey,rx,8.6,0,0,TAU);g.fillStyle=pal.limb;g.fill();
-      if(e.c>.15){g.beginPath();g.ellipse(e.x,ey,rx*.55,5,0,0,TAU);g.fillStyle=pal.hi;g.fill();
-        if(!small){g.fillStyle='rgba(255,255,255,.7)';g.beginPath();g.arc(e.x-rx*.15,ey-2,1.1,0,TAU);g.fill();}
-        this.anchors.ear=AP(e.x,ey);}};
+    /* the ears: a dark disc with a light middle, half behind the head's
+       edge, on whichever sides of it can be seen */
+    /* the one turned toward us sits on the back half of the side, behind
+       the screen, the way the original robot's did */
+    const ears=[-1,1].map(sd=>{const ph=ah+sd*HP, c=Math.cos(ph);
+      return{sd,c,x:Math.sin(ph)*(hw+1.6*(1-Math.max(0,c)))-sa*hw*.46*Math.max(0,c)};});
+    const ear=e=>{const ey=top+H*.52+P.headNod*1.5, out=e.c>.15?0:Math.sign(e.x)*.5;
+      g.beginPath();g.arc(e.x,ey,5.4,0,TAU);g.fillStyle=NAVY;g.fill();
+      g.beginPath();g.arc(e.x+out,ey,3,0,TAU);g.fillStyle=pal.earIn;g.fill();
+      if(e.c>.15)this.anchors.ear=AP(e.x,ey);};
     ears.filter(e=>e.c<=.15).forEach(ear);
+    /* The shell: the team colour, its far side and its underside in the
+       darker tone, one light along the top. The darker side stays on the
+       right whichever way it turns: it is where the light is not. */
     const shell=()=>rr(g,-hw,top,hw*2,H,rad);
-    const gr=g.createLinearGradient(0,top,0,top+H);gr.addColorStop(0,pal.hi);gr.addColorStop(.5,pal.base);gr.addColorStop(1,pal.lo);
-    shell();g.fillStyle=gr;g.fill();
+    shell();g.fillStyle=pal.shade;g.fill();
+    rr(g,-hw,top,hw*2-SIDE,H-SIDE,rad);g.fillStyle=pal.face;g.fill();
     g.save();shell();g.clip();
-    if(!small){const sg=g.createLinearGradient(-hw,0,hw,0);sg.addColorStop(0,'rgba(255,255,255,.14)');sg.addColorStop(.5,'rgba(255,255,255,0)');sg.addColorStop(1,'rgba(10,0,40,.16)');
-      g.fillStyle=sg;g.fillRect(-hw,top,hw*2,H);
-      g.fillStyle='rgba(255,255,255,.4)';rr(g,-hw+7,top+3,hw*2-18,4.2,2.1);g.fill();}
-    g.fillStyle='rgba(10,0,40,.14)';g.fillRect(-hw,top+H-5,hw*2,5);
+    g.fillStyle=pal.hi;rr(g,-hw+9,top+4.5,Math.min(13,hw*.42),3,1.5);g.fill();
+    /* an outfit is worn on the shell, under the screen */
+    const Wr=this.ctx.wear;
+    if(Wr.outfit&&window.CC_WEAR){g.save();g.translate(0,top+H/2);g.scale(2*hw/WEAR_S,H/WEAR_S);CC_WEAR.outfit(g,Wr.outfit,pal.base);g.restore();}
     const fb=feat(ah+PI);fb.vis=sm(.15,.55,fb.c);
-    if(fb.vis>.01){ // the back of the head: vents and the </> mark
-      g.save();g.globalAlpha*=fb.vis;const bx=fb.u*hw*.4, k=.6+.4*Math.max(0,fb.c);
-      g.strokeStyle='rgba(28,22,56,.4)';g.lineWidth=2.4;g.lineCap='round';
-      for(let i=0;i<3;i++){g.beginPath();g.moveTo(bx-9*k,top+11+i*5);g.lineTo(bx+9*k,top+11+i*5);g.stroke();}
-      g.strokeStyle='rgba(255,255,255,.55)';g.lineWidth=2;g.lineJoin='round';const my=top+32;
-      g.beginPath();g.moveTo(bx-5*k,my-3.5);g.lineTo(bx-9*k,my);g.lineTo(bx-5*k,my+3.5);g.moveTo(bx+5*k,my-3.5);g.lineTo(bx+9*k,my);g.lineTo(bx+5*k,my+3.5);
-      g.moveTo(bx+1.6*k,my-4.2);g.lineTo(bx-1.6*k,my+4.2);g.stroke();g.restore();
+    if(fb.vis>.01){ // the back of the head: two vents and the </> mark
+      g.save();g.globalAlpha*=fb.vis;const bx=fb.u*hw*.4, k=.6+.4*Math.max(0,fb.c), my=top+H*.58;
+      g.strokeStyle=pal.shade;g.lineWidth=2.6;g.lineCap='round';g.lineJoin='round';
+      for(let i=0;i<2;i++){g.beginPath();g.moveTo(bx-10*k,top+11+i*5);g.lineTo(bx+10*k,top+11+i*5);g.stroke();}
+      g.lineWidth=3.2;g.beginPath();g.moveTo(bx-8*k,my-5.5);g.lineTo(bx-14*k,my);g.lineTo(bx-8*k,my+5.5);g.moveTo(bx+8*k,my-5.5);g.lineTo(bx+14*k,my);g.lineTo(bx+8*k,my+5.5);
+      g.moveTo(bx+2.4*k,my-6.5);g.lineTo(bx-2.4*k,my+6.5);g.stroke();g.restore();
     }
     const f=feat(ah);
     if(f.vis>.01)this.screen(g,f,hw,P);
     g.restore();
     ears.filter(e=>e.c>.15).forEach(ear);
+    /* A full bag rides on the head, behind the light: there is no back to
+       hang a pack on. The clips swell it (packScale) and bounce it (packB). */
+    if(P.packFull){const sc=P.packScale*(1+(P.packB||0)*.07);
+      drawItem(g,'sack',-12*ca-13*sa,top-6.5*sc+1,sc*.95,this.ctx.t);}
     this.antenna(g,ah,P);
     this.anchors.headC=AP(0,top+H/2);this.anchors.hat=AP(0,top);
     /* the head anchor. A hat is drawn here, after the antenna and inside
        the head's own transform, so it rides every nod, tilt, lag, lean and
        squash the head does — and sits over the antenna, as it always has.
        Hats were made on a body square of WEAR_S; that square's top edge is
-       put on the top of this head. */
+       put on the top of this head, as wide as the head is. */
     const W=this.ctx.wear;
     if(W.hat){
-      const k=58/WEAR_S;
+      const k=64/WEAR_S;
       g.save();g.translate(0,top+WEAR_S/2*k);g.scale(k,k);
       if(!(window.CC_WEAR&&CC_WEAR.hat(g,W.hat))&&typeof sprite==='function'){
         const hp=sprite(W.hat,24);
@@ -420,41 +388,50 @@ class Bot{
     }
     g.restore();
   }
+  /* The screen: the original robot's face, dark glass in a rim of the
+     shell's darker tone, a sheen across its left side, and the face drawn
+     on it the way it always was (drawFace, every expression). */
   screen(g,f,hw,P){
     const {t,small,AP,pal}=this.ctx;
-    const sw=40*(.6+.4*Math.max(0,f.c)), sh=29, sx=f.u*hw*.4, sy=H_TOP+21.5+P.headNod*3.2;
+    const sw=46*(.6+.4*Math.max(0,f.c)), sh=30, sx=f.u*hw*.4-SIDE/2, sy=H_TOP+26+P.headNod*3;
     g.save();g.globalAlpha*=f.vis;
-    if(!small){g.save();g.globalAlpha*=.55;rr(g,sx-sw/2-2.4,sy-sh/2-2.4,sw+4.8,sh+4.8,11.5);g.fillStyle=pal.dk;g.fill();g.restore();}
-    const sg=g.createLinearGradient(0,sy-sh/2,0,sy+sh/2);sg.addColorStop(0,SCR_A);sg.addColorStop(1,SCR_B);
-    rr(g,sx-sw/2,sy-sh/2,sw,sh,9);g.fillStyle=sg;g.fill();
-    g.save();rr(g,sx-sw/2,sy-sh/2,sw,sh,9);g.clip();
+    rr(g,sx-sw/2-2.2,sy-sh/2-2.2,sw+4.4,sh+4.4,10);g.fillStyle=pal.shade;g.fill();
+    rr(g,sx-sw/2,sy-sh/2,sw,sh,8);g.fillStyle=SCREEN;g.fill();
+    g.save();rr(g,sx-sw/2,sy-sh/2,sw,sh,8);g.clip();
+    g.fillStyle=SCREEN_HI;g.beginPath();g.moveTo(sx-sw/2,sy-sh/2);g.lineTo(sx-sw/2+sw*.34,sy-sh/2);g.lineTo(sx-sw/2+sw*.12,sy+sh/2);g.lineTo(sx-sw/2,sy+sh/2);g.closePath();g.fill();
     drawFace(g,this,P,sx,sy,sw,sh,f);
-    if(!small){g.fillStyle='rgba(255,255,255,.07)';g.beginPath();g.moveTo(sx-sw/2,sy-sh/2);g.lineTo(sx-sw/2+sw*.5,sy-sh/2);g.lineTo(sx-sw/2+sw*.2,sy+sh/2);g.lineTo(sx-sw/2,sy+sh/2);g.closePath();g.fill();}
     g.restore();
     g.restore();
     this.anchors.screen=AP(sx,sy);
   }
   antenna(g,ah,P){
-    const {small,t,AP,pal}=this.ctx;
+    const {t,AP}=this.ctx;
     const bx=-Math.sin(ah)*3, by=H_TOP+P.headNod*1.2, o=this.ant, tx=bx+o.x, ty=by+o.y;
-    g.lineCap='round';
-    g.beginPath();g.moveTo(bx,by);g.quadraticCurveTo(bx,by-8,tx,ty+4.5);g.strokeStyle=pal.limb;g.lineWidth=2.8;g.stroke();
-    g.beginPath();g.ellipse(bx,by,5,2.3,0,0,TAU);g.fillStyle=pal.limb;g.fill();
-    // the bulb is the program's state
-    const st=P.bulb||'idle', col=bulbCol(st,t);
-    const gl=Math.max(P.glow,{run:.55,think:.45+.3*Math.sin(t/260),error:.8,party:.9,idle:.22,sleep:.15+.15*Math.sin(t/900),off:0}[st]||0);
-    if(!small&&gl>0){const rg=g.createRadialGradient(tx,ty,2,tx,ty,15);rg.addColorStop(0,colA(col,.55*gl));rg.addColorStop(1,colA(col,0));g.fillStyle=rg;g.beginPath();g.arc(tx,ty,15,0,TAU);g.fill();}
-    if(small){g.fillStyle=col;}
-    else{const bg=g.createRadialGradient(tx-1.8,ty-2,.5,tx,ty,6);bg.addColorStop(0,'#ffffff');bg.addColorStop(.35,col);bg.addColorStop(1,shadeAny(col,-.25));g.fillStyle=bg;}
-    g.beginPath();g.arc(tx,ty,5.6,0,TAU);g.fill();
+    // a dark cap on the head, a stalk, and the light on it
+    g.beginPath();g.ellipse(bx,by,7*(.5+.5*Math.abs(Math.cos(ah))),2.7,0,0,TAU);g.fillStyle=NAVY;g.fill();
+    g.lineCap='round';g.beginPath();g.moveTo(bx,by);g.quadraticCurveTo(bx,by-6,tx,ty+3.5);g.strokeStyle=STALK;g.lineWidth=3;g.stroke();
+    // the light is the program's state
+    const col=bulbCol(P.bulb||'idle',t);
+    g.beginPath();g.arc(tx,ty,10,0,TAU);g.fillStyle=colA(col,.3);g.fill();
+    g.beginPath();g.arc(tx,ty,5.2,0,TAU);g.fillStyle=col;g.fill();
+    g.beginPath();g.arc(tx-.9,ty-1,3.6,0,TAU);g.fillStyle='rgba(255,255,255,.32)';g.fill();
+    g.beginPath();g.arc(tx-1.9,ty-2.2,1.3,0,TAU);g.fillStyle='rgba(255,255,255,.9)';g.fill();
     this.anchors.bulb=AP(tx,ty);
   }
 }
-function bulbCol(st,t){switch(st){case'run':return'#5ee07a';case'think':return'#5ab8ff';case'error':return(Math.floor(t/170)%2)?'#ff5d73':'#c23a55';
-  case'sleep':return'#8b80c4';case'off':return'#5c5684';case'party':return'hsl('+Math.round((t/4)%360)+',92%,62%)';default:return'#ffd24a';}}
+
+/* Mint is the icon's light, and a robot's when it has nothing to say. Running
+   a program it breathes between that and a paler mint — no glow, a flat light
+   that changes — so "is it working?" can be read off the map. */
+function bulbCol(st,t){switch(st){
+  case'run':{const k=.5+.5*Math.sin(t/190);return'rgb('+Math.round(103+k*105)+','+Math.round(231+k*22)+','+Math.round(177+k*58)+')';}
+  case'think':return'#5ab8ff';case'error':return(Math.floor(t/170)%2)?'#ff5d73':'#c23a55';
+  case'sleep':return'#a79fd6';case'off':return'#8d86b8';case'party':return'hsl('+Math.round((t/4)%360)+',92%,66%)';default:return'#67e7b1';}}
 function colA(c,a){if(c[0]==='#'){const r=hexRgb(c);return'rgba('+r.join(',')+','+a.toFixed(3)+')';}if(c.indexOf('hsl(')===0)return c.replace('hsl(','hsla(').replace(')',','+a.toFixed(3)+')');return c;}
 function shadeAny(c,a){return c[0]==='#'?shade(c,a):c;}
 
+/* The face: the original robot's, unchanged — two eye shapes and a mouth
+   per expression (EXP), light blue on the dark screen. */
 function drawFace(g,bot,P,sx,sy,sw,sh,f){
   const {t,small}=bot.ctx;
   const ex=EXP[bot.expr]||EXP.neutral;
@@ -486,6 +463,12 @@ function drawFace(g,bot,P,sx,sy,sw,sh,f){
 function drawEye(g,mode,x,y,w,h,ex,sd,col,glow,open,t,useGlow){
   g.fillStyle=col;g.strokeStyle=col;g.lineCap='round';g.lineJoin='round';
   if(useGlow){g.shadowColor=glow;g.shadowBlur=7;}
+  /* the plain eye sits in a darker ring and carries one glint, as on the
+     character sheet; every other expression is drawn as it always was */
+  if(mode==='cap'&&!ex.col&&ex.tint!=='red'&&h*open>=3.2){
+    const hh=Math.max(1.6,h*open), rw=w+3.4, rh=hh+3.4;
+    g.save();g.shadowBlur=0;rr(g,x-rw/2,y-rh/2,rw,rh,Math.min(rw,rh)/2);g.fillStyle=EYE_RING;g.fill();g.restore();
+  }
   switch(mode){
     case'cap':{
       const hh=Math.max(1.6,h*open);
@@ -496,6 +479,7 @@ function drawEye(g,mode,x,y,w,h,ex,sd,col,glow,open,t,useGlow){
         const yIn=top+hh*(lid+tilt*.5), yOut=top+hh*(lid-tilt*.5), xi=x+inner*(w/2+2), xo=x-inner*(w/2+2);
         g.beginPath();g.moveTo(xi,yIn);g.lineTo(xo,yOut);g.lineTo(xo,y+hh);g.lineTo(xi,y+hh);g.closePath();g.clip();}
       rr(g,x-w/2,y-hh/2,w,hh,Math.min(w,hh)/2);g.fill();
+      if(!ex.col&&ex.tint!=='red'&&hh>5){g.shadowBlur=0;g.fillStyle='#ffffff';g.beginPath();g.arc(x-w*.18,y-hh*.24,Math.min(w,hh)*.16,0,TAU);g.fill();}
       g.restore();break;}
     case'arc':g.lineWidth=3;g.beginPath();g.moveTo(x-w/2,y+h*.22);g.quadraticCurveTo(x,y-h*.62,x+w/2,y+h*.22);g.stroke();break;
     case'round':{const r=w/2*Math.max(.2,open);g.beginPath();g.arc(x,y,r,0,TAU);g.fill();g.shadowBlur=0;g.fillStyle='rgba(16,18,48,.85)';g.beginPath();g.arc(x,y+.4,r*.42,0,TAU);g.fill();
@@ -875,7 +859,11 @@ function boardPose(kind,t){
    3D). Its feet are FOOT of a tile below the tile's centre, where the
    trees and rocks stand on theirs: on the tile's bottom edge it read as
    standing on the line between two. UNIT is one rig unit, in tiles. */
-const FOOT=.28, UNIT=.72/82.5;
+const FOOT=.28, UNIT=1/82.5;
+/* how tall it stands, in rig units, for whatever a host puts over or on it
+   (a name, a carried block, the tap that picks it): just above the light,
+   the same under a hat, and where its hands hold a thing up from */
+const TALL=80, TALL_HAT=94, HOLD=22;
 /* how far a bump carries the robot toward what it hit, in tiles */
 function nudge(t){return t<.2?.16*E.i2(t/.2):.16*(1-E.o3(clamp((t-.2)/.3,0,1)));}
 /* how far a teeter leans it out over the water, in tiles */
@@ -900,7 +888,7 @@ function stars(g,x,y,s,t,a){
 
 const bots=new WeakMap();
 window.CC_RIG={
-  Bot, P0, mix:mixPose, anim:A, pose, events, drawItem, drawStill, boardPose, nudge, teeter, stars, FOOT, UNIT, EXP, DIRYAW,
+  Bot, P0, mix:mixPose, anim:A, pose, events, drawItem, drawStill, boardPose, nudge, teeter, stars, FOOT, UNIT, TALL, TALL_HAT, HOLD, EXP, DIRYAW,
   /* one Bot per game robot, held beside it rather than on it, so it never
      reaches a save */
   botFor(r){let b=bots.get(r);if(!b){b=new Bot(r.color||'#ffb830',r.dir==null?2:r.dir);bots.set(r,b);}return b;}
