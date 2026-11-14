@@ -159,18 +159,11 @@ function openSheets(){ return document.querySelectorAll(".sheet.open").length; }
    Both are CLICKED rather than reimplemented, for exactly the reason the
    ✕ is: the gesture does what the control does, so the two can never
    drift apart. */
-/* A tab's page has one size — the phone (tabbar.css) — so it is always
-   "full": a pull up has nothing to grow into, and a pull down has no half
-   rung to stop on, only the way out. It must never press the shared size
-   control either, which is the LEVELS' size: dragging a page would quietly
-   change how the next level opens. */
-const PAGE=new Set(["hub","projects","settings","style","quests","orders","funcLib","guide","shop"]);
 function sizeCtl(el){
   if(el.id==="maker")return el.querySelector(".m-head .iconbtn.size");
   return $("edMax");
 }
 function isFull(el){
-  if(PAGE.has(el.id))return true;
   if(el.id==="maker")return el.classList.contains("wide");
   const ed=$("editor");
   return !!ed&&ed.classList.contains("max");
@@ -190,7 +183,7 @@ function mirrorSize(){
    rung — the sheet is already small, or it is the maker, whose size
    control moves its canvas rather than its top edge. */
 function halfHeight(el){
-  if(el.id==="maker"||PAGE.has(el.id)||!isFull(el)||!sizeCtl(el))return 0;
+  if(el.id==="maker"||!isFull(el)||!sizeCtl(el))return 0;
   const ed=$("editor"), h=el.offsetHeight;
   el.classList.add("sheet-resize"); ed.classList.add("sheet-resize");
   ed.classList.remove("max"); mirrorSize();

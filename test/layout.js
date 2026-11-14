@@ -286,30 +286,28 @@ const ck=(n,ok,d)=>{ok?pass++:fail++; console.log((ok?'  ✅ ':'  ❌ ')+n+(ok?'
       const full=await measure();
       $('edMax').click(); await new Promise(r=>setTimeout(r,400));
       const half=await measure();
-      /* a page is a screen: it shows no size control, and a drag on it
-         never touches the size the levels share */
+      /* the control has to work from a page that is not the editor */
       $('editor').classList.remove('open'); hubOpen();
       await new Promise(r=>setTimeout(r,300));
-      const pages=ids.filter(id=>id!=='mentor');
-      const shown=e=>!!e&&getComputedStyle(e).display!=='none';
-      const sizeOn=pages.filter(id=>shown($(id).querySelector('.m-head .iconbtn.size')));
-      const mentorSize=!!$('mentor').querySelector('.m-head .iconbtn.size');
-      const keptHalf=!$('editor').classList.contains('max');
+      /* guarded so a missing control fails this check instead of throwing
+         and taking the rest of the suite with it */
+      const sz=$('hubSize'); if(sz)sz.click();
+      await new Promise(r=>setTimeout(r,400));
+      const fromMenu={present:!!sz,
+                      hub:Math.round($('hub').getBoundingClientRect().height/innerHeight*100),
+                      editorMax:$('editor').classList.contains('max')};
       hubClose();
-      if(!$('editor').classList.contains('max'))$('edMax').click();
-      return {full,half,pages,sizeOn,mentorSize,keptHalf};
+      const missing=ids.filter(id=>!$(id).querySelector('.m-head .iconbtn.size'));
+      return {full,half,fromMenu,missing};
     });
     const same=o=>Object.values(o).every(v=>v===Object.values(o)[0]);
-    const pick=(o,ks)=>Object.fromEntries(ks.map(k=>[k,o[k]]));
-    const F=sizes.full.editor, Hh=sizes.half.editor;
-    ck(`${W}x${H} every page is a screen, whatever size a level was left at`,
-       same(pick(sizes.full,sizes.pages)) && same(pick(sizes.half,sizes.pages)) &&
-       sizes.full[sizes.pages[0]]===F && sizes.half[sizes.pages[0]]===F, sizes);
-    ck(`${W}x${H} the levels' sheets still share one size, and it still shrinks`,
-       sizes.full.mentor===F && sizes.half.mentor===Hh && F>Hh, sizes);
-    ck(`${W}x${H} a page shows no size control; a level's sheet does, and a page leaves it alone`,
-       sizes.sizeOn.length===0 && sizes.mentorSize && sizes.keptHalf,
-       {sizeOn:sizes.sizeOn,mentorSize:sizes.mentorSize,keptHalf:sizes.keptHalf});
+    ck(`${W}x${H} every page is the size the code page is`,
+       same(sizes.full) && same(sizes.half) &&
+       Object.values(sizes.full)[0]>Object.values(sizes.half)[0], sizes);
+    ck(`${W}x${H} every page carries the shrink control, and it works from any of them`,
+       sizes.missing.length===0 && sizes.fromMenu.present &&
+       sizes.fromMenu.hub>80 && sizes.fromMenu.editorMax,
+       {missing:sizes.missing,fromMenu:sizes.fromMenu});
     /* the creator check below measures inside an open editor, which is the
        state this block found and has to hand back */
     await pg.evaluate(()=>{ $('editor').classList.add('open'); });

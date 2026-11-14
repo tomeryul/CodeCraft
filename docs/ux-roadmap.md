@@ -183,16 +183,12 @@ run). The numbers were already healthy — 60fps in every state, layout shift
 **0.059**, **1** notification and it answers the player's own tap — so what
 it found was the experience itself:
 
-- **Pages were half a phone.** Every page under Play, Create and Me opened
-  at the half size (520 of 844px): under its header and above the tab bar
-  that left ~350px — two cards of a list, half of Me — and the top 40% of
-  the screen went to a world nobody could touch while reading. A page is a
-  screen (skill §1): it now takes the phone under the top bar whatever size
-  a level was left at (`tabbar.css`), has no size button, and a pull down
-  closes it (`sheet-drag.js`, `PAGE` — a drag on a page never presses the
-  shared size control, which is the levels'). Levels keep their half/full
-  sheet (topic 3). The first try tied it to the tab bar being up, and a
-  page fading out above a level shrank on the way out: a **0.97** shift.
+- **Pages were half a phone.** Every page under Play, Create and Me opens
+  at the shared size, and at half that leaves ~350px of list under the
+  world. v224 made every page a full screen with no size button. **Owner
+  decision (v225): keep the half screen.** The size button is back on every
+  page, and pages follow the one size the levels share, as before — do not
+  take the half size away from pages again.
 - **The Academy counted four ways.** "Six short lessons" printed beside
   "0/9" — the journey's own step count, read by a child as nine lessons —
   then "0/10 done", "basics 0/6" and "Lesson 1 of 10". The journey's pill
@@ -208,4 +204,5 @@ it found was the experience itself:
   longer has. The splash robot is drawn by the rig and waves, only while
   the splash is up and uncovered; the 🤖 icon is the new Robo.
 
-After: 60fps in every state, layout shift **0.045**, 1 notification.
+After (v224): 60fps in every state, layout shift **0.045**, 1 notification.
+The other three findings stay as shipped in v224.
