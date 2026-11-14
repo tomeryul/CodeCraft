@@ -130,6 +130,31 @@ function renderSplashAuth(){
 });
 $("playBtn").addEventListener("click",()=>enterGame(true));
 
+/* The splash's robot is the game's own, drawn by the rig and waving hello.
+   The CSS mascot it replaces was the old robot, so the first thing a
+   player saw was a robot they would never meet. It is drawn only while
+   the splash is up and nothing covers it (the age gate sits on top of it
+   at first), and it stops for good once the splash is hidden — the splash
+   has paid for animating after it was gone before (test/perf.js). */
+(function splashBot(){
+  const cv=$("splashBot"); if(!cv||!window.CC_RIG)return;
+  const W=180, H=160, d=Math.min(2,window.devicePixelRatio||1);
+  cv.width=W*d; cv.height=H*d;
+  const g=cv.getContext("2d"), t0=performance.now();
+  const frame=now=>{
+    const sp=$("splash"); if(!sp||sp.classList.contains("hide"))return;
+    const ag=$("agegate");
+    if(!(ag&&ag.offsetParent)){
+      /* a wave, then a breath, over and over */
+      const t=now-t0, cyc=t%3600, P=cyc<1600?CC_RIG.pose("wave",cyc/1600,t,{fs:0}):CC_RIG.pose("idle",0,t,{fs:0});
+      g.setTransform(d,0,0,d,0,0);g.clearRect(0,0,W,H);
+      CC_RIG.drawStill(g,W/2,H-14,1.5,.25,"#ffb830",P,{t});
+    }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+})();
+
 /* Registering and walking away was not enough to get an update onto a phone.
    Two things kept an old build alive there: the browser serves sw.js itself
    from its own HTTP cache (for up to a day) unless told not to, and a page

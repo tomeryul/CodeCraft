@@ -69,9 +69,33 @@ body.tb-off #tabbar{transform:translateX(-50%) translateY(calc(100% + var(--tb-b
    The sheet still reaches the bottom edge, so it rises and sinks exactly as
    before and two pages are still the same frame for a swap; only its
    content stops short, and the bar sits on the sheet's own colour. */
-body.tb-on #hub,body.tb-on #projects,body.tb-on #settings,body.tb-on #style,
-body.tb-on #quests,body.tb-on #orders,body.tb-on #funcLib,body.tb-on #guide,
-body.tb-on #shop{padding-bottom:var(--tb-space);}
+/* Always, not only while the bar is up: Back from a level opens the page
+   while the bar is still stepped aside, and a list measured without the
+   padding then is 80px taller — its scroll restored against the wrong
+   height (clamped) and its content shifting when the bar came back. */
+#hub,#projects,#settings,#style,#quests,#orders,#funcLib,#guide,
+#shop{padding-bottom:var(--tb-space);}
+
+/* ---- a tab's pages are screens ----
+   Every page under Play, Create and Me is something you read — a list, the
+   shop, your robot — so it takes the phone, under the top bar, whatever
+   size a level was last left at. At half height it handed the top 40% of
+   the screen to a world nobody could touch while reading, and a list
+   showed two of its cards. A page has one size, so it has no size button,
+   and a pull down closes it (sheet-drag.js, PAGE). A level is not a page:
+   it keeps its half / full sheet (docs/ux-roadmap.md, topic 3). */
+/* :is() over both states of the shared size so it outranks codecraft-v5's
+   two lists whatever the level size is — and NOT tied to the tab bar being
+   up: a level hides the bar, and the page fading out above it must not
+   shrink on the way out (that was a 0.97 layout shift) */
+:is(body.sheets-full,body:not(.sheets-full)) :is(#hub,#projects,#settings,#style,#quests,#orders,#funcLib,#guide).sized,
+:is(body.sheets-full,body:not(.sheets-full)) #shop{height:var(--sheet-full);max-height:var(--sheet-full);}
+#hub .iconbtn.size,#projects .iconbtn.size,#settings .iconbtn.size,#style .iconbtn.size,
+#quests .iconbtn.size,#orders .iconbtn.size,#funcLib .iconbtn.size,#guide .iconbtn.size,
+#shop .iconbtn.size{display:none;}
+
+/* the journey's pill when the step has no count of its own: the way in */
+.j-go.j-arrow{font-size:var(--fs-md);line-height:1;padding-left:9px;padding-right:9px;}
 
 /* the header's face carries the tab's own glyph */
 #hub .m-head .face svg{width:26px;height:26px;color:#3a2800;display:block;}

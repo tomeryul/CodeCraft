@@ -164,7 +164,7 @@ function hubClose(){
    each walked again by the icon and language observers — was most of it. */
 function hubSig(){
   const s=typeof journeyStep==="function"?journeyStep():null;
-  const parts=[hubTab,s&&hubTab==="play"?s.title+"|"+s.hint+"|"+journeyProgress():"",
+  const parts=[hubTab,s&&hubTab==="play"?s.title+"|"+s.hint+"|"+journeyProgress()+"|"+journeyBadge(s):"",
     (typeof lang!=="undefined"?lang:"")];
   if(hubTab==="me")parts.push(meSig());
   for(const g of GROUPS){ if(g.tab!==hubTab)continue; for(const t of g.tiles){
@@ -189,7 +189,7 @@ function hubRender(){
       w.innerHTML='<div class="hub-nlab">Next up</div>'+
         '<button class="j-btn" type="button"><span class="j-em">'+s.em+'</span>'+
         '<span class="j-tx"><b>'+esc(s.title)+'</b><small>'+esc(s.hint)+'</small></span>'+
-        '<span class="j-go">'+journeyProgress()+'/'+JOURNEY.length+'</span></button>';
+        journeyBadge(s)+'</button>';
       w.querySelector(".j-btn").addEventListener("click",()=>{
         hubClose();try{s.go();}catch(_){}});
       el.appendChild(w);

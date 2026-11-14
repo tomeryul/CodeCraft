@@ -514,6 +514,9 @@ body.sheets-full #maker.sized,
 /* 40, the height of every other control row: at 36 the tabs and undo/redo
    were the smallest targets on the sheet, and undo touched redo */
 #blocksTab .v5-edrow #routineTabs .rtab{flex:0 0 auto;min-height:40px;}
+/* no functions in reach (editor.js, renderRoutineTabs): the row is not there */
+#blocksTab .v5-edrow #routineTabs[hidden],#routineTabs[hidden]{display:none;}
+#blocksTab .v5-edrow #routineTabs[hidden] ~ .ed-btns{margin-inline-start:auto;}
 #blocksTab .v5-edrow .ed-btns{
   display:flex;flex:0 0 auto;gap:4px;padding:3px;
   border-radius:var(--r-ctl);background:rgba(0,0,0,.24);border:1px solid var(--hair);}

@@ -41,6 +41,13 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
      the editor's size is mirrored onto <body> and changes how tall the
      other sheets are, and a phase that left the hub open would otherwise
      hand the next one a different screen. */
+  /* A tab's pages are screens with no half size, so anything about the
+     shared size is asked of the mentor, which still has both. */
+  const openMentor = async () => {
+    await pg.evaluate(() => { navHome(); }); await wait(350);
+    await pg.evaluate(() => $('mentorBtn').click()); await wait(550);
+    return grip('mentor');
+  };
   const openHub = async () => {
     await pg.evaluate(() => { navHome(); }); await wait(350);
     await pg.evaluate(() => hubOpen()); await wait(550);
@@ -199,43 +206,55 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   console.log('▶ the other way up the same ladder');
   /* Down makes the window smaller and then sends it away. Up has to make
      it bigger, by the same hand movement, or the gesture is lopsided. */
-  const size = () => pg.evaluate(() => ({
+  const size = (id = 'mentor') => pg.evaluate(i => ({
     max: $('editor').classList.contains('max'),
     full: document.body.classList.contains('sheets-full'),
-    hub: $('hub').classList.contains('open') ? Math.round($('hub').offsetHeight) : null
-  }));
+    h: $(i).classList.contains('open') ? Math.round($(i).offsetHeight) : null
+  }), id);
   const shrink = async () => {
     await pg.evaluate(() => { if ($('editor').classList.contains('max')) $('edMax').click(); });
     await wait(600);
   };
 
   await shrink();
-  r = await openHub();
+  r = await openMentor();
   const small = await size();
-  await drag('hub', 8, -15, 16);                 // 120px UP at about 940px/s
+  await drag('mentor', 8, -15, 16);              // 120px UP at about 940px/s
   await wait(1100);
   const grown = await size();
   ck('pulling a sheet up makes the window bigger',
-    small.max === false && grown.max === true && grown.hub > small.hub + 100,
+    small.max === false && grown.max === true && grown.h > small.h + 100,
     { before: small, after: grown });
-  ck('and the sheet it grew is still open', await isOpen('hub') === true);
+  ck('and the sheet it grew is still open', await isOpen('mentor') === true);
 
   /* Nothing lives above full height. The danger here is the up-gesture
      falling through into the DOWN branch and throwing the sheet away. */
-  await drag('hub', 8, -15, 16);
+  await drag('mentor', 8, -15, 16);
   await wait(1100);
   const ceiling = await size();
   ck('pulling up at full height changes nothing and keeps the sheet',
-    ceiling.max === true && await isOpen('hub') === true, ceiling);
+    ceiling.max === true && await isOpen('mentor') === true, ceiling);
 
   await shrink();
-  r = await openHub();
-  await drag('hub', 5, -6, 70);                  // 30px at about 85px/s
+  r = await openMentor();
+  await drag('mentor', 5, -6, 70);               // 30px at about 85px/s
   await wait(900);
   const nudged = await size();
   ck('a small slow pull up is not enough to resize',
-    nudged.max === false && await isOpen('hub') === true, nudged);
-  ck('and it comes back to rest', await ty('hub') === 0, await ty('hub'));
+    nudged.max === false && await isOpen('mentor') === true, nudged);
+  ck('and it comes back to rest', await ty('mentor') === 0, await ty('mentor'));
+
+  /* A page is already the whole phone: pulled up it stays as it is, and
+     it never presses the size the levels share. */
+  await shrink();
+  r = await openHub();
+  const pageBefore = await size('hub');
+  await drag('hub', 8, -15, 16);
+  await wait(1100);
+  const pageAfter = await size('hub');
+  ck('a page pulled up stays the page it was, and leaves the levels\' size alone',
+    pageAfter.max === false && pageAfter.h === pageBefore.h && await isOpen('hub') === true,
+    { before: pageBefore, after: pageAfter });
 
   /* The maker sizes itself — a pinned canvas does not fit in 56vh — so
      the gesture has to reach ITS control, not the shared one. */
@@ -291,11 +310,14 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     return { hBefore, hAfter, jump: Math.round(topAfter - topBefore) };
   }, [id, to]);
 
-  for (const id of ['editor', 'hub']) {
+  const openIt = async id => {
+    if (id === 'editor') { await pg.evaluate(() => $('editor').classList.add('open')); await wait(600); }
+    else await openMentor();
+  };
+  for (const id of ['editor', 'mentor']) {
     await pg.evaluate(() => { navHome(); }); await wait(400);
     await full();
-    if (id === 'editor') { await pg.evaluate(() => $('editor').classList.add('open')); await wait(600); }
-    else await openHub();
+    await openIt(id);
     const H = await pg.evaluate(i => $(i).offsetHeight, id);
     const look = await pullAndLook(id, Math.round(H * 0.42));
     await wait(1000);
@@ -313,13 +335,30 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 
     await pg.evaluate(() => { navHome(); }); await wait(400);
     await full();
-    if (id === 'editor') { await pg.evaluate(() => $('editor').classList.add('open')); await wait(600); }
-    else await openHub();
+    await openIt(id);
     await drag(id, 12, 20, 16);                  // from full: 240px at ~1250px/s
     await wait(1200);
     ck(`${id}: from full, a hard flick goes all the way in one throw`,
       await isOpen(id) === false, await pg.evaluate(i => $(i).className, id));
   }
+
+  /* A page has two rungs, itself and gone: a long slow pull leaves, a
+     short one comes back, and neither touches the levels' size. */
+  await shrink();
+  r = await openHub();
+  const PH = await pg.evaluate(() => $('hub').offsetHeight);
+  await pullAndLook('hub', Math.round(PH * 0.15));
+  await wait(1000);
+  const pageShort = { open: await isOpen('hub'), y: await ty('hub'),
+    max: await pg.evaluate(() => $('editor').classList.contains('max')) };
+  ck('a page pulled down a little comes back to the whole phone',
+    pageShort.open === true && pageShort.y === 0 && pageShort.max === false, pageShort);
+  await pullAndLook('hub', Math.round(PH * 0.6));
+  await wait(1200);
+  const pageLong = { open: await isOpen('hub'),
+    max: await pg.evaluate(() => $('editor').classList.contains('max')) };
+  ck('a page pulled down far closes, with no half rung on the way',
+    pageLong.open === false && pageLong.max === false, pageLong);
 
   console.log('▶ buttons in the header keep their own press');
   r = await openHub();

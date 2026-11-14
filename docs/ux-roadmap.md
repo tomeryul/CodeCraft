@@ -174,3 +174,38 @@ What it still found, and what was done:
 - The audit's own lesson step clicked a dot the Academy page no longer has
   (v187), so steps 19–22 never opened a lesson. Fixed.
 `test/pages.js`, `test/first-session.js`.
+
+---
+
+## Third pass (v223 audit)  ✅ v224
+Re-run after the tab bar, the new robot and its family (390×844, first
+run). The numbers were already healthy — 60fps in every state, layout shift
+**0.059**, **1** notification and it answers the player's own tap — so what
+it found was the experience itself:
+
+- **Pages were half a phone.** Every page under Play, Create and Me opened
+  at the half size (520 of 844px): under its header and above the tab bar
+  that left ~350px — two cards of a list, half of Me — and the top 40% of
+  the screen went to a world nobody could touch while reading. A page is a
+  screen (skill §1): it now takes the phone under the top bar whatever size
+  a level was left at (`tabbar.css`), has no size button, and a pull down
+  closes it (`sheet-drag.js`, `PAGE` — a drag on a page never presses the
+  shared size control, which is the levels'). Levels keep their half/full
+  sheet (topic 3). The first try tied it to the tab bar being up, and a
+  page fading out above a level shrank on the way out: a **0.97** shift.
+- **The Academy counted four ways.** "Six short lessons" printed beside
+  "0/9" — the journey's own step count, read by a child as nine lessons —
+  then "0/10 done", "basics 0/6" and "Lesson 1 of 10". The journey's pill
+  now shows the step's own progress where it has one (`journeyBadge`: the
+  Academy's basics, "0/6", the count its page shows) and an arrow where it
+  has none.
+- **Lesson 1 opened on four things it does not teach.** "Main · A() · B()
+  · 📚" stood over the one ⬆️ Move it hands out. The function row is shown
+  when functions are in reach — a level that hands out 🔧 Call, a world
+  that has unlocked them, a robot that already has one (`renderRoutineTabs`).
+- **The first screen was the old robot.** The splash's CSS mascot and the
+  🤖 icon (the age gate, toasts) were the white-eyed robot the game no
+  longer has. The splash robot is drawn by the rig and waves, only while
+  the splash is up and uncovered; the 🤖 icon is the new Robo.
+
+After: 60fps in every state, layout shift **0.045**, 1 notification.

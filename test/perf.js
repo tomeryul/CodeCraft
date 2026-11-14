@@ -83,7 +83,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     const wait = ms => new Promise(r => setTimeout(r, ms));
     await __home();
     const out = { world: (await __watch(600)).draws };
-    hubOpen(); await wait(600);
+    /* a page is always a screen now, so the half sheet is a level's own
+       (the mentor shares the levels' size) */
+    if ($('editor').classList.contains('max')) $('edMax').click();
+    $('mentorBtn').click(); await wait(600);
     out.half = (await __watch(600)).draws;
     $('edMax').click(); await wait(700);
     out.full = (await __watch(600)).draws;

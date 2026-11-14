@@ -150,6 +150,18 @@ function addBlock(t){
 function renderRoutineTabs(){
   const el=$("routineTabs"); if(!el)return;
   const r=R(), R2=robotRoutines(r);
+  /* Functions are shown when they are in reach: a level that hands out the
+     🔧 Call block, a world that has unlocked them, or a robot that already
+     has one written. Lesson 1 hands out ⬆️ Move and nothing else, and it
+     used to open on "Main · A() · B() · 📚" — three things to wonder about
+     before the one block it teaches. Only the row goes: its Main tab with
+     nothing beside it says nothing the block count does not. */
+  const fnOn=(typeof mgState!=="undefined"&&mgState
+      ? (mgState.proj.allowed||CHALLENGE_BLOCKS).indexOf("call")>=0
+      : !!(typeof unlocks!=="undefined"&&unlocks.vars))
+    || ROUTINE_IDS.some(id=>countBlocks(routineOf(r,id).body)>0);
+  el.hidden=!fnOn;
+  if(!fnOn){ if(edTarget!=="main"){edTarget="main";selBlock=null;elseSel=null;} el.innerHTML=""; return; }
   const inCur=uid=>uid!=null&&!!byUid(curList(),uid);
   const tab=(id,label,list)=>{
     const running=(r.running||r.peek)&&r.curUid!=null&&byUid(list,r.curUid);

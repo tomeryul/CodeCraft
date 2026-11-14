@@ -195,6 +195,12 @@ the bar), and in `WATCH`. A screen that is a task of its own — a level, the
 code editor, the mentor, the wear maker — is in `OWN`, and the bar steps
 aside for it (`body.tb-off`).
 
+**A tab's pages are screens** — every page under Play, Create and Me
+takes the phone under the top bar whatever size a level was left at
+(`tabbar.css`), with no size button, and a pull down closes it
+(`PAGE` in `sheet-drag.js`, which never presses the shared size control:
+that one is the levels'). Levels keep their half / full sheet.
+
 **Everything floating over the bottom of the world stands on the bar:** the
 Code|Build|Run row, the journey card, the build palette, an object's menu
 and the coach are placed from `--tb-space`, never from `--sab` alone.

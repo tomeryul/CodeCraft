@@ -58,6 +58,7 @@ const JOURNEY=[
    hint:"Six short lessons. They teach every block you need to start.",
    where:"Projects ▸ Starter Academy",
    done:()=>typeof academyComplete==="function"&&academyComplete(),
+   prog:()=>typeof academyCoreDone==="function"?[academyCoreDone(),ACADEMY_CORE]:null,
    go:()=>{if(typeof academyStart==="function")academyStart();}},
 
   {id:"chop", em:"🪓", title:"Send your robot for wood",
@@ -111,6 +112,14 @@ const JOURNEY=[
    go:()=>jProjects(jCard(/Design a level|Continue/i),"mine")}
 ];
 
+/* What a step's pill says: the step's OWN progress where it has one (the
+   Academy's six basics, "2/6" — the same count its page shows), otherwise
+   the way in. It used to be the journey's place, "0/9", printed right
+   beside "Six short lessons", and a child read it as nine lessons. */
+function journeyBadge(s){
+  let p=null; try{p=s.prog&&s.prog();}catch(_){}
+  return p?'<span class="j-go">'+p[0]+'/'+p[1]+'</span>':'<span class="j-go j-arrow" aria-hidden="true">›</span>';
+}
 function journeyState(){
   player.journey=player.journey||{claimed:{}};
   if(!player.journey.claimed)player.journey.claimed={};
@@ -175,11 +184,10 @@ function renderJourney(){
   const s=journeyStep();
   if(hidden||!s){el.style.display="none";return;}
   el.style.display="";
-  const n=journeyProgress();
   const html='<button class="j-btn" type="button">'+
     '<span class="j-em">'+s.em+'</span>'+
     '<span class="j-tx"><b>'+esc(s.title)+'</b><small>'+esc(s.hint)+'</small></span>'+
-    '<span class="j-go">'+n+'/'+JOURNEY.length+'</span></button>';
+    journeyBadge(s)+'</button>';
   if(el._html===html)return;   // called every second; the step rarely changes
   el._html=html; el.innerHTML=html;
 }

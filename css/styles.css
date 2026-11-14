@@ -316,6 +316,8 @@ button{font-family:inherit;border:none;cursor:pointer;color:var(--ink);}
 /* no filter: the robot carries its own shadow (.mbody, .mshadow), and a
    filter on a moving element is drawn by iOS as a texture that goes soft */
 #splash .bot{font-size:74px;animation:bob 2.6s ease-in-out infinite;}
+/* the robot itself, drawn by the rig (boot.js, splashBot) */
+#splash .bot canvas{display:block;width:180px;height:160px;margin:0 auto;}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 /* the antenna light sits 32px above the body and the bob lifts it 10px
    more: on a 568px phone the content starts at the top edge, and the
